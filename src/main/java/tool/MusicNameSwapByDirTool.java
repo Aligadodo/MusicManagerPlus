@@ -23,7 +23,7 @@ public class MusicNameSwapByDirTool {
     public static void main(String[] args) {
         System.out.println("begin !");
 //        renameFiles("H:\\8-待整理");
-        renameFiles("H:\\0-中文歌手");
+        renameFiles("X:\\0 - 专辑系列\\1 - 试音碟\\2 - 女声发烧\\Female Audiophile II - 明达-爵士发烧女声天碟-精选II");
 //        renameFiles("L:\\", rules);
         System.out.println("done !");
     }
@@ -31,6 +31,7 @@ public class MusicNameSwapByDirTool {
     public static void renameFiles(String rootDir) {
 
         List<File> dirs = new ArrayList<>();
+        dirs.add(new File(rootDir));
         FileUtil.listFiles(0, new File(rootDir), new ArrayList<>(), dirs);
         System.out.println(String.format("dir has  %d dirs ", dirs.size()));
         dirs.forEach(

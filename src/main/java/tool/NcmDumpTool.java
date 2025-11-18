@@ -40,7 +40,7 @@ public class NcmDumpTool {
 
         //File folder = new File("D:\\音乐\\Music");
         //L:\网易云
-        File folder = new File("C:\\Users\\28667\\Downloads\\VipSongsDownload");
+        File folder = new File("D:\\CloudMusic\\VipSongsDownload");
         File[] files = folder.listFiles();
 
 

@@ -4,17 +4,13 @@ import domain.FileStatisticInfo;
 import domain.MusicInfo;
 import org.apache.commons.io.FileExistsException;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.jaudiotagger.audio.AudioFile;
-import org.jaudiotagger.audio.AudioFileIO;
 import org.jaudiotagger.audio.exceptions.CannotReadException;
 import org.jaudiotagger.audio.flac.FlacFileReader;
-import org.jaudiotagger.audio.mp3.MP3FileReader;
 import org.jaudiotagger.tag.FieldKey;
 import org.jaudiotagger.tag.Tag;
 import rule.Rule;
 import util.FileUtil;
-import util.MusicNameParserUtil;
 
 import java.io.File;
 import java.io.IOException;
@@ -32,6 +28,7 @@ public class MusicTagUpdateTool {
     //private static final String music_types = "mp3,flac,wav";
     private static final String music_types = "mp3,flac,wav,aiff,ape,dfd,dsf,iso";
     private static final List<Rule> rules = new ArrayList<>();
+    private static AudioFile mp3File;
 
     static {
 
@@ -42,7 +39,7 @@ public class MusicTagUpdateTool {
     public static void main(String[] args) {
         System.out.println("begin !");
 //        renameFiles("H:\\8-待整理");
-        renameFiles("C:\\Users\\28667\\Downloads\\VipSongsDownload");
+        renameFiles("X:\\0 - 专辑系列\\0 - 华语专辑\\W - 王菲\\王菲 - 执迷不悔 - 1993 Flac");
 //
 //        renameFiles("I:\\");
 //        renameFiles("L:\\", rules);
@@ -96,7 +93,8 @@ public class MusicTagUpdateTool {
     private static void updateMp3FileTag(MusicInfo musicInfo, FileStatisticInfo fileStatisticInfo) {
         File file = fileStatisticInfo.file;
         try {
-            if(!fileStatisticInfo.file.getName().contains("mp3")){
+            if(!fileStatisticInfo.file.getName().contains("mp3")
+            ){
                 return;
             }
             AudioFile mp3File = new FlacFileReader().read(file);
