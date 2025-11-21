@@ -39,7 +39,7 @@ public class FileStatisticInfo {
     public int countJPChars;
     public int countKoreanChars;
     public int countNUMChars;
-    private static final String full_music_types = "mp3,flac,wav,aiff,ape,asf,dfd,dsf,iso,dts,dff";
+    private static final String full_music_types = "mp3,flac,wav,aiff,iso,ape,asf,dfd,dsf,dts,dff";
     public static FileStatisticInfo create(File file) {
         FileStatisticInfo statisticInfo = new FileStatisticInfo();
         statisticInfo.file = file;
