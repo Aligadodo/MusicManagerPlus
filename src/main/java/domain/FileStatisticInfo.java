@@ -4,6 +4,15 @@ import com.alibaba.fastjson.JSONObject;
 import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
+import org.jaudiotagger.audio.aiff.AiffFileReader;
+import org.jaudiotagger.audio.asf.AsfFileReader;
+import org.jaudiotagger.audio.dff.DffFileReader;
+import org.jaudiotagger.audio.dsf.DsfFileReader;
+import org.jaudiotagger.audio.flac.FlacFileReader;
+import org.jaudiotagger.audio.generic.AudioFileReader;
+import org.jaudiotagger.audio.mp3.MP3FileReader;
+import org.jaudiotagger.audio.real.RealFileReader;
+import org.jaudiotagger.audio.wav.WavFileReader;
 import util.FileUtil;
 import util.LanguageUtil;
 
@@ -30,7 +39,7 @@ public class FileStatisticInfo {
     public int countJPChars;
     public int countKoreanChars;
     public int countNUMChars;
-
+    private static final String full_music_types = "mp3,flac,wav,aiff,ape,asf,dfd,dsf,iso,dts,dff";
     public static FileStatisticInfo create(File file) {
         FileStatisticInfo statisticInfo = new FileStatisticInfo();
         statisticInfo.file = file;
@@ -41,7 +50,6 @@ public class FileStatisticInfo {
             filename = filename.substring(0, filename.lastIndexOf('.'));
         }
         statisticInfo.oriName = filename;
-        statisticInfo.classicName = LanguageUtil.toClassicName(filename);
         statisticInfo.fileNameLength = filename.length();
         for (char c : filename.toCharArray()) {
             if (LanguageUtil.isChineseChar(c)) {
@@ -56,10 +64,46 @@ public class FileStatisticInfo {
                 statisticInfo.countNUMChars = statisticInfo.countNUMChars + 1;
             }
         }
+        statisticInfo.classicName = LanguageUtil.toClassicName(filename,  statisticInfo.countCNChars>0);
         return statisticInfo;
     }
 
     public void print(){
         System.out.println(this.classicName + ":" + JSONObject.toJSONString(this));
+    }
+
+    public boolean isMp3(){
+        return "mp3".equals(this.type);
+    }
+
+    public boolean isMusic(){
+        return full_music_types.contains(this.type);
+    }
+//mp3,flac,wav,aiff,ape,asf,dfd,dsf,iso,dts,dff
+    public AudioFileReader getAudioFileReader(){
+        switch (this.type){
+            case "mp3":
+                return new MP3FileReader();
+            case "flac":
+                return new FlacFileReader();
+            case "wav":
+                return new WavFileReader();
+            case "aiff":
+                return new AiffFileReader();
+            case "ape":
+                return new WavFileReader();
+            case "asf":
+                return new AsfFileReader();
+            case "dfd":
+                return new DffFileReader();
+            case "dsf":
+                return new DsfFileReader();
+            case "dts":
+            case "dff":
+                return new DffFileReader();
+            default:
+                return new RealFileReader();
+
+        }
     }
 }

@@ -51,7 +51,7 @@ public class FileUtil {
         if (file.getName().indexOf('.') == -1) {
             return "unknown";
         }
-        return filename.substring(filename.lastIndexOf('.') + 1);
+        return filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
     }
 
     public static double getFileSizeMB(File file) {

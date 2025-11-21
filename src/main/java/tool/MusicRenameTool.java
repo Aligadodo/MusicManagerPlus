@@ -95,7 +95,7 @@ public class MusicRenameTool {
 
     }
 
-    private static MusicInfo queryMusicFileTag(File file) {
+    public static MusicInfo queryMusicFileTag(File file) {
         MusicInfo musicInfo = new MusicInfo();
         musicInfo.file = file;
         try {

@@ -22,7 +22,7 @@ public class MergeMusicByArtistsTool {
     public static void main(String[] args) {
         System.out.println("begin !");
 //        renameFiles("H:\\8-待整理");
-        renameFiles("H:\\8-待整理");
+        renameFiles("X:\\8 - 待整理\\华语流行乐坛歌手精选1264首经典歌曲无损音质合集[FLAC]");
 //        renameFiles("I:\\中文歌手");
 
 //        renameFiles("L:\\", rules);

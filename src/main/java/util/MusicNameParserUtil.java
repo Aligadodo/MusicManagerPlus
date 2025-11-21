@@ -14,12 +14,12 @@ public class MusicNameParserUtil {
     public static final Pattern eng = Pattern.compile("[0-9a-zA-Z\\s]*");
     public static final String full_music_types = "mp3,flac,wav,aiff,ape,dfd,dsf,iso";
     static {
-        scanArtistDirs("H:\\0-中文歌手");
-        scanArtistDirs("H:\\0-欧美歌手");
-        scanArtistDirs("H:\\0-日韩歌手");
-        scanArtistDirs("H:\\1-西式古典");
-        scanArtistDirs("H:\\1-乐团乐队");
-        scanArtistDirs("H:\\1-80年代老歌手");
+        scanArtistDirs("X:\\0 - 中文歌手");
+        scanArtistDirs("X:\\0 - 欧美歌手");
+        scanArtistDirs("X:\\0 - 日韩歌手");
+        scanArtistDirs("X:\\1 - 西式古典");
+        scanArtistDirs("X:\\1 - 乐团乐队");
+        scanArtistDirs("X:\\1 - 80年代老歌手");
 
         System.out.println(String.format("find %d dirs ", existingDirMapping.size()));
     }
@@ -30,6 +30,9 @@ public class MusicNameParserUtil {
 
 
     private static void scanArtistDirs(String dir) {
+        if(new File(dir).listFiles()==null){
+            return;
+        }
         Arrays.stream(Objects.requireNonNull(new File(dir).listFiles())).forEach(i -> {
             if (i.isDirectory()) {
                 if (StringUtils.contains(i.getName(), "-")) {

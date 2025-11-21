@@ -179,7 +179,17 @@ public class LanguageUtil {
      * 名称标准化，含去空格、转半角、转简体、转大写等
      **/
     public static String toClassicName(String name) {
-        return toSimpleChinese(toHalfWidth(name)).replace(" ", "").toUpperCase();
+        return toSimpleChinese(toHalfWidth(name)).replace(" ", "").toUpperCase().trim();
+    }
+
+    /**
+     * 名称标准化，含去空格、转半角、转简体、转大写等
+     **/
+    public static String toClassicName(String name, boolean isChinese) {
+        if(!isChinese){
+            return toSimpleChinese(toHalfWidth(name)).replace(" ", "").trim();
+        }
+        return toClassicName(name);
     }
 
 
