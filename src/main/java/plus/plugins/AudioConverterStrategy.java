@@ -19,6 +19,7 @@ import plus.type.ScanTarget;
 
 import java.io.File;
 import java.util.*;
+import java.util.prefs.Preferences;
 
 public class AudioConverterStrategy extends AppStrategy {
     private final JFXComboBox<String> cbTargetFormat;
@@ -64,13 +65,27 @@ public class AudioConverterStrategy extends AppStrategy {
         txtCacheDir.disableProperty().bind(chkEnableCache.selectedProperty().not());
     }
 
-    @Override public String getName() { return "音频格式转换 (高并发/CD修复/SSD加速)"; }
-    @Override public ScanTarget getTargetType() { return ScanTarget.FILES_ONLY; }
-    @Override public int getPreferredThreadCount() { return spThreads.getValue(); }
+    @Override
+    public String getName() {
+        return "音频格式转换 (高并发/CD修复/SSD加速)";
+    }
 
     @Override
-    public Node getConfigNode() {
+    public ScanTarget getTargetType() {
+        return ScanTarget.FILES_ONLY;
+    }
+
+    @Override
+    public int getPreferredThreadCount() {
+        return spThreads.getValue();
+    }
+
+
+    @Override public Node getConfigNode() {
+        // ... existing config node creation ...
+        // (确保这里返回的内容被外层的 ScrollPane 包裹，逻辑在 createActionPanel 已处理)
         VBox box = new VBox(10);
+        // ... (UI 构建代码保持不变) ...
         HBox ffmpegBox = new HBox(10, new Label("FFmpeg:"), txtFFmpegPath);
         ffmpegBox.setAlignment(Pos.CENTER_LEFT);
         JFXButton btnPick = new JFXButton("浏览");
@@ -81,7 +96,6 @@ public class AudioConverterStrategy extends AppStrategy {
         });
         ffmpegBox.getChildren().add(btnPick);
 
-        // Cache UI
         HBox cacheBox = new HBox(10, txtCacheDir);
         HBox.setHgrow(txtCacheDir, Priority.ALWAYS);
         JFXButton btnPickCache = new JFXButton("选择SSD目录");
@@ -172,7 +186,7 @@ public class AudioConverterStrategy extends AppStrategy {
             // 设置暂存路径
             if (useCache && status != ExecStatus.SKIPPED) {
                 // 使用 UUID 避免文件名冲突，保持平铺结构以最大化写入性能
-                String tempFileName = UUID.randomUUID().toString() + "_" + newName;
+                String tempFileName = UUID.randomUUID() + "_" + newName;
                 File stagingFile = new File(cacheDir, tempFileName);
                 params.put("stagingPath", stagingFile.getAbsolutePath());
             }
@@ -193,4 +207,36 @@ public class AudioConverterStrategy extends AppStrategy {
         }
         return records;
     }
+
+
+    // 修改：接受 Properties 而不是 Preferences
+    public void savePrefs(Properties props) {
+        if (cbTargetFormat.getValue() != null) props.setProperty("ac_targetFormat", cbTargetFormat.getValue());
+        if (cbOutputDirMode.getValue() != null) props.setProperty("ac_outputMode", cbOutputDirMode.getValue());
+        if (txtFFmpegPath.getText() != null) props.setProperty("ac_ffmpegPath", txtFFmpegPath.getText());
+        props.setProperty("ac_useCache", String.valueOf(chkEnableCache.isSelected()));
+        if (txtCacheDir.getText() != null) props.setProperty("ac_cacheDir", txtCacheDir.getText());
+        props.setProperty("ac_threads", String.valueOf(spThreads.getValue()));
+    }
+
+    // 修改：接受 Properties 而不是 Preferences
+    public void loadPrefs(Properties props) {
+        String fmt = props.getProperty("ac_targetFormat");
+        if (fmt != null) cbTargetFormat.getSelectionModel().select(fmt);
+
+        String outMode = props.getProperty("ac_outputMode");
+        if (outMode != null) cbOutputDirMode.getSelectionModel().select(outMode);
+
+        txtFFmpegPath.setText(props.getProperty("ac_ffmpegPath", "ffmpeg"));
+        chkEnableCache.setSelected(Boolean.parseBoolean(props.getProperty("ac_useCache", "false")));
+        txtCacheDir.setText(props.getProperty("ac_cacheDir", ""));
+
+        String threads = props.getProperty("ac_threads");
+        if (threads != null) {
+            try {
+                spThreads.getValueFactory().setValue(Integer.parseInt(threads));
+            } catch (NumberFormatException ignore) {}
+        }
+    }
+
 }
