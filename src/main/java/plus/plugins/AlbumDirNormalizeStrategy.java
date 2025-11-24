@@ -12,6 +12,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * demo 未实现
+ */
 public class AlbumDirNormalizeStrategy extends AppStrategy {
     @Override
     public String getName() {
@@ -39,7 +42,7 @@ public class AlbumDirNormalizeStrategy extends AppStrategy {
 
             String artist = "Unknown";
             String album = folder.getName();
-            String year = "2000";
+            String year = "XXXX";
             String type = "MP3";
 
             if (entry.getValue().stream().anyMatch(f -> f.getName().endsWith(".flac"))) type = "FLAC";

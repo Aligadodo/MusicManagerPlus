@@ -14,6 +14,10 @@ import plus.type.ScanTarget;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+
+/**
+ * Demo 功能待实现
+ */
 public class FileMigrateStrategy extends AppStrategy {
     private final TextField txtTargetDir;
     private final JFXButton btnPickTarget;
