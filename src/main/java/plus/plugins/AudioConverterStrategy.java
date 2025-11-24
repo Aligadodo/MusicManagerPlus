@@ -53,7 +53,7 @@ public class AudioConverterStrategy extends AppStrategy {
         chkSkipExisting.setSelected(true);
 
         int cores = Runtime.getRuntime().availableProcessors();
-        spThreads = new Spinner<>(1, 32, Math.max(1, cores / 2));
+        spThreads = new Spinner<>(1, 64, Math.max(1, cores / 2));
         spThreads.setTooltip(new Tooltip("并行转换的线程数，建议不超过CPU核心数"));
 
         txtFFmpegPath = new TextField("ffmpeg");

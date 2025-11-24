@@ -39,6 +39,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -51,6 +52,7 @@ import java.util.stream.Stream;
 
 
 public class MusicFileManagerApp extends Application {
+    private static final SimpleDateFormat sdf = new SimpleDateFormat();// 格式化时间
     private final List<AppStrategy> strategies = new ArrayList<>();
     // Local Conf
     // 使用 Properties 和本地文件
@@ -397,7 +399,7 @@ public class MusicFileManagerApp extends Application {
         btnExecute.setPrefWidth(Double.MAX_VALUE);
         btnExecute.setOnAction(e -> runExecute());
 
-        btnStop = new JFXButton("停止任务");
+        btnStop = new JFXButton("3. 终止任务");
         btnStop.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white;");
         btnStop.setPrefWidth(Double.MAX_VALUE);
         btnStop.setDisable(true);
@@ -705,12 +707,13 @@ public class MusicFileManagerApp extends Application {
                                 if (Thread.currentThread().isInterrupted()) return;
 
                                 try {
+                                    long begin = System.currentTimeMillis();
                                     updateRecordStatus(rec, ExecStatus.RUNNING);
                                     performFileOperation(rec);
                                     updateRecordStatus(rec, ExecStatus.SUCCESS);
                                     successCount.incrementAndGet();
                                     // 简化的实时反馈
-                                    Platform.runLater(() -> logArea.appendText("成功: " + rec.getOriginalName() + "\n"));
+                                    Platform.runLater(() -> logArea.appendText("成功: " + rec.getOriginalPath()+"\\" + rec.getOriginalName() + "，耗时：" +((System.currentTimeMillis()-begin)/1000.0)+  "秒。 \n"));
                                 } catch (Exception e) {
                                     updateRecordStatus(rec, ExecStatus.FAILED);
                                     failCount.incrementAndGet();
@@ -878,7 +881,7 @@ public class MusicFileManagerApp extends Application {
         if (mapMetadata) {
             outputBuilder.addExtraArgs("-map_metadata", "0");
         }
-
+        outputBuilder.addExtraArgs("-threads", "4");
         if (params.containsKey("sample_rate")) {
             outputBuilder.setAudioSampleRate(Integer.parseInt(params.get("sample_rate")));
         }
@@ -906,7 +909,8 @@ public class MusicFileManagerApp extends Application {
     }
 
     private void log(String msg) {
-        Platform.runLater(() -> logArea.appendText(msg + "\n"));
+        System.out.println(msg);
+        Platform.runLater(() -> logArea.appendText(sdf.format(new Date())+ " --- " +msg + "\n"));
     }
 
 
