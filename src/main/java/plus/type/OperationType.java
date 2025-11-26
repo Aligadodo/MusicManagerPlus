@@ -1,3 +1,3 @@
 package plus.type;
 
-public enum OperationType {NONE, RENAME, MOVE, CONVERT}
+public enum OperationType {NONE, RENAME, MOVE, CONVERT, SPLIT}

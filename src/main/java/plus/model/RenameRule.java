@@ -1,71 +1,63 @@
 package plus.model;
 
-import plus.type.RenameActionType;
+import plus.type.ActionType;
 
 import java.util.List;
 
 public class RenameRule {
     public List<RuleCondition> conditions;
-    public RenameActionType renameActionType;
+    public ActionType actionType;
     public String findStr;
     public String replaceStr;
 
-    public RenameRule(List<RuleCondition> conditions, RenameActionType renameActionType, String findStr, String replaceStr) {
-        this.conditions = conditions;
-        this.renameActionType = renameActionType;
-        this.findStr = findStr;
-        this.replaceStr = replaceStr;
+    public RenameRule(List<RuleCondition> c, ActionType a, String f, String r) {
+        this.conditions = c;
+        this.actionType = a;
+        this.findStr = f;
+        this.replaceStr = r;
     }
 
-    // 判断规则是否适用于文件名
-    public boolean matches(String filename) {
+    public boolean matches(String s) {
         if (conditions == null || conditions.isEmpty()) return true;
-        for (RuleCondition c : conditions) {
-            if (!c.test(filename)) return false;
-        }
+        for (RuleCondition c : conditions) if (!c.test(s)) return false;
         return true;
     }
 
-    // 执行替换逻辑
-    public String apply(String filename) {
-        String result = filename;
-        String rVal = replaceStr == null ? "" : replaceStr;
+    public String apply(String s) {
+        String r = s;
+        String v = replaceStr == null ? "" : replaceStr;
         try {
-            switch (renameActionType) {
+            switch (actionType) {
                 case REPLACE_TEXT:
-                    if (findStr != null && !findStr.isEmpty())
-                        result = filename.replace(findStr, rVal);
+                    if (findStr != null && !findStr.isEmpty()) r = s.replace(findStr, v);
                     break;
                 case REPLACE_REGEX:
-                    if (findStr != null && !findStr.isEmpty())
-                        result = filename.replaceAll(findStr, rVal);
+                    if (findStr != null && !findStr.isEmpty()) r = s.replaceAll(findStr, v);
                     break;
                 case PREPEND:
-                    result = rVal + filename;
+                    r = v + s;
                     break;
                 case APPEND:
-                    // 智能追加：如果有扩展名，加在扩展名之前
-                    int dot = filename.lastIndexOf('.');
-                    if (dot > 0) {
-                        result = filename.substring(0, dot) + rVal + filename.substring(dot);
-                    } else {
-                        result = filename + rVal;
-                    }
+                    int d = s.lastIndexOf('.');
+                    if (d > 0) r = s.substring(0, d) + v + s.substring(d);
+                    else r = s + v;
                     break;
                 case TO_LOWER:
-                    result = filename.toLowerCase();
+                    r = s.toLowerCase();
                     break;
                 case TO_UPPER:
-                    result = filename.toUpperCase();
+                    r = s.toUpperCase();
                     break;
                 case TRIM:
-                    result = filename.trim();
+                    r = s.trim();
                     break;
             }
         } catch (Exception e) {
-            // 忽略正则错误等，保持原名
-            System.err.println("Rule execution failed: " + e.getMessage());
         }
-        return result;
+        return r;
+    }
+
+    public String getActionDesc() {
+        return actionType + (findStr != null && !findStr.isEmpty() ? " [" + findStr + "]" : "") + (replaceStr != null ? " -> " + replaceStr : "");
     }
 }

@@ -30,8 +30,8 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class MusicTagUpdateTool {
 
-    //private static final String music_types = "mp3,flac,wav";
-    private static final String music_types = "flac,wav,aiff,ape,dfd,dsf,iso";
+    private static final String music_types = "wav";
+//    private static final String music_types = "flac,wav,aiff,ape,dfd,dsf,iso";
     private static final List<Rule> rules = new ArrayList<>();
 
     static {
@@ -43,7 +43,7 @@ public class MusicTagUpdateTool {
     public static void main(String[] args) throws InterruptedException {
         System.out.println("begin !");
 //        renameFiles("H:\\8-待整理");
-        renameFiles("X:\\");
+        renameFiles("X:\\0 - 专辑系列\\0 - 华语专辑\\C - 蔡琴\\");
 //
 //        renameFiles("I:\\");
 //        renameFiles("L:\\", rules);
@@ -131,7 +131,7 @@ public class MusicTagUpdateTool {
             System.out.println(file.getName() + " album: " + album +" --- "+musicInfo.album); // 專輯名
             System.out.println(file.getName() + " singer: " + artist +" --- "+musicInfo.artist); // 歌手名
             System.out.println(file.getName() + " songName: " + songName +" --- "+musicInfo.songName); // 歌名
-            boolean anyUpdate = true;
+            boolean anyUpdate = false;
             if (artist.contains("?") || StringUtils.isBlank(artist)) {
                 if (musicInfo.artist != null) {
                     fileTags.setField(FieldKey.ARTIST, musicInfo.artist);
@@ -154,7 +154,7 @@ public class MusicTagUpdateTool {
                 String artistV2 = fileTagsV2.getFirst(FieldKey.ARTIST);// 歌手名
                 String albumV2 = fileTagsV2.getFirst(FieldKey.ALBUM);// 專輯名
                 String songNameV2 = fileTagsV2.getFirst(FieldKey.TITLE);// 歌名
-                boolean needReset = false;
+                boolean needReset = true;
                 if (artistV2.contains("?")) {
                     needReset = true;
                 }

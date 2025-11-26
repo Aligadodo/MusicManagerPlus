@@ -26,7 +26,8 @@ public class DirTagUpdateTool {
 
     public static void main(String[] args) {
         System.out.println("begin !");
-        renameFiles("X:\\0 - 专辑系列");
+//        renameFiles("X:\\0 - 专辑系列");
+//        renameFiles("X:\\8 - 待整理");
         renameFiles("X:\\8 - 待整理");
 //        renameFiles("L:\\", rules);
         System.out.println("done !");

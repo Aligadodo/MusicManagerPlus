@@ -33,10 +33,7 @@ import plus.type.OperationType;
 import plus.type.ScanTarget;
 
 import java.awt.*;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -257,6 +254,7 @@ public class MusicFileManagerApp extends Application {
     private void initStrategies() {
         strategies.add(new AdvancedRenameStrategy());
         strategies.add(new AudioConverterStrategy());
+        strategies.add(new CueSplitterStrategy());
         strategies.add(new AlbumDirNormalizeStrategy());
         strategies.add(new TrackNumberStrategy());
         strategies.add(new FileMigrateStrategy());
@@ -353,7 +351,7 @@ public class MusicFileManagerApp extends Application {
         spRecursionDepth.valueProperty().addListener((o, old, v) -> invalidatePreview());
 
         ObservableList<String> extensions = FXCollections.observableArrayList(
-                "mp3", "flac", "wav", "m4a", "ape", "dsf", "dff", "dts", "dfd"
+                "mp3", "flac", "wav", "m4a", "ape", "dsf", "dff", "dts", "dfd", "cue", "iso"
         );
         ccbFileTypes = new CheckComboBox<>(extensions);
         ccbFileTypes.getCheckModel().checkAll();
@@ -990,6 +988,10 @@ public class MusicFileManagerApp extends Application {
                 if (!target.getParentFile().exists()) target.getParentFile().mkdirs();
                 Files.move(source.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING);
                 break;
+            case SPLIT: // 新增 SPLIT 操作
+                if (!target.getParentFile().exists()) target.getParentFile().mkdirs();
+                splitAudioTrack(rec);
+                break;
             case CONVERT:
                 File finalTarget = target;
                 File stagingFile = null;
@@ -1017,9 +1019,48 @@ public class MusicFileManagerApp extends Application {
                     }
                 }
                 break;
+
             default:
                 break;
         }
+    }
+
+    // --- New: Split Audio Track Implementation ---
+    private void splitAudioTrack(ChangeRecord rec) throws IOException {
+        Map<String, String> params = rec.getExtraParams();
+        String audioSourcePath = params.get("audioSource");
+        File audioSource = new File(audioSourcePath);
+        if (!audioSource.exists()) throw new FileNotFoundException("源音频文件不存在: " + audioSourcePath);
+
+        String startTime = params.get("startTime"); // seconds
+        String duration = params.get("duration");   // seconds (optional)
+        String ffmpegPath = params.getOrDefault("ffmpegPath", "ffmpeg");
+
+        FFmpeg ffmpeg = new FFmpeg(ffmpegPath);
+        FFmpegBuilder builder = new FFmpegBuilder();
+
+        // 输入选项：使用 -ss 进行快速 seek (注意：对于某些格式放在 -i 之前更精确/快)
+        // builder.addExtraArgs("-ss", startTime);
+        builder.setInput(audioSourcePath);
+
+        FFmpegOutputBuilder outputBuilder = builder.addOutput(rec.getNewPath())
+                .setStartOffset(Long.parseLong(startTime), TimeUnit.SECONDS) // 精确 seek
+                .setFormat(params.getOrDefault("format", "flac"))
+                .setAudioCodec(params.getOrDefault("codec", "flac"))
+                .addExtraArgs("-map_metadata", "-1"); // 清除原文件元数据，使用自定义的
+
+        // 如果有持续时间（除了最后一轨通常都有）
+        if (duration != null) {
+            outputBuilder.setDuration(Long.parseLong(duration), TimeUnit.SECONDS);
+        }
+
+        // 添加 Metadata
+        if (params.containsKey("title")) outputBuilder.addMetaTag("title", params.get("title"));
+        if (params.containsKey("artist")) outputBuilder.addMetaTag("artist", params.get("artist"));
+        if (params.containsKey("album")) outputBuilder.addMetaTag("album", params.get("album"));
+        if (params.containsKey("track")) outputBuilder.addMetaTag("track", params.get("track"));
+
+        new FFmpegExecutor(ffmpeg).createJob(builder).run();
     }
 
     // 核心修复：APE 转换支持
