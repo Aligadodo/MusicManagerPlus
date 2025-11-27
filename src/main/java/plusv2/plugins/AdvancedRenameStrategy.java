@@ -15,7 +15,6 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import plusv2.AppStrategy;
 import plusv2.model.ChangeRecord;
-import plusv2.model.RenameRule;
 import plusv2.model.RuleCondition;
 import plusv2.type.*;
 
@@ -31,22 +30,25 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 public class AdvancedRenameStrategy extends AppStrategy {
+
+    // UI Controls
     private final ListView<RenameRule> lvRules;
     private final JFXButton btnAddRule, btnRemoveRule, btnMoveUp, btnMoveDown;
     private final JFXComboBox<String> cbCrossDriveMode;
     private final Spinner<Integer> spThreads;
     private final JFXComboBox<String> cbProcessScope;
 
+    // Runtime Params
     private List<RenameRule> pRules;
     private String pCrossDriveMode;
     private int pThreads;
-    private int pProcessScopeIndex; // 改用索引判断，避免字符串匹配错误
+    private int pProcessScopeIndex;
 
     public AdvancedRenameStrategy() {
         lvRules = new ListView<>();
         lvRules.setCellFactory(p -> new RuleListCell());
         lvRules.setPlaceholder(new Label("暂无规则，请点击下方添加..."));
-        lvRules.setPrefHeight(200);
+        lvRules.setPrefHeight(150);
 
         btnAddRule = new JFXButton("添加规则");
         btnAddRule.setStyle("-fx-background-color: #3498db; -fx-text-fill: white;");
@@ -71,7 +73,7 @@ public class AdvancedRenameStrategy extends AppStrategy {
         spThreads = new Spinner<>(1, 64, Runtime.getRuntime().availableProcessors());
 
         cbProcessScope = new JFXComboBox<>(FXCollections.observableArrayList("仅处理文件", "仅处理文件夹", "全部处理"));
-        cbProcessScope.getSelectionModel().select(2); // 默认全部处理
+        cbProcessScope.getSelectionModel().select(2);
     }
 
     private void moveRule(int o) {
@@ -85,9 +87,10 @@ public class AdvancedRenameStrategy extends AppStrategy {
         }
     }
 
-    @Override public String getName() { return "高级重命名 (正则/多规则/首字母/清理)"; }
-    @Override public ScanTarget getTargetType() { return ScanTarget.ALL; }
-    @Override public int getPreferredThreadCount() { return spThreads.getValue(); }
+    @Override
+    public String getName() {
+        return "高级重命名 (多规则)";
+    }
 
     @Override
     public Node getConfigNode() {
@@ -96,10 +99,14 @@ public class AdvancedRenameStrategy extends AppStrategy {
         t.setAlignment(Pos.CENTER_LEFT);
 
         GridPane g = new GridPane();
-        g.setHgap(10); g.setVgap(5);
-        g.add(new Label("对象:"), 0, 0); g.add(cbProcessScope, 1, 0);
-        g.add(new Label("跨盘:"), 2, 0); g.add(cbCrossDriveMode, 3, 0);
-        g.add(new Label("并发:"), 4, 0); g.add(spThreads, 5, 0);
+        g.setHgap(10);
+        g.setVgap(5);
+        g.add(new Label("对象:"), 0, 0);
+        g.add(cbProcessScope, 1, 0);
+        g.add(new Label("跨盘:"), 2, 0);
+        g.add(cbCrossDriveMode, 3, 0);
+        g.add(new Label("并发:"), 4, 0);
+        g.add(spThreads, 5, 0);
 
         r.getChildren().addAll(new Label("规则链 (从上至下依次执行):"), lvRules, t, new Separator(), g);
         return r;
@@ -113,76 +120,70 @@ public class AdvancedRenameStrategy extends AppStrategy {
         pProcessScopeIndex = cbProcessScope.getSelectionModel().getSelectedIndex();
     }
 
+    // --- Config Persistence ---
     @Override
     public void saveConfig(Properties props) {
-        props.setProperty("arn_crossDrive", cbCrossDriveMode.getValue());
-        props.setProperty("arn_scope_idx", String.valueOf(cbProcessScope.getSelectionModel().getSelectedIndex()));
+        props.setProperty("arn_crossDrive", String.valueOf(cbCrossDriveMode.getSelectionModel().getSelectedIndex()));
+        props.setProperty("arn_scope", String.valueOf(cbProcessScope.getSelectionModel().getSelectedIndex()));
         props.setProperty("arn_threads", String.valueOf(spThreads.getValue()));
-    }
-    @Override
-    public void loadConfig(Properties props) {
-        if (props.containsKey("arn_crossDrive")) cbCrossDriveMode.getSelectionModel().select(props.getProperty("arn_crossDrive"));
-        if (props.containsKey("arn_scope_idx")) {
-            try {
-                cbProcessScope.getSelectionModel().select(Integer.parseInt(props.getProperty("arn_scope_idx")));
-            } catch (NumberFormatException e) {
-                cbProcessScope.getSelectionModel().select(2);
+
+        // Save Rules
+        props.setProperty("arn_rule_count", String.valueOf(lvRules.getItems().size()));
+        for (int i = 0; i < lvRules.getItems().size(); i++) {
+            RenameRule r = lvRules.getItems().get(i);
+            String prefix = "arn_rule_" + i + "_";
+            props.setProperty(prefix + "action", r.actionType.name());
+            props.setProperty(prefix + "find", r.findStr == null ? "" : r.findStr);
+            props.setProperty(prefix + "replace", r.replaceStr == null ? "" : r.replaceStr);
+
+            // Save Conditions
+            props.setProperty(prefix + "cond_count", String.valueOf(r.conditions.size()));
+            for (int j = 0; j < r.conditions.size(); j++) {
+                RuleCondition c = r.conditions.get(j);
+                String cPrefix = prefix + "cond_" + j + "_";
+                props.setProperty(cPrefix + "type", c.type.name());
+                props.setProperty(cPrefix + "val", c.value == null ? "" : c.value);
             }
         }
     }
 
     @Override
-    public List<ChangeRecord> analyze(List<File> files, List<File> roots, BiConsumer<Double, String> rep) {
-        List<RenameRule> rs = pRules;
-        boolean cpy = "复制 (Copy)".equals(pCrossDriveMode);
-        // 修复：使用索引判断，解决 "仅处理文件夹" 包含 "文件" 字眼导致的逻辑错误
-        // 0: 仅文件, 1: 仅文件夹, 2: 全部
-        boolean pFile = (pProcessScopeIndex == 0 || pProcessScopeIndex == 2);
-        boolean pFolder = (pProcessScopeIndex == 1 || pProcessScopeIndex == 2);
+    public void loadConfig(Properties props) {
+        if (props.containsKey("arn_crossDrive"))
+            cbCrossDriveMode.getSelectionModel().select(Integer.parseInt(props.getProperty("arn_crossDrive")));
+        if (props.containsKey("arn_scope"))
+            cbProcessScope.getSelectionModel().select(Integer.parseInt(props.getProperty("arn_scope")));
+        if (props.containsKey("arn_threads"))
+            spThreads.getValueFactory().setValue(Integer.parseInt(props.getProperty("arn_threads")));
 
-        int tot = files.size();
-        AtomicInteger proc = new AtomicInteger(0);
+        // Load Rules
+        lvRules.getItems().clear();
+        int count = Integer.parseInt(props.getProperty("arn_rule_count", "0"));
+        for (int i = 0; i < count; i++) {
+            String prefix = "arn_rule_" + i + "_";
+            try {
+                ActionType action = ActionType.valueOf(props.getProperty(prefix + "action"));
+                String find = props.getProperty(prefix + "find");
+                String replace = props.getProperty(prefix + "replace");
 
-        return files.parallelStream().map(f -> {
-            int cur = proc.incrementAndGet();
-            if (rep != null && cur % 100 == 0) Platform.runLater(() -> rep.accept((double) cur / tot, "计算: " + cur + "/" + tot));
-
-            boolean d = f.isDirectory();
-            if (d && !pFolder) return null;
-            if (!d && !pFile) return null;
-            if (roots.contains(f)) return null;
-
-            String on = f.getName();
-            String cn = on;
-            boolean app = false;
-
-            for (RenameRule r : rs) {
-                if (r.matches(cn)) {
-                    String t = r.apply(cn);
-                    if (!t.equals(cn)) {
-                        cn = t;
-                        app = true;
-                    }
+                List<RuleCondition> conds = new ArrayList<>();
+                int cCount = Integer.parseInt(props.getProperty(prefix + "cond_count", "0"));
+                for (int j = 0; j < cCount; j++) {
+                    String cPrefix = prefix + "cond_" + j + "_";
+                    ConditionType cType = ConditionType.valueOf(props.getProperty(cPrefix + "type"));
+                    String cVal = props.getProperty(cPrefix + "val");
+                    conds.add(new RuleCondition(cType, cVal));
                 }
+                lvRules.getItems().add(new RenameRule(conds, action, find, replace));
+            } catch (Exception e) {
+                System.err.println("Failed to load rename rule " + i + ": " + e.getMessage());
             }
-            if (!app) return null;
+        }
+    }
 
-            File tf;
-            OperationType op;
-            if (cn.contains(File.separator) || (System.getProperty("os.name").toLowerCase().contains("win") && cn.contains(":"))) {
-                File pp = new File(cn);
-                tf = pp.isAbsolute() ? pp : new File(f.getParent(), cn);
-                op = cpy ? OperationType.CONVERT : OperationType.MOVE;
-            } else {
-                tf = new File(f.getParent(), cn);
-                op = OperationType.RENAME;
-            }
-
-            boolean ch = !tf.getAbsolutePath().equals(f.getAbsolutePath());
-            Map<String, String> pm = new HashMap<>();
-            if (op == OperationType.CONVERT) pm.put("action", "copy");
-            return new ChangeRecord(f.getName(), tf.getName(), f, ch, tf.getAbsolutePath(), op, pm, ExecStatus.PENDING);
-        }).filter(Objects::nonNull).collect(Collectors.toList());
+    @Override
+    public ScanTarget getTargetType() {
+        return ScanTarget.ALL;
     }
 
     @Override
@@ -190,9 +191,11 @@ public class AdvancedRenameStrategy extends AppStrategy {
         File s = rec.getFileHandle();
         File t = new File(rec.getNewPath());
         if (s.equals(t)) return;
-        if (rec.getOpType() == OperationType.CONVERT) {
+
+        if (rec.getOpType() == OperationType.CONVERT && "copy".equals(rec.getExtraParams().get("action"))) {
             if (!t.getParentFile().exists()) t.getParentFile().mkdirs();
-            if (s.isDirectory()) copyDirectory(s, t); else Files.copy(s.toPath(), t.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            if (s.isDirectory()) copyDirectory(s, t);
+            else Files.copy(s.toPath(), t.toPath(), StandardCopyOption.REPLACE_EXISTING);
         } else {
             if (!t.getParentFile().exists()) t.getParentFile().mkdirs();
             Files.move(s.toPath(), t.toPath(), StandardCopyOption.REPLACE_EXISTING);
@@ -202,20 +205,92 @@ public class AdvancedRenameStrategy extends AppStrategy {
     private void copyDirectory(File source, File target) throws IOException {
         Files.walk(source.toPath()).forEach(sourcePath -> {
             Path targetPath = target.toPath().resolve(source.toPath().relativize(sourcePath));
-            try { Files.copy(sourcePath, targetPath, StandardCopyOption.REPLACE_EXISTING); } catch (IOException e) { throw new UncheckedIOException(e); }
+            try {
+                Files.copy(sourcePath, targetPath, StandardCopyOption.REPLACE_EXISTING);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
         });
+    }
+
+    @Override
+    public List<ChangeRecord> analyze(List<ChangeRecord> inputRecords, List<File> roots, BiConsumer<Double, String> progressReporter) {
+        List<RenameRule> rules = pRules;
+        boolean isCopy = "复制 (Copy)".equals(pCrossDriveMode);
+        boolean pFile = (pProcessScopeIndex == 0 || pProcessScopeIndex == 2);
+        boolean pFolder = (pProcessScopeIndex == 1 || pProcessScopeIndex == 2);
+
+        int total = inputRecords.size();
+        AtomicInteger processed = new AtomicInteger(0);
+
+        return inputRecords.parallelStream().map(rec -> {
+            int curr = processed.incrementAndGet();
+            if (progressReporter != null && curr % 100 == 0) {
+                double p = (double) curr / total;
+                Platform.runLater(() -> progressReporter.accept(p, "规则计算: " + curr + "/" + total));
+            }
+
+            File currentVirtualFile = new File(rec.getNewPath());
+            if (!checkConditions(currentVirtualFile)) return rec;
+
+            boolean d = currentVirtualFile.isDirectory();
+            // 注意：Pipeline 中间状态的文件可能不存在，用 isDirectory 判断可能不准
+            // 如果是中间步骤，我们假设如果原始文件是目录，它也是目录
+            if (rec.getFileHandle().isDirectory()) d = true;
+            else if (rec.getFileHandle().isFile()) d = false;
+
+            if (d && !pFolder) return rec;
+            if (!d && !pFile) return rec;
+
+            String currentName = currentVirtualFile.getName();
+            boolean appliedAny = false;
+            for (RenameRule rule : rules) {
+                if (rule.matches(currentName)) {
+                    String temp = rule.apply(currentName);
+                    if (!temp.equals(currentName)) {
+                        currentName = temp;
+                        appliedAny = true;
+                    }
+                }
+            }
+
+            if (!appliedAny) return rec;
+
+            File parentDir = currentVirtualFile.getParentFile();
+            File targetFile;
+            OperationType newOp;
+
+            if (currentName.contains(File.separator) || (System.getProperty("os.name").toLowerCase().contains("win") && currentName.contains(":"))) {
+                File potentialPath = new File(currentName);
+                targetFile = potentialPath.isAbsolute() ? potentialPath : new File(parentDir, currentName);
+                newOp = isCopy ? OperationType.CONVERT : OperationType.MOVE;
+            } else {
+                targetFile = new File(parentDir, currentName);
+                newOp = OperationType.RENAME;
+            }
+
+            rec.setNewName(targetFile.getName());
+            rec.setNewPath(targetFile.getAbsolutePath());
+            rec.setChanged(true);
+            rec.setOpType(newOp);
+
+            if (newOp == OperationType.CONVERT) {
+                rec.getExtraParams().put("action", "copy");
+            }
+            return rec;
+        }).collect(Collectors.toList());
     }
 
     private void showRuleEditDialog(RenameRule existingRule) {
         Dialog<RenameRule> dialog = new Dialog<>();
-        dialog.setTitle(existingRule == null ? "添加重命名规则" : "编辑重命名规则");
-        dialog.setHeaderText("配置规则生效条件与替换逻辑");
-
-        ButtonType saveButtonType = new ButtonType("保存", ButtonBar.ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(saveButtonType, ButtonType.CANCEL);
+        dialog.setTitle(existingRule == null ? "添加规则" : "编辑规则");
+        ButtonType saveBtn = new ButtonType("保存", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(saveBtn, ButtonType.CANCEL);
 
         GridPane grid = new GridPane();
-        grid.setHgap(10); grid.setVgap(10); grid.setPadding(new Insets(20, 10, 10, 10));
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20));
 
         // Conditions
         ListView<RuleCondition> lvConds = new ListView<>();
@@ -226,7 +301,8 @@ public class AdvancedRenameStrategy extends AppStrategy {
 
         JFXComboBox<ConditionType> cbCondType = new JFXComboBox<>(FXCollections.observableArrayList(ConditionType.values()));
         cbCondType.getSelectionModel().select(0);
-        TextField txtCondVal = new TextField(); txtCondVal.setPromptText("条件值");
+        TextField txtCondVal = new TextField();
+        txtCondVal.setPromptText("条件值");
         JFXButton btnAddCond = new JFXButton("+");
         btnAddCond.setOnAction(e -> {
             if (!txtCondVal.getText().isEmpty()) {
@@ -243,49 +319,46 @@ public class AdvancedRenameStrategy extends AppStrategy {
         // Actions
         JFXComboBox<ActionType> cbAction = new JFXComboBox<>(FXCollections.observableArrayList(ActionType.values()));
         cbAction.getSelectionModel().select(0);
-
-        // Dynamic Fields
         TextField txtFind = new TextField();
+        txtFind.setPromptText("查找内容");
         TextField txtReplace = new TextField();
-        Label lblFind = new Label("参数 A:");
-        Label lblReplace = new Label("参数 B:");
+        txtReplace.setPromptText("替换内容");
 
-        cbAction.getSelectionModel().selectedItemProperty().addListener((obs, old, val) -> {
-            txtFind.setDisable(false); txtReplace.setDisable(false);
+        cbAction.getSelectionModel().selectedItemProperty().addListener((o, old, val) -> {
+            txtFind.setDisable(false);
+            txtReplace.setDisable(false);
             switch (val) {
-                case ADD_LETTER_PREFIX:
-                    lblFind.setText("忽略字符 (可选):"); txtFind.setPromptText("如: 'The '");
-                    lblReplace.setText("分隔符:"); txtReplace.setPromptText("默认: ' - '");
-                    if (txtReplace.getText().isEmpty()) txtReplace.setText(" - ");
+                case REPLACE_TEXT:
+                    txtFind.setPromptText("查找文本");
+                    txtReplace.setPromptText("替换为");
                     break;
-                case CLEAN_NOISE:
-                    lblFind.setText("额外干扰词 (逗号分隔):");
-                    txtFind.setPromptText("CD,Live (已内置常用符号)");
-                    lblReplace.setText("提示:"); txtReplace.setDisable(true);
-                    txtReplace.setPromptText("无需填写");
-                    break;
-                case BATCH_REMOVE:
-                    lblFind.setText("要移除的字符/词 (空格分隔):");
-                    txtFind.setPromptText("CD MP3 320k [ ]");
-                    lblReplace.setText("提示:"); txtReplace.setDisable(true);
-                    txtReplace.setPromptText("无需填写");
-                    break;
-                case REPLACE_TEXT: case REPLACE_REGEX:
-                    lblFind.setText("查找内容:"); txtFind.setPromptText("查找...");
-                    lblReplace.setText("替换为:"); txtReplace.setPromptText("替换...");
+                case REPLACE_REGEX:
+                    txtFind.setPromptText("正则 (Regex)");
+                    txtReplace.setPromptText("替换为");
                     break;
                 case PREPEND:
-                    lblFind.setText("无效:"); txtFind.setDisable(true);
-                    lblReplace.setText("前缀:"); txtReplace.setPromptText("要添加的前缀");
+                    txtFind.setDisable(true);
+                    txtReplace.setPromptText("前缀");
                     break;
                 case APPEND:
-                    lblFind.setText("无效:"); txtFind.setDisable(true);
-                    lblReplace.setText("后缀:"); txtReplace.setPromptText("要添加的后缀");
+                    txtFind.setDisable(true);
+                    txtReplace.setPromptText("后缀");
+                    break;
+                case ADD_LETTER_PREFIX:
+                    txtFind.setPromptText("忽略起始词 (可选)");
+                    txtReplace.setPromptText("分隔符 (默认 ' - ')");
+                    break;
+                case CLEAN_NOISE:
+                    txtFind.setPromptText("额外干扰词 (逗号分隔)");
+                    txtReplace.setDisable(true);
+                    break;
+                case BATCH_REMOVE:
+                    txtFind.setPromptText("要移除的词 (空格分隔)");
+                    txtReplace.setDisable(true);
                     break;
                 default:
-                    lblFind.setText("无效:"); txtFind.setDisable(true);
-                    lblReplace.setText("无效:"); txtReplace.setDisable(true);
-                    break;
+                    txtFind.setDisable(true);
+                    txtReplace.setDisable(true);
             }
         });
 
@@ -293,20 +366,21 @@ public class AdvancedRenameStrategy extends AppStrategy {
             cbAction.getSelectionModel().select(existingRule.actionType);
             txtFind.setText(existingRule.findStr);
             txtReplace.setText(existingRule.replaceStr);
-        } else {
-            cbAction.getSelectionModel().select(ActionType.REPLACE_TEXT);
         }
 
         grid.add(new Label("1. 前置条件:"), 0, 0);
         grid.add(new HBox(5, cbCondType, txtCondVal, btnAddCond, btnDelCond), 1, 0);
         grid.add(lvConds, 1, 1);
         grid.add(new Separator(), 0, 2, 2, 1);
-        grid.add(new Label("2. 执行动作:"), 0, 3); grid.add(cbAction, 1, 3);
-        grid.add(lblFind, 0, 4); grid.add(txtFind, 1, 4);
-        grid.add(lblReplace, 0, 5); grid.add(txtReplace, 1, 5);
+        grid.add(new Label("2. 执行动作:"), 0, 3);
+        grid.add(cbAction, 1, 3);
+        grid.add(new Label("参数 A:"), 0, 4);
+        grid.add(txtFind, 1, 4);
+        grid.add(new Label("参数 B:"), 0, 5);
+        grid.add(txtReplace, 1, 5);
 
         dialog.getDialogPane().setContent(grid);
-        dialog.setResultConverter(b -> b == saveButtonType ? new RenameRule(new ArrayList<>(condList), cbAction.getValue(), txtFind.getText(), txtReplace.getText()) : null);
+        dialog.setResultConverter(b -> b == saveBtn ? new RenameRule(new ArrayList<>(condList), cbAction.getValue(), txtFind.getText(), txtReplace.getText()) : null);
 
         dialog.showAndWait().ifPresent(r -> {
             if (existingRule != null) lvRules.getItems().set(lvRules.getItems().indexOf(existingRule), r);
@@ -314,17 +388,174 @@ public class AdvancedRenameStrategy extends AppStrategy {
         });
     }
 
-    class RuleListCell extends ListCell<RenameRule> {
-        @Override protected void updateItem(RenameRule item, boolean empty) {
+    enum ActionType {
+        REPLACE_TEXT("文本替换"), REPLACE_REGEX("正则替换"), PREPEND("前缀添加"), APPEND("后缀添加"),
+        TO_LOWER("转小写"), TO_UPPER("转大写"), TRIM("去空格"), ADD_LETTER_PREFIX("首字母前缀"),
+        CLEAN_NOISE("智能清理"), BATCH_REMOVE("批量移除");
+        private final String d;
+
+        ActionType(String d) {
+            this.d = d;
+        }
+
+        @Override
+        public String toString() {
+            return d;
+        }
+    }
+
+    // --- Helper Classes (Need to be static for standalone file) ---
+    static class RuleListCell extends ListCell<RenameRule> {
+        @Override
+        protected void updateItem(RenameRule item, boolean empty) {
             super.updateItem(item, empty);
-            if (empty || item == null) { setText(null); setGraphic(null); } else {
+            if (empty || item == null) {
+                setText(null);
+                setGraphic(null);
+            } else {
                 VBox v = new VBox(3);
                 String cond = item.conditions.isEmpty() ? "无条件" : item.conditions.stream().map(RuleCondition::toString).collect(Collectors.joining(" & "));
-                Label l1 = new Label("若: " + cond); l1.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 11px;");
-                Label l2 = new Label(item.getActionDesc()); l2.setStyle("-fx-font-weight: bold;");
-                v.getChildren().addAll(l1, l2); setGraphic(v);
-                setOnMouseClicked(e -> { if (e.getClickCount() == 2) showRuleEditDialog(item); });
+                Label l1 = new Label("若: " + cond);
+                l1.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 11px;");
+                Label l2 = new Label(item.getActionDesc());
+                l2.setStyle("-fx-font-weight: bold;");
+                v.getChildren().addAll(l1, l2);
+                setGraphic(v);
             }
+        }
+    }
+
+    static class RenameRule {
+        List<RuleCondition> conditions;
+        ActionType actionType;
+        String findStr;
+        String replaceStr;
+
+        public RenameRule(List<RuleCondition> c, ActionType a, String f, String r) {
+            conditions = c;
+            actionType = a;
+            findStr = f;
+            replaceStr = r;
+        }
+
+        public boolean matches(String s) {
+            if (conditions == null || conditions.isEmpty()) return true;
+            for (RuleCondition c : conditions)
+                if (!c.test(new File(s)))
+                    return false; // Condition test needs File but here we check string logic inside RuleCondition if possible, or adapt.
+            // Note: RuleCondition.test takes File. Here we are matching filename string.
+            // Simplified for this context: RenameRule conditions usually match filename string.
+            // Adapting RuleCondition to check String s:
+            for (RuleCondition c : conditions) {
+                // Temporary hack: RuleCondition expects File, but we have String name.
+                // We should construct a dummy file or overload test.
+                // Assuming RuleCondition.test logic mainly checks getName().
+                if (!c.test(new File(s))) return false;
+            }
+            return true;
+        }
+
+        public String apply(String s) {
+            String r = s;
+            String v = replaceStr == null ? "" : replaceStr;
+            try {
+                switch (actionType) {
+                    case REPLACE_TEXT:
+                        if (findStr != null && !findStr.isEmpty()) r = s.replace(findStr, v);
+                        break;
+                    case REPLACE_REGEX:
+                        if (findStr != null && !findStr.isEmpty()) r = s.replaceAll(findStr, v);
+                        break;
+                    case PREPEND:
+                        r = v + s;
+                        break;
+                    case APPEND:
+                        int d = s.lastIndexOf('.');
+                        if (d > 0) r = s.substring(0, d) + v + s.substring(d);
+                        else r = s + v;
+                        break;
+                    case TO_LOWER:
+                        r = s.toLowerCase();
+                        break;
+                    case TO_UPPER:
+                        r = s.toUpperCase();
+                        break;
+                    case TRIM:
+                        r = s.trim();
+                        break;
+                    case BATCH_REMOVE:
+                        if (findStr != null) for (String t : findStr.split(" ")) if (!t.isEmpty()) r = r.replace(t, "");
+                        r = r.trim();
+                        break;
+                    case CLEAN_NOISE:
+                        r = r.replaceAll("(?i)\\[(mqms|flac|mp3|wav|cue|log|iso|ape|dsf|dff).*?\\]", "");
+                        r = r.replaceAll("[《》]", "");
+                        if (findStr != null) for (String w : findStr.split("[,，、]"))
+                            if (!w.trim().isEmpty()) r = r.replace(w.trim(), "");
+                        r = r.replaceAll("\\s+", " ").trim();
+                        break;
+                    case ADD_LETTER_PREFIX:
+                        String core = s;
+                        if (findStr != null && !findStr.isEmpty() && s.toLowerCase().startsWith(findStr.toLowerCase()))
+                            core = s.substring(findStr.length()).trim();
+                        char first = getFirstValidChar(core);
+                        if (first != 0) {
+                            char py = getPinyinFirstLetter(first);
+                            if (py != 0) {
+                                String sep = v.isEmpty() ? " - " : v;
+                                String p = Character.toUpperCase(py) + sep;
+                                if (!s.startsWith(p)) r = p + s;
+                            }
+                        }
+                        break;
+                }
+            } catch (Exception e) {
+            }
+            return r;
+        }
+
+        public String getActionDesc() {
+            return actionType + " " + (findStr != null ? findStr : "") + (replaceStr != null && !replaceStr.isEmpty() ? " -> " + replaceStr : "");
+        }
+
+        private char getFirstValidChar(String s) {
+            for (char c : s.toCharArray()) if (Character.isLetterOrDigit(c) || (c >= 0x4e00 && c <= 0x9fa5)) return c;
+            return 0;
+        }
+
+        private char getPinyinFirstLetter(char c) {
+            if (c >= 'a' && c <= 'z') return (char) (c - 32);
+            if (c >= 'A' && c <= 'Z') return c;
+            try {
+                byte[] b = String.valueOf(c).getBytes("GBK");
+                if (b.length < 2) return 0;
+                int code = (b[0] & 0xFF) * 256 + (b[1] & 0xFF);
+                if (code >= 45217 && code <= 45252) return 'A';
+                if (code >= 45253 && code <= 45760) return 'B';
+                if (code >= 45761 && code <= 46317) return 'C';
+                if (code >= 46318 && code <= 46825) return 'D';
+                if (code >= 46826 && code <= 47009) return 'E';
+                if (code >= 47010 && code <= 47296) return 'F';
+                if (code >= 47297 && code <= 47613) return 'G';
+                if (code >= 47614 && code <= 48118) return 'H';
+                if (code >= 48119 && code <= 49061) return 'J';
+                if (code >= 49062 && code <= 49323) return 'K';
+                if (code >= 49324 && code <= 49895) return 'L';
+                if (code >= 49896 && code <= 50370) return 'M';
+                if (code >= 50371 && code <= 50613) return 'N';
+                if (code >= 50614 && code <= 50621) return 'O';
+                if (code >= 50622 && code <= 50905) return 'P';
+                if (code >= 50906 && code <= 51386) return 'Q';
+                if (code >= 51387 && code <= 51445) return 'R';
+                if (code >= 51446 && code <= 52217) return 'S';
+                if (code >= 52218 && code <= 52697) return 'T';
+                if (code >= 52698 && code <= 52979) return 'W';
+                if (code >= 52980 && code <= 53688) return 'X';
+                if (code >= 53689 && code <= 54480) return 'Y';
+                if (code >= 54481 && code <= 55289) return 'Z';
+            } catch (Exception e) {
+            }
+            return 0;
         }
     }
 }

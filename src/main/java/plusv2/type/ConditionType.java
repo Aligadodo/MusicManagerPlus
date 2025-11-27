@@ -1,22 +1,20 @@
 package plusv2.type;
 
 public enum ConditionType {
-    CONTAINS("包含文本"),
-    NOT_CONTAINS("不包含文本"),
-    STARTS_WITH("以...开头"),
-    ENDS_WITH("以...结尾"),
-    LENGTH_GT("长度大于"),
-    LENGTH_LT("长度小于"),
-    REGEX_MATCH("正则匹配");
+    // 文本匹配
+    CONTAINS("文件名包含"),
+    NOT_CONTAINS("文件名不含"),
+    STARTS_WITH("文件名开头"),
+    ENDS_WITH("文件名结尾"),
+    REGEX_MATCH("正则匹配"),
 
-    private final String desc;
+    // 属性匹配 (New Features)
+    FILE_SIZE_GT("文件大小 > (MB)"),
+    FILE_SIZE_LT("文件大小 < (MB)"),
+    PARENT_DIR_IS("父文件夹名为"),
+    FILE_EXT_IS("文件扩展名是");
 
-    ConditionType(String desc) {
-        this.desc = desc;
-    }
-
-    @Override
-    public String toString() {
-        return desc;
-    }
+    private final String description;
+    ConditionType(String description) { this.description = description; }
+    @Override public String toString() { return description; }
 }

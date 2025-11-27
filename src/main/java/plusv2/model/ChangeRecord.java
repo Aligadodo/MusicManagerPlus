@@ -9,62 +9,38 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
-// 使用 NoArgsConstructor 配合手动全参构造，避免 @AllArgsConstructor 隐患
 @Data
 @NoArgsConstructor
 public class ChangeRecord {
     private String originalName;
     private String newName;
-    private File fileHandle;
+    private File fileHandle; // 原始文件句柄
     private boolean changed;
-    private String newPath;
+    private String newPath;  // 最终路径
     private OperationType opType;
-    private Map<String, String> extraParams;
+    private Map<String, String> extraParams = new HashMap<>();
     private ExecStatus status = ExecStatus.PENDING;
 
-    // 全参数构造方法
-    public ChangeRecord(String originalName, String newName, File fileHandle,
-                        boolean changed, String newPath, OperationType opType,
-                        Map<String, String> extraParams, ExecStatus status) {
+    // 链式处理中的中间状态文件（如果不为空，说明这是上一步产生的临时状态）
+    private File intermediateFile;
+
+    public ChangeRecord(String o, String n, File f, boolean c, String p, OperationType op) {
+        this.originalName=o; this.newName=n; this.fileHandle=f; this.changed=c; this.newPath=p; this.opType=op;
+    }
+
+    public ChangeRecord(String originalName, String name, File fileHandle, boolean b, String absolutePath, OperationType operationType, Map<String, String> params, ExecStatus status) {
         this.originalName = originalName;
-        this.newName = newName;
+        this.newName = name;
         this.fileHandle = fileHandle;
-        this.changed = changed;
-        this.newPath = newPath;
-        this.opType = opType;
-        this.extraParams = extraParams;
+        this.changed = b;
+        this.newPath = absolutePath;
+        this.opType = operationType;
+        this.extraParams = params;
         this.status = status;
     }
 
-    // 便捷构造方法
-    public ChangeRecord(String oName, String nName, File f, boolean c, String nPath, OperationType type) {
-        this(oName, nName, f, c, nPath, type, new HashMap<>(), ExecStatus.PENDING);
-    }
-
-    // 带参数的便捷构造方法
-    public ChangeRecord(String oName, String nName, File f, boolean c, String nPath, OperationType type, Map<String, String> params) {
-        this(oName, nName, f, c, nPath, type, params, ExecStatus.PENDING);
-    }
-
-    public ChangeRecord(String originalName, String newName, File fileHandle, boolean changed, String newPath, boolean isMove) {
-        this.originalName = originalName;
-        this.newName = newName;
-        this.fileHandle = fileHandle;
-        this.changed = changed;
-        this.newPath = newPath;
-        if (isMove) {
-            this.opType = OperationType.MOVE;
-        } else {
-            this.opType = OperationType.RENAME;
-        }
-    }
-
-    public String getOriginalPath() {
-        return fileHandle != null ? fileHandle.getAbsolutePath() : "";
-    }
-
-    @Override
-    public String toString() {
-        return originalName;
+    // 获取当前应该处理的“源”文件（可能是原始文件，也可能是链式处理中上一步生成的文件）
+    public File getCurrentSource() {
+        return intermediateFile != null ? intermediateFile : fileHandle;
     }
 }

@@ -12,35 +12,40 @@ import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
 import javafx.scene.control.*;
-import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import org.controlsfx.control.CheckComboBox;
 import plusv2.model.ChangeRecord;
+import plusv2.model.RuleCondition;
 import plusv2.plugins.*;
+import plusv2.type.ConditionType;
 import plusv2.type.ExecStatus;
 import plusv2.type.OperationType;
-import plusv2.type.ScanTarget;
 
 import java.awt.*;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.*;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -50,45 +55,62 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-
+/**
+ * Echo Music File Manager v12.0 (UX Enhanced)
+ * 包含高级筛选、统计展示、优化的异步预览与执行流程
+ */
 public class MusicFileManagerApp extends Application {
-    private final ConcurrentLinkedQueue<String> logQueue = new ConcurrentLinkedQueue<>();
-    private final Properties appProps = new Properties();
-    // Data Models
-    private final ObservableList<ChangeRecord> changePreviewList = FXCollections.observableArrayList();
-    private final List<File> sourceRootDirs = new ArrayList<>();
-    private final ObservableList<String> logItems = FXCollections.observableArrayList();
-    private final List<AppStrategy> strategies = new ArrayList<>();
-    private File configFile;
+
     private Stage primaryStage;
-    // UI Controls
-    private TreeView<File> sourceTree; // 左侧源目录树
-    private TreeTableView<ChangeRecord> previewTable; // 中间预览表(升级)
-    // Global Settings Controls
+    private Properties appProps = new Properties();
+    private File lastConfigFile = new File(System.getProperty("user.home"), ".echo_music_manager_v14.config");
+
+    // --- 核心数据模型 ---
+    private ObservableList<File> sourceRoots = FXCollections.observableArrayList();
+    private ObservableList<AppStrategy> pipelineStrategies = FXCollections.observableArrayList();
+    // 全量变更记录
+    private List<ChangeRecord> fullChangeList = new ArrayList<>();
+
+    // --- UI 组件 ---
+    private TabPane mainTabPane;
+    private Tab tabCompose, tabPreview, tabLog;
+
+    // Tab 1: 编排
+    private ListView<File> sourceListView;
+    private ListView<AppStrategy> pipelineListView;
+    private VBox configContainer;
+    private JFXComboBox<AppStrategy> cbStrategyTemplates;
     private JFXComboBox<String> cbRecursionMode;
     private Spinner<Integer> spRecursionDepth;
     private CheckComboBox<String> ccbFileTypes;
-    private CheckBox chkSaveLog;
-    private CheckBox chkHideUnchanged;
-    // Logging
-    private ListView<String> logView;
-    private AnimationTimer uiUpdater;
-    private PrintWriter fileLogger;
-    // Progress
-    private VBox progressBox;
+
+    // Tab 2: 预览与筛选
+    private TreeTableView<ChangeRecord> previewTable;
     private ProgressBar mainProgressBar;
     private Label progressLabel;
     private Label etaLabel;
-    // Strategies & Actions
-    private JFXComboBox<AppStrategy> cbStrategy;
-    private VBox strategyConfigContainer;
-    private JFXButton btnPreview, btnExecute, btnCancel;
+    private Label statsLabel;
+    private TextField txtSearchFilter;
+    private ComboBox<String> cbStatusFilter;
+    private JFXButton btnExecute, btnStop, btnGoPreview;
+    private CheckBox chkHideUnchanged;
+    private VBox progressBox; // 确保定义
 
-    // Task Management
-    private ExecutorService currentExecutor;
-    private Task<?> currentTask; // 当前运行的主任务(扫描/预览/执行)
+    // Tab 3: 日志
+    private TextArea logArea;
+    private ConcurrentLinkedQueue<String> logQueue = new ConcurrentLinkedQueue<>();
+    private CheckBox chkSaveLog;
+    private PrintWriter fileLogger;
+    private AnimationTimer uiUpdater;
+
+    // 任务管理
+    private ExecutorService executorService;
+    private Task<?> currentTask;
     private volatile boolean isTaskRunning = false;
     private int executionThreadCount = 1;
+
+    // 策略原型
+    private List<AppStrategy> strategyPrototypes = new ArrayList<>();
 
     public static void main(String[] args) {
         launch(args);
@@ -97,852 +119,559 @@ public class MusicFileManagerApp extends Application {
     @Override
     public void start(Stage primaryStage) {
         this.primaryStage = primaryStage;
-        primaryStage.setTitle("Echo - 音乐文件管理专家 v10.0 (Ultimate)");
+        primaryStage.setTitle("Echo - 音乐文件管理专家 v14.2");
 
-        initStrategies();
+        initStrategyPrototypes();
+
         Scene scene = new Scene(createMainLayout(), 1400, 950);
-        scene.getRoot().setStyle("-fx-font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; -fx-font-size: 14px;");
+        if (getClass().getResource("/css/jfoenix-components.css") != null) {
+            scene.getStylesheets().add(getClass().getResource("/css/jfoenix-components.css").toExternalForm());
+        }
 
         primaryStage.setScene(scene);
-
-        // 默认不自动加载，让用户手动选择或加载最后一次
-        // loadConfigFromFile(new File(...));
-
         primaryStage.setOnCloseRequest(e -> {
-            cancelTask();
+            saveGlobalConfig(lastConfigFile);
+            forceStop();
             closeFileLogger();
             Platform.exit();
             System.exit(0);
         });
 
-        startUiUpdater();
+        startLogUpdater();
+        // 延迟加载配置以确保UI组件已就绪
+        Platform.runLater(() -> loadGlobalConfig(lastConfigFile));
+
         primaryStage.show();
     }
 
-    // --- UI Construction ---
+    // ==================== 1. UI 构建 ====================
 
     private BorderPane createMainLayout() {
         BorderPane root = new BorderPane();
+        // 菜单
+        MenuBar menuBar = new MenuBar();
+        Menu fileMenu = new Menu("文件");
+        MenuItem loadItem = new MenuItem("加载配置..."); loadItem.setOnAction(e -> loadConfigAction());
+        MenuItem saveItem = new MenuItem("保存配置..."); saveItem.setOnAction(e -> saveConfigAction());
+        MenuItem exitItem = new MenuItem("退出"); exitItem.setOnAction(e -> { forceStop(); primaryStage.close(); });
+        fileMenu.getItems().addAll(loadItem, saveItem, new SeparatorMenuItem(), exitItem);
+        menuBar.getMenus().add(fileMenu);
+        root.setTop(menuBar);
 
-        // 1. Top Menu & Toolbar
-        root.setTop(createTopBar());
+        // 标签页
+        mainTabPane = new TabPane();
+        mainTabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
+        createComposeTab();
+        createPreviewTab();
+        createLogTab();
+        mainTabPane.getTabs().addAll(tabCompose, tabPreview, tabLog);
+        root.setCenter(mainTabPane);
 
-        // 2. Main Split: Left (Source) | Center (Action & Preview)
-        SplitPane mainSplit = new SplitPane();
-        mainSplit.getItems().addAll(createLeftPanel(), createCenterPanel());
-        mainSplit.setDividerPositions(0.25);
-        root.setCenter(mainSplit);
-
-        // 3. Bottom: Status & Log
-        root.setBottom(createBottomPanel());
-
+        // 状态栏
+        HBox statusBar = new HBox(10); statusBar.setPadding(new Insets(5));
+        statusBar.setStyle("-fx-background-color: #f0f0f0; -fx-border-color: #ccc; -fx-border-width: 1 0 0 0;");
+        statusBar.getChildren().add(new Label("Ready."));
+        root.setBottom(statusBar);
         return root;
     }
 
-    private VBox createTopBar() {
-        MenuBar menuBar = new MenuBar();
-        Menu fileMenu = new Menu("文件 (File)");
-        MenuItem loadConfigItem = new MenuItem("加载配置...");
-        loadConfigItem.setOnAction(e -> loadConfigAction());
-        MenuItem saveConfigItem = new MenuItem("保存当前配置...");
-        saveConfigItem.setOnAction(e -> saveConfigAction());
-        MenuItem exitItem = new MenuItem("退出");
-        exitItem.setOnAction(e -> primaryStage.close());
-        fileMenu.getItems().addAll(loadConfigItem, saveConfigItem, new SeparatorMenuItem(), exitItem);
-        menuBar.getMenus().add(fileMenu);
+    private void createComposeTab() {
+        tabCompose = new Tab("1. 任务编排");
+        BorderPane content = new BorderPane(); content.setPadding(new Insets(10));
 
-        return new VBox(menuBar);
+        // Left: 源文件
+        VBox leftBox = new VBox(10); leftBox.setPadding(new Insets(0, 10, 0, 0)); leftBox.setPrefWidth(320);
+        Label lblSource = new Label("源目录"); lblSource.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
+        sourceListView = new ListView<>(sourceRoots);
+        sourceListView.setPlaceholder(new Label("拖拽文件夹到此处"));
+        sourceListView.setCellFactory(p -> new ListCell<File>() { @Override protected void updateItem(File i, boolean e) { super.updateItem(i, e); if(e||i==null)setText(null); else { setText(i.getAbsolutePath()); setTooltip(new Tooltip(i.getAbsolutePath())); } } });
+        sourceListView.setOnDragOver(e -> { if(e.getDragboard().hasFiles()) e.acceptTransferModes(TransferMode.COPY_OR_MOVE); e.consume(); });
+        sourceListView.setOnDragDropped(e -> { if(e.getDragboard().hasFiles()) { for(File f : e.getDragboard().getFiles()) if(f.isDirectory() && !sourceRoots.contains(f)) sourceRoots.add(f); invalidatePreview("源变更"); } e.setDropCompleted(true); e.consume(); });
+
+        HBox srcBtns = new HBox(5);
+        JFXButton btnAddSrc = new JFXButton("添加"); btnAddSrc.setOnAction(e -> addDirectoryAction());
+        JFXButton btnRemSrc = new JFXButton("移除"); btnRemSrc.setOnAction(e -> { if(sourceListView.getSelectionModel().getSelectedItem()!=null) { sourceRoots.remove(sourceListView.getSelectionModel().getSelectedItem()); invalidatePreview("源变更"); } });
+        styleBtn(btnAddSrc, "#3498db"); styleBtn(btnRemSrc, "#e74c3c"); srcBtns.getChildren().addAll(btnAddSrc, btnRemSrc);
+
+        VBox filtersBox = new VBox(8); filtersBox.setStyle("-fx-background-color: #f9f9f9; -fx-padding: 10; -fx-border-color: #ddd; -fx-border-radius: 4;");
+        cbRecursionMode = new JFXComboBox<>(FXCollections.observableArrayList("仅当前目录", "递归所有子目录", "指定目录深度")); cbRecursionMode.getSelectionModel().select(1);
+        cbRecursionMode.getSelectionModel().selectedItemProperty().addListener((o,old,v)->invalidatePreview("递归变更"));
+        spRecursionDepth = new Spinner<>(1, 20, 2); spRecursionDepth.setEditable(true); spRecursionDepth.setPrefWidth(80);
+        spRecursionDepth.disableProperty().bind(cbRecursionMode.getSelectionModel().selectedItemProperty().isNotEqualTo("指定目录深度"));
+        spRecursionDepth.valueProperty().addListener((o,old,v)->invalidatePreview("递归变更"));
+        ccbFileTypes = new CheckComboBox<>(FXCollections.observableArrayList("mp3","flac","wav","m4a","ape","dsf","dff","dts","iso","jpg","png","nfo","cue","tak","tta","wv","wma","aac","ogg","opus"));
+        ccbFileTypes.getCheckModel().checkAll(); ccbFileTypes.setMaxWidth(Double.MAX_VALUE);
+        ccbFileTypes.getCheckModel().getCheckedItems().addListener((ListChangeListener<String>) c -> invalidatePreview("类型变更"));
+        filtersBox.getChildren().addAll(new Label("递归:"), new HBox(5, cbRecursionMode, spRecursionDepth), new Label("类型:"), ccbFileTypes);
+        leftBox.getChildren().addAll(lblSource, sourceListView, srcBtns, new Separator(), new Label("全局筛选:"), filtersBox);
+
+        // Center: 策略流水线
+        SplitPane centerSplit = new SplitPane();
+        VBox pipeBox = new VBox(10); pipeBox.setPadding(new Insets(0, 10, 0, 10));
+        Label lblPipe = new Label("任务流水线"); lblPipe.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
+        pipelineListView = new ListView<>(pipelineStrategies);
+        pipelineListView.setCellFactory(p -> new ListCell<AppStrategy>() { @Override protected void updateItem(AppStrategy i, boolean e) { super.updateItem(i, e); if(e||i==null) setText(null); else setText((getIndex()+1) + ". " + i.getName()); } });
+        pipelineListView.getSelectionModel().selectedItemProperty().addListener((o,old,newVal) -> refreshConfigPanel(newVal));
+
+        HBox pipeTools = new HBox(5);
+        cbStrategyTemplates = new JFXComboBox<>(FXCollections.observableArrayList(strategyPrototypes)); cbStrategyTemplates.setPromptText("选择功能..."); cbStrategyTemplates.setPrefWidth(200);
+        cbStrategyTemplates.setConverter(new javafx.util.StringConverter<AppStrategy>() { @Override public String toString(AppStrategy o) { return o.getName(); } @Override public AppStrategy fromString(String s) { return null; } });
+        JFXButton btnAddStep = new JFXButton("添加"); styleBtn(btnAddStep, "#2ecc71"); btnAddStep.setOnAction(e -> addStrategyStep(null));
+        JFXButton btnRemStep = new JFXButton("删除"); styleBtn(btnRemStep, "#e74c3c"); btnRemStep.setOnAction(e -> { if(pipelineListView.getSelectionModel().getSelectedItem()!=null) { pipelineStrategies.remove(pipelineListView.getSelectionModel().getSelectedItem()); configContainer.getChildren().clear(); invalidatePreview("步骤移除"); } });
+        pipeTools.getChildren().addAll(cbStrategyTemplates, btnAddStep, btnRemStep);
+        pipeBox.getChildren().addAll(lblPipe, pipelineListView, pipeTools);
+
+        // Right: 参数配置
+        VBox configBox = new VBox(10); configBox.setPadding(new Insets(0, 0, 0, 10));
+        Label lblConfig = new Label("参数配置"); lblConfig.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
+        configContainer = new VBox(10); configContainer.setStyle("-fx-background-color: white; -fx-padding: 15;");
+        ScrollPane scrollConfig = new ScrollPane(configContainer); scrollConfig.setFitToWidth(true); scrollConfig.setStyle("-fx-background-color: transparent; -fx-border-color: #ddd;");
+        configBox.getChildren().addAll(lblConfig, scrollConfig); VBox.setVgrow(scrollConfig, Priority.ALWAYS);
+
+        centerSplit.getItems().addAll(pipeBox, configBox); centerSplit.setDividerPositions(0.4);
+
+        HBox bottomBox = new HBox(10); bottomBox.setAlignment(Pos.CENTER_RIGHT); bottomBox.setPadding(new Insets(10, 0, 0, 0));
+        btnGoPreview = new JFXButton("下一步：生成预览 >"); styleBtn(btnGoPreview, "#f39c12");
+        btnGoPreview.setOnAction(e -> runPipelineAnalysis());
+        bottomBox.getChildren().add(btnGoPreview);
+
+        content.setLeft(leftBox); content.setCenter(centerSplit); content.setBottom(bottomBox);
+        tabCompose.setContent(content);
     }
 
-    private VBox createLeftPanel() {
-        VBox box = new VBox(10);
-        box.setPadding(new Insets(10));
-        box.setStyle("-fx-background-color: #f4f4f4; -fx-border-color: #ddd; -fx-border-width: 0 1 0 0;");
+    private void createPreviewTab() {
+        tabPreview = new Tab("2. 预览与执行");
+        VBox root = new VBox(10); root.setPadding(new Insets(10));
 
-        Label title = new Label("源目录管理");
-        title.setFont(Font.font("Segoe UI", 16));
-        title.setStyle("-fx-font-weight: bold;");
+        HBox actionBar = new HBox(15); actionBar.setAlignment(Pos.CENTER_LEFT);
+        btnExecute = new JFXButton("执行变更"); styleBtn(btnExecute, "#27ae60"); btnExecute.setDisable(true); btnExecute.setOnAction(e -> runPipelineExecution());
+        btnStop = new JFXButton("停止"); styleBtn(btnStop, "#e74c3c"); btnStop.setDisable(true); btnStop.setOnAction(e -> forceStop());
 
-        Label subHint = new Label("支持拖拽文件夹到此处");
-        subHint.setTextFill(Color.GRAY);
-        subHint.setFont(Font.font(12));
+        HBox filterBox = new HBox(10); filterBox.setAlignment(Pos.CENTER_LEFT);
+        txtSearchFilter = new TextField(); txtSearchFilter.setPromptText("搜索名称..."); txtSearchFilter.textProperty().addListener((o, old, v) -> refreshPreviewTableFilter());
+        cbStatusFilter = new ComboBox<>(FXCollections.observableArrayList("全部", "已变更", "未变更", "失败", "成功")); cbStatusFilter.getSelectionModel().select(0); cbStatusFilter.valueProperty().addListener((o, old, v) -> refreshPreviewTableFilter());
+        chkHideUnchanged = new CheckBox("仅显示变更"); chkHideUnchanged.setSelected(true); chkHideUnchanged.selectedProperty().addListener((o, old, v) -> refreshPreviewTableFilter());
+        filterBox.getChildren().addAll(new Label("筛选:"), txtSearchFilter, cbStatusFilter, chkHideUnchanged);
 
-        sourceTree = new TreeView<>();
-        sourceTree.setShowRoot(true);
-        VBox.setVgrow(sourceTree, Priority.ALWAYS);
+        Region spacer = new Region(); HBox.setHgrow(spacer, Priority.ALWAYS);
+        HBox statsBar = new HBox(15); statsBar.setAlignment(Pos.CENTER_LEFT);
+        progressLabel = new Label("等待"); etaLabel = new Label(""); statsLabel = new Label("0/0");
+        mainProgressBar = new ProgressBar(0); mainProgressBar.setPrefWidth(150);
 
-        // 初始化根节点
-        refreshLeftTree();
+        // 确保 progressBox 被初始化
+        progressBox = new VBox();
+        // 这里我们将进度条组件放入 statsBar 布局
+        statsBar.getChildren().addAll(new Label("进度:"), mainProgressBar, progressLabel, etaLabel, new Separator(javafx.geometry.Orientation.VERTICAL), statsLabel);
 
-        // 拖拽支持
-        sourceTree.setOnDragOver(event -> {
-            if (event.getGestureSource() != sourceTree && event.getDragboard().hasFiles()) {
-                event.acceptTransferModes(TransferMode.COPY_OR_MOVE);
-            }
-            event.consume();
-        });
+        actionBar.getChildren().addAll(btnExecute, btnStop, spacer, filterBox);
 
-        sourceTree.setOnDragDropped(event -> {
-            Dragboard db = event.getDragboard();
-            boolean success = false;
-            if (db.hasFiles()) {
-                for (File file : db.getFiles()) {
-                    if (file.isDirectory() && !sourceRootDirs.contains(file)) {
-                        sourceRootDirs.add(file);
-                    }
+        previewTable = new TreeTableView<>(); previewTable.setShowRoot(false); previewTable.setColumnResizePolicy(TreeTableView.CONSTRAINED_RESIZE_POLICY); VBox.setVgrow(previewTable, Priority.ALWAYS);
+        setupPreviewTable();
+        root.getChildren().addAll(actionBar, statsBar, previewTable);
+        tabPreview.setContent(root);
+    }
+
+    private void createLogTab() {
+        tabLog = new Tab("3. 运行日志");
+        VBox root = new VBox(10); root.setPadding(new Insets(10));
+        HBox controls = new HBox(10); controls.setAlignment(Pos.CENTER_LEFT);
+        chkSaveLog = new CheckBox("输出日志到文件"); JFXButton btnClear = new JFXButton("清空"); btnClear.setOnAction(e -> logArea.clear());
+        Region s = new Region(); HBox.setHgrow(s, Priority.ALWAYS); controls.getChildren().addAll(chkSaveLog, s, btnClear);
+        logArea = new TextArea(); logArea.setEditable(false); logArea.setFont(Font.font("Consolas", 12)); VBox.setVgrow(logArea, Priority.ALWAYS);
+        root.getChildren().addAll(controls, logArea);
+        tabLog.setContent(root);
+    }
+
+    // ==================== 2. 策略逻辑 ====================
+
+    private void initStrategyPrototypes() {
+        strategyPrototypes.add(new AdvancedRenameStrategy());
+        strategyPrototypes.add(new AudioConverterStrategy());
+        strategyPrototypes.add(new FileMigrateStrategy());
+        strategyPrototypes.add(new AlbumDirNormalizeStrategy());
+        strategyPrototypes.add(new TrackNumberStrategy());
+        strategyPrototypes.add(new CueSplitterStrategy());
+    }
+
+    private void addStrategyStep(Properties config) {
+        AppStrategy template = cbStrategyTemplates.getValue();
+        if (template != null) {
+            try {
+                AppStrategy newStep = template.getClass().getDeclaredConstructor().newInstance();
+                newStep.setContext(this);
+                if (config != null) {
+                    // 未来扩展：支持传入具体配置
                 }
-                refreshLeftTree();
-                success = true;
-            }
-            event.setDropCompleted(success);
-            event.consume();
-        });
+                pipelineStrategies.add(newStep);
+                pipelineListView.getSelectionModel().select(newStep);
+                invalidatePreview("添加步骤");
+            } catch (Exception e) { log("添加失败: " + e.getMessage()); }
+        }
+    }
 
-        // 单元格渲染 & 右键菜单
-        sourceTree.setCellFactory(tv -> {
-            TreeCell<File> cell = new TreeCell<File>() {
-                @Override
-                protected void updateItem(File item, boolean empty) {
-                    super.updateItem(item, empty);
-                    if (empty || item == null) {
-                        setText(null);
-                        setGraphic(null);
-                    } else {
-                        if (item.getPath().equals("ALL_ROOTS")) {
-                            setText("📚 所有源目录 (" + sourceRootDirs.size() + ")");
-                            setStyle("-fx-font-weight: bold;");
-                        } else {
-                            setText((item.isDirectory() ? "📁 " : "📄 ") + item.getName());
-                            setTooltip(new Tooltip(item.getAbsolutePath()));
-                            setStyle("");
+    private void refreshConfigPanel(AppStrategy strategy) {
+        configContainer.getChildren().clear();
+        if (strategy == null) return;
+
+        Label title = new Label(strategy.getName());
+        title.setFont(Font.font("Segoe UI", FontWeight.BOLD, 16));
+
+        Node cfgNode = strategy.getConfigNode();
+        if (cfgNode == null) cfgNode = new Label("此功能无需配置");
+
+        TitledPane tpCond = new TitledPane("前置过滤条件", createConditionsUI(strategy));
+        tpCond.setExpanded(false);
+
+        configContainer.getChildren().addAll(title, new Separator(), tpCond, new Label("参数配置:"), cfgNode);
+    }
+
+    private Node createConditionsUI(AppStrategy strategy) {
+        VBox box = new VBox(5);
+        ListView<RuleCondition> lv = new ListView<>(FXCollections.observableArrayList(strategy.getGlobalConditions()));
+        lv.setPrefHeight(100);
+        HBox input = new HBox(5);
+        ComboBox<ConditionType> cbType = new ComboBox<>(FXCollections.observableArrayList(ConditionType.values())); cbType.getSelectionModel().select(0);
+        TextField txtVal = new TextField(); txtVal.setPromptText("值");
+        Button btnAdd = new Button("+");
+        btnAdd.setOnAction(e -> { if(!txtVal.getText().isEmpty()){ strategy.getGlobalConditions().add(new RuleCondition(cbType.getValue(), txtVal.getText())); lv.getItems().setAll(strategy.getGlobalConditions()); invalidatePreview("添加条件"); } });
+        Button btnDel = new Button("-");
+        btnDel.setOnAction(e -> { RuleCondition s = lv.getSelectionModel().getSelectedItem(); if(s!=null){ strategy.getGlobalConditions().remove(s); lv.getItems().setAll(strategy.getGlobalConditions()); invalidatePreview("移除条件"); } });
+        input.getChildren().addAll(cbType, txtVal, btnAdd, btnDel);
+        box.getChildren().addAll(lv, input);
+        return box;
+    }
+
+    // ==================== 3. 配置持久化 ====================
+
+    private void saveConfigAction() { FileChooser fc=new FileChooser(); File f=fc.showSaveDialog(primaryStage); if(f!=null) saveGlobalConfig(f); }
+    private void loadConfigAction() { FileChooser fc=new FileChooser(); File f=fc.showOpenDialog(primaryStage); if(f!=null) loadGlobalConfig(f); }
+
+    private void saveGlobalConfig(File file) {
+        try (FileOutputStream fos = new FileOutputStream(file)) {
+            Properties props = new Properties();
+            props.setProperty("g_recMode", String.valueOf(cbRecursionMode.getSelectionModel().getSelectedIndex()));
+            props.setProperty("g_recDepth", String.valueOf(spRecursionDepth.getValue()));
+            if (!sourceRoots.isEmpty()) {
+                String paths = sourceRoots.stream().map(File::getAbsolutePath).collect(Collectors.joining("||"));
+                props.setProperty("g_sources", paths);
+            }
+            props.setProperty("pipeline.size", String.valueOf(pipelineStrategies.size()));
+            for (int i = 0; i < pipelineStrategies.size(); i++) {
+                AppStrategy s = pipelineStrategies.get(i);
+                Properties strategyProps = new Properties();
+                s.saveConfig(strategyProps);
+                String prefix = "pipeline." + i + ".";
+                props.setProperty(prefix + "class", s.getClass().getName());
+                for (String key : strategyProps.stringPropertyNames()) {
+                    props.setProperty(prefix + "param." + key, strategyProps.getProperty(key));
+                }
+            }
+            props.store(fos, "Config");
+            log("配置已保存至: " + file.getName());
+        } catch (Exception e) { log("保存失败: " + e.getMessage()); }
+    }
+
+    private void loadGlobalConfig(File file) {
+        if (!file.exists()) return;
+        try (FileInputStream fis = new FileInputStream(file)) {
+            Properties props = new Properties();
+            props.load(fis);
+            if (props.containsKey("g_recMode")) cbRecursionMode.getSelectionModel().select(Integer.parseInt(props.getProperty("g_recMode")));
+            if (props.containsKey("g_recDepth")) spRecursionDepth.getValueFactory().setValue(Integer.parseInt(props.getProperty("g_recDepth")));
+            String paths = props.getProperty("g_sources");
+            if (paths != null && !paths.isEmpty()) {
+                sourceRoots.clear();
+                for (String p : paths.split("\\|\\|")) { File f = new File(p); if (f.exists()) sourceRoots.add(f); }
+            }
+            pipelineStrategies.clear();
+            configContainer.getChildren().clear();
+            int size = Integer.parseInt(props.getProperty("pipeline.size", "0"));
+            for (int i = 0; i < size; i++) {
+                String prefix = "pipeline." + i + ".";
+                String className = props.getProperty(prefix + "class");
+                if (className == null) continue;
+                try {
+                    Class<?> clazz = Class.forName(className);
+                    AppStrategy strategy = (AppStrategy) clazz.getDeclaredConstructor().newInstance();
+                    strategy.setContext(this);
+                    Properties strategyProps = new Properties();
+                    String paramPrefix = prefix + "param.";
+                    for (String key : props.stringPropertyNames()) {
+                        if (key.startsWith(paramPrefix)) {
+                            strategyProps.setProperty(key.substring(paramPrefix.length()), props.getProperty(key));
                         }
                     }
-                }
-            };
-
-            ContextMenu cm = new ContextMenu();
-            MenuItem removeItem = new MenuItem("移除此目录");
-            removeItem.setOnAction(e -> {
-                if (cell.getItem() != null && !cell.getItem().getPath().equals("ALL_ROOTS")) {
-                    sourceRootDirs.remove(cell.getItem());
-                    refreshLeftTree();
-                }
-            });
-            MenuItem openItem = new MenuItem("打开文件夹");
-            openItem.setOnAction(e -> openFileInSystem(cell.getItem()));
-
-            cm.getItems().addAll(openItem, new SeparatorMenuItem(), removeItem);
-
-            cell.itemProperty().addListener((obs, old, newVal) -> {
-                if (newVal != null && !newVal.getPath().equals("ALL_ROOTS")) {
-                    cell.setContextMenu(cm);
-                } else {
-                    cell.setContextMenu(null);
-                }
-            });
-            return cell;
-        });
-
-        JFXButton btnAdd = new JFXButton("添加文件夹...");
-        btnAdd.setStyle("-fx-background-color: #3498db; -fx-text-fill: white;");
-        btnAdd.setMaxWidth(Double.MAX_VALUE);
-        btnAdd.setOnAction(e -> addDirectory());
-
-        JFXButton btnClear = new JFXButton("清空列表");
-        btnClear.setStyle("-fx-background-color: #95a5a6; -fx-text-fill: white;");
-        btnClear.setMaxWidth(Double.MAX_VALUE);
-        btnClear.setOnAction(e -> {
-            sourceRootDirs.clear();
-            refreshLeftTree();
-        });
-
-        box.getChildren().addAll(title, subHint, sourceTree, btnAdd, btnClear);
-        return box;
+                    strategy.loadConfig(strategyProps);
+                    pipelineStrategies.add(strategy);
+                } catch (Exception ex) { log("加载策略失败: " + ex.getMessage()); }
+            }
+            if (!pipelineStrategies.isEmpty()) pipelineListView.getSelectionModel().select(0);
+            log("配置已加载: " + file.getName());
+        } catch (Exception e) { log("加载失败: " + e.getMessage()); }
     }
 
-    private VBox createCenterPanel() {
-        VBox box = new VBox(15);
-        box.setPadding(new Insets(15));
+    // ==================== 4. 核心流水线执行 ====================
 
-        // 1. Global Filters Section (FlowPane for responsiveness)
-        FlowPane filters = new FlowPane(15, 10);
-        filters.setAlignment(Pos.CENTER_LEFT);
+    private void runPipelineAnalysis() {
+        if (sourceRoots.isEmpty()) { log("请先添加源目录！"); return; }
+        if (pipelineStrategies.isEmpty()) { log("请添加操作步骤！"); return; }
+        if (isTaskRunning) return;
 
-        cbRecursionMode = new JFXComboBox<>(FXCollections.observableArrayList("仅当前目录", "递归所有子目录", "指定目录深度"));
-        cbRecursionMode.getSelectionModel().select(1);
-        cbRecursionMode.getSelectionModel().selectedItemProperty().addListener((o, old, v) -> invalidatePreview());
+        mainTabPane.getSelectionModel().select(tabPreview);
+        resetProgressUI("正在扫描...", false);
 
-        spRecursionDepth = new Spinner<>(1, 20, 2);
-        spRecursionDepth.setEditable(true);
-        spRecursionDepth.setPrefWidth(70);
-        spRecursionDepth.disableProperty().bind(cbRecursionMode.getSelectionModel().selectedItemProperty().isNotEqualTo("指定目录深度"));
-        spRecursionDepth.valueProperty().addListener((o, old, v) -> invalidatePreview());
+        for(AppStrategy s : pipelineStrategies) s.captureParams();
+        List<String> exts = new ArrayList<>(ccbFileTypes.getCheckModel().getCheckedItems());
+        int depth = "仅当前目录".equals(cbRecursionMode.getValue()) ? 1 : ("递归所有子目录".equals(cbRecursionMode.getValue()) ? Integer.MAX_VALUE : spRecursionDepth.getValue());
 
-        ObservableList<String> extensions = FXCollections.observableArrayList(
-                "mp3", "flac", "wav", "m4a", "ape", "dsf", "dff", "dts", "iso", "jpg", "png", "nfo", "cue", "tak", "tta", "wv", "wma", "aac", "ogg"
-        );
-        ccbFileTypes = new CheckComboBox<>(extensions);
-        ccbFileTypes.getCheckModel().checkAll();
-        ccbFileTypes.setPrefWidth(120);
-        ccbFileTypes.getCheckModel().getCheckedItems().addListener((ListChangeListener<String>) c -> invalidatePreview());
+        Task<List<ChangeRecord>> task = new Task<List<ChangeRecord>>() {
+            @Override protected List<ChangeRecord> call() throws Exception {
+                List<File> files = new ArrayList<>();
+                for(File r : sourceRoots) {
+                    if(isCancelled()) break;
+                    files.addAll(scanFilesRobust(r, depth, exts, this::updateMessage));
+                }
+                if(isCancelled()) return null;
 
-        filters.getChildren().addAll(
-                new Label("扫描范围:"), cbRecursionMode, spRecursionDepth,
-                new Separator(javafx.geometry.Orientation.VERTICAL),
-                new Label("文件类型:"), ccbFileTypes
-        );
+                List<ChangeRecord> records = files.stream().map(f->new ChangeRecord(f.getName(), f.getName(), f, false, f.getAbsolutePath(), OperationType.NONE)).collect(Collectors.toList());
 
-        // 2. Strategy Config Section
-        HBox strategyHeader = new HBox(10, new Label("功能选择:"), cbStrategy = new JFXComboBox<>());
-        strategyHeader.setAlignment(Pos.CENTER_LEFT);
-        cbStrategy.setItems(FXCollections.observableArrayList(strategies));
-        cbStrategy.setPrefWidth(300);
-        cbStrategy.setConverter(new javafx.util.StringConverter<AppStrategy>() {
-            @Override
-            public String toString(AppStrategy object) {
-                return object.getName();
+                for(int i=0; i<pipelineStrategies.size(); i++) {
+                    if(isCancelled()) break;
+                    AppStrategy s = pipelineStrategies.get(i);
+                    updateMessage("步骤 " + (i+1) + ": " + s.getName());
+                    records = s.analyze(records, sourceRoots, (p, m)-> updateProgress(p, 1.0));
+                }
+                return records;
             }
+        };
 
-            @Override
-            public AppStrategy fromString(String string) {
+        setupTaskHandlers(task, "预览完成");
+        new Thread(task).start();
+    }
+
+    private void runPipelineExecution() {
+        if(fullChangeList.isEmpty() || isTaskRunning) return;
+        long count = fullChangeList.stream().filter(ChangeRecord::isChanged).count();
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "确定执行 " + count + " 个变更吗？", ButtonType.YES, ButtonType.NO);
+        if (alert.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) return;
+
+        resetProgressUI("正在执行...", true);
+        if(chkSaveLog.isSelected()) initFileLogger();
+
+        Task<Void> task = new Task<Void>() {
+            @Override protected Void call() throws Exception {
+                List<ChangeRecord> todos = fullChangeList.stream().filter(ChangeRecord::isChanged).collect(Collectors.toList());
+                int total = todos.size();
+                AtomicInteger curr = new AtomicInteger(0);
+                AtomicInteger succ = new AtomicInteger(0);
+                long startT = System.currentTimeMillis();
+
+                executorService = Executors.newFixedThreadPool(4);
+
+                for(ChangeRecord r : todos) {
+                    if(isCancelled()) break;
+                    executorService.submit(() -> {
+                        if(isCancelled()) return;
+                        try {
+                            Platform.runLater(()->r.setStatus(ExecStatus.RUNNING));
+                            AppStrategy s = findStrategyForOp(r.getOpType());
+                            if(s!=null) {
+                                s.execute(r);
+                                Platform.runLater(()->r.setStatus(ExecStatus.SUCCESS));
+                                succ.incrementAndGet();
+                                logAndFile("成功: "+r.getNewName());
+                            } else {
+                                Platform.runLater(()->r.setStatus(ExecStatus.SKIPPED));
+                            }
+                        } catch(Exception e) {
+                            Platform.runLater(()->r.setStatus(ExecStatus.FAILED));
+                            logAndFile("失败: "+e.getMessage());
+                        } finally {
+                            int c = curr.incrementAndGet();
+                            updateProgress(c, total);
+                            if(c%10==0) Platform.runLater(()->updateStats(System.currentTimeMillis()-startT));
+                        }
+                    });
+                }
+                executorService.shutdown();
+                while (!executorService.awaitTermination(500, TimeUnit.MILLISECONDS)) {
+                    if (isCancelled()) { executorService.shutdownNow(); break; }
+                }
+
+                Platform.runLater(() -> {
+                    logImmediate(String.format("执行结束. 成功: %d", succ.get()));
+                });
                 return null;
             }
-        });
-
-        strategyConfigContainer = new VBox();
-        strategyConfigContainer.setStyle("-fx-padding: 15; -fx-background-color: #fdfdfd; -fx-border-color: #eee; -fx-border-radius: 4;");
-        ScrollPane scrollConfig = new ScrollPane(strategyConfigContainer);
-        scrollConfig.setFitToWidth(true);
-        scrollConfig.setPrefHeight(200);
-        scrollConfig.setStyle("-fx-background-color: transparent;");
-
-        cbStrategy.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
-            strategyConfigContainer.getChildren().clear();
-            if (newVal != null && newVal.getConfigNode() != null) {
-                strategyConfigContainer.getChildren().add(newVal.getConfigNode());
-            } else {
-                strategyConfigContainer.getChildren().add(new Label("该功能无需额外配置。"));
-            }
-            invalidatePreview();
-        });
-
-        // 3. Action Bar
-        HBox actions = new HBox(15);
-        actions.setAlignment(Pos.CENTER_LEFT);
-
-        btnPreview = new JFXButton("生成预览");
-        btnPreview.setStyle("-fx-background-color: #f39c12; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8 20;");
-        btnPreview.setOnAction(e -> runPreview());
-
-        btnExecute = new JFXButton("执行变更");
-        btnExecute.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8 20;");
-        btnExecute.setDisable(true);
-        btnExecute.setOnAction(e -> runExecute());
-
-        btnCancel = new JFXButton("取消");
-        btnCancel.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8 20;");
-        btnCancel.setDisable(true);
-        btnCancel.setOnAction(e -> cancelTask());
-
-        chkHideUnchanged = new CheckBox("仅显示有变更的项目");
-        chkHideUnchanged.setSelected(true);
-        chkHideUnchanged.selectedProperty().addListener((o, old, v) -> refreshPreviewTable());
-
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-
-        actions.getChildren().addAll(btnPreview, btnExecute, btnCancel, spacer, chkHideUnchanged);
-
-        // 4. Preview Table (Replaces TreeView)
-        createPreviewTable();
-
-        box.getChildren().addAll(
-                new Label("1. 筛选与配置"), filters,
-                new Separator(),
-                strategyHeader, scrollConfig,
-                new Separator(),
-                new Label("2. 预览与执行"), actions, previewTable
-        );
-        VBox.setVgrow(previewTable, Priority.ALWAYS);
-        return box;
+        };
+        setupTaskHandlers(task, "执行完成");
+        new Thread(task).start();
     }
 
-    @SuppressWarnings("unchecked")
-    private void createPreviewTable() {
-        previewTable = new TreeTableView<>();
-        previewTable.setShowRoot(false); // 隐藏根节点
+    // --- 辅助方法与任务控制 ---
 
-        TreeTableColumn<ChangeRecord, String> colName = new TreeTableColumn<>("原名称/文件");
-        colName.setPrefWidth(250);
-        colName.setCellValueFactory(param -> new SimpleStringProperty(param.getValue().getValue().getOriginalName()));
+    private AppStrategy findStrategyForOp(OperationType op) {
+        for(int i=pipelineStrategies.size()-1; i>=0; i--) {
+            AppStrategy s = pipelineStrategies.get(i);
+            if(op == OperationType.RENAME && (s instanceof AdvancedRenameStrategy || s instanceof TrackNumberStrategy || s instanceof AlbumDirNormalizeStrategy)) return s;
+            if(op == OperationType.CONVERT && s instanceof AudioConverterStrategy) return s;
+            if(op == OperationType.MOVE && s instanceof FileMigrateStrategy) return s;
+            if(op == OperationType.SPLIT && s instanceof CueSplitterStrategy) return s;
+        }
+        return null;
+    }
 
-        TreeTableColumn<ChangeRecord, String> colNewName = new TreeTableColumn<>("新名称");
-        colNewName.setPrefWidth(250);
-        colNewName.setCellValueFactory(param -> {
-            ChangeRecord r = param.getValue().getValue();
-            return new SimpleStringProperty(r.isChanged() ? r.getNewName() : "-");
-        });
-        // 样式化：变更的显示绿色
-        colNewName.setCellFactory(col -> new TreeTableCell<ChangeRecord, String>() {
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                setText(item);
-                if (item != null && !item.equals("-")) setTextFill(Color.web("#27ae60"));
-                else setTextFill(Color.BLACK);
+    private void refreshPreviewTableFilter() {
+        if(fullChangeList.isEmpty()) return;
+        String search = txtSearchFilter.getText().toLowerCase();
+        String status = cbStatusFilter.getValue();
+        boolean hide = chkHideUnchanged.isSelected();
+
+        Task<TreeItem<ChangeRecord>> t = new Task<TreeItem<ChangeRecord>>() {
+            @Override protected TreeItem<ChangeRecord> call() {
+                TreeItem<ChangeRecord> root = new TreeItem<>(new ChangeRecord());
+                root.setExpanded(true);
+                for(ChangeRecord r : fullChangeList) {
+                    if(hide && !r.isChanged() && r.getStatus()!=ExecStatus.FAILED) continue;
+                    if(!search.isEmpty() && !r.getOriginalName().toLowerCase().contains(search)) continue;
+                    if("成功".equals(status) && r.getStatus()!=ExecStatus.SUCCESS) continue;
+                    if("失败".equals(status) && r.getStatus()!=ExecStatus.FAILED) continue;
+                    root.getChildren().add(new TreeItem<>(r));
+                }
+                return root;
             }
-        });
+        };
+        t.setOnSucceeded(e -> { previewTable.setRoot(t.getValue()); updateStats(0); });
+        new Thread(t).start();
+    }
 
-        TreeTableColumn<ChangeRecord, String> colStatus = new TreeTableColumn<>("状态");
-        colStatus.setPrefWidth(100);
-        colStatus.setCellValueFactory(param -> new SimpleStringProperty(param.getValue().getValue().getStatus().toString()));
+    private void updateStats(long ms) {
+        long tot = fullChangeList.size();
+        long chg = fullChangeList.stream().filter(ChangeRecord::isChanged).count();
+        long suc = fullChangeList.stream().filter(r->r.getStatus()==ExecStatus.SUCCESS).count();
+        long fail = fullChangeList.stream().filter(r->r.getStatus()==ExecStatus.FAILED).count();
+        statsLabel.setText(String.format("总计:%d | 变更:%d | 成功:%d | 失败:%d", tot, chg, suc, fail));
+    }
 
-        TreeTableColumn<ChangeRecord, String> colPath = new TreeTableColumn<>("目标路径");
-        colPath.setPrefWidth(300);
-        colPath.setCellValueFactory(param -> new SimpleStringProperty(param.getValue().getValue().getNewPath()));
-
-        previewTable.getColumns().addAll(colName, colNewName, colStatus, colPath);
-
-        // 右键菜单
+    private void setupPreviewTable() {
+        TreeTableColumn<ChangeRecord, String> c1 = new TreeTableColumn<>("源文件"); c1.setCellValueFactory(p->new SimpleStringProperty(p.getValue().getValue().getOriginalName())); c1.setPrefWidth(250);
+        TreeTableColumn<ChangeRecord, String> c2 = new TreeTableColumn<>("目标"); c2.setCellValueFactory(p->new SimpleStringProperty(p.getValue().getValue().getNewName())); c2.setPrefWidth(250);
+        c2.setCellFactory(c->new TreeTableCell<ChangeRecord,String>(){ @Override protected void updateItem(String i, boolean e){ super.updateItem(i,e); setText(i); if(i!=null && getTreeTableRow().getItem()!=null && !i.equals(getTreeTableRow().getItem().getOriginalName())) setTextFill(Color.web("#27ae60")); else setTextFill(Color.BLACK); }});
+        TreeTableColumn<ChangeRecord, String> c3 = new TreeTableColumn<>("状态"); c3.setCellValueFactory(p->new SimpleStringProperty(p.getValue().getValue().getStatus().toString())); c3.setPrefWidth(80);
+        c3.setCellFactory(c->new TreeTableCell<ChangeRecord, String>(){ @Override protected void updateItem(String i, boolean e){ super.updateItem(i,e); setText(i); if("SUCCESS".equals(i)) setTextFill(Color.GREEN); else if("FAILED".equals(i)) setTextFill(Color.RED); else setTextFill(Color.BLACK); }});
+        TreeTableColumn<ChangeRecord, String> c4 = new TreeTableColumn<>("路径"); c4.setCellValueFactory(p->new SimpleStringProperty(p.getValue().getValue().getNewPath())); c4.setPrefWidth(350);
+        previewTable.getColumns().setAll(c1, c2, c3, c4);
         previewTable.setRowFactory(tv -> {
             TreeTableRow<ChangeRecord> row = new TreeTableRow<>();
             ContextMenu cm = new ContextMenu();
-            MenuItem openFile = new MenuItem("打开文件/播放");
-            openFile.setOnAction(e -> openFileInSystem(row.getItem().getFileHandle()));
-            MenuItem openDir = new MenuItem("打开所在目录");
-            openDir.setOnAction(e -> openParentDirectory(row.getItem().getFileHandle()));
-            MenuItem openTargetDir = new MenuItem("打开目标目录");
-            openTargetDir.setOnAction(e -> openFileInSystem(new File(row.getItem().getNewPath()).getParentFile()));
-
-            cm.getItems().addAll(openFile, openDir, openTargetDir);
-
-            row.contextMenuProperty().bind(
-                    javafx.beans.binding.Bindings.when(row.emptyProperty())
-                            .then((ContextMenu) null)
-                            .otherwise(cm)
-            );
+            MenuItem i1 = new MenuItem("打开文件"); i1.setOnAction(e->openFileInSystem(row.getItem().getFileHandle()));
+            MenuItem i2 = new MenuItem("打开目录"); i2.setOnAction(e->openParentDirectory(row.getItem().getFileHandle()));
+            cm.getItems().addAll(i1, i2);
+            row.contextMenuProperty().bind(javafx.beans.binding.Bindings.when(row.emptyProperty()).then((ContextMenu)null).otherwise(cm));
             return row;
         });
     }
 
-    private VBox createBottomPanel() {
-        VBox box = new VBox(5);
-        box.setPadding(new Insets(10));
-        box.setStyle("-fx-background-color: #f0f0f0; -fx-border-color: #ccc; -fx-border-width: 1 0 0 0;");
-
-        // Progress Area
-        progressBox = new VBox(5);
-        progressLabel = new Label("准备就绪");
-        etaLabel = new Label("");
-        HBox info = new HBox(20, new Label("状态:"), progressLabel, new Region(), etaLabel);
-        HBox.setHgrow(info.getChildren().get(2), Priority.ALWAYS);
-
-        mainProgressBar = new ProgressBar(0);
-        mainProgressBar.setPrefWidth(Double.MAX_VALUE);
-        mainProgressBar.setPrefHeight(12);
-        progressBox.getChildren().addAll(info, mainProgressBar);
-        progressBox.setVisible(false);
-
-        // Log Area
-        HBox logControls = new HBox(10);
-        logControls.setAlignment(Pos.CENTER_LEFT);
-        Label logTitle = new Label("系统日志:");
-        logTitle.setStyle("-fx-font-weight: bold;");
-        chkSaveLog = new CheckBox("输出日志到文件 (execution.log)");
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-        JFXButton btnClearLog = new JFXButton("清空日志");
-        btnClearLog.setOnAction(e -> logItems.clear());
-        logControls.getChildren().addAll(logTitle, spacer, chkSaveLog, btnClearLog);
-
-        logView = new ListView<>(logItems);
-        logView.setPrefHeight(100);
-        logView.setStyle("-fx-font-family: 'Consolas'; -fx-font-size: 11px;");
-
-        box.getChildren().addAll(progressBox, logControls, logView);
-        return box;
+    private List<File> scanFilesRobust(File root, int depth, List<String> exts, Consumer<String> msg) {
+        List<File> list = new ArrayList<>();
+        if(!root.exists()) return list;
+        try (Stream<Path> s = Files.walk(root.toPath(), depth)) {
+            list = s.filter(p -> {
+                File f = p.toFile();
+                if(f.equals(root) || (f.isDirectory() && depth > 1)) return false;
+                if(f.isDirectory()) return true;
+                String n = f.getName().toLowerCase();
+                for(String e : exts) if(n.endsWith("."+e)) return true;
+                return false;
+            }).map(Path::toFile).collect(Collectors.toList());
+        } catch(IOException e) { log("扫描异常: "+e.getMessage()); }
+        return list;
     }
 
-    // --- Core Logic & Task Management ---
-
-    private void runPreview() {
-        if (isTaskRunning) return;
-        if (sourceRootDirs.isEmpty()) {
-            logImmediate("❌ 请先添加源目录！");
-            return;
-        }
-        AppStrategy strategy = cbStrategy.getValue();
-        if (strategy == null) return;
-
-        resetState(true);
-        strategy.captureParams();
-        executionThreadCount = strategy.getPreferredThreadCount();
-        boolean hideUnchanged = chkHideUnchanged.isSelected();
-        int maxDepth = "仅当前目录".equals(cbRecursionMode.getValue()) ? 1 :
-                "指定目录深度".equals(cbRecursionMode.getValue()) ? spRecursionDepth.getValue() : Integer.MAX_VALUE;
-
-        // 启动任务
-        startTaskUI("正在扫描并分析...", false);
-
-        Task<TreeItem<ChangeRecord>> task = new Task<TreeItem<ChangeRecord>>() {
-            @Override
-            protected TreeItem<ChangeRecord> call() throws Exception {
-                long t0 = System.currentTimeMillis();
-
-                // 1. 扫描
-                List<File> allFiles = new ArrayList<>();
-                for (File root : sourceRootDirs) {
-                    if (isCancelled()) break;
-                    updateMessage("正在扫描: " + root.getName());
-                    allFiles.addAll(scanFiles(root, strategy.getTargetType(), maxDepth, this::updateMessage));
-                }
-
-                if (isCancelled()) return null;
-                log("扫描完成，共 " + allFiles.size() + " 个对象。");
-
-                // 2. 分析
-                updateMessage("正在分析变更...");
-                List<ChangeRecord> changes = strategy.analyze(allFiles, sourceRootDirs, (p, msg) -> {
-                    updateProgress(p, 1.0);
-                    if (msg != null) updateMessage(msg);
-                });
-
-                if (isCancelled()) return null;
-                Platform.runLater(() -> changePreviewList.setAll(changes));
-
-                updateMessage("生成视图...");
-                return buildPreviewTree(changes, sourceRootDirs, hideUnchanged);
-            }
-        };
-
-        task.setOnSucceeded(e -> {
-            previewTable.setRoot(task.getValue());
-            long changedCount = changePreviewList.stream().filter(ChangeRecord::isChanged).count();
-            logImmediate("✅ 预览完成。预计变更: " + changedCount + " / 总数: " + changePreviewList.size());
-            btnExecute.setDisable(changedCount == 0);
-            stopTaskUI();
-        });
-
-        task.setOnFailed(e -> {
-            logImmediate("❌ 预览失败: " + e.getSource().getException().getMessage());
-            e.getSource().getException().printStackTrace();
-            stopTaskUI();
-        });
-
-        task.setOnCancelled(e -> {
-            logImmediate("⚠️ 预览已取消");
-            stopTaskUI();
-        });
-
-        currentTask = task;
-        new Thread(task).start();
-    }
-
-    private void runExecute() {
-        if (isTaskRunning) return;
-        long count = changePreviewList.stream().filter(c -> c.isChanged() && c.getStatus() != ExecStatus.SKIPPED).count();
-        if (count == 0) return;
-
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION,
-                String.format("确定执行 %d 个变更吗？\n(并发数: %d)", count, executionThreadCount),
-                ButtonType.YES, ButtonType.NO);
-
-        alert.showAndWait().ifPresent(resp -> {
-            if (resp == ButtonType.YES) {
-                // 准备日志文件
-                if (chkSaveLog.isSelected()) initFileLogger();
-
-                startTaskUI("正在执行...", true);
-                cbStrategy.getValue().captureParams(); // 二次确认参数
-
-                Task<Void> executeTask = new Task<Void>() {
-                    @Override
-                    protected Void call() throws Exception {
-                        List<ChangeRecord> todos = changePreviewList.stream()
-                                .filter(c -> c.isChanged() && c.getStatus() != ExecStatus.SKIPPED)
-                                .collect(Collectors.toList());
-                        int total = todos.size();
-                        AtomicInteger current = new AtomicInteger(0);
-                        AtomicInteger success = new AtomicInteger(0);
-                        AtomicInteger fail = new AtomicInteger(0);
-                        long startT = System.currentTimeMillis();
-
-                        currentExecutor = Executors.newFixedThreadPool(executionThreadCount);
-
-                        for (ChangeRecord rec : todos) {
-                            if (currentExecutor.isShutdown()) break;
-                            currentExecutor.submit(() -> {
-                                try {
-                                    updateRecordStatus(rec, ExecStatus.RUNNING);
-                                    cbStrategy.getValue().execute(rec);
-                                    updateRecordStatus(rec, ExecStatus.SUCCESS);
-                                    success.incrementAndGet();
-                                    logFile("成功: " + rec.getOriginalName() + " -> " + rec.getNewName());
-                                } catch (Exception e) {
-                                    updateRecordStatus(rec, ExecStatus.FAILED);
-                                    fail.incrementAndGet();
-                                    String err = "失败 [" + rec.getOriginalName() + "]: " + e.getMessage();
-                                    logFile(err);
-                                    logImmediate(err);
-                                } finally {
-                                    int done = current.incrementAndGet();
-                                    updateProgress(done, total);
-                                    // 更新 ETA (节流)
-                                    if (done % 5 == 0 || done == total) {
-                                        long elapsed = System.currentTimeMillis() - startT;
-                                        double rate = (double) done / elapsed;
-                                        long remain = rate > 0 ? (long) ((total - done) / rate) : 0;
-                                        Platform.runLater(() -> {
-                                            progressLabel.setText(String.format("进度: %d/%d (成:%d 败:%d)", done, total, success.get(), fail.get()));
-                                            etaLabel.setText("剩余: " + formatDuration(remain));
-                                        });
-                                    }
-                                }
-                            });
-                        }
-
-                        currentExecutor.shutdown();
-                        try {
-                            while (!currentExecutor.awaitTermination(500, TimeUnit.MILLISECONDS)) {
-                                if (isCancelled()) {
-                                    currentExecutor.shutdownNow();
-                                    break;
-                                }
-                            }
-                        } catch (InterruptedException e) {
-                            currentExecutor.shutdownNow();
-                        }
-
-                        Platform.runLater(() -> {
-                            String time = formatDuration(System.currentTimeMillis() - startT);
-                            logImmediate(String.format("🏁 执行结束. 耗时: %s. 成功: %d, 失败: %d", time, success.get(), fail.get()));
-                            closeFileLogger();
-                            stopTaskUI();
-                            // 完成后允许再次预览或执行失败的
-                            btnPreview.setDisable(false);
-                        });
-                        return null;
-                    }
-                };
-
-                executeTask.setOnCancelled(e -> {
-                    logImmediate("⚠️ 任务已终止");
-                    closeFileLogger();
-                    stopTaskUI();
-                });
-
-                currentTask = executeTask;
-                mainProgressBar.progressProperty().bind(executeTask.progressProperty());
-                new Thread(executeTask).start();
-            }
-        });
-    }
-
-    private void cancelTask() {
-        if (currentTask != null && isTaskRunning) {
-            logImmediate("正在取消...");
-            currentTask.cancel();
-            if (currentExecutor != null) currentExecutor.shutdownNow();
-        }
-    }
-
-    // --- Helper Logic ---
-
-    private void startTaskUI(String msg, boolean isExec) {
+    private void resetProgressUI(String msg, boolean isExec) {
         isTaskRunning = true;
-        btnPreview.setDisable(true);
+        currentTask = null;
         btnExecute.setDisable(true);
-        btnCancel.setDisable(false);
-        cbStrategy.setDisable(true);
+        btnStop.setDisable(false);
+        if (!isExec) btnGoPreview.setDisable(true);
 
-        progressBox.setVisible(true);
+        // 关键修复：先解绑，再赋值，防止 Exception
         progressLabel.textProperty().unbind();
-        progressLabel.setText(msg);
         mainProgressBar.progressProperty().unbind();
-        mainProgressBar.setProgress(0);
+
+        progressLabel.setText(msg);
+        mainProgressBar.setProgress(-1);
         etaLabel.setText("");
     }
 
-    private void stopTaskUI() {
+    private void finishTaskUI(String msg) {
         isTaskRunning = false;
-        btnPreview.setDisable(false);
-        btnCancel.setDisable(true);
-        cbStrategy.setDisable(false);
-        // Execute button state depends on preview result, handle by caller or default disabled
+        progressLabel.textProperty().unbind();
+        mainProgressBar.progressProperty().unbind();
+
+        progressLabel.setText(msg);
+        mainProgressBar.setProgress(1.0);
+        btnStop.setDisable(true);
+        btnGoPreview.setDisable(false);
     }
 
-    private void refreshPreviewTable() {
-        if (changePreviewList.isEmpty()) return;
-        boolean hide = chkHideUnchanged.isSelected();
-        List<ChangeRecord> snapshot = new ArrayList<>(changePreviewList);
-        Task<TreeItem<ChangeRecord>> task = new Task<TreeItem<ChangeRecord>>() {
-            @Override
-            protected TreeItem<ChangeRecord> call() {
-                return buildPreviewTree(snapshot, sourceRootDirs, hide);
+    private void setupTaskHandlers(Task<?> task, String successMsg) {
+        currentTask = task;
+        task.setOnSucceeded(e -> {
+            // 成功回调中会进行具体的逻辑判断（如是预览还是执行），再调用 finishTaskUI
+            if (task.getValue() instanceof List) { // 预览任务
+                fullChangeList = (List<ChangeRecord>) task.getValue();
+                refreshPreviewTableFilter();
+                long count = fullChangeList.stream().filter(ChangeRecord::isChanged).count();
+                log("预览完成。变更数: " + count);
+                finishTaskUI(successMsg);
+                btnExecute.setDisable(count == 0);
+            } else { // 执行任务
+                finishTaskUI(successMsg);
+                closeFileLogger();
+                btnExecute.setDisable(false);
             }
-        };
-        task.setOnSucceeded(e -> previewTable.setRoot(task.getValue()));
-        new Thread(task).start();
-    }
-
-    private TreeItem<ChangeRecord> buildPreviewTree(List<ChangeRecord> records, List<File> rootDirs, boolean hideUnchanged) {
-        ChangeRecord vRoot = new ChangeRecord("ROOT", "", null, false, "VIRTUAL_ROOT", OperationType.NONE);
-        TreeItem<ChangeRecord> rootItem = new TreeItem<>(vRoot);
-        rootItem.setExpanded(true);
-
-        Map<String, TreeItem<ChangeRecord>> pathMap = new HashMap<>();
-        pathMap.put("VIRTUAL_ROOT", rootItem);
-
-        // 创建根节点
-        for (File r : rootDirs) {
-            ChangeRecord rec = new ChangeRecord(r.getAbsolutePath(), "", r, false, r.getAbsolutePath(), OperationType.NONE);
-            TreeItem<ChangeRecord> item = new TreeItem<>(rec);
-            item.setExpanded(true);
-            rootItem.getChildren().add(item);
-            pathMap.put(r.getAbsolutePath(), item);
-        }
-
-        records.sort(Comparator.comparing(ChangeRecord::getOriginalPath));
-        for (ChangeRecord rec : records) {
-            if (hideUnchanged && !rec.isChanged() && rec.getStatus() != ExecStatus.FAILED) continue;
-            if (rootDirs.contains(rec.getFileHandle())) continue;
-
-            TreeItem<ChangeRecord> parent = ensureParent(rec.getFileHandle().getParentFile(), rootDirs, pathMap, rootItem);
-            parent.getChildren().add(new TreeItem<>(rec));
-        }
-        return rootItem;
-    }
-
-    private TreeItem<ChangeRecord> ensureParent(File dir, List<File> roots, Map<String, TreeItem<ChangeRecord>> map, TreeItem<ChangeRecord> vRoot) {
-        String path = dir.getAbsolutePath();
-        if (map.containsKey(path)) return map.get(path);
-
-        File matchRoot = roots.stream().filter(r -> path.startsWith(r.getAbsolutePath())).findFirst().orElse(null);
-        if (matchRoot != null && !dir.equals(matchRoot)) {
-            TreeItem<ChangeRecord> parent = ensureParent(dir.getParentFile(), roots, map, vRoot);
-            ChangeRecord rec = new ChangeRecord(dir.getName(), "", dir, false, path, OperationType.NONE);
-            TreeItem<ChangeRecord> item = new TreeItem<>(rec);
-            item.setExpanded(false); // 默认折叠以优化性能
-            parent.getChildren().add(item);
-            map.put(path, item);
-            return item;
-        }
-        return vRoot;
-    }
-
-    private List<File> scanFiles(File root, ScanTarget type, int depth, Consumer<String> logger) {
-        List<File> result = new ArrayList<>();
-        try (Stream<Path> stream = Files.walk(root.toPath(), depth)) {
-            ObservableList<String> types = ccbFileTypes.getCheckModel().getCheckedItems();
-            AtomicInteger count = new AtomicInteger(0);
-            result = stream.filter(p -> {
-                int c = count.incrementAndGet();
-                if (c % 2000 == 0 && logger != null) Platform.runLater(() -> logger.accept("扫描中... (" + c + ")"));
-
-                File f = p.toFile();
-                if (f.isDirectory()) {
-                    // 如果只处理文件，且当前是目录，跳过返回结果，但walk还是会继续遍历子项
-                    return type != ScanTarget.FILES_ONLY;
-                }
-                // 如果是文件
-                if (type == ScanTarget.FOLDERS_ONLY) return false;
-
-                // 检查扩展名
-                String name = f.getName().toLowerCase();
-                for (String ext : types) {
-                    if (name.endsWith("." + ext)) return true;
-                }
-                return false;
-            }).map(Path::toFile).collect(Collectors.toList());
-        } catch (IOException e) {
-            logImmediate("扫描受限: " + e.getMessage());
-        }
-        return result;
-    }
-
-    // --- Config & Logging IO ---
-
-    private void saveConfigAction() {
-        FileChooser fc = new FileChooser();
-        fc.setTitle("保存配置");
-        fc.setInitialFileName("music_manager_profile.properties");
-        File f = fc.showSaveDialog(primaryStage);
-        if (f != null) {
-            configFile = f;
-            savePreferences();
-            logImmediate("配置已保存至: " + f.getName());
-        }
-    }
-
-    private void loadConfigAction() {
-        FileChooser fc = new FileChooser();
-        fc.setTitle("加载配置");
-        File f = fc.showOpenDialog(primaryStage);
-        if (f != null) {
-            configFile = f;
-            loadPreferences();
-            logImmediate("配置已加载: " + f.getName());
-        }
-    }
-
-    private void savePreferences() {
-        try {
-            // Global
-            if (cbStrategy.getSelectionModel().getSelectedIndex() >= 0)
-                appProps.setProperty("g_strategy", String.valueOf(cbStrategy.getSelectionModel().getSelectedIndex()));
-            appProps.setProperty("g_recMode", String.valueOf(cbRecursionMode.getSelectionModel().getSelectedIndex()));
-            appProps.setProperty("g_recDepth", String.valueOf(spRecursionDepth.getValue()));
-            // Strategies
-            for (AppStrategy s : strategies) s.saveConfig(appProps);
-
-            try (FileOutputStream fos = new FileOutputStream(configFile)) {
-                appProps.store(fos, "MusicFileManager Config");
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void loadPreferences() {
-        if (!configFile.exists()) return;
-        try (FileInputStream fis = new FileInputStream(configFile)) {
-            appProps.load(fis);
-            // Global
-            int sIdx = Integer.parseInt(appProps.getProperty("g_strategy", "0"));
-            if (sIdx < strategies.size()) cbStrategy.getSelectionModel().select(sIdx);
-            cbRecursionMode.getSelectionModel().select(Integer.parseInt(appProps.getProperty("g_recMode", "1")));
-            spRecursionDepth.getValueFactory().setValue(Integer.parseInt(appProps.getProperty("g_recDepth", "2")));
-            // Strategies
-            for (AppStrategy s : strategies) s.loadConfig(appProps);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void initFileLogger() {
-        try {
-            fileLogger = new PrintWriter(new FileWriter("execution.log", true), true);
-            fileLogger.println("--- Session Start: " + new Date() + " ---");
-        } catch (IOException e) {
-            logImmediate("无法创建日志文件: " + e.getMessage());
-        }
-    }
-
-    private void logFile(String msg) {
-        if (fileLogger != null) fileLogger.println(new SimpleDateFormat("HH:mm:ss").format(new Date()) + " " + msg);
-    }
-
-    private void closeFileLogger() {
-        if (fileLogger != null) {
-            fileLogger.println("--- Session End ---");
-            fileLogger.close();
-            fileLogger = null;
-        }
-    }
-
-    // --- Common Utils ---
-    private void startUiUpdater() {
-        uiUpdater = new AnimationTimer() {
-            private long last = 0;
-
-            @Override
-            public void handle(long now) {
-                if (now - last >= 100_000_000) {
-                    List<String> list = new ArrayList<>();
-                    String s;
-                    while ((s = logQueue.poll()) != null) list.add(s);
-                    if (!list.isEmpty()) {
-                        logItems.addAll(list);
-                        if (logItems.size() > 2000) logItems.remove(0, list.size());
-                        logView.scrollTo(logItems.size() - 1);
-                    }
-                    last = now;
-                }
-            }
-        };
-        uiUpdater.start();
-    }
-
-    void log(String m) {
-        logQueue.offer(m);
-    }
-
-    private void logImmediate(String m) {
-        Platform.runLater(() -> {
-            logItems.add(m);
-            logView.scrollTo(logItems.size() - 1);
         });
+        task.setOnFailed(e -> {
+            finishTaskUI("出错");
+            log("❌ 失败: " + e.getSource().getException().getMessage());
+            closeFileLogger();
+        });
+        task.setOnCancelled(e -> {
+            finishTaskUI("已取消");
+            closeFileLogger();
+        });
+
+        progressLabel.textProperty().bind(task.messageProperty());
+        mainProgressBar.progressProperty().bind(task.progressProperty());
     }
 
-    private void addDirectory() {
-        DirectoryChooser dc = new DirectoryChooser();
-        File f = dc.showDialog(primaryStage);
-        if (f != null && !sourceRootDirs.contains(f)) {
-            sourceRootDirs.add(f);
-            refreshLeftTree();
+    private void forceStop() {
+        if(isTaskRunning) {
+            isTaskRunning = false;
+            if(currentTask!=null) currentTask.cancel();
+            if(executorService!=null) executorService.shutdownNow();
+            log("已强制停止");
+            finishTaskUI("已停止");
         }
     }
 
-    private void removeDirectory() { /* Used by Context Menu */ }
-
-    private void refreshLeftTree() {
-        if (sourceTree.getRoot() == null) sourceTree.setRoot(new TreeItem<>(new File("ALL_ROOTS")));
-        sourceTree.getRoot().getChildren().clear();
-        for (File f : sourceRootDirs) sourceTree.getRoot().getChildren().add(new TreeItem<>(f));
-        sourceTree.getRoot().setExpanded(true);
+    // --- Utils ---
+    private void startLogUpdater() {
+        uiUpdater = new AnimationTimer() { @Override public void handle(long now) {
+            StringBuilder sb = new StringBuilder(); String s;
+            while((s=logQueue.poll())!=null) sb.append(s).append("\n");
+            if(sb.length()>0) logArea.appendText(sb.toString());
+        }}; uiUpdater.start();
     }
-
-    private void resetState(boolean clearLog) {
-        if (clearLog) logItems.clear();
-        changePreviewList.clear();
-        previewTable.setRoot(null);
-        btnExecute.setDisable(true);
-    }
-
-    void invalidatePreview() {
-        if (!changePreviewList.isEmpty()) {
-            changePreviewList.clear();
-            previewTable.setRoot(null);
-            log("配置已变，请重新预览");
-        }
-        btnExecute.setDisable(true);
-    }
-
-    private String formatDuration(long ms) {
-        long s = ms / 1000;
-        long m = s / 60;
-        return String.format("%02d:%02d", m, s % 60);
-    }
-
-    private void openFileInSystem(File f) {
-        try {
-            if (f != null && f.exists()) Desktop.getDesktop().open(f);
-        } catch (Exception e) {
-        }
-    }
-
-    private void openParentDirectory(File f) {
-        if (f != null) openFileInSystem(f.isDirectory() ? f : f.getParentFile());
-    }
-
-    private void updateRecordStatus(ChangeRecord r, ExecStatus s) {
-        r.setStatus(s); /* Table refresh handled by prop binding or refresh() */
-    }
-
-    // --- Context Injection ---
-    private void initStrategies() {
-        register(new AdvancedRenameStrategy());
-        register(new AudioConverterStrategy());
-        register(new AlbumDirNormalizeStrategy());
-        register(new TrackNumberStrategy());
-        register(new FileMigrateStrategy());
-        register(new CueSplitterStrategy());
-    }
-
-    private void register(AppStrategy s) {
-        s.setContext(this);
-        strategies.add(s);
-    }
+    public void log(String s) { logQueue.offer(s); }
+    private void logImmediate(String s) { Platform.runLater(() -> log(s)); }
+    private void logAndFile(String s) { log(s); if(fileLogger!=null) fileLogger.println(s); }
+    private void initFileLogger() { try { fileLogger=new PrintWriter(new FileWriter("exec.log", true), true); } catch(Exception e){} }
+    private void closeFileLogger() { if(fileLogger!=null) { fileLogger.close(); fileLogger=null; } }
+    private void styleBtn(Button b, String c) { b.setStyle("-fx-background-color: "+c+"; -fx-text-fill: white; -fx-font-weight: bold;"); }
+    private void addDirectoryAction() { DirectoryChooser dc=new DirectoryChooser(); File f=dc.showDialog(primaryStage); if(f!=null && !sourceRoots.contains(f)) { sourceRoots.add(f); invalidatePreview("源增加"); } }
+    private void openFileInSystem(File f) { try{if(f!=null&&f.exists())Desktop.getDesktop().open(f);}catch(Exception e){} }
+    private void openParentDirectory(File f) { if(f!=null) openFileInSystem(f.isDirectory()?f:f.getParentFile()); }
+    void invalidatePreview(String r) { if(!fullChangeList.isEmpty()) { fullChangeList.clear(); previewTable.setRoot(null); log(r + ", 需重新预览"); updateStats(0); } btnExecute.setDisable(true); }
 }
-
-

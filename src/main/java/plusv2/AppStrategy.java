@@ -3,9 +3,11 @@ package plusv2;
 import javafx.scene.Node;
 import lombok.Getter;
 import plusv2.model.ChangeRecord;
+import plusv2.model.RuleCondition;
 import plusv2.type.ScanTarget;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
@@ -13,59 +15,49 @@ import java.util.function.BiConsumer;
 
 @Getter
 public abstract class AppStrategy {
-    // [新增] 获取 App 实例 (供子类使用)
-    // [新增] 持有主程序引用
     protected MusicFileManagerApp app;
+    // 通用前置条件 (所有策略都支持)
+    protected List<RuleCondition> globalConditions = new ArrayList<>();
 
-    // [新增] 上下文注入方法 (在 initStrategies 中自动调用)
-    public void setContext(MusicFileManagerApp app) {
-        this.app = app;
-    }
-
-    // [新增] 便捷日志方法 (子类可直接调用 log("xxx"))
-    protected void log(String msg) {
-        if (app != null) app.log(msg);
-    }
+    public void setContext(MusicFileManagerApp app) { this.app = app; }
+    protected void log(String msg) { if (app != null) app.log(msg); }
 
     // [新增] 便捷日志方法 (子类可直接调用 log("xxx"))
     protected void invalidatePreview() {
-        if (app != null) app.invalidatePreview();
+        if (app != null) app.invalidatePreview("组件触发");
     }
 
     public abstract String getName();
+    public abstract Node getConfigNode(); // 策略特有的配置UI
 
-    public abstract Node getConfigNode();
+    // 通用条件配置接口 (UI调用)
+    public List<RuleCondition> getGlobalConditions() { return globalConditions; }
+
+    // 核心分析逻辑
+    public abstract List<ChangeRecord> analyze(List<ChangeRecord> inputRecords, List<File> rootDirs, BiConsumer<Double, String> progressReporter);
+
+    // 核心执行逻辑
+    public abstract void execute(ChangeRecord rec) throws Exception;
+
+    // 配置存取
+    public abstract void saveConfig(Properties props);
+    public abstract void loadConfig(Properties props);
+
+    // 辅助：检查通用条件
+    protected boolean checkConditions(File f) {
+        if (globalConditions.isEmpty()) return true;
+        for (RuleCondition c : globalConditions) {
+            if (!c.test(f)) return false;
+        }
+        return true;
+    }
 
     public abstract ScanTarget getTargetType();
 
-    // 新增：UI线程捕获参数的方法，避免后台线程访问UI
     public void captureParams() {
     }
 
-    public int getPreferredThreadCount() {
-        return 1;
+    public String getDescription() {
+        return getName();
     }
-
-    // [新增] 执行单个变更记录的逻辑
-    public abstract void execute(ChangeRecord rec) throws Exception;
-
-    // [新增] 配置持久化接口 (默认空实现)
-    public void saveConfig(Properties props) {
-    }
-
-    public void loadConfig(Properties props) {
-    }
-
-    public List<ChangeRecord> analyze(List<File> files, List<File> rootDirs, BiConsumer<Double, String> progressReporter) {
-        try {
-            return analyze(files, rootDirs);
-        } finally {
-            progressReporter.accept(100.0, getName() + " analysis finished.");
-        }
-    }
-
-    public List<ChangeRecord> analyze(List<File> files, List<File> rootDirs) {
-        return Collections.emptyList();
-    }
-
 }
