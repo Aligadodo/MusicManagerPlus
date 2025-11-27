@@ -1,6 +1,6 @@
-package plus.model;
+package backup.plusV1.model;
 
-import plus.type.ActionType;
+import backup.plusV1.type.ActionType;
 
 import java.util.List;
 

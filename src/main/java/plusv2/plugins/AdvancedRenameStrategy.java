@@ -13,7 +13,7 @@ import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import plusv2.AppStrategyV2;
+import plusv2.AppStrategy;
 import plusv2.model.ChangeRecord;
 import plusv2.model.RenameRule;
 import plusv2.model.RuleCondition;
@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
-public class AdvancedRenameStrategy extends AppStrategyV2 {
+public class AdvancedRenameStrategy extends AppStrategy {
     private final ListView<RenameRule> lvRules;
     private final JFXButton btnAddRule, btnRemoveRule, btnMoveUp, btnMoveDown;
     private final JFXComboBox<String> cbCrossDriveMode;

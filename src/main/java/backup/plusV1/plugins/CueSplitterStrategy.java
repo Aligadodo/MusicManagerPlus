@@ -1,4 +1,4 @@
-package plus.plugins;
+package backup.plusV1.plugins;
 
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXComboBox;
@@ -14,14 +14,13 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import lombok.Data;
-import plus.AppStrategy;
-import plus.model.ChangeRecord;
-import plus.type.ExecStatus;
-import plus.type.OperationType;
-import plus.type.ScanTarget;
+import backup.plusV1.OldAppStrategy;
+import backup.plusV1.model.ChangeRecord;
+import backup.plusV1.type.ExecStatus;
+import backup.plusV1.type.OperationType;
+import backup.plusV1.type.ScanTarget;
 
 import java.io.File;
-import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -31,7 +30,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class CueSplitterStrategy extends AppStrategy {
+public class CueSplitterStrategy extends OldAppStrategy {
     private final JFXComboBox<String> cbTargetFormat;
     private final JFXComboBox<String> cbOutputDirMode;
     private final TextField txtRelativePath;

@@ -1,4 +1,4 @@
-package plus.plugins;
+package backup.plusV1.plugins;
 
 
 import com.jfoenix.controls.JFXButton;
@@ -13,11 +13,11 @@ import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import plus.AppStrategy;
-import plus.model.ChangeRecord;
-import plus.model.RenameRule;
-import plus.model.RuleCondition;
-import plus.type.*;
+import backup.plusV1.OldAppStrategy;
+import backup.plusV1.model.ChangeRecord;
+import backup.plusV1.model.RenameRule;
+import backup.plusV1.model.RuleCondition;
+import backup.plusV1.type.*;
 
 import java.io.File;
 import java.util.*;
@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
-public class AdvancedRenameStrategy extends AppStrategy {
+public class AdvancedRenameStrategy extends OldAppStrategy {
     private final ListView<RenameRule> lvRules;
     private final JFXButton btnAddRule, btnRemoveRule, btnMoveUp, btnMoveDown;
     private final JFXComboBox<String> cbCrossDriveMode;

@@ -10,12 +10,10 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import plusv2.AppStrategyV2;
-import plusv2.model.AudioMeta;
+import plusv2.AppStrategy;
 import plusv2.model.ChangeRecord;
 import plusv2.type.OperationType;
 import plusv2.type.ScanTarget;
-import plusv2.util.MetadataHelper;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -25,7 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
-public class TrackNumberStrategy extends AppStrategyV2 {
+public class TrackNumberStrategy extends AppStrategy {
     private final JFXComboBox<String> cbMode;
     private final CheckBox chkPadZero;
     private final TextField txtSeparator;

@@ -1,4 +1,4 @@
-package plus.plugins;
+package backup.plusV1.plugins;
 
 import com.jfoenix.controls.JFXButton;
 import javafx.scene.Node;
@@ -7,9 +7,9 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
-import plus.AppStrategy;
-import plus.model.ChangeRecord;
-import plus.type.ScanTarget;
+import backup.plusV1.OldAppStrategy;
+import backup.plusV1.model.ChangeRecord;
+import backup.plusV1.type.ScanTarget;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -18,7 +18,7 @@ import java.util.List;
 /**
  * Demo 功能待实现
  */
-public class FileMigrateStrategy extends AppStrategy {
+public class FileMigrateStrategy extends OldAppStrategy {
     private final TextField txtTargetDir;
     private final JFXButton btnPickTarget;
 

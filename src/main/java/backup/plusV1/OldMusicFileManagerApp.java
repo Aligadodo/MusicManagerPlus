@@ -1,4 +1,4 @@
-package plus;
+package backup.plusV1;
 
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXComboBox;
@@ -26,11 +26,11 @@ import net.bramp.ffmpeg.FFmpegExecutor;
 import net.bramp.ffmpeg.builder.FFmpegBuilder;
 import net.bramp.ffmpeg.builder.FFmpegOutputBuilder;
 import org.controlsfx.control.CheckComboBox;
-import plus.model.ChangeRecord;
-import plus.plugins.*;
-import plus.type.ExecStatus;
-import plus.type.OperationType;
-import plus.type.ScanTarget;
+import backup.plusV1.model.ChangeRecord;
+import backup.plusV1.plugins.*;
+import backup.plusV1.type.ExecStatus;
+import backup.plusV1.type.OperationType;
+import backup.plusV1.type.ScanTarget;
 
 import java.awt.*;
 import java.io.*;
@@ -50,9 +50,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 
-public class MusicFileManagerApp extends Application {
+public class OldMusicFileManagerApp extends Application {
     private static final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");// 格式化时间
-    private final List<AppStrategy> strategies = new ArrayList<>();
+    private final List<OldAppStrategy> strategies = new ArrayList<>();
     // Data Models
     private final ObservableList<ChangeRecord> changePreviewList = FXCollections.observableArrayList();
     private final ObservableList<String> sourcePathStrings = FXCollections.observableArrayList();
@@ -92,7 +92,7 @@ public class MusicFileManagerApp extends Application {
     // 内存信息
     private TreeView<File> dirTree;
     private TreeView<ChangeRecord> previewTree;
-    private JFXComboBox<AppStrategy> cbStrategy;
+    private JFXComboBox<OldAppStrategy> cbStrategy;
     private VBox strategyConfigContainer;
     // 线程池配置
     private int executionThreadCount = 1;
@@ -191,7 +191,7 @@ public class MusicFileManagerApp extends Application {
             appProps.setProperty("recursionDepth", String.valueOf(spRecursionDepth.getValue()));
 
             // 保存特定的策略配置
-            for (AppStrategy s : strategies) {
+            for (OldAppStrategy s : strategies) {
                 if (s instanceof AudioConverterStrategy) {
                     ((AudioConverterStrategy) s).savePrefs(appProps);
                 }
@@ -230,7 +230,7 @@ public class MusicFileManagerApp extends Application {
             spRecursionDepth.getValueFactory().setValue(depth);
 
             // 恢复策略配置
-            for (AppStrategy s : strategies) {
+            for (OldAppStrategy s : strategies) {
                 if (s instanceof AudioConverterStrategy) {
                     ((AudioConverterStrategy) s).loadPrefs(appProps);
                 }
@@ -426,14 +426,14 @@ public class MusicFileManagerApp extends Application {
         cbStrategy = new JFXComboBox<>();
         cbStrategy.setItems(FXCollections.observableArrayList(strategies));
         cbStrategy.setPrefWidth(Double.MAX_VALUE);
-        cbStrategy.setConverter(new javafx.util.StringConverter<AppStrategy>() {
+        cbStrategy.setConverter(new javafx.util.StringConverter<OldAppStrategy>() {
             @Override
-            public String toString(AppStrategy object) {
+            public String toString(OldAppStrategy object) {
                 return object.getName();
             }
 
             @Override
-            public AppStrategy fromString(String string) {
+            public OldAppStrategy fromString(String string) {
                 return null;
             }
         });
@@ -622,7 +622,7 @@ public class MusicFileManagerApp extends Application {
             log("请添加工作目录。");
             return;
         }
-        AppStrategy strategy = cbStrategy.getValue();
+        OldAppStrategy strategy = cbStrategy.getValue();
         if (strategy == null) return;
 
         changePreviewList.clear();
@@ -850,7 +850,7 @@ public class MusicFileManagerApp extends Application {
             logImmediate("已有执行中的变更，不可操作。");
             return;
         }
-        AppStrategy strategy = cbStrategy.getValue();
+        OldAppStrategy strategy = cbStrategy.getValue();
         if (strategy == null) return;
         executionThreadCount = strategy.getPreferredThreadCount();
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION,

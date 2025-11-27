@@ -1,6 +1,6 @@
-package plus.model;
+package backup.plusV1.model;
 
-import plus.type.ConditionType;
+import backup.plusV1.type.ConditionType;
 
 public class RuleCondition {
     ConditionType type;

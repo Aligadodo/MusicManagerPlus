@@ -1,4 +1,4 @@
-package plus.plugins; // --- Strategies ---
+package backup.plusV1.plugins; // --- Strategies ---
 
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXComboBox;
@@ -12,11 +12,11 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
-import plus.AppStrategy;
-import plus.model.ChangeRecord;
-import plus.type.ExecStatus;
-import plus.type.OperationType;
-import plus.type.ScanTarget;
+import backup.plusV1.OldAppStrategy;
+import backup.plusV1.model.ChangeRecord;
+import backup.plusV1.type.ExecStatus;
+import backup.plusV1.type.OperationType;
+import backup.plusV1.type.ScanTarget;
 
 import java.io.File;
 import java.util.*;
@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
-public class AudioConverterStrategy extends AppStrategy {
+public class AudioConverterStrategy extends OldAppStrategy {
     private final JFXComboBox<String> cbTargetFormat;
     private final JFXComboBox<String> cbOutputDirMode;
     private final TextField txtRelativePath;

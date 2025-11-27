@@ -1,4 +1,4 @@
-package plus.backup;
+package backup;
 
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXComboBox;

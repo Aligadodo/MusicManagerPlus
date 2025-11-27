@@ -1,10 +1,10 @@
-package plus.plugins;
+package backup.plusV1.plugins;
 
 import javafx.scene.Node;
 import javafx.scene.control.Label;
-import plus.AppStrategy;
-import plus.model.ChangeRecord;
-import plus.type.ScanTarget;
+import backup.plusV1.OldAppStrategy;
+import backup.plusV1.model.ChangeRecord;
+import backup.plusV1.type.ScanTarget;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 /**
  * demo 未实现
  */
-public class AlbumDirNormalizeStrategy extends AppStrategy {
+public class AlbumDirNormalizeStrategy extends OldAppStrategy {
     @Override
     public String getName() {
         return "专辑目录标准化";

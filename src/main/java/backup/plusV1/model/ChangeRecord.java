@@ -1,9 +1,9 @@
-package plus.model;
+package backup.plusV1.model;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import plus.type.ExecStatus;
-import plus.type.OperationType;
+import backup.plusV1.type.ExecStatus;
+import backup.plusV1.type.OperationType;
 
 import java.io.File;
 import java.util.HashMap;

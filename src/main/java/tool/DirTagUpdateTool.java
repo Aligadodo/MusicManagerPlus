@@ -37,14 +37,16 @@ public class DirTagUpdateTool {
         List<File> files = new ArrayList<>();
         List<File> dirs = new ArrayList<>();
         FileUtil.listFiles(0, new File(rootDir), files, dirs);
-        System.out.println(String.format("dir has %d files and %d dirs ", files.size(), dirs.size()));
+        System.out.printf("dir has %d files and %d dirs %n", files.size(), dirs.size());
         Collections.reverse(dirs);
         dirs.forEach(
                 dir -> {
+                    if (dir.listFiles() == null) return;
                     Map<String, Integer> typeMap = getMusicTypesCount(dir);
-                    if(typeMap.size() == 1){
+                    long countDirs = Arrays.stream(dir.listFiles()).filter(File::isDirectory).count();
+                    if (typeMap.size() == 1 && countDirs < 4) {
                         String type = typeMap.keySet().iterator().next().toUpperCase();
-                        if(!dir.getName().toUpperCase().contains(type)) {
+                        if (!dir.getName().toUpperCase().contains(type)) {
                             FileUtil.renameDir(dir, dir.getName() + " - " + type);
                         }
                     }
@@ -57,11 +59,11 @@ public class DirTagUpdateTool {
     private static Map<String, Integer> getMusicTypesCount(File dir) {
         Map<String, Integer> map = new HashMap<>();
         File[] files = dir.listFiles();
-        if(files != null) {
+        if (files != null) {
             for (File file : files) {
-                if(!file.isDirectory()) {
+                if (!file.isDirectory()) {
                     FileStatisticInfo fileStatisticInfo = FileStatisticInfo.create(file);
-                    if(full_music_types.contains(fileStatisticInfo.type)){
+                    if (full_music_types.contains(fileStatisticInfo.type)) {
                         map.put(fileStatisticInfo.type, map.getOrDefault(fileStatisticInfo.type, 0) + 1);
                     }
                 }

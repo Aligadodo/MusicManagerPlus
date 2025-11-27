@@ -1,14 +1,14 @@
-package plus;
+package backup.plusV1;
 
 import javafx.scene.Node;
-import plus.model.ChangeRecord;
-import plus.type.ScanTarget;
+import backup.plusV1.model.ChangeRecord;
+import backup.plusV1.type.ScanTarget;
 
 import java.io.File;
 import java.util.List;
 import java.util.function.BiConsumer;
 
-public abstract class AppStrategy {
+public abstract class OldAppStrategy {
     public abstract String getName();
 
     public abstract Node getConfigNode();

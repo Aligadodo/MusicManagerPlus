@@ -16,7 +16,7 @@ import net.bramp.ffmpeg.FFmpeg;
 import net.bramp.ffmpeg.FFmpegExecutor;
 import net.bramp.ffmpeg.builder.FFmpegBuilder;
 import net.bramp.ffmpeg.builder.FFmpegOutputBuilder;
-import plusv2.AppStrategyV2;
+import plusv2.AppStrategy;
 import plusv2.model.AudioMeta;
 import plusv2.model.ChangeRecord;
 import plusv2.type.ExecStatus;
@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
-public class AudioConverterStrategy extends AppStrategyV2 {
+public class AudioConverterStrategy extends AppStrategy {
     private final JFXComboBox<String> cbTargetFormat;
     private final JFXComboBox<String> cbOutputDirMode;
     private final TextField txtRelativePath;

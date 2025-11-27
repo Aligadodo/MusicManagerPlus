@@ -5,7 +5,7 @@ import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
-import plusv2.AppStrategyV2;
+import plusv2.AppStrategy;
 import plusv2.model.AudioMeta;
 import plusv2.model.ChangeRecord;
 import plusv2.type.OperationType;
@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 /**
  * demo
  */
-public class AlbumDirNormalizeStrategy extends AppStrategyV2 {
+public class AlbumDirNormalizeStrategy extends AppStrategy {
     private final TextField txtTemplate;
     private String pTemplate;
 

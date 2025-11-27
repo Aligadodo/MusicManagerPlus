@@ -9,7 +9,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
-import plusv2.AppStrategyV2;
+import plusv2.AppStrategy;
 import plusv2.model.AudioMeta;
 import plusv2.model.ChangeRecord;
 import plusv2.type.ExecStatus;
@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 /**
  * Demo 功能待实现
  */
-public class FileMigrateStrategy extends AppStrategyV2 {
+public class FileMigrateStrategy extends AppStrategy {
     private final TextField txtDestDir;
     private final TextField txtPathPattern;
     private final JFXButton btnPick;

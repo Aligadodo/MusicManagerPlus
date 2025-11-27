@@ -18,7 +18,7 @@ import net.bramp.ffmpeg.FFmpeg;
 import net.bramp.ffmpeg.FFmpegExecutor;
 import net.bramp.ffmpeg.builder.FFmpegBuilder;
 import net.bramp.ffmpeg.builder.FFmpegOutputBuilder;
-import plusv2.AppStrategyV2;
+import plusv2.AppStrategy;
 import plusv2.model.ChangeRecord;
 import plusv2.type.ExecStatus;
 import plusv2.type.OperationType;
@@ -37,7 +37,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class CueSplitterStrategy extends AppStrategyV2 {
+public class CueSplitterStrategy extends AppStrategy {
     // ... existing fields and constructor ...
     private final JFXComboBox<String> cbTargetFormat;
     private final JFXComboBox<String> cbOutputDirMode;

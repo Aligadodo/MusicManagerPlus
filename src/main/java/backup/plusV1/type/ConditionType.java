@@ -1,4 +1,4 @@
-package plus.type;
+package backup.plusV1.type;
 
 public enum ConditionType {
     CONTAINS("包含文本"),

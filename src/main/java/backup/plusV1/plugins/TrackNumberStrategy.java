@@ -1,9 +1,9 @@
-package plus.plugins;
+package backup.plusV1.plugins;
 
 import javafx.scene.Node;
-import plus.AppStrategy;
-import plus.model.ChangeRecord;
-import plus.type.ScanTarget;
+import backup.plusV1.OldAppStrategy;
+import backup.plusV1.model.ChangeRecord;
+import backup.plusV1.type.ScanTarget;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class TrackNumberStrategy extends AppStrategy {
+public class TrackNumberStrategy extends OldAppStrategy {
     @Override public String getName() { return "歌曲序号补全"; }
     @Override public Node getConfigNode() { return null; }
     @Override public ScanTarget getTargetType() { return ScanTarget.FILES_ONLY; }

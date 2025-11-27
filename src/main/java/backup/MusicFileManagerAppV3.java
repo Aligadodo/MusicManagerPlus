@@ -1,4 +1,4 @@
-package plus.backup;
+package backup;
 
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXComboBox;
@@ -34,7 +34,7 @@ import java.util.stream.Stream;
 
 // 实际开发请确保引入: JFoenix, ControlsFX, Lombok, Commons-IO, JAudioTagger
 
-public class MusicFileManagerAppV4 extends Application {
+public class MusicFileManagerAppV3 extends Application {
 
     private Stage primaryStage;
     
