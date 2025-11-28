@@ -1,6 +1,6 @@
 package com.filemanager;
 
-import com.filemanager.plusv2.MusicFileManagerApp;
+import com.filemanager.MusicFileManagerApp;
 
 public class Launcher {
     public static void main(String[] args) {

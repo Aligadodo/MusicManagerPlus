@@ -1,4 +1,4 @@
-package com.filemanager.plusv2.type;
+package com.filemanager.type;
 
 public enum ActionType {
     REPLACE_TEXT("文本替换"),

@@ -1,10 +1,10 @@
-package com.filemanager.plusv2.plugins;
+package com.filemanager.plugins;
 
-import com.filemanager.plusv2.AppStrategy;
-import com.filemanager.plusv2.model.ChangeRecord;
-import com.filemanager.plusv2.type.ExecStatus;
-import com.filemanager.plusv2.type.OperationType;
-import com.filemanager.plusv2.type.ScanTarget;
+import com.filemanager.AppStrategy;
+import com.filemanager.model.ChangeRecord;
+import com.filemanager.type.ExecStatus;
+import com.filemanager.type.OperationType;
+import com.filemanager.type.ScanTarget;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXComboBox;
 import javafx.application.Platform;

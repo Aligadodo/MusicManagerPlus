@@ -1,8 +1,8 @@
-package com.filemanager.plusv2;
+package com.filemanager;
 
-import com.filemanager.plusv2.model.ChangeRecord;
-import com.filemanager.plusv2.model.RuleCondition;
-import com.filemanager.plusv2.type.ScanTarget;
+import com.filemanager.model.ChangeRecord;
+import com.filemanager.model.RuleCondition;
+import com.filemanager.type.ScanTarget;
 import javafx.scene.Node;
 import lombok.Getter;
 

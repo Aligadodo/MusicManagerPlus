@@ -1,9 +1,9 @@
-package com.filemanager.plusv2.model;
+package com.filemanager.model;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import com.filemanager.plusv2.type.ExecStatus;
-import com.filemanager.plusv2.type.OperationType;
+import com.filemanager.type.ExecStatus;
+import com.filemanager.type.OperationType;
 
 import java.io.File;
 import java.util.HashMap;

@@ -1,4 +1,4 @@
-package com.filemanager.plusv2.util;
+package com.filemanager.util;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;

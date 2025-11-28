@@ -1,9 +1,9 @@
-package com.filemanager.plusv2.model;
+package com.filemanager.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import com.filemanager.plusv2.type.ConditionType;
+import com.filemanager.type.ConditionType;
 
 import java.io.File;
 

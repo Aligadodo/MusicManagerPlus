@@ -1,4 +1,4 @@
-package com.filemanager.plusv2.type;
+package com.filemanager.type;
 
 public enum ConditionType {
     // 文本匹配
