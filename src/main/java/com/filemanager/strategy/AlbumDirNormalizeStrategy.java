@@ -1,6 +1,5 @@
-package com.filemanager.plugins;
+package com.filemanager.strategy;
 
-import com.filemanager.AppStrategy;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
@@ -60,7 +59,7 @@ public class AlbumDirNormalizeStrategy extends AppStrategy {
     @Override
     public Node getConfigNode() {
         VBox box = new VBox(10);
-        box.getChildren().addAll(new Label("目录命名模板:"), txtTemplate, new Label("变量: %artist%, %album%, %year%"));
+        box.getChildren().addAll(createStyledLabel("目录命名模板:"), txtTemplate, createStyledLabel("变量: %artist%, %album%, %year%"));
         return box;
     }
 

@@ -1,6 +1,5 @@
-package com.filemanager.plugins;
+package com.filemanager.strategy;
 
-import com.filemanager.AppStrategy;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
@@ -73,7 +72,7 @@ public class TrackNumberStrategy extends AppStrategy {
     @Override
     public Node getConfigNode() {
         VBox box = new VBox(10);
-        box.getChildren().addAll(new Label("模式:"), cbMode, new HBox(10, chkPadZero, new Label("分隔符:"), txtSeparator));
+        box.getChildren().addAll(createStyledLabel("模式:"), cbMode, new HBox(10, chkPadZero, createStyledLabel("分隔符:"), txtSeparator));
         return box;
     }
 

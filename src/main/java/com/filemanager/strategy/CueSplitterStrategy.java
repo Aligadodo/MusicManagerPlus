@@ -1,6 +1,5 @@
-package com.filemanager.plugins;
+package com.filemanager.strategy;
 
-import com.filemanager.AppStrategy;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
@@ -103,7 +102,7 @@ public class CueSplitterStrategy extends AppStrategy {
     @Override
     public Node getConfigNode() {
         VBox box = new VBox(10);
-        HBox ff = new HBox(10, new Label("FFmpeg:"), txtFFmpegPath);
+        HBox ff = new HBox(10, createStyledLabel("FFmpeg:"), txtFFmpegPath);
         JFXButton b = new JFXButton("...");
         b.setOnAction(e -> {
             FileChooser fc = new FileChooser();
@@ -111,7 +110,7 @@ public class CueSplitterStrategy extends AppStrategy {
             if (f != null) txtFFmpegPath.setText(f.getAbsolutePath());
         });
         ff.getChildren().add(b);
-        box.getChildren().addAll(new Label("目标格式:"), cbTargetFormat, new Label("输出:"), cbOutputDirMode, txtRelativePath, new Label("并发:"), spThreads, ff);
+        box.getChildren().addAll(createStyledLabel("目标格式:"), cbTargetFormat, createStyledLabel("输出:"), cbOutputDirMode, txtRelativePath, createStyledLabel("并发:"), spThreads, ff);
         return box;
     }
 

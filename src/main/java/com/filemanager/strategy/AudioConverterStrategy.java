@@ -1,6 +1,5 @@
-package com.filemanager.plugins; // --- Strategies ---
+package com.filemanager.strategy; // --- Strategies ---
 
-import com.filemanager.AppStrategy;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
@@ -85,7 +84,7 @@ public class AudioConverterStrategy extends AppStrategy {
     @Override
     public Node getConfigNode() {
         VBox box = new VBox(10);
-        HBox ffmpegBox = new HBox(10, new Label("FFmpeg:"), txtFFmpegPath);
+        HBox ffmpegBox = new HBox(10, createStyledLabel("FFmpeg:"), txtFFmpegPath);
         ffmpegBox.setAlignment(Pos.CENTER_LEFT);
         JFXButton btnPick = new JFXButton("浏览");
         btnPick.setOnAction(e -> {
@@ -107,11 +106,11 @@ public class AudioConverterStrategy extends AppStrategy {
         cacheBox.getChildren().add(btnPickCache);
 
         box.getChildren().addAll(
-                new Label("目标格式:"), cbTargetFormat,
-                new Label("输出位置:"), new HBox(10, cbOutputDirMode, txtRelativePath),
+                createStyledLabel("目标格式:"), cbTargetFormat,
+                createStyledLabel("输出位置:"), new HBox(10, cbOutputDirMode, txtRelativePath),
                 new Separator(),
                 chkForceFilenameMeta,
-                new HBox(15, new Label("并发线程:"), spThreads),
+                new HBox(15, createStyledLabel("并发线程:"), spThreads),
                 chkEnableCache, cacheBox,
                 new Separator(), chkSkipExisting, ffmpegBox
         );

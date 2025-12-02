@@ -1,9 +1,12 @@
-package com.filemanager;
+package com.filemanager.strategy;
 
+import com.filemanager.front.FileManagerAppInterface;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.RuleCondition;
 import com.filemanager.type.ScanTarget;
 import javafx.scene.Node;
+import javafx.scene.control.Label;
+import javafx.scene.paint.Color;
 import lombok.Getter;
 
 import java.io.File;
@@ -14,11 +17,11 @@ import java.util.function.BiConsumer;
 
 @Getter
 public abstract class AppStrategy {
-    protected MusicFileManagerApp app;
+    protected FileManagerAppInterface app;
     // 通用前置条件 (所有策略都支持)
     protected List<RuleCondition> globalConditions = new ArrayList<>();
 
-    public void setContext(MusicFileManagerApp app) {
+    public void setContext(FileManagerAppInterface app) {
         this.app = app;
     }
 
@@ -67,5 +70,11 @@ public abstract class AppStrategy {
 
     public String getDescription() {
         return getName();
+    }
+
+    protected static Label createStyledLabel(String text) {
+        Label label = new Label(text);
+        label.setTextFill(Color.web("#333333"));
+        return label;
     }
 }

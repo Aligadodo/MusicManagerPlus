@@ -1,8 +1,8 @@
-package com.filemanager;
+package com.filemanager.front;
 
 import com.filemanager.model.*;
 import com.filemanager.model.ChangeRecord;
-import com.filemanager.plugins.*;
+import com.filemanager.strategy.*;
 import com.filemanager.type.ConditionType;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
@@ -18,6 +18,7 @@ import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
@@ -49,15 +50,15 @@ import java.util.stream.Stream;
  * Echo Music File Manager v15.1 (Complete & Robust)
  * 修复了配置加载、文件扫描、列表过滤等核心功能的完整实现，无桩代码。
  */
-public class MusicFileManagerApp extends Application {
+public class MusicFileManagerAppV15 extends Application implements FileManagerAppInterface {
 
     private Stage primaryStage;
     private final Properties appProps = new Properties();
     private final File lastConfigFile = new File(System.getProperty("user.home"), ".echo_music_manager_v15.config");
 
     // --- 核心数据 ---
-    private final ObservableList<File> sourceRoots = FXCollections.observableArrayList();
-    private final ObservableList<AppStrategy> pipelineStrategies = FXCollections.observableArrayList();
+    final ObservableList<File> sourceRoots = FXCollections.observableArrayList();
+    final ObservableList<AppStrategy> pipelineStrategies = FXCollections.observableArrayList();
     private List<ChangeRecord> fullChangeList = new ArrayList<>();
 
     // --- UI 容器 (层叠布局实现背景) ---
@@ -66,7 +67,9 @@ public class MusicFileManagerApp extends Application {
     private Region backgroundOverlay;
     private BorderPane mainContent;
     private TabPane mainTabPane;
-    private Tab tabCompose, tabPreview, tabLog;
+    private Tab tabCompose;
+    private Tab tabPreview;
+    private Tab tabLog;
 
     // --- Tab 1: 编排 (Composer) ---
     private ListView<File> sourceListView;
@@ -100,7 +103,6 @@ public class MusicFileManagerApp extends Application {
     private Task<?> currentTask;
     private volatile boolean isTaskRunning = false;
     private AnimationTimer uiUpdater;
-    private final int executionThreadCount = 1;
 
     // 外观配置
     private String bgImagePath = "";
@@ -485,6 +487,7 @@ public class MusicFileManagerApp extends Application {
         strategyPrototypes.add(new AlbumDirNormalizeStrategy());
         strategyPrototypes.add(new TrackNumberStrategy());
         strategyPrototypes.add(new CueSplitterStrategy());
+        strategyPrototypes.add(new MetadataScraperStrategy());
     }
 
     private void addStrategyStep() {
@@ -516,6 +519,7 @@ public class MusicFileManagerApp extends Application {
         TitledPane tpCond = new TitledPane("前置过滤条件", createConditionsUI(strategy));
         tpCond.setExpanded(false);
         configContainer.getChildren().addAll(title, desc, new Separator(), tpCond, new Separator(), new Label("参数配置:"), cfgNode);
+        forceDarkText(cfgNode);
     }
 
     // --- 核心流水线逻辑 ---
@@ -530,7 +534,7 @@ public class MusicFileManagerApp extends Application {
         if (btnExecute != null) btnExecute.setDisable(true);
     }
 
-    private void runPipelineAnalysis() {
+    void runPipelineAnalysis() {
         if (sourceRoots.isEmpty()) {
             showToast("请先添加源目录！");
             return;
@@ -604,7 +608,7 @@ public class MusicFileManagerApp extends Application {
         new Thread(task).start();
     }
 
-    private void runPipelineExecution() {
+    void runPipelineExecution() {
         if (fullChangeList.isEmpty() || isTaskRunning) return;
         long count = fullChangeList.stream().filter(ChangeRecord::isChanged).count();
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "确定执行 " + count + " 个变更吗？", ButtonType.YES, ButtonType.NO);
@@ -673,7 +677,7 @@ public class MusicFileManagerApp extends Application {
 
     // --- 辅助方法 ---
 
-    private void refreshPreviewTableFilter() {
+    void refreshPreviewTableFilter() {
         if (fullChangeList.isEmpty()) return;
         String search = txtSearchFilter.getText().toLowerCase();
         String status = cbStatusFilter.getValue();
@@ -729,7 +733,7 @@ public class MusicFileManagerApp extends Application {
         return list;
     }
 
-    private void setupPreviewColumns() {
+    void setupPreviewColumns() {
         TreeTableColumn<ChangeRecord, String> c1 = new TreeTableColumn<>("源文件");
         c1.setCellValueFactory(p -> new SimpleStringProperty(p.getValue().getValue().getOriginalName()));
         c1.setPrefWidth(250);
@@ -816,7 +820,7 @@ public class MusicFileManagerApp extends Application {
         });
     }
 
-    private void forceStop() {
+    void forceStop() {
         if (isTaskRunning) {
             isTaskRunning = false;
             if (currentTask != null) currentTask.cancel();
@@ -1102,6 +1106,16 @@ public class MusicFileManagerApp extends Application {
     private static class Spacer extends Region {
         public Spacer() {
             HBox.setHgrow(this, Priority.ALWAYS);
+        }
+    }
+
+    // 递归设置深色文本，防止第三方组件(如自定义策略UI)使用默认颜色
+    private void forceDarkText(Node node) {
+        if (node instanceof Label) ((Label) node).setTextFill(Color.web("#333"));
+        if (node instanceof CheckBox) ((CheckBox) node).setTextFill(Color.web("#333"));
+        if (node instanceof RadioButton) ((RadioButton) node).setTextFill(Color.web("#333"));
+        if (node instanceof Parent) {
+            for (Node child : ((Parent) node).getChildrenUnmodifiable()) forceDarkText(child);
         }
     }
 }

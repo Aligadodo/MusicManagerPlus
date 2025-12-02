@@ -1,7 +1,6 @@
-package com.filemanager.plugins;
+package com.filemanager.strategy;
 
 
-import com.filemanager.AppStrategy;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.RuleCondition;
 import com.filemanager.type.ConditionType;
@@ -51,24 +50,24 @@ public class AdvancedRenameStrategy extends AppStrategy {
     public AdvancedRenameStrategy() {
         lvRules = new ListView<>();
         lvRules.setCellFactory(p -> new RuleListCell());
-        lvRules.setPlaceholder(new Label("暂无规则，请点击下方添加..."));
+        lvRules.setPlaceholder(createStyledLabel("暂无规则，请点击下方添加..."));
         lvRules.setPrefHeight(150);
 
         btnAddRule = new JFXButton("添加规则");
-        btnAddRule.setStyle("-fx-background-color: #3498db; -fx-text-fill: white;");
+        btnAddRule.setStyle("-fx-background-color: #3498db;");
         btnAddRule.setOnAction(e -> showRuleEditDialog(null));
 
-        btnRemoveRule = new JFXButton("删除");
-        btnRemoveRule.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white;");
+        btnRemoveRule = new JFXButton("删除选中");
+        btnRemoveRule.setStyle("-fx-background-color: #e74c3c;");
         btnRemoveRule.setOnAction(e -> {
             RenameRule s = lvRules.getSelectionModel().getSelectedItem();
             if (s != null) lvRules.getItems().remove(s);
         });
 
-        btnMoveUp = new JFXButton("↑");
+        btnMoveUp = new JFXButton("↑(上移)");
         btnMoveUp.setOnAction(e -> moveRule(-1));
 
-        btnMoveDown = new JFXButton("↓");
+        btnMoveDown = new JFXButton("↓(下移)");
         btnMoveDown.setOnAction(e -> moveRule(1));
 
         cbCrossDriveMode = new JFXComboBox<>(FXCollections.observableArrayList("移动 (Move)", "复制 (Copy)"));
@@ -105,14 +104,16 @@ public class AdvancedRenameStrategy extends AppStrategy {
         GridPane g = new GridPane();
         g.setHgap(10);
         g.setVgap(5);
-        g.add(new Label("对象:"), 0, 0);
+        g.add(createStyledLabel("对象:"), 0, 0);
         g.add(cbProcessScope, 1, 0);
-        g.add(new Label("跨盘:"), 2, 0);
+        g.add(createStyledLabel("跨盘:"), 2, 0);
         g.add(cbCrossDriveMode, 3, 0);
-        g.add(new Label("并发:"), 4, 0);
+        g.add(createStyledLabel("并发:"), 4, 0);
         g.add(spThreads, 5, 0);
+        g.setStyle("-fx-background-color: rgba(255,255,255,0.5); -fx-background-radius: 20; -fx-padding: 5 15; -fx-text-fill: #333333;");
 
-        r.getChildren().addAll(new Label("规则链 (从上至下依次执行):"), lvRules, t, new Separator(), g);
+
+        r.getChildren().addAll(createStyledLabel("规则链 (从上至下依次执行):"), lvRules, t, new Separator(), g);
         return r;
     }
 
@@ -372,15 +373,15 @@ public class AdvancedRenameStrategy extends AppStrategy {
             txtReplace.setText(existingRule.replaceStr);
         }
 
-        grid.add(new Label("1. 前置条件:"), 0, 0);
+        grid.add(createStyledLabel("1. 前置条件:"), 0, 0);
         grid.add(new HBox(5, cbCondType, txtCondVal, btnAddCond, btnDelCond), 1, 0);
         grid.add(lvConds, 1, 1);
         grid.add(new Separator(), 0, 2, 2, 1);
-        grid.add(new Label("2. 执行动作:"), 0, 3);
+        grid.add(createStyledLabel("2. 执行动作:"), 0, 3);
         grid.add(cbAction, 1, 3);
-        grid.add(new Label("参数 A:"), 0, 4);
+        grid.add(createStyledLabel("参数 A:"), 0, 4);
         grid.add(txtFind, 1, 4);
-        grid.add(new Label("参数 B:"), 0, 5);
+        grid.add(createStyledLabel("参数 B:"), 0, 5);
         grid.add(txtReplace, 1, 5);
 
         dialog.getDialogPane().setContent(grid);
@@ -419,9 +420,9 @@ public class AdvancedRenameStrategy extends AppStrategy {
             } else {
                 VBox v = new VBox(3);
                 String cond = item.conditions.isEmpty() ? "无条件" : item.conditions.stream().map(RuleCondition::toString).collect(Collectors.joining(" & "));
-                Label l1 = new Label("若: " + cond);
-                l1.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 11px;");
-                Label l2 = new Label(item.getActionDesc());
+                Label l1 = createStyledLabel("若: " + cond);
+                l1.setStyle("-fx-font-size: 11px;");
+                Label l2 = createStyledLabel(item.getActionDesc());
                 l2.setStyle("-fx-font-weight: bold;");
                 v.getChildren().addAll(l1, l2);
                 setGraphic(v);

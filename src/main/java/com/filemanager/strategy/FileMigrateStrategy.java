@@ -1,6 +1,5 @@
-package com.filemanager.plugins;
+package com.filemanager.strategy;
 
-import com.filemanager.AppStrategy;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
@@ -82,7 +81,7 @@ public class FileMigrateStrategy extends AppStrategy {
             File f = dc.showDialog(null);
             if (f != null) txtDestDir.setText(f.getAbsolutePath());
         });
-        box.getChildren().addAll(new Label("目标根目录:"), new HBox(10, txtDestDir, btn), new Label("结构模板 (/分隔):"), txtPathPattern, chkCleanEmpty);
+        box.getChildren().addAll(createStyledLabel("目标根目录:"), new HBox(10, txtDestDir, btn), createStyledLabel("结构模板 (/分隔):"), txtPathPattern, chkCleanEmpty);
         return box;
     }
 
