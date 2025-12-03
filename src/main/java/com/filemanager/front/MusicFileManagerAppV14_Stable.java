@@ -409,6 +409,7 @@ public class MusicFileManagerAppV14_Stable extends Application implements FileMa
         strategyPrototypes.add(new TrackNumberStrategy());
         strategyPrototypes.add(new CueSplitterStrategy());
         strategyPrototypes.add(new MetadataScraperStrategy());
+        strategyPrototypes.add(new FileCleanupStrategy());
     }
 
     private void addStrategyStep(Properties config) {

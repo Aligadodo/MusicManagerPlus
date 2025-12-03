@@ -108,8 +108,8 @@ public class AdvancedRenameStrategy extends AppStrategy {
         g.add(cbProcessScope, 1, 0);
         g.add(createStyledLabel("跨盘:"), 2, 0);
         g.add(cbCrossDriveMode, 3, 0);
-        g.add(createStyledLabel("并发:"), 4, 0);
-        g.add(spThreads, 5, 0);
+        g.add(createStyledLabel("并发:"), 0, 1);
+        g.add(spThreads, 1, 1);
         g.setStyle("-fx-background-color: rgba(255,255,255,0.5); -fx-background-radius: 20; -fx-padding: 5 15; -fx-text-fill: #333333;");
 
 

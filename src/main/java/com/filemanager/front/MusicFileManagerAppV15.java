@@ -488,6 +488,7 @@ public class MusicFileManagerAppV15 extends Application implements FileManagerAp
         strategyPrototypes.add(new TrackNumberStrategy());
         strategyPrototypes.add(new CueSplitterStrategy());
         strategyPrototypes.add(new MetadataScraperStrategy());
+        strategyPrototypes.add(new FileCleanupStrategy());
     }
 
     private void addStrategyStep() {

@@ -905,6 +905,7 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
         strategyPrototypes.add(new TrackNumberStrategy());
         strategyPrototypes.add(new CueSplitterStrategy());
         strategyPrototypes.add(new MetadataScraperStrategy());
+        strategyPrototypes.add(new FileCleanupStrategy());
     }
 
     private void addStrategyStep(AppStrategy template) {
@@ -934,32 +935,6 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
         return null;
     }
 
-    private Node createConditionsUI(AppStrategy s) {
-        VBox box = new VBox(5);
-        ListView<RuleCondition> lv = new ListView<>(FXCollections.observableArrayList(s.getGlobalConditions()));
-        lv.setPrefHeight(80);
-        HBox in = new HBox(5);
-        ComboBox<ConditionType> ct = new ComboBox<>(FXCollections.observableArrayList(ConditionType.values()));
-        ct.getSelectionModel().select(0);
-        TextField tv = new TextField();
-        JFXButton ba = new JFXButton("+");
-        ba.setOnAction(e -> {
-            if (!tv.getText().isEmpty()) {
-                s.getGlobalConditions().add(new RuleCondition(ct.getValue(), tv.getText()));
-                lv.getItems().setAll(s.getGlobalConditions());
-            }
-        });
-        JFXButton bd = new JFXButton("-");
-        bd.setOnAction(e -> {
-            RuleCondition sel = lv.getSelectionModel().getSelectedItem();
-            if (sel != null) s.getGlobalConditions().remove(sel);
-            lv.getItems().setAll(s.getGlobalConditions());
-        });
-        in.getChildren().addAll(ct, tv, ba, bd);
-        box.getChildren().addAll(lv, in);
-        return box;
-    }
-
     private static class Spacer extends Region {
         public Spacer() {
             HBox.setHgrow(this, Priority.ALWAYS);
@@ -984,31 +959,22 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
         }
     }
 
-    // [变更] ComposeView: 增强列表交互 (支持行内删除)，确保配置刷新逻辑正确
     private class ComposeView {
-        protected final MusicFileManagerAppV16 app;
-        protected VBox viewNode;
-        protected ListView<AppStrategy> pipelineListView;
-        protected VBox configContainer;
-        protected ListView<File> sourceListView;
-        protected JFXComboBox<AppStrategy> cbStrategyTemplates;
+        private final MusicFileManagerAppV16 app;
+        private VBox viewNode;
+        private ListView<AppStrategy> pipelineListView;
+        private VBox configContainer;
 
-        public ComposeView(MusicFileManagerAppV16 app) {
-            this.app = app;
-            buildUI();
-        }
-
-        public Node getViewNode() {
-            return viewNode;
-        }
+        public ComposeView(MusicFileManagerAppV16 app) { this.app = app; buildUI(); }
+        public Node getViewNode() { return viewNode; }
 
         private void buildUI() {
             viewNode = new VBox(20);
 
             HBox headers = new HBox(20);
             headers.getChildren().addAll(
-                    styles.createSectionHeader("1. 源目录", "拖拽添加"),
-                    styles.createSectionHeader("2. 流水线", "按序执行"),
+                    styles.createSectionHeader("1. 源目录", "拖拽添加 / 排序"),
+                    styles.createSectionHeader("2. 流水线", "按序执行 / 调整"),
                     styles.createSectionHeader("3. 参数配置", "选中步骤编辑")
             );
             HBox.setHgrow(headers.getChildren().get(0), Priority.ALWAYS);
@@ -1017,116 +983,147 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
 
             GridPane grid = new GridPane();
             grid.setHgap(20);
-            ColumnConstraints col1 = new ColumnConstraints();
-            col1.setPercentWidth(30);
-            ColumnConstraints col2 = new ColumnConstraints();
-            col2.setPercentWidth(30);
-            ColumnConstraints col3 = new ColumnConstraints();
-            col3.setPercentWidth(40);
+            ColumnConstraints col1 = new ColumnConstraints(); col1.setPercentWidth(30);
+            ColumnConstraints col2 = new ColumnConstraints(); col2.setPercentWidth(30);
+            ColumnConstraints col3 = new ColumnConstraints(); col3.setPercentWidth(40);
             grid.getColumnConstraints().addAll(col1, col2, col3);
 
             // --- Left Panel (Source) ---
-            // (保持原样，为节省篇幅略去具体代码，请保留原有的 sourceListView 构建逻辑)
             VBox leftPanel = styles.createGlassPane();
-            leftPanel.setPadding(new Insets(15));
-            leftPanel.setSpacing(10);
+            leftPanel.setPadding(new Insets(15)); leftPanel.setSpacing(10);
 
-            sourceListView = new ListView<>(app.sourceRoots);
+            ListView<File> sourceListView = new ListView<>(app.sourceRoots);
             sourceListView.setPlaceholder(styles.createNormalLabel("拖拽文件夹到此"));
             VBox.setVgrow(sourceListView, Priority.ALWAYS);
+
+            // [增强] 源目录列表单元格：支持完整路径显示 + 行内操作
             sourceListView.setCellFactory(p -> new ListCell<File>() {
-                @Override
-                protected void updateItem(File item, boolean empty) {
+                @Override protected void updateItem(File item, boolean empty) {
                     super.updateItem(item, empty);
-                    if (empty || item == null) {
-                        setText(null);
-                        setStyle("-fx-background-color: transparent;");
+                    if(empty || item == null) {
+                        setText(null); setGraphic(null); setStyle("-fx-background-color: transparent;");
                     } else {
-                        setText(item.getName());
-                        setTooltip(new Tooltip(item.getAbsolutePath()));
-                        setStyle("-fx-background-color: transparent; -fx-text-fill: " + currentTheme.textColor + ";");
+                        setText(null); // 使用 Graphic 布局
+                        BorderPane pane = new BorderPane();
+
+                        VBox content = new VBox(2);
+                        Label name = styles.createLabel(item.getName(), 13, true);
+                        Label path = styles.createInfoLabel(item.getAbsolutePath());
+                        path.setTooltip(new Tooltip(item.getAbsolutePath()));
+                        content.getChildren().addAll(name, path);
+
+                        HBox actions = new HBox(4);
+                        actions.setAlignment(Pos.CENTER_RIGHT);
+                        // 文件夹操作：上移、下移、打开、删除
+                        JFXButton btnUp = createSmallIconButton("▲", e -> moveListItem(app.sourceRoots, getIndex(), -1));
+                        JFXButton btnDown = createSmallIconButton("▼", e -> moveListItem(app.sourceRoots, getIndex(), 1));
+                        JFXButton btnOpen = createSmallIconButton("📂", e -> openFileInSystem(item));
+                        JFXButton btnDel = createSmallIconButton("✕", e -> {
+                            app.sourceRoots.remove(item);
+                            app.invalidatePreview("移除源目录");
+                        });
+                        btnDel.setTextFill(Color.web("#e74c3c")); // 红色删除键
+
+                        actions.getChildren().addAll(btnUp, btnDown, btnOpen, btnDel);
+
+                        pane.setCenter(content);
+                        pane.setRight(actions);
+                        setGraphic(pane);
+                        setStyle("-fx-background-color: transparent; -fx-border-color: #eee; -fx-border-width: 0 0 1 0;");
+
+                        // 拖拽支持
+                        setOnDragOver(e -> {
+                            if (e.getDragboard().hasFiles()) e.acceptTransferModes(TransferMode.COPY_OR_MOVE);
+                            e.consume();
+                        });
+                        setOnDragDropped(e -> handleDragDrop(e));
                     }
                 }
             });
-            // ... (Source Drag&Drop logic unchanged) ...
-            // 占位代码：请保留原有的 sourceListView 事件处理和按钮逻辑
+            // 列表本身的拖拽支持
+            sourceListView.setOnDragOver(e -> { if (e.getDragboard().hasFiles()) e.acceptTransferModes(TransferMode.COPY_OR_MOVE); e.consume(); });
+            sourceListView.setOnDragDropped(this::handleDragDrop);
 
             HBox srcBtns = new HBox(10);
             srcBtns.getChildren().addAll(
-                    styles.createActionButton("添加", null, app::addDirectoryAction),
-                    styles.createActionButton("清空", "#e74c3c", () -> {
-                        app.sourceRoots.clear();
-                        app.invalidatePreview("清空源");
-                    })
+                    styles.createActionButton("添加文件夹", null, app::addDirectoryAction),
+                    styles.createActionButton("全部清空", "#e74c3c", () -> { app.sourceRoots.clear(); app.invalidatePreview("清空源"); })
             );
-            TitledPane tpFilters = new TitledPane("全局筛选", app.createGlobalFiltersUI());
-            tpFilters.setCollapsible(true);
-            tpFilters.setExpanded(true);
+
+            TitledPane tpFilters = new TitledPane("全局筛选设置", app.createGlobalFiltersUI());
+            tpFilters.setCollapsible(true); tpFilters.setExpanded(true);
             tpFilters.setStyle("-fx-text-fill: " + currentTheme.textColor + ";");
+
             leftPanel.getChildren().addAll(sourceListView, srcBtns, tpFilters);
             grid.add(leftPanel, 0, 0);
 
-            // --- Center Panel (Pipeline) [重点改进] ---
+            // --- Center Panel (Pipeline) ---
             VBox centerPanel = styles.createGlassPane();
-            centerPanel.setPadding(new Insets(15));
-            centerPanel.setSpacing(10);
+            centerPanel.setPadding(new Insets(15)); centerPanel.setSpacing(10);
 
             pipelineListView = new ListView<>(app.pipelineStrategies);
             pipelineListView.setStyle("-fx-background-color: rgba(255,255,255,0.5); -fx-background-radius: 5;");
             VBox.setVgrow(pipelineListView, Priority.ALWAYS);
 
-            // 增强的 Cell Factory：支持显示序号、描述和删除按钮
+            // [增强] 流水线列表单元格：支持序号 + 描述 + 完整操作
             pipelineListView.setCellFactory(param -> new ListCell<AppStrategy>() {
-                @Override
-                protected void updateItem(AppStrategy item, boolean empty) {
+                @Override protected void updateItem(AppStrategy item, boolean empty) {
                     super.updateItem(item, empty);
-                    if (empty || item == null) {
-                        setText(null);
-                        setGraphic(null);
-                        setStyle("-fx-background-color: transparent;");
+                    if(empty || item == null) {
+                        setText(null); setGraphic(null); setStyle("-fx-background-color: transparent;");
                     } else {
+                        setText(null);
                         BorderPane pane = new BorderPane();
 
                         VBox v = new VBox(2);
-                        Label n = styles.createLabel((getIndex() + 1) + ". " + item.getName(), 13, true);
+                        Label n = styles.createLabel((getIndex()+1) + ". " + item.getName(), 14, true);
                         Label d = styles.createInfoLabel(item.getDescription());
-                        d.setMaxWidth(180); // 防止过宽撑开
+                        d.setMaxWidth(180);
                         v.getChildren().addAll(n, d);
-                        pane.setCenter(v);
 
-                        // 行内删除按钮
-                        JFXButton btnDel = new JFXButton("✕");
-                        btnDel.setStyle("-fx-text-fill: #e74c3c; -fx-font-weight: bold; -fx-background-color: transparent; -fx-cursor: hand;");
-                        btnDel.setOnAction(e -> {
+                        HBox actions = new HBox(4);
+                        actions.setAlignment(Pos.CENTER_RIGHT);
+
+                        // 策略操作：上移、下移、删除
+                        // (注：配置详情通过列表选中触发，这里不需要额外按钮，或者可以加一个 '⚙' 指示)
+                        JFXButton btnUp = createSmallIconButton("▲", e -> {
+                            moveListItem(app.pipelineStrategies, getIndex(), -1);
+                            pipelineListView.getSelectionModel().select(getIndex()); // 保持选中
+                        });
+                        JFXButton btnDown = createSmallIconButton("▼", e -> {
+                            moveListItem(app.pipelineStrategies, getIndex(), 1);
+                            pipelineListView.getSelectionModel().select(getIndex());
+                        });
+                        JFXButton btnDel = createSmallIconButton("✕", e -> {
                             app.pipelineStrategies.remove(item);
-                            configContainer.getChildren().clear();
+                            configContainer.getChildren().clear(); // 清空配置面板
                             app.invalidatePreview("步骤移除");
                         });
-                        pane.setRight(btnDel);
+                        btnDel.setTextFill(Color.web("#e74c3c"));
 
+                        actions.getChildren().addAll(btnUp, btnDown, btnDel);
+
+                        pane.setCenter(v);
+                        pane.setRight(actions);
                         setGraphic(pane);
-                        setStyle("-fx-background-color: transparent; -fx-border-color: #eee; -fx-border-width: 0 0 1 0;");
+
+                        // 选中态样式处理
+                        if (isSelected()) {
+                            setStyle("-fx-background-color: rgba(52, 152, 219, 0.15); -fx-border-color: #3498db; -fx-border-width: 0 0 1 0;");
+                        } else {
+                            setStyle("-fx-background-color: transparent; -fx-border-color: #eee; -fx-border-width: 0 0 1 0;");
+                        }
                     }
                 }
             });
 
-            pipelineListView.getSelectionModel().selectedItemProperty().addListener((o, old, val) -> refreshConfig(val));
+            pipelineListView.getSelectionModel().selectedItemProperty().addListener((o,old,val) -> refreshConfig(val));
 
             HBox pipeActions = new HBox(5);
-            cbStrategyTemplates = new JFXComboBox<>(FXCollections.observableArrayList(app.strategyPrototypes));
+            JFXComboBox<AppStrategy> cbStrategyTemplates = new JFXComboBox<>(FXCollections.observableArrayList(app.strategyPrototypes));
             cbStrategyTemplates.setPromptText("选择功能...");
             cbStrategyTemplates.setPrefWidth(150);
-            cbStrategyTemplates.setConverter(new javafx.util.StringConverter<AppStrategy>() {
-                @Override
-                public String toString(AppStrategy o) {
-                    return o.getName();
-                }
-
-                @Override
-                public AppStrategy fromString(String s) {
-                    return null;
-                }
-            });
+            cbStrategyTemplates.setConverter(new javafx.util.StringConverter<AppStrategy>() { @Override public String toString(AppStrategy o) { return o.getName(); } @Override public AppStrategy fromString(String s) { return null; } });
 
             JFXButton btnAddStep = styles.createActionButton("添加步骤", "#2ecc71", () -> app.addStrategyStep(cbStrategyTemplates.getValue()));
 
@@ -1137,14 +1134,15 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
             // --- Right Panel (Config) ---
             VBox rightPanel = styles.createGlassPane();
             rightPanel.setPadding(new Insets(15));
+
             configContainer = new VBox(10);
-            // 关键：设置最小宽度和背景透明，防止内容被遮挡
             configContainer.setStyle("-fx-background-color: transparent;");
-            ScrollPane configScroll = new ScrollPane(configContainer);
-            configScroll.setFitToWidth(true);
-            configScroll.setStyle("-fx-background: transparent; -fx-background-color: transparent;");
-            VBox.setVgrow(configScroll, Priority.ALWAYS);
-            rightPanel.getChildren().add(configScroll);
+
+            ScrollPane sc = new ScrollPane(configContainer);
+            sc.setFitToWidth(true);
+            sc.setStyle("-fx-background: transparent; -fx-background-color: transparent;");
+            VBox.setVgrow(sc, Priority.ALWAYS);
+            rightPanel.getChildren().add(sc);
             grid.add(rightPanel, 2, 0);
 
             VBox.setVgrow(grid, Priority.ALWAYS);
@@ -1157,12 +1155,32 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
             bottom.getChildren().add(btnGo);
 
             viewNode.getChildren().addAll(headers, grid, bottom);
+
+            // Init select first
+            if (!app.pipelineStrategies.isEmpty()) {
+                pipelineListView.getSelectionModel().selectFirst();
+            }
         }
 
-        // 刷新配置面板：加载策略的具体 UI
+        private void handleDragDrop(javafx.scene.input.DragEvent e) {
+            if (e.getDragboard().hasFiles()) {
+                boolean changed = false;
+                for(File f : e.getDragboard().getFiles()) {
+                    if(f.isDirectory() && !app.sourceRoots.contains(f)) {
+                        app.sourceRoots.add(f);
+                        changed = true;
+                    }
+                }
+                if(changed) app.invalidatePreview("源变更");
+            }
+            e.setDropCompleted(true);
+            e.consume();
+        }
+
         public void refreshConfig(AppStrategy s) {
             configContainer.getChildren().clear();
-            if (s == null) return;
+            if(s==null) return;
+
             configContainer.getChildren().addAll(
                     styles.createHeader(s.getName()),
                     styles.createInfoLabel(s.getDescription()),
@@ -1171,11 +1189,89 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
                     app.createConditionsUI(s),
                     new Separator(),
                     styles.createNormalLabel("参数配置:"),
-                    s.getConfigNode() != null ? s.getConfigNode() : new Label("此功能无配置项")
+                    s.getConfigNode() != null ? s.getConfigNode() : new Label("无")
             );
-            // 强制应用深色文本，解决毛玻璃背景下的显示问题
             styles.forceDarkText(configContainer);
         }
+    }
+
+    // [新增] 通用：列表项移动辅助方法
+    private <T> void moveListItem(ObservableList<T> list, int index, int direction) {
+        int newIndex = index + direction;
+        if (newIndex >= 0 && newIndex < list.size()) {
+            Collections.swap(list, index, newIndex);
+            invalidatePreview("列表顺序变更");
+        }
+    }
+
+    // [新增] 通用：创建统一风格的微型图标按钮
+    private JFXButton createSmallIconButton(String text, javafx.event.EventHandler<javafx.event.ActionEvent> handler) {
+        JFXButton btn = new JFXButton(text);
+        btn.setStyle("-fx-background-color: transparent; -fx-border-color: #ccc; -fx-border-radius: 3; -fx-padding: 2 6 2 6; -fx-font-size: 10px;");
+        btn.setTextFill(Color.web("#555"));
+        btn.setOnAction(e -> {
+            handler.handle(e);
+            e.consume(); // 防止事件冒泡触发 ListCell 选中
+        });
+        // Hover 效果
+        btn.setOnMouseEntered(e -> btn.setStyle("-fx-background-color: #eee; -fx-border-color: #999; -fx-border-radius: 3; -fx-padding: 2 6 2 6; -fx-font-size: 10px;"));
+        btn.setOnMouseExited(e -> btn.setStyle("-fx-background-color: transparent; -fx-border-color: #ccc; -fx-border-radius: 3; -fx-padding: 2 6 2 6; -fx-font-size: 10px;"));
+        return btn;
+    }
+
+    // [变更] createConditionsUI: 使用统一的 ListCell 风格
+    private Node createConditionsUI(AppStrategy strategy) {
+        VBox box = new VBox(5);
+
+        ListView<RuleCondition> lv = new ListView<>(FXCollections.observableArrayList(strategy.getGlobalConditions()));
+        lv.setPrefHeight(100);
+
+        // 使用统一风格的 Cell
+        lv.setCellFactory(p -> new ListCell<RuleCondition>() {
+            @Override protected void updateItem(RuleCondition item, boolean empty) {
+                super.updateItem(item, empty);
+                if(empty || item == null) {
+                    setText(null); setGraphic(null); setStyle("-fx-background-color: transparent;");
+                } else {
+                    setText(null);
+                    HBox root = new HBox(10);
+                    root.setAlignment(Pos.CENTER_LEFT);
+
+                    Label lbl = styles.createNormalLabel(item.toString());
+                    Region sp = new Region(); HBox.setHgrow(sp, Priority.ALWAYS);
+                    JFXButton btnDel = createSmallIconButton("✕", e -> {
+                        strategy.getGlobalConditions().remove(item);
+                        lv.getItems().setAll(strategy.getGlobalConditions());
+                        invalidatePreview("移除条件");
+                    });
+                    btnDel.setTextFill(Color.RED);
+
+                    root.getChildren().addAll(lbl, sp, btnDel);
+                    setGraphic(root);
+                    setStyle("-fx-background-color: transparent; -fx-border-color: #eee; -fx-border-width: 0 0 1 0;");
+                }
+            }
+        });
+
+        HBox input = new HBox(5);
+        ComboBox<ConditionType> cbType = new ComboBox<>(FXCollections.observableArrayList(ConditionType.values()));
+        cbType.getSelectionModel().select(0);
+        TextField txtVal = new TextField();
+        txtVal.setPromptText("条件值");
+        HBox.setHgrow(txtVal, Priority.ALWAYS);
+
+        JFXButton btnAdd = styles.createActionButton("+", "#3498db", () -> {
+            if(!txtVal.getText().isEmpty()){
+                strategy.getGlobalConditions().add(new RuleCondition(cbType.getValue(), txtVal.getText()));
+                lv.getItems().setAll(strategy.getGlobalConditions());
+                txtVal.clear();
+                invalidatePreview("添加条件");
+            }
+        });
+
+        input.getChildren().addAll(cbType, txtVal, btnAdd);
+        box.getChildren().addAll(lv, input);
+        return box;
     }
 
     private class PreviewView {

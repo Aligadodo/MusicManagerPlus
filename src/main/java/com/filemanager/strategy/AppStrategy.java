@@ -18,8 +18,16 @@ import java.util.function.BiConsumer;
 @Getter
 public abstract class AppStrategy {
     protected FileManagerAppInterface app;
+    // 通用条件配置接口 (UI调用)
     // 通用前置条件 (所有策略都支持)
+    @Getter
     protected List<RuleCondition> globalConditions = new ArrayList<>();
+
+    protected static Label createStyledLabel(String text) {
+        Label label = new Label(text);
+        label.setTextFill(Color.web("#333333"));
+        return label;
+    }
 
     public void setContext(FileManagerAppInterface app) {
         this.app = app;
@@ -36,12 +44,11 @@ public abstract class AppStrategy {
 
     public abstract String getName();
 
-    public abstract Node getConfigNode(); // 策略特有的配置UI
-
-    // 通用条件配置接口 (UI调用)
-    public List<RuleCondition> getGlobalConditions() {
-        return globalConditions;
+    public int getPreferredThreadCount() {
+        return 1;
     }
+
+    public abstract Node getConfigNode(); // 策略特有的配置UI
 
     // 核心分析逻辑
     public abstract List<ChangeRecord> analyze(List<ChangeRecord> inputRecords, List<File> rootDirs, BiConsumer<Double, String> progressReporter);
@@ -70,11 +77,5 @@ public abstract class AppStrategy {
 
     public String getDescription() {
         return getName();
-    }
-
-    protected static Label createStyledLabel(String text) {
-        Label label = new Label(text);
-        label.setTextFill(Color.web("#333333"));
-        return label;
     }
 }
