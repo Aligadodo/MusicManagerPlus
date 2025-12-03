@@ -380,7 +380,11 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
         new Thread(task).start();
     }
 
-    public void runPipelineExecution() {
+    /**
+     * 执行流水线
+     * 优化：增加排序逻辑，确保文件夹操作的安全性
+     */
+    private void runPipelineExecution() {
         long count = fullChangeList.stream().filter(ChangeRecord::isChanged).count();
         if (count == 0) return;
 
@@ -388,62 +392,72 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
         if (alert.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) return;
 
         resetProgressUI("正在执行...", true);
-        if (chkSaveLog.isSelected()) initFileLogger();
+        if(chkSaveLog.isSelected()) initFileLogger();
 
         Task<Void> task = new Task<Void>() {
-            @Override
-            protected Void call() throws Exception {
-                List<ChangeRecord> todos = fullChangeList.stream().filter(ChangeRecord::isChanged).collect(Collectors.toList());
+            @Override protected Void call() throws Exception {
+                // [优化] 按路径长度倒序排序 (Deepest First)
+                // 这是一个关键的保护措施：确保先重命名/移动/删除子文件，再处理父文件夹。
+                // 避免因为父文件夹先被重命名，导致子文件路径失效的问题。
+                List<ChangeRecord> todos = fullChangeList.stream()
+                        .filter(ChangeRecord::isChanged)
+                        .sorted((r1, r2) -> Integer.compare(r2.getNewPath().length(), r1.getNewPath().length()))
+                        .collect(Collectors.toList());
+
                 int total = todos.size();
                 AtomicInteger curr = new AtomicInteger(0);
                 AtomicInteger succ = new AtomicInteger(0);
                 long startT = System.currentTimeMillis();
+
                 executorService = Executors.newFixedThreadPool(4);
-                for (ChangeRecord rec : todos) {
-                    if (isCancelled()) break;
+
+                for(ChangeRecord rec : todos) {
+                    if(isCancelled()) break;
                     executorService.submit(() -> {
                         try {
-                            Platform.runLater(() -> rec.setStatus(ExecStatus.RUNNING));
+                            Platform.runLater(()->rec.setStatus(ExecStatus.RUNNING));
                             AppStrategy s = findStrategyForOp(rec.getOpType());
-                            if (s != null) {
+                            if(s!=null) {
                                 s.execute(rec);
-                                Platform.runLater(() -> rec.setStatus(ExecStatus.SUCCESS));
+                                Platform.runLater(()->rec.setStatus(ExecStatus.SUCCESS));
                                 succ.incrementAndGet();
-                                logAndFile("成功: " + rec.getNewName());
+                                logAndFile("成功: "+rec.getNewName());
                             } else {
-                                Platform.runLater(() -> rec.setStatus(ExecStatus.SKIPPED));
+                                Platform.runLater(()->rec.setStatus(ExecStatus.SKIPPED));
                             }
-                        } catch (Exception e) {
-                            Platform.runLater(() -> rec.setStatus(ExecStatus.FAILED));
-                            logAndFile("失败: " + e.getMessage());
+                        } catch(Exception e) {
+                            Platform.runLater(()->rec.setStatus(ExecStatus.FAILED));
+                            logAndFile("失败: "+e.getMessage());
                         } finally {
                             int c = curr.incrementAndGet();
                             updateProgress(c, total);
-                            if (c % 10 == 0) Platform.runLater(() -> {
-                                updateStats(System.currentTimeMillis() - startT);
+                            if(c%10==0) Platform.runLater(()->{
+                                updateStats(System.currentTimeMillis()-startT);
                                 previewTable.refresh();
                             });
                         }
                     });
                 }
                 executorService.shutdown();
-                while (!executorService.awaitTermination(500, TimeUnit.MILLISECONDS)) {
-                    if (isCancelled()) {
-                        executorService.shutdownNow();
-                        break;
-                    }
-                }
+                while(!executorService.awaitTermination(500, TimeUnit.MILLISECONDS)) { if(isCancelled()) { executorService.shutdownNow(); break; } }
                 return null;
             }
         };
-        task.setOnSucceeded(e -> {
-            finishTaskUI("执行完成");
-            closeFileLogger();
-            btnExecute.setDisable(false);
-        });
+        task.setOnSucceeded(e -> { finishTaskUI("执行完成"); closeFileLogger(); btnExecute.setDisable(false); });
         handleTaskLifecycle(task);
         new Thread(task).start();
     }
+
+    // [新增] 通用：列表项移动辅助方法
+    private <T> void moveListItem(ObservableList<T> list, int index, int direction) {
+        int newIndex = index + direction;
+        if (newIndex >= 0 && newIndex < list.size()) {
+            Collections.swap(list, index, newIndex);
+            invalidatePreview("列表顺序变更");
+        }
+    }
+
+
 
     private void refreshPreviewTableFilter() {
         if (fullChangeList.isEmpty()) return;
@@ -571,21 +585,30 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
         }
     }
 
-    private List<File> scanFilesRobust(File r, int d, List<String> e, Consumer<String> m) {
-        List<File> l = new ArrayList<>();
-        if (!r.exists()) return l;
-        try (Stream<Path> s = Files.walk(r.toPath(), d)) {
-            l = s.filter(p -> {
+    /**
+     * 强化的扫描逻辑
+     * 修复：确保文件夹被包含在扫描结果中，以便支持文件夹重命名/删除等策略
+     */
+    private List<File> scanFilesRobust(File root, int maxDepth, List<String> exts, Consumer<String> msg) {
+        List<File> list = new ArrayList<>();
+        if(!root.exists()) return list;
+        try (Stream<Path> s = Files.walk(root.toPath(), maxDepth)) {
+            list = s.filter(p -> {
                 File f = p.toFile();
-                if (f.equals(r) || (f.isDirectory() && d > 1)) return false;
-                if (f.isDirectory()) return true;
+                if(f.equals(root)) return false; // 排除根目录本身
+
+                // [修复] 始终保留文件夹，无论递归深度如何。
+                // 之前的逻辑错误地排除了递归子目录，导致文件夹重命名/删除策略失效。
+                // 具体的策略（Strategy）会根据自己的 getTargetType() 再次过滤是否处理文件夹。
+                if(f.isDirectory()) return true;
+
+                // 文件则应用扩展名过滤
                 String n = f.getName().toLowerCase();
-                for (String ex : e) if (n.endsWith("." + ex)) return true;
+                for(String e : exts) if(n.endsWith("."+e)) return true;
                 return false;
             }).map(Path::toFile).collect(Collectors.toList());
-        } catch (IOException x) {
-        }
-        return l;
+        } catch(IOException e) { log("扫描异常: "+e.getMessage()); }
+        return list;
     }
 
     // --- Appearance & Config ---
@@ -931,6 +954,7 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
                 return s;
             if (op == OperationType.MOVE && s instanceof FileMigrateStrategy) return s;
             if (op == OperationType.SPLIT && s instanceof CueSplitterStrategy) return s;
+            if (op == OperationType.DELETE && s instanceof FileCleanupStrategy) return s;
         }
         return null;
     }
@@ -1195,14 +1219,6 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
         }
     }
 
-    // [新增] 通用：列表项移动辅助方法
-    private <T> void moveListItem(ObservableList<T> list, int index, int direction) {
-        int newIndex = index + direction;
-        if (newIndex >= 0 && newIndex < list.size()) {
-            Collections.swap(list, index, newIndex);
-            invalidatePreview("列表顺序变更");
-        }
-    }
 
     // [新增] 通用：创建统一风格的微型图标按钮
     private JFXButton createSmallIconButton(String text, javafx.event.EventHandler<javafx.event.ActionEvent> handler) {

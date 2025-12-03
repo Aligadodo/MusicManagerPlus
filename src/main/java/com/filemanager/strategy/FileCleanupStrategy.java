@@ -4,6 +4,7 @@ import com.filemanager.model.*;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
+import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXComboBox;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -11,11 +12,14 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
+import javafx.stage.DirectoryChooser;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.text.DecimalFormat;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
@@ -29,19 +33,21 @@ import java.util.stream.Collectors;
  * 删除方式：直接删除、伪删除（归档到垃圾箱）
  */
 public class FileCleanupStrategy extends AppStrategy {
-
+    // 常见媒体类型定义，用于同类比较
+    private static final Set<String> EXT_AUDIO = new HashSet<>(Arrays.asList("mp3", "flac", "wav", "aac", "m4a", "ogg", "wma", "ape", "alac", "aiff", "dsf", "dff"));
+    private static final Set<String> EXT_VIDEO = new HashSet<>(Arrays.asList("mp4", "mkv", "avi", "mov", "wmv", "flv", "m4v", "mpg"));
+    private static final Set<String> EXT_IMAGE = new HashSet<>(Arrays.asList("jpg", "jpeg", "png", "bmp", "gif", "webp", "tiff"));
     // --- UI Components ---
     private final JFXComboBox<CleanupMode> cbMode;
     private final JFXComboBox<DeleteMethod> cbMethod;
-    private final TextField txtTrashDirName; // 伪删除的根目录名
-    private final CheckBox chkKeepLargest;   // 去重时保留最大的
-    private final TextField txtKeepExt;      // 去重时优先保留的后缀
+    private final TextField txtTrashPath; // 回收站路径（支持相对或绝对）
+    private final CheckBox chkKeepLargest;
+    private final TextField txtKeepExt;
     private final Spinner<Integer> spThreads;
-
     // --- Runtime Params ---
     private CleanupMode pMode;
     private DeleteMethod pMethod;
-    private String pTrashName;
+    private String pTrashPath;
     private boolean pKeepLargest;
     private String pKeepExt;
     private int pThreads;
@@ -55,60 +61,84 @@ public class FileCleanupStrategy extends AppStrategy {
         cbMethod.getSelectionModel().select(DeleteMethod.PSEUDO_DELETE);
         cbMethod.setTooltip(new Tooltip("选择删除的方式"));
 
-        txtTrashDirName = new TextField(".EchoTrash");
-        txtTrashDirName.setPromptText("回收站目录名");
-        txtTrashDirName.visibleProperty().bind(cbMethod.getSelectionModel().selectedItemProperty().isEqualTo(DeleteMethod.PSEUDO_DELETE));
+        txtTrashPath = new TextField(".EchoTrash");
+        txtTrashPath.setPromptText("回收站位置");
+        txtTrashPath.setTooltip(new Tooltip("输入相对名称（如 .del）将在各盘根目录创建；输入绝对路径（如 D:\\Trash）则统一移动到该处。"));
+        txtTrashPath.visibleProperty().bind(cbMethod.getSelectionModel().selectedItemProperty().isEqualTo(DeleteMethod.PSEUDO_DELETE));
 
-        chkKeepLargest = new CheckBox("保留文件体积最大的副本");
+        chkKeepLargest = new CheckBox("保留体积/质量最佳的副本");
         chkKeepLargest.setSelected(true);
         chkKeepLargest.visibleProperty().bind(cbMode.getSelectionModel().selectedItemProperty().isEqualTo(CleanupMode.DEDUP_FILES));
+        chkKeepLargest.setTooltip(new Tooltip("勾选：保留最大的文件；不勾选：保留名字最短（通常是原件）的文件"));
 
         txtKeepExt = new TextField("flac");
-        txtKeepExt.setPromptText("优先保留的后缀 (如 flac)");
+        txtKeepExt.setPromptText("优先保留后缀");
         txtKeepExt.visibleProperty().bind(cbMode.getSelectionModel().selectedItemProperty().isEqualTo(CleanupMode.DEDUP_FILES));
 
         spThreads = new Spinner<>(1, 32, 4);
     }
 
     @Override
-    public String getName() { return "文件清理与去重"; }
+    public String getName() {
+        return "文件清理与去重";
+    }
 
     @Override
-    public String getDescription() { return "支持同名文件去重、重复文件夹清理及空目录删除。支持伪删除（移动到回收站）。"; }
+    public String getDescription() {
+        return "智能识别重复文件/文件夹、清理空目录。支持按盘符结构伪删除。";
+    }
 
     @Override
-    public ScanTarget getTargetType() { return ScanTarget.ALL; } // 需要同时处理文件和文件夹
+    public ScanTarget getTargetType() {
+        return ScanTarget.ALL;
+    }
 
     @Override
-    public int getPreferredThreadCount() { return spThreads.getValue(); }
+    public int getPreferredThreadCount() {
+        return spThreads.getValue();
+    }
 
     @Override
     public Node getConfigNode() {
         VBox box = new VBox(10);
-        
         GridPane grid = new GridPane();
-        grid.setHgap(10); grid.setVgap(10);
-        
-        grid.add(new Label("清理模式:"), 0, 0); grid.add(cbMode, 1, 0);
-        grid.add(new Label("删除方式:"), 0, 1); grid.add(cbMethod, 1, 1);
-        
+        grid.setHgap(10);
+        grid.setVgap(10);
+
+        grid.add(new Label("清理模式:"), 0, 0);
+        grid.add(cbMode, 1, 0);
+        grid.add(new Label("删除方式:"), 0, 1);
+        grid.add(cbMethod, 1, 1);
+
         // 动态配置区
-        VBox dynamicArea = new VBox(5);
-        dynamicArea.setStyle("-fx-background-color: rgba(0,0,0,0.05); -fx-padding: 8; -fx-background-radius: 4;");
-        
-        Label lblTrash = new Label("回收站目录名:");
-        lblTrash.visibleProperty().bind(txtTrashDirName.visibleProperty());
-        HBox trashBox = new HBox(5, lblTrash, txtTrashDirName);
+        VBox dynamicArea = new VBox(8);
+        dynamicArea.setStyle("-fx-background-color: rgba(0,0,0,0.03); -fx-padding: 10; -fx-background-radius: 5;");
+
+        // 回收站配置
+        HBox trashBox = new HBox(10);
         trashBox.setAlignment(Pos.CENTER_LEFT);
+        JFXButton btnPickTrash = new JFXButton("浏览...");
+        btnPickTrash.setOnAction(e -> {
+            DirectoryChooser dc = new DirectoryChooser();
+            File f = dc.showDialog(null);
+            if (f != null) txtTrashPath.setText(f.getAbsolutePath());
+        });
+        trashBox.getChildren().addAll(new Label("回收站路径:"), txtTrashPath, btnPickTrash);
+        trashBox.visibleProperty().bind(cbMethod.getSelectionModel().selectedItemProperty().isEqualTo(DeleteMethod.PSEUDO_DELETE));
+        trashBox.managedProperty().bind(trashBox.visibleProperty());
 
-        Label lblKeep = new Label("去重规则:");
-        lblKeep.visibleProperty().bind(chkKeepLargest.visibleProperty());
-        HBox dedupBox = new HBox(10, chkKeepLargest, new Label("优先后缀:"), txtKeepExt);
-        dedupBox.setAlignment(Pos.CENTER_LEFT);
-        dedupBox.visibleProperty().bind(chkKeepLargest.visibleProperty());
+        // 去重配置
+        VBox dedupBox = new VBox(5);
+        HBox keepRow = new HBox(10, chkKeepLargest, new Label("优先后缀:"), txtKeepExt);
+        keepRow.setAlignment(Pos.CENTER_LEFT);
+        Label lblHint = new Label("提示：去重仅在同类型文件（如音频vs音频）间进行，会自动忽略 '(1)', 'Copy' 等后缀。");
+        lblHint.setStyle("-fx-font-size: 10px; -fx-text-fill: gray;");
+        dedupBox.getChildren().addAll(keepRow, lblHint);
+        dedupBox.visibleProperty().bind(cbMode.getSelectionModel().selectedItemProperty().isEqualTo(CleanupMode.DEDUP_FILES));
+        dedupBox.managedProperty().bind(dedupBox.visibleProperty());
 
-        dynamicArea.getChildren().addAll(trashBox, lblKeep, dedupBox);
-        
+        dynamicArea.getChildren().addAll(trashBox, dedupBox);
+
         box.getChildren().addAll(grid, dynamicArea, new Separator(), new HBox(10, new Label("并发线程:"), spThreads));
         return box;
     }
@@ -117,8 +147,8 @@ public class FileCleanupStrategy extends AppStrategy {
     public void captureParams() {
         pMode = cbMode.getValue();
         pMethod = cbMethod.getValue();
-        pTrashName = txtTrashDirName.getText();
-        if(pTrashName == null || pTrashName.isEmpty()) pTrashName = ".EchoTrash";
+        pTrashPath = txtTrashPath.getText();
+        if (pTrashPath == null || pTrashPath.trim().isEmpty()) pTrashPath = ".EchoTrash";
         pKeepLargest = chkKeepLargest.isSelected();
         pKeepExt = txtKeepExt.getText();
         pThreads = spThreads.getValue();
@@ -128,27 +158,33 @@ public class FileCleanupStrategy extends AppStrategy {
     public void saveConfig(Properties props) {
         props.setProperty("clean_mode", pMode.name());
         props.setProperty("clean_method", pMethod.name());
-        props.setProperty("clean_trash", pTrashName);
+        props.setProperty("clean_trash", pTrashPath);
         props.setProperty("clean_keepLarge", String.valueOf(pKeepLargest));
         props.setProperty("clean_keepExt", pKeepExt);
+        props.setProperty("clean_threads", String.valueOf(pThreads));
     }
 
     @Override
     public void loadConfig(Properties props) {
-        if(props.containsKey("clean_mode")) cbMode.getSelectionModel().select(CleanupMode.valueOf(props.getProperty("clean_mode")));
-        if(props.containsKey("clean_method")) cbMethod.getSelectionModel().select(DeleteMethod.valueOf(props.getProperty("clean_method")));
-        if(props.containsKey("clean_trash")) txtTrashDirName.setText(props.getProperty("clean_trash"));
-        if(props.containsKey("clean_keepLarge")) chkKeepLargest.setSelected(Boolean.parseBoolean(props.getProperty("clean_keepLarge")));
-        if(props.containsKey("clean_keepExt")) txtKeepExt.setText(props.getProperty("clean_keepExt"));
+        if (props.containsKey("clean_mode"))
+            cbMode.getSelectionModel().select(CleanupMode.valueOf(props.getProperty("clean_mode")));
+        if (props.containsKey("clean_method"))
+            cbMethod.getSelectionModel().select(DeleteMethod.valueOf(props.getProperty("clean_method")));
+        if (props.containsKey("clean_trash")) txtTrashPath.setText(props.getProperty("clean_trash"));
+        if (props.containsKey("clean_keepLarge"))
+            chkKeepLargest.setSelected(Boolean.parseBoolean(props.getProperty("clean_keepLarge")));
+        if (props.containsKey("clean_keepExt")) txtKeepExt.setText(props.getProperty("clean_keepExt"));
+        if (props.containsKey("clean_threads"))
+            spThreads.getValueFactory().setValue(Integer.parseInt(props.getProperty("clean_threads")));
     }
 
     @Override
     public List<ChangeRecord> analyze(List<ChangeRecord> inputRecords, List<File> rootDirs, BiConsumer<Double, String> progressReporter) {
         // 1. 根据模式选择分析器
         List<File> inputFiles = inputRecords.stream().map(ChangeRecord::getFileHandle).collect(Collectors.toList());
-        
+
         if (pMode == CleanupMode.REMOVE_EMPTY_DIRS) {
-            return analyzeEmptyDirs(inputFiles, rootDirs);
+            return analyzeEmptyDirs(inputFiles, rootDirs, progressReporter);
         } else if (pMode == CleanupMode.DEDUP_FOLDERS) {
             return analyzeDuplicateFolders(inputFiles, progressReporter);
         } else {
@@ -159,12 +195,12 @@ public class FileCleanupStrategy extends AppStrategy {
     @Override
     public void execute(ChangeRecord rec) throws Exception {
         if (rec.getOpType() != OperationType.DELETE) return;
-        
+
         File file = rec.getFileHandle();
         if (!file.exists()) return; // 可能已经被处理了
-        
+
         String method = rec.getExtraParams().get("method");
-        
+
         if ("DIRECT".equals(method)) {
             // 递归删除（如果是文件夹）
             if (file.isDirectory()) deleteDirectoryRecursively(file);
@@ -175,11 +211,20 @@ public class FileCleanupStrategy extends AppStrategy {
             if (trashPath != null && !trashPath.isEmpty()) {
                 File trashFile = new File(trashPath);
                 if (!trashFile.getParentFile().exists()) trashFile.getParentFile().mkdirs();
-                Files.move(file.toPath(), trashFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                // 尝试移动
+                try {
+                    Files.move(file.toPath(), trashFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                } catch (IOException e) {
+                    // 跨盘移动 fallback
+                    if (file.isDirectory()) copyDirectory(file, trashFile);
+                    else Files.copy(file.toPath(), trashFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+
+                    deleteDirectoryRecursively(file); // 移完后删源
+                }
             }
         }
     }
-    
+
     private void deleteDirectoryRecursively(File file) throws IOException {
         Files.walkFileTree(file.toPath(), new SimpleFileVisitor<Path>() {
             @Override
@@ -187,6 +232,7 @@ public class FileCleanupStrategy extends AppStrategy {
                 Files.delete(file);
                 return FileVisitResult.CONTINUE;
             }
+
             @Override
             public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
                 Files.delete(dir);
@@ -198,104 +244,114 @@ public class FileCleanupStrategy extends AppStrategy {
     // --- 具体分析逻辑 ---
 
     /**
-     * 1. 文件去重分析
-     * 逻辑：同目录下，核心文件名相同（去除 (1) 等后缀），判定为重复组。
+     * 1. 智能文件去重
      */
     private List<ChangeRecord> analyzeDuplicateFiles(List<File> files, BiConsumer<Double, String> reporter) {
         List<ChangeRecord> result = new ArrayList<>();
-        // 按父目录分组
-        Map<File, List<File>> dirMap = files.stream()
-            .filter(File::isFile)
-            .collect(Collectors.groupingBy(File::getParentFile));
+        Map<File, List<File>> dirMap = files.stream().filter(File::isFile).collect(Collectors.groupingBy(File::getParentFile));
 
         int total = dirMap.size();
         AtomicInteger curr = new AtomicInteger(0);
-
-        // 定义正则：匹配文件名核心部分，去除 " (1)", " - 副本", ".mp3" 等
-        // 示例: "Song (1).mp3" -> "Song"
-        Pattern normPattern = Pattern.compile("^(.+?)(\\s*[\\(\\[（].*?[\\)\\]）])?(\\s*-\\s*副本)?(\\.[^.]+)?$");
+        // 正则：提取文件名核心 (忽略 (1), - Copy 等)
+        Pattern normPattern = Pattern.compile("^(.+?)(\\s*[\\(\\[（].*?[\\)\\]）])?(\\s*-\\s*(副本|Copy))?(\\s*\\(\\d+\\))?(\\.[^.]+)?$");
 
         for (Map.Entry<File, List<File>> entry : dirMap.entrySet()) {
-            if (reporter != null && curr.incrementAndGet() % 10 == 0) 
-                Platform.runLater(() -> reporter.accept((double)curr.get()/total, "分析目录: " + entry.getKey().getName()));
+            if (reporter != null && curr.incrementAndGet() % 20 == 0)
+                Platform.runLater(() -> reporter.accept((double) curr.get() / total, "分析文件: " + entry.getKey().getName()));
 
-            // 在同目录下，按 CoreName 分组
+            // 二级分组：CoreName -> List<File>
             Map<String, List<File>> nameGroup = entry.getValue().stream()
-                .collect(Collectors.groupingBy(f -> {
-                    Matcher m = normPattern.matcher(f.getName());
-                    if (m.find()) return m.group(1).trim().toLowerCase();
-                    return f.getName();
-                }));
+                    .collect(Collectors.groupingBy(f -> {
+                        String name = f.getName();
+                        Matcher m = normPattern.matcher(name);
+                        String core = m.find() ? m.group(1).trim().toLowerCase() : name.toLowerCase();
+                        String ext = getExt(name);
+                        String typeTag = getMediaType(ext);
+                        return core + "::" + typeTag; // Key: "song::AUDIO"
+                    }));
 
             for (List<File> group : nameGroup.values()) {
                 if (group.size() < 2) continue; // 无重复
 
-                // 选出保留者 (Keeper)
+                // 决策：保留哪一个？
                 File keeper = Collections.max(group, (f1, f2) -> {
-                    // 1. 优先匹配后缀
+                    // 1. 优先后缀匹配
                     if (pKeepExt != null && !pKeepExt.isEmpty()) {
                         boolean k1 = f1.getName().toLowerCase().endsWith("." + pKeepExt.toLowerCase());
                         boolean k2 = f2.getName().toLowerCase().endsWith("." + pKeepExt.toLowerCase());
                         if (k1 != k2) return k1 ? 1 : -1;
                     }
-                    // 2. 大小优先
+                    // 2. 体积优先
                     if (pKeepLargest) {
-                        return Long.compare(f1.length(), f2.length());
+                        int sizeCmp = Long.compare(f1.length(), f2.length());
+                        if (sizeCmp != 0) return sizeCmp;
                     }
-                    // 3. 默认：名字短的优先 (通常不带 (1))
+                    // 3. 默认：名字短的优先 (通常不带 (1) 的是原件)
                     return Integer.compare(f2.getName().length(), f1.getName().length());
                 });
 
-                // 生成删除记录
+                // 严格检查：必须确保 keeper 存在于 group 中，且不被删除
                 for (File f : group) {
-                    if (f.equals(keeper)) continue;
-                    result.add(createDeleteRecord(f, "重复文件 (保留: " + keeper.getName() + ")"));
+                    if (f.equals(keeper)) continue; // 保留
+                    result.add(createDeleteRecord(f, "重复副本 (与 " + keeper.getName() + " 内容重复)"));
                 }
             }
         }
         return result;
     }
 
+    private String getExt(String name) {
+        int i = name.lastIndexOf('.');
+        return i > 0 ? name.substring(i + 1).toLowerCase() : "";
+    }
+
+    private String getMediaType(String ext) {
+        if (EXT_AUDIO.contains(ext)) return "AUDIO";
+        if (EXT_VIDEO.contains(ext)) return "VIDEO";
+        if (EXT_IMAGE.contains(ext)) return "IMAGE";
+        return "OTHER_" + ext;
+    }
+
     /**
-     * 2. 文件夹去重分析
-     * 逻辑：同父目录下，如果两个文件夹内的文件列表（名称+大小）完全一致，视为重复。
+     * 2. 文件夹去重 (内容一致性检查)
      */
     private List<ChangeRecord> analyzeDuplicateFolders(List<File> files, BiConsumer<Double, String> reporter) {
         List<ChangeRecord> result = new ArrayList<>();
-        
-        // 仅处理目录
         List<File> dirs = files.stream().filter(File::isDirectory).collect(Collectors.toList());
-        // 按父目录分组
         Map<File, List<File>> parentMap = dirs.stream()
-            .filter(f -> f.getParentFile() != null)
-            .collect(Collectors.groupingBy(File::getParentFile));
+                .filter(f -> f.getParentFile() != null)
+                .collect(Collectors.groupingBy(File::getParentFile));
 
         int total = parentMap.size();
         AtomicInteger curr = new AtomicInteger(0);
 
         for (List<File> siblings : parentMap.values()) {
-            if (reporter != null) Platform.runLater(() -> reporter.accept((double)curr.incrementAndGet()/total, "分析目录结构..."));
-            
-            // 计算每个文件夹的指纹 (文件名+大小 的 Hash)
-            Map<File, String> fingerPrints = new HashMap<>();
+            if (reporter != null)
+                Platform.runLater(() -> reporter.accept((double) curr.incrementAndGet() / total, "递归分析目录内容..."));
+
+            // 计算指纹（包含递归内容）
+            Map<File, String> fingerprints = new HashMap<>();
             for (File dir : siblings) {
-                fingerPrints.put(dir, calculateDirFingerprint(dir));
+                fingerprints.put(dir, calculateRecursiveDirFingerprint(dir));
             }
 
             // 按指纹分组
             Map<String, List<File>> dupeGroups = siblings.stream()
-                .collect(Collectors.groupingBy(fingerPrints::get));
+                    .collect(Collectors.groupingBy(fingerprints::get));
 
-            for (List<File> group : dupeGroups.values()) {
+            for (Map.Entry<String, List<File>> entry : dupeGroups.entrySet()) {
+                if (entry.getKey().isEmpty()) continue; // 忽略空指纹或无法读取的
+                List<File> group = entry.getValue();
                 if (group.size() < 2) continue;
-                if (group.get(0) == null) continue; // 无法读取的目录
 
-                // 排序：保留名字最短的，或修改日期最早的
-                group.sort(Comparator.comparingInt((File f) -> f.getName().length()).thenComparing(File::lastModified));
-                
+                // 保留名字最短的
+                group.sort(Comparator.comparingInt((File f) -> f.getName().length()));
                 File keeper = group.get(0);
+
                 for (int i = 1; i < group.size(); i++) {
-                    result.add(createDeleteRecord(group.get(i), "重复文件夹 (内容与 " + keeper.getName() + " 一致)"));
+                    File toDelete = group.get(i);
+                    String sizeStr = formatSize(getDirSize(toDelete));
+                    result.add(createDeleteRecord(toDelete, "文件夹内容重复 (同: " + keeper.getName() + ", 大小: " + sizeStr + ")"));
                 }
             }
         }
@@ -303,97 +359,169 @@ public class FileCleanupStrategy extends AppStrategy {
     }
 
     /**
-     * 3. 空文件夹清理
-     * 逻辑：递归到底层，如果是空目录则删除。
+     * 递归计算文件夹指纹：相对路径 + 文件大小
+     * 只有目录结构和文件大小完全一致才视为重复
      */
-    private List<ChangeRecord> analyzeEmptyDirs(List<File> files, List<File> rootDirs) {
+    private String calculateRecursiveDirFingerprint(File dir) {
+        try {
+            StringBuilder sb = new StringBuilder();
+            Files.walk(dir.toPath())
+                    .sorted() // 确保顺序一致
+                    .forEach(path -> {
+                        File f = path.toFile();
+                        String relPath = dir.toPath().relativize(path).toString();
+                        sb.append(relPath).append(":");
+                        if (f.isFile()) sb.append(f.length());
+                        else sb.append("D");
+                        sb.append("|");
+                    });
+            return sb.toString();
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    /**
+     * 递归计算文件夹大小
+     */
+    private long getDirSize(File dir) {
+        try {
+            return Files.walk(dir.toPath())
+                    .filter(p -> p.toFile().isFile())
+                    .mapToLong(p -> p.toFile().length())
+                    .sum();
+        } catch (IOException e) {
+            return 0;
+        }
+    }
+
+    private String formatSize(long size) {
+        if (size <= 0) return "0 B";
+        final String[] units = new String[]{"B", "KB", "MB", "GB", "TB"};
+        int digitGroups = (int) (Math.log10(size) / Math.log10(1024));
+        return new DecimalFormat("#,##0.#").format(size / Math.pow(1024, digitGroups)) + " " + units[digitGroups];
+    }
+
+    /**
+     * 3. 空文件夹清理
+     */
+    private List<ChangeRecord> analyzeEmptyDirs(List<File> files, List<File> rootDirs, BiConsumer<Double, String> reporter) {
         List<ChangeRecord> result = new ArrayList<>();
-        // 简单实现：只检查传入列表中的目录是否为空
-        // 注意：为了安全，必须再次确认目录真实为空
-        for (File f : files) {
-            if (f.isDirectory() && !rootDirs.contains(f)) {
-                String[] list = f.list();
-                if (list != null && list.length == 0) {
-                    result.add(createDeleteRecord(f, "空文件夹"));
-                }
+        // 按路径长度倒序，确保先删除底层空目录
+        List<File> sortedDirs = files.stream()
+                .filter(File::isDirectory)
+                .sorted((f1, f2) -> Integer.compare(f2.getAbsolutePath().length(), f1.getAbsolutePath().length()))
+                .collect(Collectors.toList());
+
+        int total = sortedDirs.size();
+        AtomicInteger processed = new AtomicInteger(0);
+
+        for (File f : sortedDirs) {
+            if (reporter != null && processed.incrementAndGet() % 50 == 0)
+                Platform.runLater(() -> reporter.accept((double) processed.get() / total, "检查空目录..."));
+
+            if (rootDirs.contains(f)) continue; // 保护根目录
+
+            // 检查是否为空（注意：前面的步骤可能删除了文件，但这里是analyze阶段，只能检查当前状态）
+            // 或者我们假设这是一个独立步骤。
+            if (isDirectoryEmpty(f)) {
+                result.add(createDeleteRecord(f, "空文件夹 (无子文件)"));
             }
         }
         return result;
     }
 
-    // --- 辅助方法 ---
+    private boolean isDirectoryEmpty(File directory) {
+        try (DirectoryStream<Path> dirStream = Files.newDirectoryStream(directory.toPath())) {
+            return !dirStream.iterator().hasNext();
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
+    // --- 路径计算核心 ---
 
     private ChangeRecord createDeleteRecord(File f, String reason) {
         String newPath;
         String newName;
         Map<String, String> params = new HashMap<>();
-        
+
         if (pMethod == DeleteMethod.DIRECT_DELETE) {
             newPath = "PERMANENT_DELETE";
             newName = "[删除] " + f.getName();
             params.put("method", "DIRECT");
         } else {
-            // 计算伪删除路径： DriveRoot/.EchoTrash/OriginalRelativePath
-            Path root = f.toPath().getRoot();
-            if (root == null) root = f.toPath().getParent(); // Fallback
-            
-            // 构建相对路径结构，避免文件名冲突
-            String relativeStruct = f.getParentFile().getAbsolutePath().replace(":", ""); 
-            // Windows: D:\Music -> D\Music. Linux: /home/user -> home/user
-            if (relativeStruct.startsWith(File.separator)) relativeStruct = relativeStruct.substring(1);
-            
-            File trashRoot = new File(root.toFile(), pTrashName);
-            File trashDir = new File(trashRoot, relativeStruct);
-            File trashFile = new File(trashDir, f.getName());
-            
+            // 伪删除路径计算
+            File trashRoot;
+            Path sourcePath = f.toPath();
+            Path root = sourcePath.getRoot();
+
+            if (Paths.get(pTrashPath).isAbsolute()) {
+                // 模式 B: 固定绝对路径
+                File fixedTrash = new File(pTrashPath);
+                String driveTag = root.toString().replace(":", "").replace(File.separator, "") + "_Drive";
+                Path relativeToRoot = root.relativize(sourcePath).getParent();
+                File targetDir = new File(fixedTrash, driveTag);
+                if (relativeToRoot != null) targetDir = new File(targetDir, relativeToRoot.toString());
+                trashRoot = targetDir;
+            } else {
+                // 模式 A: 相对路径
+                File driveRoot = root.toFile();
+                trashRoot = new File(driveRoot, pTrashPath);
+                Path relativeToRoot = root.relativize(sourcePath).getParent();
+                if (relativeToRoot != null) trashRoot = new File(trashRoot, relativeToRoot.toString());
+            }
+
+            File trashFile = new File(trashRoot, f.getName());
             newPath = trashFile.getAbsolutePath();
             newName = "[回收] " + f.getName();
             params.put("method", "PSEUDO");
         }
-        params.put("reason", reason); // 记录原因供展示
-        
-        // 借用 RENAME 类型来显示，或者在 MusicFileManagerApp 中支持 DELETE 类型
+        params.put("reason", reason);
+
+        // 在 ChangeRecord 中复用 RENAME 只是为了显示，OpType 必须是 DELETE
         return new ChangeRecord(f.getName(), newName, f, true, newPath, OperationType.DELETE, params, ExecStatus.PENDING);
     }
 
-    private String calculateDirFingerprint(File dir) {
-        try {
-            // 仅计算一级子文件，或者深度递归？这里做一级子文件指纹
-            File[] files = dir.listFiles();
-            if (files == null) return null;
-            
-            // 排序保证顺序一致
-            Arrays.sort(files, Comparator.comparing(File::getName));
-            
-            StringBuilder sb = new StringBuilder();
-            for (File f : files) {
-                sb.append(f.getName()).append(":");
-                if (f.isFile()) sb.append(f.length());
-                else sb.append("DIR");
-                sb.append("|");
+    private void copyDirectory(File source, File target) throws IOException {
+        Files.walk(source.toPath()).forEach(sourcePath -> {
+            Path targetPath = target.toPath().resolve(source.toPath().relativize(sourcePath));
+            try {
+                Files.copy(sourcePath, targetPath, StandardCopyOption.REPLACE_EXISTING);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
             }
-            return sb.toString();
-        } catch (Exception e) { return null; }
+        });
     }
 
-    // --- Enums ---
-    
     public enum CleanupMode {
         DEDUP_FILES("同名/近似文件去重"),
         DEDUP_FOLDERS("重复内容文件夹去重"),
         REMOVE_EMPTY_DIRS("删除空文件夹");
-        
-        private String label;
-        CleanupMode(String l) { label = l; }
-        @Override public String toString() { return label; }
+        private final String label;
+
+        CleanupMode(String l) {
+            label = l;
+        }
+
+        @Override
+        public String toString() {
+            return label;
+        }
     }
-    
+
     public enum DeleteMethod {
-        PSEUDO_DELETE("伪删除 (保留路径结构到回收站)"),
+        PSEUDO_DELETE("伪删除 (保留目录结构到回收站)"),
         DIRECT_DELETE("直接物理删除 (不可恢复)");
-        
-        private String label;
-        DeleteMethod(String l) { label = l; }
-        @Override public String toString() { return label; }
+        private final String label;
+
+        DeleteMethod(String l) {
+            label = l;
+        }
+
+        @Override
+        public String toString() {
+            return label;
+        }
     }
 }

@@ -1012,6 +1012,7 @@ public class MusicFileManagerAppV15 extends Application implements FileManagerAp
             if (op == OperationType.CONVERT && s instanceof AudioConverterStrategy) return s;
             if (op == OperationType.MOVE && s instanceof FileMigrateStrategy) return s;
             if (op == OperationType.SPLIT && s instanceof CueSplitterStrategy) return s;
+            if (op == OperationType.DELETE && s instanceof FileCleanupStrategy) return s;
         }
         return null;
     }
