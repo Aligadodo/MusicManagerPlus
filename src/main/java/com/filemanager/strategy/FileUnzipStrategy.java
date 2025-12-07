@@ -19,12 +19,10 @@ import org.apache.commons.compress.archivers.ArchiveInputStream;
 import org.apache.commons.compress.archivers.ArchiveStreamFactory;
 import org.apache.commons.compress.archivers.sevenz.SevenZArchiveEntry;
 import org.apache.commons.compress.archivers.sevenz.SevenZFile;
-import org.apache.commons.compress.utils.IOUtils;
 
 import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -32,12 +30,11 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 /**
- * 批量智能解压策略 (v4.2 - 密码箱与自动匹配版)
- * 特性：
- * 1. 密码管理箱：支持保存多个常用密码。
- * 2. 自动匹配：尝试无密码及列表中的所有密码进行解压。
- * 3. 失败处理：支持解压失败（如无匹配密码）后自动删除源文件。
- * 4. 线程数：使用全局配置，本策略不单独维护。
+ * 批量智能解压策略 (v5.1 - SSD 极速优化版)
+ * 优化点：
+ * 1. [核心] 移除全局 IO 信号量限制，允许 SSD 全速并发解压。
+ * 2. [核心] 增大 Java IO 缓冲区至 64KB，提升吞吐量。
+ * 3. 保持了密码箱、智能目录、失败保护等所有特性。
  */
 public class FileUnzipStrategy extends AppStrategy {
 
@@ -51,7 +48,7 @@ public class FileUnzipStrategy extends AppStrategy {
     private final CheckBox chkSmartFolder;
     private final CheckBox chkDeleteSource; // 解压成功后删除
     private final CheckBox chkOverwrite;
-    private final CheckBox chkDeleteOnFail; // [新增] 解压失败后删除
+    private final CheckBox chkDeleteOnFail; // 解压失败后删除
 
     // 密码箱 UI
     private final ListView<String> lvPasswords;
@@ -79,7 +76,7 @@ public class FileUnzipStrategy extends AppStrategy {
         cbEngine.getSelectionModel().select(0);
 
         txtExePath = new TextField();
-        txtExePath.setPromptText("7z.exe 或 bandizip.exe 路径");
+        txtExePath.setPromptText("7z.exe 或 bz.exe 路径");
         txtExePath.visibleProperty().bind(cbEngine.getSelectionModel().selectedItemProperty().isNotEqualTo("内置引擎 (Java Commons Compress)"));
 
         // 路径模式
@@ -91,13 +88,15 @@ public class FileUnzipStrategy extends AppStrategy {
         cbOutputMode.getSelectionModel().select(0);
 
         txtCustomPath = new TextField("Unzipped");
+        txtCustomPath.setPromptText("目标文件夹路径");
         txtCustomPath.visibleProperty().bind(cbOutputMode.getSelectionModel().selectedItemProperty().isEqualTo("指定目录 (Custom Path)"));
 
         // 选项
         chkSmartFolder = new CheckBox("智能目录 (防炸弹)");
         chkSmartFolder.setSelected(true);
+        chkSmartFolder.setTooltip(new Tooltip("始终先在独立文件夹解压，若解压后发现只有单目录则自动移出。\n防止“解压炸弹”弄乱目录。"));
 
-        chkDeleteSource = new CheckBox("成功后删除源文件");
+        chkDeleteSource = new CheckBox("解压成功并校验后删除源文件");
         chkDeleteSource.setSelected(false);
         chkDeleteSource.setStyle("-fx-text-fill: #27ae60;"); // 绿色提示
 
@@ -132,13 +131,15 @@ public class FileUnzipStrategy extends AppStrategy {
             if (sel != null) lvPasswords.getItems().remove(sel);
         });
 
-        autoDetect7Zip();
+        autoDetectExternalTools();
     }
 
-    private void autoDetect7Zip() {
+    private void autoDetectExternalTools() {
         String[] paths = {
                 "C:\\Program Files\\7-Zip\\7z.exe",
-                "C:\\Program Files (x86)\\7-Zip\\7z.exe"
+                "C:\\Program Files (x86)\\7-Zip\\7z.exe",
+                "C:\\Program Files\\Bandizip\\bz.exe",
+                "C:\\Program Files\\Bandizip\\Bandizip.exe"
         };
         for (String p : paths) {
             if (new File(p).exists()) {
@@ -150,12 +151,12 @@ public class FileUnzipStrategy extends AppStrategy {
 
     @Override
     public String getName() {
-        return "批量智能解压 (密码箱版)";
+        return "批量智能解压 (SSD极速版)";
     }
 
     @Override
     public String getDescription() {
-        return "支持多密码自动匹配、外部引擎调用及失败自动清理。";
+        return "针对 SSD 优化，移除 IO 限制。支持多密码匹配及外部引擎调用。";
     }
 
     @Override
@@ -184,7 +185,7 @@ public class FileUnzipStrategy extends AppStrategy {
         btnExePick.visibleProperty().bind(txtExePath.visibleProperty());
         btnExePick.setOnAction(e -> {
             FileChooser fc = new FileChooser();
-            fc.setTitle("选择解压程序");
+            fc.setTitle("选择解压程序 (7z.exe / bz.exe)");
             File f = fc.showOpenDialog(null);
             if (f != null) txtExePath.setText(f.getAbsolutePath());
         });
@@ -218,6 +219,8 @@ public class FileUnzipStrategy extends AppStrategy {
         // 4. 选项配置
         VBox opts = new VBox(5);
         opts.getChildren().addAll(chkSmartFolder, chkOverwrite, chkDeleteSource, chkDeleteOnFail);
+
+        // 移除了内部线程配置 UI，由主程序统一控制
 
         box.getChildren().addAll(grid, tpPass, new Separator(), new Label("操作选项:"), opts);
         return box;
@@ -310,6 +313,7 @@ public class FileUnzipStrategy extends AppStrategy {
                 baseDestDir = new File(file.getParentFile(), "Extracted_" + file.getName());
             }
 
+            // 预览路径（如果是智能模式，实际路径在执行时才确定，这里显示基础路径）
             File previewDest = pSmart ? new File(baseDestDir, getBaseName(file.getName())) : baseDestDir;
 
             String displayName = (pEngine.contains("外部") ? "[外部] " : "[内置] ") +
@@ -324,7 +328,6 @@ public class FileUnzipStrategy extends AppStrategy {
             params.put("overwrite", String.valueOf(pOverwrite));
             params.put("deleteSuccess", String.valueOf(pDeleteSuccess));
             params.put("deleteFail", String.valueOf(pDeleteFail));
-            // 密码列表不在此处序列化，而是使用运行时捕获的 pPasswords 列表
 
             return new ChangeRecord(rec.getOriginalName(), displayName, file, true, previewDest.getAbsolutePath(), OperationType.UNZIP, params, ExecStatus.PENDING);
 
@@ -335,6 +338,12 @@ public class FileUnzipStrategy extends AppStrategy {
     public void execute(ChangeRecord rec) throws Exception {
         if (!rec.getExtraParams().containsKey("baseDest")) return;
 
+        // [优化] 直接调用执行，不加锁，允许全速并发
+        // 并发度由主程序的 executorService 控制
+        executeInternal(rec);
+    }
+
+    private void executeInternal(ChangeRecord rec) throws Exception {
         File archiveFile = rec.getFileHandle();
         String baseDestPath = rec.getExtraParams().get("baseDest");
         String engine = rec.getExtraParams().get("engine");
@@ -346,7 +355,7 @@ public class FileUnzipStrategy extends AppStrategy {
         File baseDestDir = new File(baseDestPath);
         if (!baseDestDir.exists()) baseDestDir.mkdirs();
 
-        // 1. 确定解压根目录
+        // 1. 确定解压根目录 (Wrapper)
         File extractRoot;
         if (smart) {
             String wrapperName = getBaseName(archiveFile.getName());
@@ -356,15 +365,15 @@ public class FileUnzipStrategy extends AppStrategy {
             extractRoot = baseDestDir;
         }
 
-        // 2. 构建尝试列表 (空密码 + 用户密码库)
+        // 2. 准备尝试列表
         List<String> passwordsToTry = new ArrayList<>();
-        passwordsToTry.add(null); // 首先尝试无密码
+        passwordsToTry.add(null);
         if (pPasswords != null) passwordsToTry.addAll(pPasswords);
 
         boolean success = false;
         Exception lastError = null;
 
-        // 3. 循环尝试密码
+        // 3. 循环尝试解压
         for (String pwd : passwordsToTry) {
             try {
                 if (engine.contains("外部")) {
@@ -372,24 +381,29 @@ public class FileUnzipStrategy extends AppStrategy {
                 } else {
                     extractWithJava(archiveFile, extractRoot, overwrite, pwd);
                 }
+
+                // 校验阶段：确保有文件产出
+                String[] files = extractRoot.list();
+                if (files == null || files.length == 0) {
+                    throw new IOException("解压程序返回成功，但目标目录为空 (可能是密码错误或程序假死)");
+                }
+
                 success = true;
-                break; // 成功则退出循环
+                break;
             } catch (Exception e) {
                 lastError = e;
-                // 如果是密码错误，继续尝试；如果是文件IO错误可能就没必要重试了，但简单起见继续
             }
         }
 
         if (!success) {
-            // 所有密码都失败
             if (deleteFail) {
                 try {
                     Files.delete(archiveFile.toPath());
                 } catch (Exception ignored) {
                 }
-                throw new IOException("解压失败(密码耗尽)，源文件已删除: " + (lastError != null ? lastError.getMessage() : "未知错误"));
+                throw new IOException("解压失败(源已删): " + (lastError != null ? lastError.getMessage() : "未知"));
             } else {
-                throw new IOException("解压失败(密码耗尽): " + (lastError != null ? lastError.getMessage() : "未知错误"));
+                throw new IOException("解压失败: " + (lastError != null ? lastError.getMessage() : "未知"));
             }
         }
 
@@ -418,17 +432,35 @@ public class FileUnzipStrategy extends AppStrategy {
 
         List<String> cmd = new ArrayList<>();
         cmd.add(exePath);
+
+        // 适配参数
+        String lowerExe = exePath.toLowerCase();
+        boolean isBandizip = lowerExe.contains("bandizip") || lowerExe.contains("bz.exe");
+
+        // Bandizip 智能修复
+        if (isBandizip && !lowerExe.endsWith("bz.exe") && !lowerExe.endsWith("bc.exe")) {
+            File bz = new File(new File(exePath).getParent(), "bz.exe");
+            if (bz.exists()) {
+                cmd.set(0, bz.getAbsolutePath());
+                isBandizip = true;
+            }
+        }
+
         cmd.add("x");
         cmd.add(archive.getAbsolutePath());
-        cmd.add("-o" + destDir.getAbsolutePath());
+
+        // 路径参数适配
+        if (isBandizip) {
+            cmd.add("-o:" + destDir.getAbsolutePath());
+        } else {
+            cmd.add("-o" + destDir.getAbsolutePath()); // 7z
+        }
 
         if (pwd != null && !pwd.isEmpty()) cmd.add("-p" + pwd);
         cmd.add(overwrite ? "-aoa" : "-aos");
         cmd.add("-y");
 
         ProcessBuilder pb = new ProcessBuilder(cmd);
-        // 不合并错误流，以便区分标准输出和错误
-        // pb.redirectErrorStream(true); 
         Process p = pb.start();
 
         // 消耗流
@@ -449,7 +481,6 @@ public class FileUnzipStrategy extends AppStrategy {
     private void extractWithJava(File archive, File destDir, boolean overwrite, String pwd) throws Exception {
         String lowerName = archive.getName().toLowerCase();
 
-        // 7z (支持密码)
         if (lowerName.endsWith(".7z")) {
             byte[] pwdBytes = pwd == null ? null : pwd.getBytes(Charset.defaultCharset());
             try (SevenZFile sevenZFile = pwdBytes == null ? new SevenZFile(archive) : new SevenZFile(archive, pwdBytes)) {
@@ -471,12 +502,10 @@ public class FileUnzipStrategy extends AppStrategy {
             return;
         }
 
-        // Rar (不支持)
         if (lowerName.endsWith(".rar")) {
             throw new IOException("内置引擎不支持 RAR，请切换外部引擎。");
         }
 
-        // Zip 等流式 (不支持密码)
         try (InputStream fi = Files.newInputStream(archive.toPath());
              InputStream bi = new BufferedInputStream(fi);
              ArchiveInputStream in = new ArchiveStreamFactory().createArchiveInputStream(bi)) {
@@ -484,19 +513,25 @@ public class FileUnzipStrategy extends AppStrategy {
             ArchiveEntry entry;
             while ((entry = in.getNextEntry()) != null) {
                 if (!in.canReadEntryData(entry)) {
-                    if (pwd != null) throw new IOException("内置引擎不支持此格式的加密流，请用外部引擎。");
+                    if (pwd != null) throw new IOException("内置引擎不支持加密流，请用外部引擎。");
                     continue;
                 }
 
                 File target = new File(destDir, entry.getName());
                 if (entry.isDirectory()) {
-                    if (!target.isDirectory() && !target.mkdirs()) throw new IOException("无法创建目录");
+                    if (!target.isDirectory() && !target.mkdirs()) throw new IOException("无法创建目录: " + target);
                 } else {
                     File parent = target.getParentFile();
-                    if (!parent.isDirectory() && !parent.mkdirs()) throw new IOException("无法创建父目录");
+                    if (!parent.isDirectory() && !parent.mkdirs()) throw new IOException("无法创建父目录: " + parent);
                     if (target.exists() && !overwrite) continue;
+
+                    // [优化] 使用 64KB 缓冲区
                     try (OutputStream o = Files.newOutputStream(target.toPath())) {
-                        IOUtils.copy(in, o);
+                        byte[] buffer = new byte[64 * 1024];
+                        int n;
+                        while (-1 != (n = in.read(buffer))) {
+                            o.write(buffer, 0, n);
+                        }
                     }
                 }
             }
@@ -521,7 +556,6 @@ public class FileUnzipStrategy extends AppStrategy {
 
             try {
                 if (targetDir.equals(wrapperDir)) {
-                    // 同名嵌套：Archive/Archive/ -> Archive/
                     File[] innerFiles = singleInnerDir.listFiles();
                     if (innerFiles != null) {
                         for (File innerFile : innerFiles) {
@@ -531,7 +565,6 @@ public class FileUnzipStrategy extends AppStrategy {
                     }
                     Files.delete(singleInnerDir.toPath());
                 } else if (!targetDir.exists()) {
-                    // 异名嵌套：Archive/Data/ -> Data/
                     Files.move(singleInnerDir.toPath(), targetDir.toPath(), StandardCopyOption.REPLACE_EXISTING);
                     deleteDirectoryRecursively(wrapperDir);
                 }
