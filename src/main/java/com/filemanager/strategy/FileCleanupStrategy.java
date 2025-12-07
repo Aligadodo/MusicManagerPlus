@@ -43,7 +43,6 @@ public class FileCleanupStrategy extends AppStrategy {
     private final TextField txtTrashPath; // 回收站路径（支持相对或绝对）
     private final CheckBox chkKeepLargest;
     private final TextField txtKeepExt;
-    private final Spinner<Integer> spThreads;
     // --- Runtime Params ---
     private CleanupMode pMode;
     private DeleteMethod pMethod;
@@ -75,7 +74,6 @@ public class FileCleanupStrategy extends AppStrategy {
         txtKeepExt.setPromptText("优先保留后缀");
         txtKeepExt.visibleProperty().bind(cbMode.getSelectionModel().selectedItemProperty().isEqualTo(CleanupMode.DEDUP_FILES));
 
-        spThreads = new Spinner<>(1, 32, 4);
     }
 
     @Override
@@ -91,11 +89,6 @@ public class FileCleanupStrategy extends AppStrategy {
     @Override
     public ScanTarget getTargetType() {
         return ScanTarget.ALL;
-    }
-
-    @Override
-    public int getPreferredThreadCount() {
-        return spThreads.getValue();
     }
 
     @Override
@@ -139,7 +132,7 @@ public class FileCleanupStrategy extends AppStrategy {
 
         dynamicArea.getChildren().addAll(trashBox, dedupBox);
 
-        box.getChildren().addAll(grid, dynamicArea, new Separator(), new HBox(10, new Label("并发线程:"), spThreads));
+        box.getChildren().addAll(grid, dynamicArea);
         return box;
     }
 
@@ -151,7 +144,6 @@ public class FileCleanupStrategy extends AppStrategy {
         if (pTrashPath == null || pTrashPath.trim().isEmpty()) pTrashPath = ".EchoTrash";
         pKeepLargest = chkKeepLargest.isSelected();
         pKeepExt = txtKeepExt.getText();
-        pThreads = spThreads.getValue();
     }
 
     @Override
@@ -161,7 +153,6 @@ public class FileCleanupStrategy extends AppStrategy {
         props.setProperty("clean_trash", pTrashPath);
         props.setProperty("clean_keepLarge", String.valueOf(pKeepLargest));
         props.setProperty("clean_keepExt", pKeepExt);
-        props.setProperty("clean_threads", String.valueOf(pThreads));
     }
 
     @Override
@@ -174,8 +165,6 @@ public class FileCleanupStrategy extends AppStrategy {
         if (props.containsKey("clean_keepLarge"))
             chkKeepLargest.setSelected(Boolean.parseBoolean(props.getProperty("clean_keepLarge")));
         if (props.containsKey("clean_keepExt")) txtKeepExt.setText(props.getProperty("clean_keepExt"));
-        if (props.containsKey("clean_threads"))
-            spThreads.getValueFactory().setValue(Integer.parseInt(props.getProperty("clean_threads")));
     }
 
     @Override

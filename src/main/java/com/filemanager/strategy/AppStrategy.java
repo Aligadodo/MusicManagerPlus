@@ -44,10 +44,6 @@ public abstract class AppStrategy {
 
     public abstract String getName();
 
-    public int getPreferredThreadCount() {
-        return 1;
-    }
-
     public abstract Node getConfigNode(); // 策略特有的配置UI
 
     // 核心分析逻辑

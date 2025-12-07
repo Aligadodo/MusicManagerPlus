@@ -45,7 +45,6 @@ public class FileUnzipStrategy extends AppStrategy {
     private final CheckBox chkSmartFolder;
     private final CheckBox chkDeleteSource;
     private final CheckBox chkOverwrite;
-    private final Spinner<Integer> spThreads;
     private final TextField txtPassword;
 
     // --- Runtime Params ---
@@ -56,7 +55,6 @@ public class FileUnzipStrategy extends AppStrategy {
     private boolean pSmart;
     private boolean pDelete;
     private boolean pOverwrite;
-    private int pThreads;
     private String pPassword;
 
     public FileUnzipStrategy() {
@@ -95,10 +93,6 @@ public class FileUnzipStrategy extends AppStrategy {
 
         txtPassword = new TextField();
         txtPassword.setPromptText("密码 (如需要)");
-
-        spThreads = new Spinner<>(1, 16, 2);
-        spThreads.setEditable(true);
-
         autoDetect7Zip();
     }
 
@@ -128,11 +122,6 @@ public class FileUnzipStrategy extends AppStrategy {
     @Override
     public ScanTarget getTargetType() {
         return ScanTarget.FILES_ONLY;
-    }
-
-    @Override
-    public int getPreferredThreadCount() {
-        return spThreads.getValue();
     }
 
     @Override
@@ -177,11 +166,8 @@ public class FileUnzipStrategy extends AppStrategy {
         });
         pathBox.getChildren().add(btnPathPick);
         grid.add(pathBox, 1, 1);
-
-        grid.add(new Label("并发线程:"), 0, 2);
-        grid.add(spThreads, 1, 2);
-        grid.add(new Label("解压密码:"), 0, 3);
-        grid.add(txtPassword, 1, 3);
+        grid.add(new Label("解压密码:"), 0, 2);
+        grid.add(txtPassword, 1, 2);
 
         box.getChildren().addAll(grid, new Separator(), chkSmartFolder, chkOverwrite, new Separator(), chkDeleteSource);
         return box;
@@ -196,7 +182,6 @@ public class FileUnzipStrategy extends AppStrategy {
         pSmart = chkSmartFolder.isSelected();
         pDelete = chkDeleteSource.isSelected();
         pOverwrite = chkOverwrite.isSelected();
-        pThreads = spThreads.getValue();
         pPassword = txtPassword.getText();
     }
 
@@ -209,7 +194,6 @@ public class FileUnzipStrategy extends AppStrategy {
         props.setProperty("zip_smart", String.valueOf(pSmart));
         props.setProperty("zip_del", String.valueOf(pDelete));
         props.setProperty("zip_over", String.valueOf(pOverwrite));
-        props.setProperty("zip_threads", String.valueOf(pThreads));
     }
 
     @Override
@@ -224,12 +208,6 @@ public class FileUnzipStrategy extends AppStrategy {
             chkDeleteSource.setSelected(Boolean.parseBoolean(props.getProperty("zip_del")));
         if (props.containsKey("zip_over"))
             chkOverwrite.setSelected(Boolean.parseBoolean(props.getProperty("zip_over")));
-        if (props.containsKey("zip_threads")) {
-            try {
-                spThreads.getValueFactory().setValue(Integer.parseInt(props.getProperty("zip_threads")));
-            } catch (Exception e) {
-            }
-        }
     }
 
     @Override

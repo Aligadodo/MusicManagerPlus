@@ -43,7 +43,6 @@ public class CueSplitterStrategy extends AppStrategy {
     private final JFXComboBox<String> cbTargetFormat;
     private final JFXComboBox<String> cbOutputDirMode;
     private final TextField txtRelativePath;
-    private final Spinner<Integer> spThreads;
     private final TextField txtFFmpegPath;
     private final CheckBox chkIgnorePregap;
 
@@ -51,7 +50,6 @@ public class CueSplitterStrategy extends AppStrategy {
     private String pFormat;
     private String pMode;
     private String pRelPath;
-    private int pThreads;
     private String pFFmpeg;
     private boolean pIgnorePregap;
 
@@ -66,9 +64,6 @@ public class CueSplitterStrategy extends AppStrategy {
         txtRelativePath = new TextField("Split");
         txtRelativePath.setPromptText("文件夹名称");
         txtRelativePath.visibleProperty().bind(cbOutputDirMode.getSelectionModel().selectedItemProperty().isNotEqualTo("原目录 (Source)"));
-
-        spThreads = new Spinner<>(1, 32, 2);
-        spThreads.setTooltip(new Tooltip("并行分轨任务数（建议2-4，视磁盘IO性能而定）"));
 
         txtFFmpegPath = new TextField("ffmpeg");
         txtFFmpegPath.setPromptText("FFmpeg 可执行文件路径");
@@ -94,11 +89,6 @@ public class CueSplitterStrategy extends AppStrategy {
     }
 
     @Override
-    public int getPreferredThreadCount() {
-        return spThreads.getValue();
-    }
-
-    @Override
     public Node getConfigNode() {
         VBox box = new VBox(10);
 
@@ -113,9 +103,6 @@ public class CueSplitterStrategy extends AppStrategy {
         HBox.setHgrow(cbOutputDirMode, Priority.ALWAYS);
         HBox.setHgrow(txtRelativePath, Priority.ALWAYS);
         grid.add(outBox, 1, 1);
-
-        grid.add(new Label("并发任务:"), 0, 2);
-        grid.add(spThreads, 1, 2);
 
         HBox ffBox = new HBox(10, txtFFmpegPath);
         HBox.setHgrow(txtFFmpegPath, Priority.ALWAYS);
@@ -138,7 +125,6 @@ public class CueSplitterStrategy extends AppStrategy {
         pFormat = cbTargetFormat.getValue();
         pMode = cbOutputDirMode.getValue();
         pRelPath = txtRelativePath.getText();
-        pThreads = spThreads.getValue();
         pFFmpeg = txtFFmpegPath.getText();
         pIgnorePregap = chkIgnorePregap.isSelected();
     }
@@ -147,7 +133,6 @@ public class CueSplitterStrategy extends AppStrategy {
     public void saveConfig(Properties props) {
         props.setProperty("cue_format", cbTargetFormat.getValue());
         props.setProperty("cue_outMode", cbOutputDirMode.getValue());
-        props.setProperty("cue_threads", String.valueOf(spThreads.getValue()));
         props.setProperty("cue_ffmpeg", txtFFmpegPath.getText());
         props.setProperty("cue_pregap", String.valueOf(chkIgnorePregap.isSelected()));
     }
@@ -158,12 +143,6 @@ public class CueSplitterStrategy extends AppStrategy {
         if (props.containsKey("cue_outMode"))
             cbOutputDirMode.getSelectionModel().select(props.getProperty("cue_outMode"));
         if (props.containsKey("cue_ffmpeg")) txtFFmpegPath.setText(props.getProperty("cue_ffmpeg"));
-        if (props.containsKey("cue_threads")) {
-            try {
-                spThreads.getValueFactory().setValue(Integer.parseInt(props.getProperty("cue_threads")));
-            } catch (Exception e) {
-            }
-        }
         if (props.containsKey("cue_pregap"))
             chkIgnorePregap.setSelected(Boolean.parseBoolean(props.getProperty("cue_pregap")));
     }
