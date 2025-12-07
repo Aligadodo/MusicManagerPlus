@@ -489,6 +489,7 @@ public class MusicFileManagerAppV15 extends Application implements FileManagerAp
         strategyPrototypes.add(new CueSplitterStrategy());
         strategyPrototypes.add(new MetadataScraperStrategy());
         strategyPrototypes.add(new FileCleanupStrategy());
+        strategyPrototypes.add(new FileUnzipStrategy());
     }
 
     private void addStrategyStep() {
@@ -1013,6 +1014,7 @@ public class MusicFileManagerAppV15 extends Application implements FileManagerAp
             if (op == OperationType.MOVE && s instanceof FileMigrateStrategy) return s;
             if (op == OperationType.SPLIT && s instanceof CueSplitterStrategy) return s;
             if (op == OperationType.DELETE && s instanceof FileCleanupStrategy) return s;
+            if (op == OperationType.UNZIP && s instanceof FileUnzipStrategy) return s;
         }
         return null;
     }

@@ -410,6 +410,7 @@ public class MusicFileManagerAppV14_Stable extends Application implements FileMa
         strategyPrototypes.add(new CueSplitterStrategy());
         strategyPrototypes.add(new MetadataScraperStrategy());
         strategyPrototypes.add(new FileCleanupStrategy());
+        strategyPrototypes.add(new FileUnzipStrategy());
     }
 
     private void addStrategyStep(Properties config) {
@@ -686,6 +687,7 @@ public class MusicFileManagerAppV14_Stable extends Application implements FileMa
             if (op == OperationType.MOVE && s instanceof FileMigrateStrategy) return s;
             if (op == OperationType.SPLIT && s instanceof CueSplitterStrategy) return s;
             if (op == OperationType.DELETE && s instanceof FileCleanupStrategy) return s;
+            if (op == OperationType.UNZIP && s instanceof FileUnzipStrategy) return s;
         }
         return null;
     }

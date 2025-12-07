@@ -181,7 +181,9 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
         cbRecursionMode.getSelectionModel().select(1);
         spRecursionDepth = new Spinner<>(1, 20, 2);
         spRecursionDepth.setEditable(true);
-        ccbFileTypes = new CheckComboBox<>(FXCollections.observableArrayList("mp3", "flac", "wav", "m4a", "ape", "dsf", "dff", "dts", "iso", "jpg", "png", "nfo", "cue", "tak"));
+        ccbFileTypes = new CheckComboBox<>(FXCollections.observableArrayList(
+                "mp3", "flac", "wav", "m4a", "ape", "dsf", "dff", "dts", "iso", "jpg", "png", "nfo", "cue",
+                "rar", "zip", "7z", "tar", "gz", "bz2"));
         ccbFileTypes.getCheckModel().checkAll();
 
         // Preview Controls
@@ -927,6 +929,7 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
         strategyPrototypes.add(new CueSplitterStrategy());
         strategyPrototypes.add(new MetadataScraperStrategy());
         strategyPrototypes.add(new FileCleanupStrategy());
+        strategyPrototypes.add(new FileUnzipStrategy());
     }
 
     private void addStrategyStep(AppStrategy template) {
@@ -953,6 +956,7 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
             if (op == OperationType.MOVE && s instanceof FileMigrateStrategy) return s;
             if (op == OperationType.SPLIT && s instanceof CueSplitterStrategy) return s;
             if (op == OperationType.DELETE && s instanceof FileCleanupStrategy) return s;
+            if (op == OperationType.UNZIP && s instanceof FileUnzipStrategy) return s;
         }
         return null;
     }
