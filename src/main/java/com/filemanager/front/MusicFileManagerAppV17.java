@@ -48,6 +48,7 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.*;
 import java.util.concurrent.*;
@@ -428,6 +429,7 @@ public class MusicFileManagerAppV17 extends Application implements FileManagerAp
                             Platform.runLater(() -> rec.setStatus(ExecStatus.RUNNING));
                             // [修改] 策略执行时不再传递线程数，只负责逻辑
                             AppStrategy s = findStrategyForOp(rec.getOpType());
+                            logAndFile("开始: " + rec.getNewName());
                             if (s != null) {
                                 s.execute(rec);
                                 Platform.runLater(() -> rec.setStatus(ExecStatus.SUCCESS));
@@ -438,7 +440,7 @@ public class MusicFileManagerAppV17 extends Application implements FileManagerAp
                             }
                         } catch (Exception e) {
                             Platform.runLater(() -> rec.setStatus(ExecStatus.FAILED));
-                            logAndFile("失败: " + e.getMessage());
+                            logAndFile("失败: " + rec.getNewName() + "原因" + e.getMessage());
                         } finally {
                             int c = curr.incrementAndGet();
                             updateProgress(c, total);
@@ -693,10 +695,15 @@ public class MusicFileManagerAppV17 extends Application implements FileManagerAp
         logQueue.offer(s);
     }
 
+    // --- Config IO (包含线程数保存) ---
     private void logAndFile(String s) {
-        log(s);
-        if (fileLogger != null) fileLogger.println(s);
+        // 增加时间戳
+        String time = new SimpleDateFormat("HH:mm:ss.SSS").format(new Date());
+        String msg = "[" + time + "] --- " + s;
+        log(msg);
+        if(fileLogger!=null) fileLogger.println(msg);
     }
+
 
     private void initFileLogger() {
         try {
