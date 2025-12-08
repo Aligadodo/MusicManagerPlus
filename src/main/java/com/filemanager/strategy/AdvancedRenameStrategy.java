@@ -38,13 +38,11 @@ public class AdvancedRenameStrategy extends AppStrategy {
     private final ListView<RenameRule> lvRules;
     private final JFXButton btnAddRule, btnRemoveRule, btnMoveUp, btnMoveDown;
     private final JFXComboBox<String> cbCrossDriveMode;
-    private final Spinner<Integer> spThreads;
     private final JFXComboBox<String> cbProcessScope;
 
     // Runtime Params
     private List<RenameRule> pRules;
     private String pCrossDriveMode;
-    private int pThreads;
     private int pProcessScopeIndex;
 
     public AdvancedRenameStrategy() {
@@ -72,8 +70,6 @@ public class AdvancedRenameStrategy extends AppStrategy {
 
         cbCrossDriveMode = new JFXComboBox<>(FXCollections.observableArrayList("移动 (Move)", "复制 (Copy)"));
         cbCrossDriveMode.getSelectionModel().select(0);
-
-        spThreads = new Spinner<>(1, 64, Runtime.getRuntime().availableProcessors());
 
         cbProcessScope = new JFXComboBox<>(FXCollections.observableArrayList("仅处理文件", "仅处理文件夹", "全部处理"));
         cbProcessScope.getSelectionModel().select(2);
@@ -108,8 +104,6 @@ public class AdvancedRenameStrategy extends AppStrategy {
         g.add(cbProcessScope, 1, 0);
         g.add(createStyledLabel("跨盘:"), 2, 0);
         g.add(cbCrossDriveMode, 3, 0);
-        g.add(createStyledLabel("并发:"), 0, 1);
-        g.add(spThreads, 1, 1);
         g.setStyle("-fx-background-color: rgba(255,255,255,0.5); -fx-background-radius: 20; -fx-padding: 5 15; -fx-text-fill: #333333;");
 
 
@@ -121,7 +115,6 @@ public class AdvancedRenameStrategy extends AppStrategy {
     public void captureParams() {
         pRules = new ArrayList<>(lvRules.getItems());
         pCrossDriveMode = cbCrossDriveMode.getValue();
-        pThreads = spThreads.getValue();
         pProcessScopeIndex = cbProcessScope.getSelectionModel().getSelectedIndex();
     }
 
@@ -130,7 +123,6 @@ public class AdvancedRenameStrategy extends AppStrategy {
     public void saveConfig(Properties props) {
         props.setProperty("arn_crossDrive", String.valueOf(cbCrossDriveMode.getSelectionModel().getSelectedIndex()));
         props.setProperty("arn_scope", String.valueOf(cbProcessScope.getSelectionModel().getSelectedIndex()));
-        props.setProperty("arn_threads", String.valueOf(spThreads.getValue()));
 
         // Save Rules
         props.setProperty("arn_rule_count", String.valueOf(lvRules.getItems().size()));
@@ -158,8 +150,6 @@ public class AdvancedRenameStrategy extends AppStrategy {
             cbCrossDriveMode.getSelectionModel().select(Integer.parseInt(props.getProperty("arn_crossDrive")));
         if (props.containsKey("arn_scope"))
             cbProcessScope.getSelectionModel().select(Integer.parseInt(props.getProperty("arn_scope")));
-        if (props.containsKey("arn_threads"))
-            spThreads.getValueFactory().setValue(Integer.parseInt(props.getProperty("arn_threads")));
 
         // Load Rules
         lvRules.getItems().clear();

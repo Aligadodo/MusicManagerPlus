@@ -8,48 +8,19 @@
     <artifactId>music-file-manager</artifactId>
     <version>1.0-SNAPSHOT</version>
 
-    <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.3.0</version>
-        <relativePath/> <!-- lookup parent from repository -->
-    </parent>
-
     <properties>
-        <java.version>17</java.version>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-
-        <!-- Versions -->
-        <spring-ai.version>1.0.0-M1</spring-ai.version>
-        <javafx.version>17.0.6</javafx.version>
-        <jfoenix.version>9.0.10</jfoenix.version> <!-- Updated for JDK 9+ -->
-        <controlsfx.version>11.1.2</controlsfx.version> <!-- Updated for JDK 11+ -->
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
     </properties>
 
+
     <dependencies>
-        <!-- Spring Package -->
-
-        <!-- ==================== Spring AI & Boot ==================== -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter</artifactId>
-            <!-- Exclude logging if you want to use custom logging or keep console clean -->
+            <groupId>org.mybatis.spring.boot</groupId>
+            <artifactId>mybatis-spring-boot-starter</artifactId>
+            <version>2.2.0</version>
         </dependency>
-
-        <dependency>
-            <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-openai-spring-boot-starter</artifactId>
-        </dependency>
-
-        <!-- JSON Processing -->
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-        </dependency>
-
-
         <!-- Apache Commons Lang -->
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -67,7 +38,7 @@
             <version>1.18.12</version>
         </dependency>
         <dependency>
-             <groupId>com.alibaba</groupId>
+            <groupId>com.alibaba</groupId>
             <artifactId>fastjson</artifactId>
             <version>1.2.83</version>
         </dependency>
@@ -96,12 +67,26 @@
         </dependency>
 
 
-<!--        音乐解析转换包-->
+        <!--        音乐解析转换包-->
         <dependency>
             <groupId>ws.schild</groupId>
             <artifactId>jave-core</artifactId>
             <version>3.4.0</version>
         </dependency>
+
+        <!--        &lt;!&ndash; Linux 环境 &ndash;&gt;-->
+        <!--        <dependency>-->
+        <!--            <groupId>ws.schild</groupId>-->
+        <!--            <artifactId>jave-nativebin-linux64</artifactId>-->
+        <!--            <version>3.4.0</version>-->
+        <!--        </dependency>-->
+
+        <!--        &lt;!&ndash; MacOS 环境 &ndash;&gt;-->
+        <!--        <dependency>-->
+        <!--            <groupId>ws.schild</groupId>-->
+        <!--            <artifactId>jave-nativebin-osx64</artifactId>-->
+        <!--            <version>3.4.0</version>-->
+        <!--        </dependency>-->
 
         <!-- Win64 环境 -->
         <dependency>
@@ -121,6 +106,14 @@
             <groupId>org.controlsfx</groupId>
             <artifactId>controlsfx</artifactId>
             <version>8.40.14</version>
+        </dependency>
+
+        <!-- Lombok to reduce boilerplate -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.24</version>
+            <scope>provided</scope>
         </dependency>
 
         <!-- Commons IO for file utility -->
@@ -150,94 +143,22 @@
             <artifactId>xz</artifactId>
             <version>1.9</version>
         </dependency>
-
-        <!-- ==================== JavaFX (Required for JDK 11+) ==================== -->
-        <dependency>
-            <groupId>org.openjfx</groupId>
-            <artifactId>javafx-controls</artifactId>
-            <version>${javafx.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.openjfx</groupId>
-            <artifactId>javafx-fxml</artifactId>
-            <version>${javafx.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.openjfx</groupId>
-            <artifactId>javafx-media</artifactId>
-            <version>${javafx.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.openjfx</groupId>
-            <artifactId>javafx-graphics</artifactId>
-            <version>${javafx.version}</version>
-        </dependency>
-
-        <!-- ==================== UI Components ==================== -->
-        <!-- JFoenix for Material Design -->
-        <dependency>
-            <groupId>com.jfoenix</groupId>
-            <artifactId>jfoenix</artifactId>
-            <version>${jfoenix.version}</version>
-        </dependency>
-
-        <!-- ControlsFX for advanced UI controls -->
-        <dependency>
-            <groupId>org.controlsfx</groupId>
-            <artifactId>controlsfx</artifactId>
-            <version>${controlsfx.version}</version>
-        </dependency>
     </dependencies>
-
-    <!-- ==================== Repositories ==================== -->
-    <repositories>
-        <!-- For JAudioTagger Snapshot -->
-        <repository>
-            <id>jaudiotagger-repository</id>
-            <url>https://gitlab.com/api/v4/projects/19769656/packages/maven</url>
-        </repository>
-        <!-- For Spring AI Milestones -->
-        <repository>
-            <id>spring-milestones</id>
-            <name>Spring Milestones</name>
-            <url>https://repo.spring.io/milestone</url>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-        </repository>
-    </repositories>
-
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>org.springframework.ai</groupId>
-                <artifactId>spring-ai-bom</artifactId>
-                <version>${spring-ai.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
 
     <build>
         <finalName>EchoMusicManager</finalName>
         <plugins>
-            <!-- Compiler Plugin -->
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.11.0</version>
-                <configuration>
-                    <source>${java.version}</source>
-                    <target>${java.version}</target>
-                </configuration>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>2.5.3</version>
             </plugin>
 
-            <!-- Shade Plugin: Build Fat Jar -->
+            <!-- Shade Plugin: 打包所有依赖到一个Jar中 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.5.1</version>
+                <version>3.2.4</version>
                 <executions>
                     <execution>
                         <phase>package</phase>
@@ -246,17 +167,12 @@
                         </goals>
                         <configuration>
                             <transformers>
+                                <!-- 自动设置 Main-Class，这样双击Jar就能运行 -->
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>com.filemanager.Launcher</mainClass>
                                 </transformer>
-                                <!-- Important for Spring Boot -->
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
-                                    <resource>META-INF/spring.handlers</resource>
-                                </transformer>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
-                                    <resource>META-INF/spring.schemas</resource>
-                                </transformer>
                             </transformers>
+                            <!-- 排除签名文件，避免因依赖包签名不一致导致运行报错 -->
                             <filters>
                                 <filter>
                                     <artifact>*:*</artifact>
@@ -272,15 +188,21 @@
                 </executions>
             </plugin>
 
-            <!-- ClassFinal Plugin: Encryption (Optional) -->
+            <!-- 2. ClassFinal Plugin: 对 Fat Jar 进行加密 -->
+            <!-- 这里的配置会自动处理 target 目录下的 jar -->
             <plugin>
                 <groupId>net.roseboy</groupId>
                 <artifactId>classfinal-maven-plugin</artifactId>
                 <version>1.2.1</version>
                 <configuration>
+                    <!-- 加密密码，设置为 # 表示不需要密码启动(绑定机器码时才需要) -->
                     <password>#</password>
+                    <!-- 指定要加密的包名，逗号分隔，这里加密您的核心业务代码 -->
                     <packages>com.filemanager</packages>
+                    <!-- 排除配置文件，避免加密后无法读取 -->
                     <cfgfiles>*.properties,*.xml,*.css</cfgfiles>
+                    <!-- 加密后的 Jar 文件名后缀，例如 EchoMusicManager-encrypted.jar -->
+                    <!-- 这里留空或者设置成同名覆盖可能会有问题，建议使用默认逻辑 -->
                 </configuration>
                 <executions>
                     <execution>
@@ -293,4 +215,5 @@
             </plugin>
         </plugins>
     </build>
+
 </project>
