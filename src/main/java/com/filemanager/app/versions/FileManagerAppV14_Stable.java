@@ -1,5 +1,6 @@
-package com.filemanager.front;
+package com.filemanager.app.versions;
 
+import com.filemanager.app.IManagerAppInterface;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.RuleCondition;
 import com.filemanager.strategy.*;
@@ -55,7 +56,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class MusicFileManagerAppV14_Stable extends Application implements FileManagerAppInterface {
+public class FileManagerAppV14_Stable extends Application implements IManagerAppInterface {
 
     private Stage primaryStage;
     private final Properties appProps = new Properties();

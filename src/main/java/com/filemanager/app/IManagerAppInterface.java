@@ -1,6 +1,6 @@
-package com.filemanager.front;
+package com.filemanager.app;
 
-public interface FileManagerAppInterface {
+public interface IManagerAppInterface {
     public void log(String s);
     public void invalidatePreview(String reason);
 }

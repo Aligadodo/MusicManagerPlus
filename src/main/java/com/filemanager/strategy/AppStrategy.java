@@ -1,8 +1,9 @@
 package com.filemanager.strategy;
 
-import com.filemanager.front.FileManagerAppInterface;
+import com.filemanager.app.IManagerAppInterface;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.RuleCondition;
+import com.filemanager.model.RuleConditionGroup;
 import com.filemanager.type.ScanTarget;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
@@ -17,11 +18,14 @@ import java.util.function.BiConsumer;
 
 @Getter
 public abstract class AppStrategy {
-    protected FileManagerAppInterface app;
+    protected IManagerAppInterface app;
     // 通用条件配置接口 (UI调用)
     // 通用前置条件 (所有策略都支持)
     @Getter
     protected List<RuleCondition> globalConditions = new ArrayList<>();
+    @Getter
+    // [修改] 升级为条件组列表 (OR关系)
+    protected List<RuleConditionGroup> conditionGroups = new ArrayList<>();
 
     protected static Label createStyledLabel(String text) {
         Label label = new Label(text);
@@ -29,7 +33,7 @@ public abstract class AppStrategy {
         return label;
     }
 
-    public void setContext(FileManagerAppInterface app) {
+    public void setContext(IManagerAppInterface app) {
         this.app = app;
     }
 
@@ -57,13 +61,17 @@ public abstract class AppStrategy {
 
     public abstract void loadConfig(Properties props);
 
-    // 辅助：检查通用条件
+
+    // [修改] 校验逻辑：组间为 OR，只要有一个组满足即可
     protected boolean checkConditions(File f) {
-        if (globalConditions.isEmpty()) return true;
+        if (conditionGroups.isEmpty() && globalConditions.isEmpty()) return true; // 无条件则通过
+        for (RuleConditionGroup group : conditionGroups) {
+            if (group.test(f)) return true; // 只要有一组满足 (组内是AND)，则通过
+        }
         for (RuleCondition c : globalConditions) {
             if (!c.test(f)) return false;
         }
-        return true;
+        return false; // 所有组都不满足
     }
 
     public abstract ScanTarget getTargetType();

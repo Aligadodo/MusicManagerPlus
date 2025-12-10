@@ -1,5 +1,6 @@
-package com.filemanager.front;
+package com.filemanager.app.versions;
 
+import com.filemanager.app.IManagerAppInterface;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.RuleCondition;
 import com.filemanager.strategy.*;
@@ -48,26 +49,27 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.*;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * Echo Music File Manager v16.0 (Aero Glass Edition)
+ * Echo Music File Manager v17.0 (Aero Glass Edition)
  * * 设计理念：
  * 1. Glassmorphism: 使用半透明层+模糊背景模拟毛玻璃质感。
  * 2. Component-based: 界面构建逻辑拆分为独立的 View 类。
  * 3. Fluid UX: 使用侧边栏导航，操作路径更清晰。
+ * 4. 更好地操作性和更多的组件
  */
-public class MusicFileManagerAppV16 extends Application implements FileManagerAppInterface {
+public class FileManagerAppV17 extends Application implements IManagerAppInterface {
 
+    // --- 外观配置 ---
+    private static final ThemeConfig currentTheme = new ThemeConfig();
     // --- 核心数据 ---
     private final ObservableList<File> sourceRoots = FXCollections.observableArrayList();
     private final ObservableList<AppStrategy> pipelineStrategies = FXCollections.observableArrayList();
@@ -75,14 +77,12 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
     private final Properties appProps = new Properties();
     private final File lastConfigFile = new File(System.getProperty("user.home"), ".echo_music_manager_v18.config");
     private final List<ChangeRecord> changePreviewList = new ArrayList<>();
-    // --- 外观配置 ---
-    private static final ThemeConfig currentTheme = new ThemeConfig();
     private final StyleFactory styles = new StyleFactory();
-    private String bgImagePath = "";
     private final List<AppStrategy> strategyPrototypes = new ArrayList<>();
+    private String bgImagePath = "";
     private Stage primaryStage;
     private List<ChangeRecord> fullChangeList = new ArrayList<>();
-    private ListView<AppStrategy> pipelineListView = new ListView<>();
+    private final ListView<AppStrategy> pipelineListView = new ListView<>();
     // --- UI 容器 ---
     private StackPane rootContainer;
     private ImageView backgroundImageView;
@@ -97,6 +97,7 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
     private JFXComboBox<String> cbRecursionMode;
     private Spinner<Integer> spRecursionDepth;
     private CheckComboBox<String> ccbFileTypes;
+    private Spinner<Integer> spGlobalThreads; // [新增] 全局线程数控制
     // --- Tab 2 Components (需在 initGlobalControls 中初始化) ---
     private TreeTableView<ChangeRecord> previewTable;
     private ProgressBar mainProgressBar;
@@ -146,7 +147,6 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
         backgroundImageView.fitHeightProperty().bind(rootContainer.heightProperty());
 
 
-
         mainContent = createMainLayout();
 
         rootContainer.getChildren().addAll(backgroundImageView, backgroundOverlay, mainContent);
@@ -176,6 +176,21 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
      * 初始化所有跨视图使用的全局控件，确保不为 null
      */
     private void initGlobalControls() {
+        // [新增] 初始化全局线程控制器
+        int cores = Runtime.getRuntime().availableProcessors();
+        spGlobalThreads = new Spinner<>(1, 32, Math.min(cores, 4)); // 默认4或核心数
+        spGlobalThreads.setEditable(true);
+        spGlobalThreads.setTooltip(new Tooltip("执行变更时的并发线程数。可在运行时动态调整。"));
+        // [关键逻辑] 监听线程数变化，实时调整运行中的线程池
+        spGlobalThreads.valueProperty().addListener((obs, oldVal, newVal) -> {
+            if (isTaskRunning && executorService instanceof ThreadPoolExecutor) {
+                ThreadPoolExecutor tpe = (ThreadPoolExecutor) executorService;
+                tpe.setCorePoolSize(newVal);
+                tpe.setMaximumPoolSize(newVal);
+                log("动态调整线程池大小: " + oldVal + " -> " + newVal);
+            }
+        });
+
         // Filter Controls
         cbRecursionMode = new JFXComboBox<>(FXCollections.observableArrayList("仅当前目录", "递归所有子目录", "指定目录深度"));
         cbRecursionMode.getSelectionModel().select(1);
@@ -300,9 +315,12 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
 
     private Node createGlobalFiltersUI() {
         VBox box = new VBox(10);
+        // [修改] 将线程数控制器加入到全局筛选面板
         box.getChildren().addAll(
                 styles.createNormalLabel("递归模式:"), cbRecursionMode, spRecursionDepth,
-                styles.createNormalLabel("文件扩展名:"), ccbFileTypes
+                styles.createNormalLabel("文件扩展名:"), ccbFileTypes,
+                new Separator(),
+                styles.createNormalLabel("并发线程数 (动态):"), spGlobalThreads
         );
         return box;
     }
@@ -380,11 +398,7 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
         new Thread(task).start();
     }
 
-    /**
-     * 执行流水线
-     * 优化：增加排序逻辑，确保文件夹操作的安全性
-     */
-    private void runPipelineExecution() {
+    public void runPipelineExecution() {
         long count = fullChangeList.stream().filter(ChangeRecord::isChanged).count();
         if (count == 0) return;
 
@@ -392,58 +406,67 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
         if (alert.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) return;
 
         resetProgressUI("正在执行...", true);
-        if(chkSaveLog.isSelected()) initFileLogger();
+        if (chkSaveLog.isSelected()) initFileLogger();
 
         Task<Void> task = new Task<Void>() {
-            @Override protected Void call() throws Exception {
-                // [优化] 按路径长度倒序排序 (Deepest First)
-                // 这是一个关键的保护措施：确保先重命名/移动/删除子文件，再处理父文件夹。
-                // 避免因为父文件夹先被重命名，导致子文件路径失效的问题。
-                List<ChangeRecord> todos = fullChangeList.stream()
-                        .filter(ChangeRecord::isChanged)
-                        .sorted((r1, r2) -> Integer.compare(r2.getNewPath().length(), r1.getNewPath().length()))
-                        .collect(Collectors.toList());
-
+            @Override
+            protected Void call() throws Exception {
+                List<ChangeRecord> todos = fullChangeList.stream().filter(ChangeRecord::isChanged).collect(Collectors.toList());
                 int total = todos.size();
                 AtomicInteger curr = new AtomicInteger(0);
                 AtomicInteger succ = new AtomicInteger(0);
                 long startT = System.currentTimeMillis();
 
-                executorService = Executors.newFixedThreadPool(4);
+                // [修改] 使用全局配置的线程数初始化线程池
+                int initialThreads = spGlobalThreads.getValue();
+                executorService = Executors.newFixedThreadPool(initialThreads);
+                log("任务启动，并发线程: " + initialThreads);
 
-                for(ChangeRecord rec : todos) {
-                    if(isCancelled()) break;
+                for (ChangeRecord rec : todos) {
+                    if (isCancelled()) break;
                     executorService.submit(() -> {
+                        if (isCancelled()) return;
                         try {
-                            Platform.runLater(()->rec.setStatus(ExecStatus.RUNNING));
+                            Platform.runLater(() -> rec.setStatus(ExecStatus.RUNNING));
+                            // [修改] 策略执行时不再传递线程数，只负责逻辑
                             AppStrategy s = findStrategyForOp(rec.getOpType());
-                            if(s!=null) {
+                            logAndFile("开始: " + rec.getNewName());
+                            if (s != null) {
                                 s.execute(rec);
-                                Platform.runLater(()->rec.setStatus(ExecStatus.SUCCESS));
+                                Platform.runLater(() -> rec.setStatus(ExecStatus.SUCCESS));
                                 succ.incrementAndGet();
-                                logAndFile("成功: "+rec.getNewName());
+                                logAndFile("成功: " + rec.getNewName());
                             } else {
-                                Platform.runLater(()->rec.setStatus(ExecStatus.SKIPPED));
+                                Platform.runLater(() -> rec.setStatus(ExecStatus.SKIPPED));
                             }
-                        } catch(Exception e) {
-                            Platform.runLater(()->rec.setStatus(ExecStatus.FAILED));
-                            logAndFile("失败: "+e.getMessage());
+                        } catch (Exception e) {
+                            Platform.runLater(() -> rec.setStatus(ExecStatus.FAILED));
+                            logAndFile("失败: " + rec.getNewName() + "原因" + e.getMessage());
                         } finally {
                             int c = curr.incrementAndGet();
                             updateProgress(c, total);
-                            if(c%10==0) Platform.runLater(()->{
-                                updateStats(System.currentTimeMillis()-startT);
+                            if (c % 10 == 0) Platform.runLater(() -> {
+                                updateStats(System.currentTimeMillis() - startT);
                                 previewTable.refresh();
                             });
                         }
                     });
                 }
                 executorService.shutdown();
-                while(!executorService.awaitTermination(500, TimeUnit.MILLISECONDS)) { if(isCancelled()) { executorService.shutdownNow(); break; } }
+                while (!executorService.awaitTermination(500, TimeUnit.MILLISECONDS)) {
+                    if (isCancelled()) {
+                        executorService.shutdownNow();
+                        break;
+                    }
+                }
                 return null;
             }
         };
-        task.setOnSucceeded(e -> { finishTaskUI("执行完成"); closeFileLogger(); btnExecute.setDisable(false); });
+        task.setOnSucceeded(e -> {
+            finishTaskUI("执行完成");
+            closeFileLogger();
+            btnExecute.setDisable(false);
+        });
         handleTaskLifecycle(task);
         new Thread(task).start();
     }
@@ -456,7 +479,6 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
             invalidatePreview("列表顺序变更");
         }
     }
-
 
 
     private void refreshPreviewTableFilter() {
@@ -591,23 +613,25 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
      */
     private List<File> scanFilesRobust(File root, int maxDepth, List<String> exts, Consumer<String> msg) {
         List<File> list = new ArrayList<>();
-        if(!root.exists()) return list;
+        if (!root.exists()) return list;
         try (Stream<Path> s = Files.walk(root.toPath(), maxDepth)) {
             list = s.filter(p -> {
                 File f = p.toFile();
-                if(f.equals(root)) return false; // 排除根目录本身
+                if (f.equals(root)) return false; // 排除根目录本身
 
                 // [修复] 始终保留文件夹，无论递归深度如何。
                 // 之前的逻辑错误地排除了递归子目录，导致文件夹重命名/删除策略失效。
                 // 具体的策略（Strategy）会根据自己的 getTargetType() 再次过滤是否处理文件夹。
-                if(f.isDirectory()) return true;
+                if (f.isDirectory()) return true;
 
                 // 文件则应用扩展名过滤
                 String n = f.getName().toLowerCase();
-                for(String e : exts) if(n.endsWith("."+e)) return true;
+                for (String e : exts) if (n.endsWith("." + e)) return true;
                 return false;
             }).map(Path::toFile).collect(Collectors.toList());
-        } catch(IOException e) { log("扫描异常: "+e.getMessage()); }
+        } catch (IOException e) {
+            log("扫描异常: " + e.getMessage());
+        }
         return list;
     }
 
@@ -672,10 +696,15 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
         logQueue.offer(s);
     }
 
+    // --- Config IO (包含线程数保存) ---
     private void logAndFile(String s) {
-        log(s);
-        if (fileLogger != null) fileLogger.println(s);
+        // 增加时间戳
+        String time = new SimpleDateFormat("HH:mm:ss.SSS").format(new Date());
+        String msg = "[" + time + "] --- " + s;
+        log(msg);
+        if(fileLogger!=null) fileLogger.println(msg);
     }
+
 
     private void initFileLogger() {
         try {
@@ -772,6 +801,8 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
         try (FileOutputStream os = new FileOutputStream(f)) {
             appProps.setProperty("g_recMode", String.valueOf(cbRecursionMode.getSelectionModel().getSelectedIndex()));
             appProps.setProperty("g_recDepth", String.valueOf(spRecursionDepth.getValue()));
+            // [新增] 保存线程数配置
+            appProps.setProperty("g_threads", String.valueOf(spGlobalThreads.getValue()));
 
             if (!sourceRoots.isEmpty()) {
                 String paths = sourceRoots.stream().map(File::getAbsolutePath).collect(Collectors.joining("||"));
@@ -806,6 +837,10 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
                 cbRecursionMode.getSelectionModel().select(Integer.parseInt(appProps.getProperty("g_recMode")));
             if (appProps.containsKey("g_recDepth"))
                 spRecursionDepth.getValueFactory().setValue(Integer.parseInt(appProps.getProperty("g_recDepth")));
+            // [新增] 加载线程数配置
+            if (appProps.containsKey("g_threads"))
+                spGlobalThreads.getValueFactory().setValue(Integer.parseInt(appProps.getProperty("g_threads")));
+
 
             String paths = appProps.getProperty("g_sources");
             if (paths != null && !paths.isEmpty()) {
@@ -817,11 +852,14 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
             }
 
             // 加载外观
-            if(appProps.containsKey("ui_accent_color")) currentTheme.accentColor = appProps.getProperty("ui_accent_color");
-            if(appProps.containsKey("ui_text_color")) currentTheme.textColor = appProps.getProperty("ui_text_color");
-            if(appProps.containsKey("ui_glass_opacity")) currentTheme.glassOpacity = Double.parseDouble(appProps.getProperty("ui_glass_opacity"));
-            if(appProps.containsKey("ui_dark_bg")) currentTheme.isDarkBackground = Boolean.parseBoolean(appProps.getProperty("ui_dark_bg"));
-            if(appProps.containsKey("ui_bg_image")) bgImagePath = appProps.getProperty("ui_bg_image");
+            if (appProps.containsKey("ui_accent_color"))
+                currentTheme.accentColor = appProps.getProperty("ui_accent_color");
+            if (appProps.containsKey("ui_text_color")) currentTheme.textColor = appProps.getProperty("ui_text_color");
+            if (appProps.containsKey("ui_glass_opacity"))
+                currentTheme.glassOpacity = Double.parseDouble(appProps.getProperty("ui_glass_opacity"));
+            if (appProps.containsKey("ui_dark_bg"))
+                currentTheme.isDarkBackground = Boolean.parseBoolean(appProps.getProperty("ui_dark_bg"));
+            if (appProps.containsKey("ui_bg_image")) bgImagePath = appProps.getProperty("ui_bg_image");
             applyAppearance();
 
             // 加载流水线
@@ -859,7 +897,7 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
             // 保存前置条件
             int condSize = s.getGlobalConditions().size();
             p.setProperty(pre + "c.size", String.valueOf(condSize));
-            for(int j=0; j<condSize; j++) {
+            for (int j = 0; j < condSize; j++) {
                 RuleCondition rc = s.getGlobalConditions().get(j);
                 p.setProperty(pre + "c." + j + ".type", rc.getType().name());
                 p.setProperty(pre + "c." + j + ".val", rc.getValue());
@@ -897,7 +935,7 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
                 // 加载前置条件
                 int cSize = Integer.parseInt(p.getProperty(pre + "c.size", "0"));
                 st.getGlobalConditions().clear();
-                for(int j=0; j<cSize; j++) {
+                for (int j = 0; j < cSize; j++) {
                     String cPre = pre + "c." + j + ".";
                     ConditionType type = ConditionType.valueOf(p.getProperty(cPre + "type"));
                     String val = p.getProperty(cPre + "val");
@@ -961,6 +999,80 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
         return null;
     }
 
+    // [新增] 通用：创建统一风格的微型图标按钮
+    private JFXButton createSmallIconButton(String text, javafx.event.EventHandler<javafx.event.ActionEvent> handler) {
+        JFXButton btn = new JFXButton(text);
+        btn.setStyle("-fx-background-color: transparent; -fx-border-color: #ccc; -fx-border-radius: 3; -fx-padding: 2 6 2 6; -fx-font-size: 10px;");
+        btn.setTextFill(Color.web("#555"));
+        btn.setOnAction(e -> {
+            handler.handle(e);
+            e.consume(); // 防止事件冒泡触发 ListCell 选中
+        });
+        // Hover 效果
+        btn.setOnMouseEntered(e -> btn.setStyle("-fx-background-color: #eee; -fx-border-color: #999; -fx-border-radius: 3; -fx-padding: 2 6 2 6; -fx-font-size: 10px;"));
+        btn.setOnMouseExited(e -> btn.setStyle("-fx-background-color: transparent; -fx-border-color: #ccc; -fx-border-radius: 3; -fx-padding: 2 6 2 6; -fx-font-size: 10px;"));
+        return btn;
+    }
+
+    // [变更] createConditionsUI: 使用统一的 ListCell 风格
+    private Node createConditionsUI(AppStrategy strategy) {
+        VBox box = new VBox(5);
+
+        ListView<RuleCondition> lv = new ListView<>(FXCollections.observableArrayList(strategy.getGlobalConditions()));
+        lv.setPrefHeight(100);
+
+        // 使用统一风格的 Cell
+        lv.setCellFactory(p -> new ListCell<RuleCondition>() {
+            @Override
+            protected void updateItem(RuleCondition item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setGraphic(null);
+                    setStyle("-fx-background-color: transparent;");
+                } else {
+                    setText(null);
+                    HBox root = new HBox(10);
+                    root.setAlignment(Pos.CENTER_LEFT);
+
+                    Label lbl = styles.createNormalLabel(item.toString());
+                    Region sp = new Region();
+                    HBox.setHgrow(sp, Priority.ALWAYS);
+                    JFXButton btnDel = createSmallIconButton("✕", e -> {
+                        strategy.getGlobalConditions().remove(item);
+                        lv.getItems().setAll(strategy.getGlobalConditions());
+                        invalidatePreview("移除条件");
+                    });
+                    btnDel.setTextFill(Color.RED);
+
+                    root.getChildren().addAll(lbl, sp, btnDel);
+                    setGraphic(root);
+                    setStyle("-fx-background-color: transparent; -fx-border-color: #eee; -fx-border-width: 0 0 1 0;");
+                }
+            }
+        });
+
+        HBox input = new HBox(5);
+        ComboBox<ConditionType> cbType = new ComboBox<>(FXCollections.observableArrayList(ConditionType.values()));
+        cbType.getSelectionModel().select(0);
+        TextField txtVal = new TextField();
+        txtVal.setPromptText("条件值");
+        HBox.setHgrow(txtVal, Priority.ALWAYS);
+
+        JFXButton btnAdd = styles.createActionButton("+", "#3498db", () -> {
+            if (!txtVal.getText().isEmpty()) {
+                strategy.getGlobalConditions().add(new RuleCondition(cbType.getValue(), txtVal.getText()));
+                lv.getItems().setAll(strategy.getGlobalConditions());
+                txtVal.clear();
+                invalidatePreview("添加条件");
+            }
+        });
+
+        input.getChildren().addAll(cbType, txtVal, btnAdd);
+        box.getChildren().addAll(lv, input);
+        return box;
+    }
+
     private static class Spacer extends Region {
         public Spacer() {
             HBox.setHgrow(this, Priority.ALWAYS);
@@ -986,13 +1098,19 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
     }
 
     private class ComposeView {
-        private final MusicFileManagerAppV16 app;
+        private final FileManagerAppV17 app;
         private VBox viewNode;
         private ListView<AppStrategy> pipelineListView;
         private VBox configContainer;
 
-        public ComposeView(MusicFileManagerAppV16 app) { this.app = app; buildUI(); }
-        public Node getViewNode() { return viewNode; }
+        public ComposeView(FileManagerAppV17 app) {
+            this.app = app;
+            buildUI();
+        }
+
+        public Node getViewNode() {
+            return viewNode;
+        }
 
         private void buildUI() {
             viewNode = new VBox(20);
@@ -1009,14 +1127,18 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
 
             GridPane grid = new GridPane();
             grid.setHgap(20);
-            ColumnConstraints col1 = new ColumnConstraints(); col1.setPercentWidth(30);
-            ColumnConstraints col2 = new ColumnConstraints(); col2.setPercentWidth(30);
-            ColumnConstraints col3 = new ColumnConstraints(); col3.setPercentWidth(40);
+            ColumnConstraints col1 = new ColumnConstraints();
+            col1.setPercentWidth(30);
+            ColumnConstraints col2 = new ColumnConstraints();
+            col2.setPercentWidth(30);
+            ColumnConstraints col3 = new ColumnConstraints();
+            col3.setPercentWidth(40);
             grid.getColumnConstraints().addAll(col1, col2, col3);
 
             // --- Left Panel (Source) ---
             VBox leftPanel = styles.createGlassPane();
-            leftPanel.setPadding(new Insets(15)); leftPanel.setSpacing(10);
+            leftPanel.setPadding(new Insets(15));
+            leftPanel.setSpacing(10);
 
             ListView<File> sourceListView = new ListView<>(app.sourceRoots);
             sourceListView.setPlaceholder(styles.createNormalLabel("拖拽文件夹到此"));
@@ -1024,10 +1146,13 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
 
             // [增强] 源目录列表单元格：支持完整路径显示 + 行内操作
             sourceListView.setCellFactory(p -> new ListCell<File>() {
-                @Override protected void updateItem(File item, boolean empty) {
+                @Override
+                protected void updateItem(File item, boolean empty) {
                     super.updateItem(item, empty);
-                    if(empty || item == null) {
-                        setText(null); setGraphic(null); setStyle("-fx-background-color: transparent;");
+                    if (empty || item == null) {
+                        setText(null);
+                        setGraphic(null);
+                        setStyle("-fx-background-color: transparent;");
                     } else {
                         setText(null); // 使用 Graphic 布局
                         BorderPane pane = new BorderPane();
@@ -1067,17 +1192,24 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
                 }
             });
             // 列表本身的拖拽支持
-            sourceListView.setOnDragOver(e -> { if (e.getDragboard().hasFiles()) e.acceptTransferModes(TransferMode.COPY_OR_MOVE); e.consume(); });
+            sourceListView.setOnDragOver(e -> {
+                if (e.getDragboard().hasFiles()) e.acceptTransferModes(TransferMode.COPY_OR_MOVE);
+                e.consume();
+            });
             sourceListView.setOnDragDropped(this::handleDragDrop);
 
             HBox srcBtns = new HBox(10);
             srcBtns.getChildren().addAll(
                     styles.createActionButton("添加文件夹", null, app::addDirectoryAction),
-                    styles.createActionButton("全部清空", "#e74c3c", () -> { app.sourceRoots.clear(); app.invalidatePreview("清空源"); })
+                    styles.createActionButton("全部清空", "#e74c3c", () -> {
+                        app.sourceRoots.clear();
+                        app.invalidatePreview("清空源");
+                    })
             );
 
             TitledPane tpFilters = new TitledPane("全局筛选设置", app.createGlobalFiltersUI());
-            tpFilters.setCollapsible(true); tpFilters.setExpanded(true);
+            tpFilters.setCollapsible(true);
+            tpFilters.setExpanded(true);
             tpFilters.setStyle("-fx-text-fill: " + currentTheme.textColor + ";");
 
             leftPanel.getChildren().addAll(sourceListView, srcBtns, tpFilters);
@@ -1085,7 +1217,8 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
 
             // --- Center Panel (Pipeline) ---
             VBox centerPanel = styles.createGlassPane();
-            centerPanel.setPadding(new Insets(15)); centerPanel.setSpacing(10);
+            centerPanel.setPadding(new Insets(15));
+            centerPanel.setSpacing(10);
 
             pipelineListView = new ListView<>(app.pipelineStrategies);
             pipelineListView.setStyle("-fx-background-color: rgba(255,255,255,0.5); -fx-background-radius: 5;");
@@ -1093,16 +1226,19 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
 
             // [增强] 流水线列表单元格：支持序号 + 描述 + 完整操作
             pipelineListView.setCellFactory(param -> new ListCell<AppStrategy>() {
-                @Override protected void updateItem(AppStrategy item, boolean empty) {
+                @Override
+                protected void updateItem(AppStrategy item, boolean empty) {
                     super.updateItem(item, empty);
-                    if(empty || item == null) {
-                        setText(null); setGraphic(null); setStyle("-fx-background-color: transparent;");
+                    if (empty || item == null) {
+                        setText(null);
+                        setGraphic(null);
+                        setStyle("-fx-background-color: transparent;");
                     } else {
                         setText(null);
                         BorderPane pane = new BorderPane();
 
                         VBox v = new VBox(2);
-                        Label n = styles.createLabel((getIndex()+1) + ". " + item.getName(), 14, true);
+                        Label n = styles.createLabel((getIndex() + 1) + ". " + item.getName(), 14, true);
                         Label d = styles.createInfoLabel(item.getDescription());
                         d.setMaxWidth(180);
                         v.getChildren().addAll(n, d);
@@ -1143,13 +1279,23 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
                 }
             });
 
-            pipelineListView.getSelectionModel().selectedItemProperty().addListener((o,old,val) -> refreshConfig(val));
+            pipelineListView.getSelectionModel().selectedItemProperty().addListener((o, old, val) -> refreshConfig(val));
 
             HBox pipeActions = new HBox(5);
             JFXComboBox<AppStrategy> cbStrategyTemplates = new JFXComboBox<>(FXCollections.observableArrayList(app.strategyPrototypes));
             cbStrategyTemplates.setPromptText("选择功能...");
             cbStrategyTemplates.setPrefWidth(150);
-            cbStrategyTemplates.setConverter(new javafx.util.StringConverter<AppStrategy>() { @Override public String toString(AppStrategy o) { return o.getName(); } @Override public AppStrategy fromString(String s) { return null; } });
+            cbStrategyTemplates.setConverter(new javafx.util.StringConverter<AppStrategy>() {
+                @Override
+                public String toString(AppStrategy o) {
+                    return o.getName();
+                }
+
+                @Override
+                public AppStrategy fromString(String s) {
+                    return null;
+                }
+            });
 
             JFXButton btnAddStep = styles.createActionButton("添加步骤", "#2ecc71", () -> app.addStrategyStep(cbStrategyTemplates.getValue()));
 
@@ -1191,13 +1337,13 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
         private void handleDragDrop(javafx.scene.input.DragEvent e) {
             if (e.getDragboard().hasFiles()) {
                 boolean changed = false;
-                for(File f : e.getDragboard().getFiles()) {
-                    if(f.isDirectory() && !app.sourceRoots.contains(f)) {
+                for (File f : e.getDragboard().getFiles()) {
+                    if (f.isDirectory() && !app.sourceRoots.contains(f)) {
                         app.sourceRoots.add(f);
                         changed = true;
                     }
                 }
-                if(changed) app.invalidatePreview("源变更");
+                if (changed) app.invalidatePreview("源变更");
             }
             e.setDropCompleted(true);
             e.consume();
@@ -1205,7 +1351,7 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
 
         public void refreshConfig(AppStrategy s) {
             configContainer.getChildren().clear();
-            if(s==null) return;
+            if (s == null) return;
 
             configContainer.getChildren().addAll(
                     styles.createHeader(s.getName()),
@@ -1219,77 +1365,6 @@ public class MusicFileManagerAppV16 extends Application implements FileManagerAp
             );
             styles.forceDarkText(configContainer);
         }
-    }
-
-
-    // [新增] 通用：创建统一风格的微型图标按钮
-    private JFXButton createSmallIconButton(String text, javafx.event.EventHandler<javafx.event.ActionEvent> handler) {
-        JFXButton btn = new JFXButton(text);
-        btn.setStyle("-fx-background-color: transparent; -fx-border-color: #ccc; -fx-border-radius: 3; -fx-padding: 2 6 2 6; -fx-font-size: 10px;");
-        btn.setTextFill(Color.web("#555"));
-        btn.setOnAction(e -> {
-            handler.handle(e);
-            e.consume(); // 防止事件冒泡触发 ListCell 选中
-        });
-        // Hover 效果
-        btn.setOnMouseEntered(e -> btn.setStyle("-fx-background-color: #eee; -fx-border-color: #999; -fx-border-radius: 3; -fx-padding: 2 6 2 6; -fx-font-size: 10px;"));
-        btn.setOnMouseExited(e -> btn.setStyle("-fx-background-color: transparent; -fx-border-color: #ccc; -fx-border-radius: 3; -fx-padding: 2 6 2 6; -fx-font-size: 10px;"));
-        return btn;
-    }
-
-    // [变更] createConditionsUI: 使用统一的 ListCell 风格
-    private Node createConditionsUI(AppStrategy strategy) {
-        VBox box = new VBox(5);
-
-        ListView<RuleCondition> lv = new ListView<>(FXCollections.observableArrayList(strategy.getGlobalConditions()));
-        lv.setPrefHeight(100);
-
-        // 使用统一风格的 Cell
-        lv.setCellFactory(p -> new ListCell<RuleCondition>() {
-            @Override protected void updateItem(RuleCondition item, boolean empty) {
-                super.updateItem(item, empty);
-                if(empty || item == null) {
-                    setText(null); setGraphic(null); setStyle("-fx-background-color: transparent;");
-                } else {
-                    setText(null);
-                    HBox root = new HBox(10);
-                    root.setAlignment(Pos.CENTER_LEFT);
-
-                    Label lbl = styles.createNormalLabel(item.toString());
-                    Region sp = new Region(); HBox.setHgrow(sp, Priority.ALWAYS);
-                    JFXButton btnDel = createSmallIconButton("✕", e -> {
-                        strategy.getGlobalConditions().remove(item);
-                        lv.getItems().setAll(strategy.getGlobalConditions());
-                        invalidatePreview("移除条件");
-                    });
-                    btnDel.setTextFill(Color.RED);
-
-                    root.getChildren().addAll(lbl, sp, btnDel);
-                    setGraphic(root);
-                    setStyle("-fx-background-color: transparent; -fx-border-color: #eee; -fx-border-width: 0 0 1 0;");
-                }
-            }
-        });
-
-        HBox input = new HBox(5);
-        ComboBox<ConditionType> cbType = new ComboBox<>(FXCollections.observableArrayList(ConditionType.values()));
-        cbType.getSelectionModel().select(0);
-        TextField txtVal = new TextField();
-        txtVal.setPromptText("条件值");
-        HBox.setHgrow(txtVal, Priority.ALWAYS);
-
-        JFXButton btnAdd = styles.createActionButton("+", "#3498db", () -> {
-            if(!txtVal.getText().isEmpty()){
-                strategy.getGlobalConditions().add(new RuleCondition(cbType.getValue(), txtVal.getText()));
-                lv.getItems().setAll(strategy.getGlobalConditions());
-                txtVal.clear();
-                invalidatePreview("添加条件");
-            }
-        });
-
-        input.getChildren().addAll(cbType, txtVal, btnAdd);
-        box.getChildren().addAll(lv, input);
-        return box;
     }
 
     private class PreviewView {

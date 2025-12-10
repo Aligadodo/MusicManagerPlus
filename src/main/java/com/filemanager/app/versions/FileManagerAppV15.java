@@ -1,5 +1,6 @@
-package com.filemanager.front;
+package com.filemanager.app.versions;
 
+import com.filemanager.app.IManagerAppInterface;
 import com.filemanager.model.*;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.strategy.*;
@@ -50,7 +51,7 @@ import java.util.stream.Stream;
  * Echo Music File Manager v15.1 (Complete & Robust)
  * 修复了配置加载、文件扫描、列表过滤等核心功能的完整实现，无桩代码。
  */
-public class MusicFileManagerAppV15 extends Application implements FileManagerAppInterface {
+public class FileManagerAppV15 extends Application implements IManagerAppInterface {
 
     private Stage primaryStage;
     private final Properties appProps = new Properties();
