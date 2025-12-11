@@ -102,4 +102,19 @@ public class StyleFactory {
             for (Node child : ((Parent) node).getChildrenUnmodifiable()) forceDarkText(child);
         }
     }
+
+    // [新增] 通用：创建统一风格的微型图标按钮
+    public JFXButton createSmallIconButton(String text, javafx.event.EventHandler<javafx.event.ActionEvent> handler) {
+        JFXButton btn = new JFXButton(text);
+        btn.setStyle("-fx-background-color: transparent; -fx-border-color: #ccc; -fx-border-radius: 3; -fx-padding: 2 6 2 6; -fx-font-size: 10px;");
+        btn.setTextFill(Color.web("#555"));
+        btn.setOnAction(e -> {
+            handler.handle(e);
+            e.consume(); // 防止事件冒泡触发 ListCell 选中
+        });
+        // Hover 效果
+        btn.setOnMouseEntered(e -> btn.setStyle("-fx-background-color: #eee; -fx-border-color: #999; -fx-border-radius: 3; -fx-padding: 2 6 2 6; -fx-font-size: 10px;"));
+        btn.setOnMouseExited(e -> btn.setStyle("-fx-background-color: transparent; -fx-border-color: #ccc; -fx-border-radius: 3; -fx-padding: 2 6 2 6; -fx-font-size: 10px;"));
+        return btn;
+    }
 }

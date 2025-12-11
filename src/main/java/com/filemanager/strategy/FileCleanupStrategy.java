@@ -13,12 +13,14 @@ import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.DirectoryChooser;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileTime;
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -42,14 +44,15 @@ public class FileCleanupStrategy extends AppStrategy {
     private final JFXComboBox<DeleteMethod> cbMethod;
     private final TextField txtTrashPath; // 回收站路径（支持相对或绝对）
     private final CheckBox chkKeepLargest;
+    private final CheckBox chkKeepEarliest;
     private final TextField txtKeepExt;
     // --- Runtime Params ---
     private CleanupMode pMode;
     private DeleteMethod pMethod;
     private String pTrashPath;
     private boolean pKeepLargest;
+    private boolean pKeepEarliest;
     private String pKeepExt;
-    private int pThreads;
 
     public FileCleanupStrategy() {
         cbMode = new JFXComboBox<>(FXCollections.observableArrayList(CleanupMode.values()));
@@ -70,7 +73,12 @@ public class FileCleanupStrategy extends AppStrategy {
         chkKeepLargest.visibleProperty().bind(cbMode.getSelectionModel().selectedItemProperty().isEqualTo(CleanupMode.DEDUP_FILES));
         chkKeepLargest.setTooltip(new Tooltip("勾选：保留最大的文件；不勾选：保留名字最短（通常是原件）的文件"));
 
-        txtKeepExt = new TextField("flac");
+        chkKeepEarliest = new CheckBox("保留日期最早/最晚的副本");
+        chkKeepEarliest.setSelected(true);
+        chkKeepEarliest.visibleProperty().bind(cbMode.getSelectionModel().selectedItemProperty().isNotEqualTo(CleanupMode.REMOVE_EMPTY_DIRS));
+        chkKeepEarliest.setTooltip(new Tooltip("勾选：保留日期最早的文件(夹)；不勾选：保留最新的文件(夹)"));
+
+        txtKeepExt = new TextField("wav");
         txtKeepExt.setPromptText("优先保留后缀");
         txtKeepExt.visibleProperty().bind(cbMode.getSelectionModel().selectedItemProperty().isEqualTo(CleanupMode.DEDUP_FILES));
 
@@ -122,11 +130,15 @@ public class FileCleanupStrategy extends AppStrategy {
 
         // 去重配置
         VBox dedupBox = new VBox(5);
-        HBox keepRow = new HBox(10, chkKeepLargest, new Label("优先后缀:"), txtKeepExt);
-        keepRow.setAlignment(Pos.CENTER_LEFT);
+        HBox keepRow1 = new HBox(10, new Label("优先后缀:"), txtKeepExt);
+        keepRow1.setAlignment(Pos.CENTER_LEFT);
+        HBox keepRow2 = new HBox(10, chkKeepLargest);
+        keepRow2.setAlignment(Pos.CENTER_LEFT);
+        HBox keepRow3 = new HBox(10, chkKeepEarliest);
+        keepRow3.setAlignment(Pos.CENTER_LEFT);
         Label lblHint = new Label("提示：去重仅在同类型文件（如音频vs音频）间进行，会自动忽略 '(1)', 'Copy' 等后缀。");
         lblHint.setStyle("-fx-font-size: 10px; -fx-text-fill: gray;");
-        dedupBox.getChildren().addAll(keepRow, lblHint);
+        dedupBox.getChildren().addAll(keepRow1, keepRow2, keepRow3, lblHint);
         dedupBox.visibleProperty().bind(cbMode.getSelectionModel().selectedItemProperty().isEqualTo(CleanupMode.DEDUP_FILES));
         dedupBox.managedProperty().bind(dedupBox.visibleProperty());
 
@@ -143,6 +155,7 @@ public class FileCleanupStrategy extends AppStrategy {
         pTrashPath = txtTrashPath.getText();
         if (pTrashPath == null || pTrashPath.trim().isEmpty()) pTrashPath = ".EchoTrash";
         pKeepLargest = chkKeepLargest.isSelected();
+        pKeepEarliest = chkKeepEarliest.isSelected();
         pKeepExt = txtKeepExt.getText();
     }
 
@@ -152,6 +165,7 @@ public class FileCleanupStrategy extends AppStrategy {
         props.setProperty("clean_method", pMethod.name());
         props.setProperty("clean_trash", pTrashPath);
         props.setProperty("clean_keepLarge", String.valueOf(pKeepLargest));
+        props.setProperty("clean_keepEarly", String.valueOf(pKeepEarliest));
         props.setProperty("clean_keepExt", pKeepExt);
     }
 
@@ -164,6 +178,8 @@ public class FileCleanupStrategy extends AppStrategy {
         if (props.containsKey("clean_trash")) txtTrashPath.setText(props.getProperty("clean_trash"));
         if (props.containsKey("clean_keepLarge"))
             chkKeepLargest.setSelected(Boolean.parseBoolean(props.getProperty("clean_keepLarge")));
+        if (props.containsKey("clean_keepEarly"))
+            chkKeepEarliest.setSelected(Boolean.parseBoolean(props.getProperty("clean_keepEarly")));
         if (props.containsKey("clean_keepExt")) txtKeepExt.setText(props.getProperty("clean_keepExt"));
     }
 
@@ -249,15 +265,14 @@ public class FileCleanupStrategy extends AppStrategy {
                 Platform.runLater(() -> reporter.accept((double) curr.get() / total, "分析文件: " + entry.getKey().getName()));
 
             // 二级分组：CoreName -> List<File>
-            Map<String, List<File>> nameGroup = entry.getValue().stream()
-                    .collect(Collectors.groupingBy(f -> {
-                        String name = f.getName();
-                        Matcher m = normPattern.matcher(name);
-                        String core = m.find() ? m.group(1).trim().toLowerCase() : name.toLowerCase();
-                        String ext = getExt(name);
-                        String typeTag = getMediaType(ext);
-                        return core + "::" + typeTag; // Key: "song::AUDIO"
-                    }));
+            Map<String, List<File>> nameGroup = entry.getValue().stream().collect(Collectors.groupingBy(f -> {
+                String name = f.getName();
+                Matcher m = normPattern.matcher(name);
+                String core = m.find() ? m.group(1).trim().toLowerCase() : name.toLowerCase();
+                String ext = getExt(name);
+                String typeTag = getMediaType(ext);
+                return core + "::" + typeTag; // Key: "song::AUDIO"
+            }));
 
             for (List<File> group : nameGroup.values()) {
                 if (group.size() < 2) continue; // 无重复
@@ -270,18 +285,45 @@ public class FileCleanupStrategy extends AppStrategy {
                         boolean k2 = f2.getName().toLowerCase().endsWith("." + pKeepExt.toLowerCase());
                         if (k1 != k2) return k1 ? 1 : -1;
                     }
+
                     // 2. 体积优先
                     if (pKeepLargest) {
                         int sizeCmp = Long.compare(f1.length(), f2.length());
                         if (sizeCmp != 0) return sizeCmp;
                     }
-                    // 3. 默认：名字短的优先 (通常不带 (1) 的是原件)
-                    return Integer.compare(f2.getName().length(), f1.getName().length());
+
+                    // 3. 变更时间优先
+                    if (pKeepEarliest) {
+                        int sizeCmp = Long.compare(f2.lastModified(), f1.lastModified());
+                        if (sizeCmp != 0) return sizeCmp;
+
+                        try {
+                            BasicFileAttributes attributes = Files.readAttributes(Paths.get(f1.getPath()), BasicFileAttributes.class);
+                            BasicFileAttributes attributes2 = Files.readAttributes(Paths.get(f2.getPath()), BasicFileAttributes.class);
+                            if (attributes2.lastModifiedTime().compareTo(attributes.lastModifiedTime()) != 0) {
+                                return attributes2.lastModifiedTime().compareTo(attributes.lastModifiedTime());
+                            }
+                            if (attributes2.creationTime().compareTo(attributes.creationTime()) != 0) {
+                                return attributes2.creationTime().compareTo(attributes.creationTime());
+                            }
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+
+                    // 4. 默认：名字短的优先 (通常不带 (1) 的是原件)
+                    int compLen = Integer.compare(f2.getName().length(), f1.getName().length());
+                    if (compLen != 0) {
+                        return compLen;
+                    }
+
+                    // 5. 默认：名字排序靠前的优先 (通常是大写)
+                    return StringUtils.compare(f2.getName(), f1.getName(), true);
                 });
 
                 // 严格检查：必须确保 keeper 存在于 group 中，且不被删除
                 for (File f : group) {
-                    if (f.equals(keeper)) continue; // 保留
+                    if (f == keeper) continue; // 保留
                     result.add(createDeleteRecord(f, "重复副本 (与 " + keeper.getName() + " 内容重复)"));
                 }
             }
@@ -307,9 +349,7 @@ public class FileCleanupStrategy extends AppStrategy {
     private List<ChangeRecord> analyzeDuplicateFolders(List<File> files, BiConsumer<Double, String> reporter) {
         List<ChangeRecord> result = new ArrayList<>();
         List<File> dirs = files.stream().filter(File::isDirectory).collect(Collectors.toList());
-        Map<File, List<File>> parentMap = dirs.stream()
-                .filter(f -> f.getParentFile() != null)
-                .collect(Collectors.groupingBy(File::getParentFile));
+        Map<File, List<File>> parentMap = dirs.stream().filter(f -> f.getParentFile() != null).collect(Collectors.groupingBy(File::getParentFile));
 
         int total = parentMap.size();
         AtomicInteger curr = new AtomicInteger(0);
@@ -325,8 +365,7 @@ public class FileCleanupStrategy extends AppStrategy {
             }
 
             // 按指纹分组
-            Map<String, List<File>> dupeGroups = siblings.stream()
-                    .collect(Collectors.groupingBy(fingerprints::get));
+            Map<String, List<File>> dupeGroups = siblings.stream().collect(Collectors.groupingBy(fingerprints::get));
 
             for (Map.Entry<String, List<File>> entry : dupeGroups.entrySet()) {
                 if (entry.getKey().isEmpty()) continue; // 忽略空指纹或无法读取的
@@ -354,8 +393,7 @@ public class FileCleanupStrategy extends AppStrategy {
     private String calculateRecursiveDirFingerprint(File dir) {
         try {
             StringBuilder sb = new StringBuilder();
-            Files.walk(dir.toPath())
-                    .sorted() // 确保顺序一致
+            Files.walk(dir.toPath()).sorted() // 确保顺序一致
                     .forEach(path -> {
                         File f = path.toFile();
                         String relPath = dir.toPath().relativize(path).toString();
@@ -375,10 +413,7 @@ public class FileCleanupStrategy extends AppStrategy {
      */
     private long getDirSize(File dir) {
         try {
-            return Files.walk(dir.toPath())
-                    .filter(p -> p.toFile().isFile())
-                    .mapToLong(p -> p.toFile().length())
-                    .sum();
+            return Files.walk(dir.toPath()).filter(p -> p.toFile().isFile()).mapToLong(p -> p.toFile().length()).sum();
         } catch (IOException e) {
             return 0;
         }
@@ -397,10 +432,7 @@ public class FileCleanupStrategy extends AppStrategy {
     private List<ChangeRecord> analyzeEmptyDirs(List<File> files, List<File> rootDirs, BiConsumer<Double, String> reporter) {
         List<ChangeRecord> result = new ArrayList<>();
         // 按路径长度倒序，确保先删除底层空目录
-        List<File> sortedDirs = files.stream()
-                .filter(File::isDirectory)
-                .sorted((f1, f2) -> Integer.compare(f2.getAbsolutePath().length(), f1.getAbsolutePath().length()))
-                .collect(Collectors.toList());
+        List<File> sortedDirs = files.stream().filter(File::isDirectory).sorted((f1, f2) -> Integer.compare(f2.getAbsolutePath().length(), f1.getAbsolutePath().length())).collect(Collectors.toList());
 
         int total = sortedDirs.size();
         AtomicInteger processed = new AtomicInteger(0);
@@ -484,9 +516,7 @@ public class FileCleanupStrategy extends AppStrategy {
     }
 
     public enum CleanupMode {
-        DEDUP_FILES("同名/近似文件去重"),
-        DEDUP_FOLDERS("重复内容文件夹去重"),
-        REMOVE_EMPTY_DIRS("删除空文件夹");
+        DEDUP_FILES("同名/近似文件去重"), DEDUP_FOLDERS("重复内容文件夹去重"), REMOVE_EMPTY_DIRS("删除空文件夹");
         private final String label;
 
         CleanupMode(String l) {
@@ -500,8 +530,7 @@ public class FileCleanupStrategy extends AppStrategy {
     }
 
     public enum DeleteMethod {
-        PSEUDO_DELETE("伪删除 (保留目录结构到回收站)"),
-        DIRECT_DELETE("直接物理删除 (不可恢复)");
+        PSEUDO_DELETE("伪删除 (保留目录结构到回收站)"), DIRECT_DELETE("直接物理删除 (不可恢复)");
         private final String label;
 
         DeleteMethod(String l) {
@@ -513,4 +542,5 @@ public class FileCleanupStrategy extends AppStrategy {
             return label;
         }
     }
+
 }

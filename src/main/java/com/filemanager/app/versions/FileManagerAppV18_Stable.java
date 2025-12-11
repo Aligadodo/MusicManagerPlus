@@ -34,6 +34,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.DragEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
@@ -1265,36 +1266,59 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
             sourceListView.setPlaceholder(styles.createNormalLabel("拖拽文件夹到此"));
             VBox.setVgrow(sourceListView, Priority.ALWAYS);
 
+            // [增强] 源目录列表单元格：支持完整路径显示 + 行内操作
             sourceListView.setCellFactory(p -> new ListCell<File>() {
-                @Override protected void updateItem(File item, boolean empty) {
+                @Override
+                protected void updateItem(File item, boolean empty) {
                     super.updateItem(item, empty);
-                    if(empty || item == null) {
-                        setText(null); setStyle("-fx-background-color: transparent;");
+                    if (empty || item == null) {
+                        setText(null);
+                        setGraphic(null);
+                        setStyle("-fx-background-color: transparent;");
                     } else {
-                        setText(item.getAbsolutePath());
-                        setTooltip(new Tooltip(item.getAbsolutePath()));
-                        setStyle("-fx-background-color: transparent; -fx-text-fill: " + currentTheme.textColor + ";");
+                        setText(null); // 使用 Graphic 布局
+                        BorderPane pane = new BorderPane();
+
+                        VBox content = new VBox(2);
+                        Label name = styles.createLabel(item.getName(), 13, true);
+                        Label path = styles.createInfoLabel(item.getAbsolutePath());
+                        path.setTooltip(new Tooltip(item.getAbsolutePath()));
+                        content.getChildren().addAll(name, path);
+
+                        HBox actions = new HBox(4);
+                        actions.setAlignment(Pos.CENTER_RIGHT);
+                        // 文件夹操作：上移、下移、打开、删除
+                        JFXButton btnUp = createSmallIconButton("▲", e -> moveListItem(app.sourceRoots, getIndex(), -1));
+                        JFXButton btnDown = createSmallIconButton("▼", e -> moveListItem(app.sourceRoots, getIndex(), 1));
+                        JFXButton btnOpen = createSmallIconButton("📂", e -> openFileInSystem(item));
+                        JFXButton btnDel = createSmallIconButton("✕", e -> {
+                            app.sourceRoots.remove(item);
+                            app.invalidatePreview("移除源目录");
+                        });
+                        btnDel.setTextFill(Color.web("#e74c3c")); // 红色删除键
+
+                        actions.getChildren().addAll(btnUp, btnDown, btnOpen, btnDel);
+
+                        pane.setCenter(content);
+                        pane.setRight(actions);
+                        setGraphic(pane);
+                        setStyle("-fx-background-color: transparent; -fx-border-color: #eee; -fx-border-width: 0 0 1 0;");
+
+                        // 拖拽支持
+                        setOnDragOver(e -> {
+                            if (e.getDragboard().hasFiles()) e.acceptTransferModes(TransferMode.COPY_OR_MOVE);
+                            e.consume();
+                        });
+                        setOnDragDropped(e -> handleDragDrop(e));
                     }
                 }
             });
+            // 列表本身的拖拽支持
             sourceListView.setOnDragOver(e -> {
                 if (e.getDragboard().hasFiles()) e.acceptTransferModes(TransferMode.COPY_OR_MOVE);
                 e.consume();
             });
-            sourceListView.setOnDragDropped(e -> {
-                if (e.getDragboard().hasFiles()) {
-                    boolean changed = false;
-                    for(File f : e.getDragboard().getFiles()) {
-                        if(f.isDirectory() && !app.sourceRoots.contains(f)) {
-                            app.sourceRoots.add(f);
-                            changed = true;
-                        }
-                    }
-                    if(changed) app.invalidatePreview("源变更");
-                }
-                e.setDropCompleted(true);
-                e.consume();
-            });
+            sourceListView.setOnDragDropped(this::handleDragDrop);
 
             HBox srcBtns = new HBox(10);
             srcBtns.getChildren().addAll(
@@ -1319,32 +1343,55 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
             VBox.setVgrow(pipelineListView, Priority.ALWAYS);
 
             pipelineListView.setCellFactory(param -> new ListCell<AppStrategy>() {
-                @Override protected void updateItem(AppStrategy item, boolean empty) {
+                @Override
+                protected void updateItem(AppStrategy item, boolean empty) {
                     super.updateItem(item, empty);
-                    if(empty || item == null) {
-                        setText(null); setGraphic(null); setStyle("-fx-background-color: transparent;");
+                    if (empty || item == null) {
+                        setText(null);
+                        setGraphic(null);
+                        setStyle("-fx-background-color: transparent;");
                     } else {
+                        setText(null);
                         BorderPane pane = new BorderPane();
+
                         VBox v = new VBox(2);
-                        Label n = styles.createLabel((getIndex()+1) + ". " + item.getName(), 13, true);
+                        Label n = styles.createLabel((getIndex() + 1) + ". " + item.getName(), 14, true);
                         Label d = styles.createInfoLabel(item.getDescription());
                         d.setMaxWidth(180);
                         v.getChildren().addAll(n, d);
 
-                        JFXButton btnDel = new JFXButton("✕");
-                        btnDel.setStyle("-fx-text-fill: #e74c3c; -fx-font-weight: bold; -fx-background-color: transparent; -fx-cursor: hand;");
-                        btnDel.setOnAction(e -> {
+                        HBox actions = new HBox(4);
+                        actions.setAlignment(Pos.CENTER_RIGHT);
+
+                        // 策略操作：上移、下移、删除
+                        // (注：配置详情通过列表选中触发，这里不需要额外按钮，或者可以加一个 '⚙' 指示)
+                        JFXButton btnUp = createSmallIconButton("▲", e -> {
+                            moveListItem(app.pipelineStrategies, getIndex(), -1);
+                            pipelineListView.getSelectionModel().select(getIndex()); // 保持选中
+                        });
+                        JFXButton btnDown = createSmallIconButton("▼", e -> {
+                            moveListItem(app.pipelineStrategies, getIndex(), 1);
+                            pipelineListView.getSelectionModel().select(getIndex());
+                        });
+                        JFXButton btnDel = createSmallIconButton("✕", e -> {
                             app.pipelineStrategies.remove(item);
-                            configContainer.getChildren().clear();
+                            configContainer.getChildren().clear(); // 清空配置面板
                             app.invalidatePreview("步骤移除");
                         });
+                        btnDel.setTextFill(Color.web("#e74c3c"));
+
+                        actions.getChildren().addAll(btnUp, btnDown, btnDel);
 
                         pane.setCenter(v);
-                        pane.setRight(btnDel);
+                        pane.setRight(actions);
                         setGraphic(pane);
 
-                        if (isSelected()) setStyle("-fx-background-color: rgba(52, 152, 219, 0.15); -fx-border-color: #3498db; -fx-border-width: 0 0 1 0;");
-                        else setStyle("-fx-background-color: transparent; -fx-border-color: #eee; -fx-border-width: 0 0 1 0;");
+                        // 选中态样式处理
+                        if (isSelected()) {
+                            setStyle("-fx-background-color: rgba(52, 152, 219, 0.15); -fx-border-color: #3498db; -fx-border-width: 0 0 1 0;");
+                        } else {
+                            setStyle("-fx-background-color: transparent; -fx-border-color: #eee; -fx-border-width: 0 0 1 0;");
+                        }
                     }
                 }
 
@@ -1418,6 +1465,21 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
             if (!app.pipelineStrategies.isEmpty()) {
                 pipelineListView.getSelectionModel().selectFirst();
             }
+        }
+
+        private void handleDragDrop(javafx.scene.input.DragEvent e) {
+            if (e.getDragboard().hasFiles()) {
+                boolean changed = false;
+                for (File f : e.getDragboard().getFiles()) {
+                    if (f.isDirectory() && !app.sourceRoots.contains(f)) {
+                        app.sourceRoots.add(f);
+                        changed = true;
+                    }
+                }
+                if (changed) app.invalidatePreview("源变更");
+            }
+            e.setDropCompleted(true);
+            e.consume();
         }
     }
 

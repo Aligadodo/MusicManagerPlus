@@ -229,17 +229,18 @@ public class FileManagerPlusApp extends Application implements IAppController, I
 
     private VBox createSideMenu() {
         VBox menu = styles.createGlassPane();
-        menu.setPrefWidth(240);
+        menu.setPrefWidth(120);
         menu.setPadding(new Insets(30, 20, 30, 20));
         menu.setSpacing(15);
         menu.setStyle("-fx-background-color: rgba(255, 255, 255, 0.85); -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 10, 0, 0, 0);");
 
-        VBox navBox = new VBox(10);
+        VBox navBox = new VBox(3);
         navBox.getChildren().addAll(
                 styles.createActionButton("任务编排", null, () -> switchView(composeView.getViewNode())),
                 styles.createActionButton("预览执行", null, () -> switchView(previewView.getViewNode())),
                 styles.createActionButton("运行日志", null, () -> switchView(logView.getViewNode()))
         );
+        navBox.setAlignment(Pos.CENTER);
 
         menu.getChildren().add(navBox);
         return menu;

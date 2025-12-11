@@ -7,6 +7,7 @@ import com.filemanager.strategy.AppStrategy;
 import com.filemanager.type.ConditionType;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXComboBox;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
@@ -20,6 +21,7 @@ import javafx.scene.paint.Color;
 import javafx.util.StringConverter;
 
 import java.io.File;
+import java.util.Collections;
 import java.util.List;
 
 public class ComposeView {
@@ -62,43 +64,64 @@ public class ComposeView {
         VBox leftPanel = styles.createGlassPane();
         leftPanel.setPadding(new Insets(15)); leftPanel.setSpacing(10);
 
+        // 初始化主类成员 sourceListView
         sourceListView = new ListView<>(app.getSourceRoots());
         sourceListView.setPlaceholder(styles.createNormalLabel("拖拽文件夹到此"));
         VBox.setVgrow(sourceListView, Priority.ALWAYS);
 
+        // [增强] 源目录列表单元格：支持完整路径显示 + 行内操作
         sourceListView.setCellFactory(p -> new ListCell<File>() {
-            @Override protected void updateItem(File item, boolean empty) {
+            @Override
+            protected void updateItem(File item, boolean empty) {
                 super.updateItem(item, empty);
-                if(empty || item == null) {
-                    setText(null); setGraphic(null); setStyle("-fx-background-color: transparent;");
-                } else {
+                if (empty || item == null) {
                     setText(null);
+                    setGraphic(null);
+                    setStyle("-fx-background-color: transparent;");
+                } else {
+                    setText(null); // 使用 Graphic 布局
                     BorderPane pane = new BorderPane();
-                    VBox content = new VBox(2);
-                    content.getChildren().addAll(styles.createLabel(item.getName(), 13, true), styles.createInfoLabel(item.getAbsolutePath()));
-                    JFXButton btnDel = styles.createIconButton("✕", "#e74c3c", () -> app.removeSourceDir(item));
-                    pane.setCenter(content); pane.setRight(btnDel);
-                    setGraphic(pane);
-                    setTooltip(new Tooltip(item.getAbsolutePath()));
-                    setStyle("-fx-background-color: transparent; -fx-border-color: #eee; -fx-border-width: 0 0 1 0;");
-                }
-            }
-        });
 
-        sourceListView.setOnDragOver(e -> { if (e.getDragboard().hasFiles()) e.acceptTransferModes(TransferMode.COPY_OR_MOVE); e.consume(); });
-        sourceListView.setOnDragDropped(e -> {
-            Dragboard db = e.getDragboard();
-            if (db.hasFiles()) {
-                boolean changed = false;
-                for(File f : db.getFiles()) {
-                    if(f.isDirectory() && !app.getSourceRoots().contains(f)) {
-                        app.getSourceRoots().add(f); changed = true;
-                    }
+                    VBox content = new VBox(2);
+                    Label name = styles.createLabel(item.getName(), 13, true);
+                    Label path = styles.createInfoLabel(item.getAbsolutePath());
+                    path.setTooltip(new Tooltip(item.getAbsolutePath()));
+                    content.getChildren().addAll(name, path);
+
+                    HBox actions = new HBox(4);
+                    actions.setAlignment(Pos.CENTER_RIGHT);
+                    // 文件夹操作：上移、下移、打开、删除
+                    JFXButton btnUp = styles.createSmallIconButton("▲", e -> moveListItem(app.getSourceRoots(), getIndex(), -1));
+                    JFXButton btnDown = styles.createSmallIconButton("▼", e -> moveListItem(app.getSourceRoots(), getIndex(), 1));
+                    JFXButton btnOpen = styles.createSmallIconButton("📂", e -> app.openFileInSystem(item));
+                    JFXButton btnDel = styles.createSmallIconButton("✕", e -> {
+                        app.getSourceRoots().remove(item);
+                        app.invalidatePreview("移除源目录");
+                    });
+                    btnDel.setTextFill(Color.web("#e74c3c")); // 红色删除键
+
+                    actions.getChildren().addAll(btnUp, btnDown, btnOpen, btnDel);
+
+                    pane.setCenter(content);
+                    pane.setRight(actions);
+                    setGraphic(pane);
+                    setStyle("-fx-background-color: transparent; -fx-border-color: #eee; -fx-border-width: 0 0 1 0;");
+
+                    // 拖拽支持
+                    setOnDragOver(e -> {
+                        if (e.getDragboard().hasFiles()) e.acceptTransferModes(TransferMode.COPY_OR_MOVE);
+                        e.consume();
+                    });
+                    setOnDragDropped(e -> handleDragDrop(e));
                 }
-                if(changed) app.invalidatePreview("源变更");
             }
-            e.setDropCompleted(true); e.consume();
         });
+        // 列表本身的拖拽支持
+        sourceListView.setOnDragOver(e -> {
+            if (e.getDragboard().hasFiles()) e.acceptTransferModes(TransferMode.COPY_OR_MOVE);
+            e.consume();
+        });
+        sourceListView.setOnDragDropped(this::handleDragDrop);
 
         HBox srcTools = new HBox(10);
         srcTools.getChildren().addAll(
@@ -122,32 +145,55 @@ public class ComposeView {
         VBox.setVgrow(pipelineListView, Priority.ALWAYS);
 
         pipelineListView.setCellFactory(param -> new ListCell<AppStrategy>() {
-            @Override protected void updateItem(AppStrategy item, boolean empty) {
+            @Override
+            protected void updateItem(AppStrategy item, boolean empty) {
                 super.updateItem(item, empty);
-                if(empty || item == null) {
-                    setText(null); setGraphic(null); setStyle("-fx-background-color: transparent;");
+                if (empty || item == null) {
+                    setText(null);
+                    setGraphic(null);
+                    setStyle("-fx-background-color: transparent;");
                 } else {
+                    setText(null);
                     BorderPane pane = new BorderPane();
+
                     VBox v = new VBox(2);
-                    Label n = styles.createLabel((getIndex()+1) + ". " + item.getName(), 13, true);
+                    Label n = styles.createLabel((getIndex() + 1) + ". " + item.getName(), 14, true);
                     Label d = styles.createInfoLabel(item.getDescription());
                     d.setMaxWidth(180);
                     v.getChildren().addAll(n, d);
 
-                    JFXButton btnDel = new JFXButton("✕");
-                    btnDel.setStyle("-fx-text-fill: #e74c3c; -fx-font-weight: bold; -fx-background-color: transparent; -fx-cursor: hand;");
-                    btnDel.setOnAction(e -> {
+                    HBox actions = new HBox(4);
+                    actions.setAlignment(Pos.CENTER_RIGHT);
+
+                    // 策略操作：上移、下移、删除
+                    // (注：配置详情通过列表选中触发，这里不需要额外按钮，或者可以加一个 '⚙' 指示)
+                    JFXButton btnUp = styles.createSmallIconButton("▲", e -> {
+                        moveListItem(app.getPipelineStrategies(), getIndex(), -1);
+                        pipelineListView.getSelectionModel().select(getIndex()); // 保持选中
+                    });
+                    JFXButton btnDown = styles.createSmallIconButton("▼", e -> {
+                        moveListItem(app.getPipelineStrategies(), getIndex(), 1);
+                        pipelineListView.getSelectionModel().select(getIndex());
+                    });
+                    JFXButton btnDel = styles.createSmallIconButton("✕", e -> {
                         app.getPipelineStrategies().remove(item);
-                        configContainer.getChildren().clear();
+                        configContainer.getChildren().clear(); // 清空配置面板
                         app.invalidatePreview("步骤移除");
                     });
+                    btnDel.setTextFill(Color.web("#e74c3c"));
+
+                    actions.getChildren().addAll(btnUp, btnDown, btnDel);
 
                     pane.setCenter(v);
-                    pane.setRight(btnDel);
+                    pane.setRight(actions);
                     setGraphic(pane);
 
-                    if (isSelected()) setStyle("-fx-background-color: rgba(52, 152, 219, 0.15); -fx-border-color: #3498db; -fx-border-width: 0 0 1 0;");
-                    else setStyle("-fx-background-color: transparent; -fx-border-color: #eee; -fx-border-width: 0 0 1 0;");
+                    // 选中态样式处理
+                    if (isSelected()) {
+                        setStyle("-fx-background-color: rgba(52, 152, 219, 0.15); -fx-border-color: #3498db; -fx-border-width: 0 0 1 0;");
+                    } else {
+                        setStyle("-fx-background-color: transparent; -fx-border-color: #eee; -fx-border-width: 0 0 1 0;");
+                    }
                 }
             }
 
@@ -168,7 +214,16 @@ public class ComposeView {
                     setStyle("-fx-background-color: transparent; -fx-border-color: #eee; -fx-border-width: 0 0 1 0;");
                 }
             }
+
         });
+
+        // 关键：加载完成后自动选中第一项，触发 UI 刷新，解决“不回显”问题
+        if (!app.getPipelineStrategies().isEmpty()) {
+            Platform.runLater(() -> {
+                pipelineListView.getSelectionModel().select(0);
+                refreshConfig(pipelineListView.getSelectionModel().getSelectedItem());
+            });
+        }
 
         // [新增] 鼠标点击强制刷新，解决只有一项时点击不显示的问题
         pipelineListView.setOnMouseClicked(e -> {
@@ -217,7 +272,31 @@ public class ComposeView {
         // Auto select first
         refreshList();
     }
-    
+
+    private void handleDragDrop(javafx.scene.input.DragEvent e) {
+        if (e.getDragboard().hasFiles()) {
+            boolean changed = false;
+            for (File f : e.getDragboard().getFiles()) {
+                if (f.isDirectory() && !app.getSourceRoots().contains(f)) {
+                    app.getSourceRoots().add(f);
+                    changed = true;
+                }
+            }
+            if (changed) app.invalidatePreview("源变更");
+        }
+        e.setDropCompleted(true);
+        e.consume();
+    }
+
+    // [新增] 通用：列表项移动辅助方法
+    private <T> void moveListItem(ObservableList<T> list, int index, int direction) {
+        int newIndex = index + direction;
+        if (newIndex >= 0 && newIndex < list.size()) {
+            Collections.swap(list, index, newIndex);
+            app.invalidatePreview("列表顺序变更");
+        }
+    }
+
     private Node createGlobalFiltersUI() {
         VBox box = new VBox(10);
         box.setPadding(new Insets(10));
