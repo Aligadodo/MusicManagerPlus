@@ -52,7 +52,11 @@ public class StyleFactory {
         if (action != null) btn.setOnAction(e -> action.run());
         return btn;
     }
-    
+
+    public JFXButton createButton(String t, javafx.event.EventHandler<javafx.event.ActionEvent> h) {
+        return this.createActionButton(t, null, () -> h.handle(null));
+    }
+
     /**
      * [新增] 创建行内图标按钮 (如删除、上移下移)
      */

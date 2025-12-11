@@ -44,6 +44,7 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
@@ -494,13 +495,20 @@ public class FileManagerPlusApp extends Application implements IAppController, I
             previewView.getPreviewTable().setRoot(t.getValue());
             updateStats(0);
         });
+        t.setOnFailed(e -> {
+            previewView.getPreviewTable().setRoot(t.getValue());
+            updateStats(0);
+        });
         new Thread(t).start();
     }
 
     private void updateStats(long ms) {
-        long t = fullChangeList.size(), c = fullChangeList.stream().filter(ChangeRecord::isChanged).count(), s = fullChangeList.stream().filter(r -> r.getStatus() == ExecStatus.SUCCESS).count();
+        long t = fullChangeList.size(),
+                c = fullChangeList.stream().filter(ChangeRecord::isChanged).count(),
+                s = fullChangeList.stream().filter(r -> r.getStatus() == ExecStatus.SUCCESS).count(),
+                f = fullChangeList.stream().filter(r -> r.getStatus() == ExecStatus.FAILED).count();
         String tm = ms > 0 ? String.format("%.1fs", ms / 1000.0) : "-";
-        Platform.runLater(() -> previewView.updateStatsDisplay(t, c, s, tm));
+        Platform.runLater(() -> previewView.updateStatsDisplay(t, c, s, f, tm));
     }
 
     private AppStrategy findStrategyForOp(OperationType op) {
@@ -517,19 +525,62 @@ public class FileManagerPlusApp extends Application implements IAppController, I
         return null;
     }
 
-    private List<File> scanFilesRobust(File r, int d, List<String> e, Consumer<String> m) {
-        List<File> l = new ArrayList<>();
-        try (Stream<Path> s = Files.walk(r.toPath(), d)) {
-            l = s.filter(p -> {
-                File f = p.toFile();
-                if (f.isDirectory()) return true;
-                String n = f.getName().toLowerCase();
-                for (String ex : e) if (n.endsWith("." + ex)) return true;
-                return false;
+    private List<File> scanFilesRobust(File root, int maxDepth, List<String> exts, Consumer<String> msg) {
+        AtomicInteger countScan = new AtomicInteger(0);
+        AtomicInteger countIgnore = new AtomicInteger(0);
+        List<File> list = new ArrayList<>();
+        if (!root.exists()) return list;
+        try (Stream<Path> s = Files.walk(root.toPath(), maxDepth)) {
+            list = s.filter(p -> {
+                try {
+                    File f = p.toFile();
+                    if (f.equals(root)) {
+                        countIgnore.incrementAndGet();
+                        return false;
+                    } // 排除根目录本身
+
+                    // [修复] 始终保留文件夹，无论递归深度如何。
+                    // 之前的逻辑错误地排除了递归子目录，导致文件夹重命名/删除策略失效。
+                    // 具体的策略（Strategy）会根据自己的 getTargetType() 再次过滤是否处理文件夹。
+                    if (f.isDirectory()) return true;
+
+                    // 文件则应用扩展名过滤
+                    String n = f.getName().toLowerCase();
+                    for (String e : exts) if (n.endsWith("." + e)) return true;
+                    countIgnore.incrementAndGet();
+                    return false;
+                }finally {
+                    countScan.incrementAndGet();
+                    if (countScan.incrementAndGet() % 1000 == 0) {
+                        String msgStr = "目录下：" + root.getAbsolutePath()
+                                + "，已扫描" + countScan.get() + "个文件"
+                                + "，已忽略" + countIgnore.get() + "个文件"
+                                + "，已收纳" + (countScan.get() - countIgnore.get()) + "个文件";
+                        msg.accept(msgStr);
+                        log(msgStr);
+                    }
+                }
+            }).filter(path -> {
+                try {
+                    path.toFile();
+                } catch (Exception e) {
+                    log(path + " 扫描异常: " + e.getMessage());
+                    return false;
+                }
+                return true;
             }).map(Path::toFile).collect(Collectors.toList());
-        } catch (IOException x) {
+        } catch (IOException e) {
+            log("扫描异常: " + e.getMessage());
         }
-        return l;
+        String msgStr = "目录下(总共)：" + root.getAbsolutePath()
+                + "，已扫描" + countScan.get() + "个文件"
+                + "，已忽略" + countIgnore.get() + "个文件"
+                + "，已收纳" + (countScan.get() - countIgnore.get()) + "个文件";
+        msg.accept(msgStr);
+        log(msgStr);
+        // 反转列表，便于由下而上处理文件，保证处理成功
+        Collections.reverse(list);
+        return list;
     }
 
     // --- Task UI State ---

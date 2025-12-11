@@ -90,15 +90,17 @@ public class PreviewView {
         btnStop.setDisable(!running);
     }
     public void updateProgress(String msg, double progress) {
+        progressLabel.textProperty().unbind();
         progressLabel.setText(msg);
+        mainProgressBar.progressProperty().unbind();
         mainProgressBar.setProgress(progress);
     }
     public void bindProgress(Task<?> task) {
         progressLabel.textProperty().bind(task.messageProperty());
         mainProgressBar.progressProperty().bind(task.progressProperty());
     }
-    public void updateStatsDisplay(long t, long c, long s, String tm) {
-        statsLabel.setText(String.format("总:%d 变:%d 成:%d 耗时:%s", t, c, s, tm));
+    public void updateStatsDisplay(long t, long c, long s,long f, String tm) {
+        statsLabel.setText(String.format("文件总数:%d 需要变更:%d 操作成功:%d 操作失败:%d 过程耗时:%s", t, c, s, f, tm));
     }
     public void refresh() { previewTable.refresh(); }
 
