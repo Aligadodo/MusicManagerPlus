@@ -51,6 +51,11 @@ public class TrackNumberStrategy extends AppStrategy {
     }
 
     @Override
+    public String getDescription() {
+        return "对目录下的多个音频文件进行排序，默认按照文件的字典序进行排列。";
+    }
+
+    @Override
     public void saveConfig(Properties props) {
         props.setProperty("tns_mode", cbMode.getValue());
         props.setProperty("tns_pad", String.valueOf(chkPadZero.isSelected()));

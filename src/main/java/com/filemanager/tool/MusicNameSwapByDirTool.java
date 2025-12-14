@@ -1,6 +1,6 @@
 package com.filemanager.tool;
 
-import com.filemanager.domain.FileStatisticInfo;
+import com.filemanager.model.FileStatisticInfo;
 import org.apache.commons.io.FileExistsException;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;

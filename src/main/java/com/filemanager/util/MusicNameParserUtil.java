@@ -1,7 +1,7 @@
 package com.filemanager.util;
 
-import com.filemanager.domain.FileStatisticInfo;
-import com.filemanager.domain.MusicInfo;
+import com.filemanager.model.FileStatisticInfo;
+import com.filemanager.model.MusicInfo;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;

@@ -79,7 +79,5 @@ public abstract class AppStrategy {
     public void captureParams() {
     }
 
-    public String getDescription() {
-        return getName();
-    }
+    public abstract String getDescription() ;
 }

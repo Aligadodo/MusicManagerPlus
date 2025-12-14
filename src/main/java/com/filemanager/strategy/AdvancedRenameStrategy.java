@@ -88,7 +88,7 @@ public class AdvancedRenameStrategy extends AppStrategy {
 
     @Override
     public String getName() {
-        return "高级重命名 (多规则)";
+        return "文件和目录重命名";
     }
 
     @Override
@@ -116,6 +116,11 @@ public class AdvancedRenameStrategy extends AppStrategy {
         pRules = new ArrayList<>(lvRules.getItems());
         pCrossDriveMode = cbCrossDriveMode.getValue();
         pProcessScopeIndex = cbProcessScope.getSelectionModel().getSelectedIndex();
+    }
+
+    @Override
+    public String getDescription() {
+        return "支持文件和文件夹的重命名，使用多条规则对命名进行多次调整直至符合预期。";
     }
 
     // --- Config Persistence ---

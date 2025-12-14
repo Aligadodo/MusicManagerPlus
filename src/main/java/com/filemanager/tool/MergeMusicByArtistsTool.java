@@ -1,7 +1,7 @@
 package com.filemanager.tool;
 
 import com.alibaba.fastjson.JSONObject;
-import com.filemanager.domain.FileStatisticInfo;
+import com.filemanager.model.FileStatisticInfo;
 import org.apache.commons.lang3.StringUtils;
 import com.filemanager.util.FileUtil;
 import com.filemanager.util.MusicNameParserUtil;

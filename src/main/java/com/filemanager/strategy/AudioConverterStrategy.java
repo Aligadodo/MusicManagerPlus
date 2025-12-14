@@ -127,8 +127,8 @@ public class AudioConverterStrategy extends AppStrategy {
         txtRelativePath.setPromptText("默认: Converted - " + cleanFormat);
     }
 
-    @Override public String getName() { return "音频格式转换 (Pro)"; }
-    @Override public String getDescription() { return "高品质音频转换。支持参数微调、乱码修复及智能覆盖检测。"; }
+    @Override public String getName() { return "音频格式转换"; }
+    @Override public String getDescription() { return "高品质音频转换。支持参数微调、乱码修复及智能覆盖检测等。"; }
     @Override public ScanTarget getTargetType() { return ScanTarget.FILES_ONLY; }
 
     @Override

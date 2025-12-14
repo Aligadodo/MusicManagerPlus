@@ -1,6 +1,6 @@
 package com.filemanager.tool;
 
-import com.filemanager.domain.FileStatisticInfo;
+import com.filemanager.model.FileStatisticInfo;
 import com.filemanager.util.FileUtil;
 
 import java.io.File;

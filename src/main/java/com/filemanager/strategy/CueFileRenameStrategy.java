@@ -7,7 +7,6 @@ import com.filemanager.type.ScanTarget;
 import com.filemanager.util.MetadataHelper;
 import javafx.application.Platform;
 import javafx.scene.Node;
-import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
 
@@ -22,18 +21,18 @@ import java.util.stream.Collectors;
 /**
  * demo
  */
-public class AlbumDirNormalizeStrategy extends AppStrategy {
+public class CueFileRenameStrategy extends AppStrategy {
     private final TextField txtTemplate;
     private String pTemplate;
 
-    public AlbumDirNormalizeStrategy() {
+    public CueFileRenameStrategy() {
         txtTemplate = new TextField("%artist% - %year% - %album%");
         txtTemplate.setPromptText("例如: %year% %album% 或 %artist%/[%year%] %album%");
     }
 
     @Override
     public String getName() {
-        return "专辑目录命名标准化";
+        return "专辑目录标准化";
     }
 
     @Override
@@ -43,7 +42,7 @@ public class AlbumDirNormalizeStrategy extends AppStrategy {
 
     @Override
     public String getDescription() {
-        return "按照特定的格式对目录名称进行标准化，如：%artist% - %year% - %album%";
+        return "为了解决cue文件在部分软件下，由于中文命名导致的无法加载的问题，支持统一调整cue及对应的音频文件命名。";
     }
 
     @Override

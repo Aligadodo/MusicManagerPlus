@@ -26,6 +26,7 @@ public class AppStrategyFactory {
             AppStrategy s = pipelineStrategies.get(i);
             // 简单匹配，实际应更严谨
             if (op == OperationType.RENAME && s instanceof AdvancedRenameStrategy) return s;
+            if (op == OperationType.ALBUM_RENAME && s instanceof AlbumDirNormalizeStrategy) return s;
             if (op == OperationType.CONVERT && s instanceof AudioConverterStrategy) return s;
             if (op == OperationType.SCRAPER && s instanceof MetadataScraperStrategy) return s;
             if (op == OperationType.UNZIP && s instanceof FileUnzipStrategy) return s;

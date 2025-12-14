@@ -58,6 +58,11 @@ public class FileMigrateStrategy extends AppStrategy {
     }
 
     @Override
+    public String getDescription() {
+        return "按照一定规则对文件和文件夹进行移动或者复制。";
+    }
+
+    @Override
     public void saveConfig(Properties props) {
         if (!txtDestDir.getText().isEmpty()) props.setProperty("fms_dest", txtDestDir.getText());
         props.setProperty("fms_pattern", txtPathPattern.getText());

@@ -1,4 +1,4 @@
-package com.filemanager.domain;
+package com.filemanager.model;
 
 import lombok.Data;
 
