@@ -1,0 +1,38 @@
+package com.filemanager.strategy;
+
+import com.filemanager.type.OperationType;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class AppStrategyFactory {
+
+    public static List<AppStrategy> getAppStrategies() {
+        List<AppStrategy> strategyPrototypes = new ArrayList<AppStrategy>();
+        strategyPrototypes.add(new AdvancedRenameStrategy());
+        strategyPrototypes.add(new AudioConverterStrategy());
+        strategyPrototypes.add(new FileMigrateStrategy());
+        strategyPrototypes.add(new AlbumDirNormalizeStrategy());
+        strategyPrototypes.add(new TrackNumberStrategy());
+        strategyPrototypes.add(new CueSplitterStrategy());
+        strategyPrototypes.add(new MetadataScraperStrategy());
+        strategyPrototypes.add(new FileCleanupStrategy());
+        strategyPrototypes.add(new FileUnzipStrategy());
+        return strategyPrototypes;
+    }
+
+    public static AppStrategy findStrategyForOp(OperationType op, List<AppStrategy> pipelineStrategies) {
+        for (int i = pipelineStrategies.size() - 1; i >= 0; i--) {
+            AppStrategy s = pipelineStrategies.get(i);
+            // 简单匹配，实际应更严谨
+            if (op == OperationType.RENAME && s instanceof AdvancedRenameStrategy) return s;
+            if (op == OperationType.CONVERT && s instanceof AudioConverterStrategy) return s;
+            if (op == OperationType.SCRAPER && s instanceof MetadataScraperStrategy) return s;
+            if (op == OperationType.UNZIP && s instanceof FileUnzipStrategy) return s;
+            if (op == OperationType.MOVE && s instanceof FileMigrateStrategy) return s;
+            if (op == OperationType.SPLIT && s instanceof CueSplitterStrategy) return s;
+            if (op == OperationType.DELETE && s instanceof FileCleanupStrategy) return s;
+        }
+        return null;
+    }
+}

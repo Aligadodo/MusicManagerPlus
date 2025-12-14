@@ -80,7 +80,7 @@ public class FileManagerAppV16 extends Application implements IManagerAppInterfa
     private static final ThemeConfig currentTheme = new ThemeConfig();
     private final StyleFactory styles = new StyleFactory();
     private String bgImagePath = "";
-    private final List<AppStrategy> strategyPrototypes = new ArrayList<>();
+    private List<AppStrategy> strategyPrototypes = new ArrayList<>();
     private Stage primaryStage;
     private List<ChangeRecord> fullChangeList = new ArrayList<>();
     private ListView<AppStrategy> pipelineListView = new ListView<>();
@@ -129,7 +129,7 @@ public class FileManagerAppV16 extends Application implements IManagerAppInterfa
         primaryStage.setTitle("Echo Music Manager - Aero Edition");
 
         // 1. 初始化策略
-        initStrategyPrototypes();
+        this.strategyPrototypes = AppStrategyFactory.getAppStrategies();
 
         // 2. 初始化全局控件 (必须在构建 UI 前完成，防止 NPE)
         initGlobalControls();
@@ -417,7 +417,7 @@ public class FileManagerAppV16 extends Application implements IManagerAppInterfa
                     executorService.submit(() -> {
                         try {
                             Platform.runLater(()->rec.setStatus(ExecStatus.RUNNING));
-                            AppStrategy s = findStrategyForOp(rec.getOpType());
+                            AppStrategy s = AppStrategyFactory.findStrategyForOp(rec.getOpType(), pipelineStrategies);
                             if(s!=null) {
                                 s.execute(rec);
                                 Platform.runLater(()->rec.setStatus(ExecStatus.SUCCESS));
@@ -956,19 +956,6 @@ public class FileManagerAppV16 extends Application implements IManagerAppInterfa
         }
     }
 
-    // --- Strategies ---
-    private void initStrategyPrototypes() {
-        strategyPrototypes.add(new AdvancedRenameStrategy());
-        strategyPrototypes.add(new AudioConverterStrategy());
-        strategyPrototypes.add(new FileMigrateStrategy());
-        strategyPrototypes.add(new AlbumDirNormalizeStrategy());
-        strategyPrototypes.add(new TrackNumberStrategy());
-        strategyPrototypes.add(new CueSplitterStrategy());
-        strategyPrototypes.add(new MetadataScraperStrategy());
-        strategyPrototypes.add(new FileCleanupStrategy());
-        strategyPrototypes.add(new FileUnzipStrategy());
-    }
-
     private void addStrategyStep(AppStrategy template) {
         if (template != null) {
             try {
@@ -981,21 +968,6 @@ public class FileManagerAppV16 extends Application implements IManagerAppInterfa
             } catch (Exception e) {
             }
         }
-    }
-
-    private AppStrategy findStrategyForOp(OperationType op) {
-        for (int i = pipelineStrategies.size() - 1; i >= 0; i--) {
-            AppStrategy s = pipelineStrategies.get(i);
-            if (op == OperationType.RENAME && (s instanceof AdvancedRenameStrategy || s instanceof TrackNumberStrategy || s instanceof AlbumDirNormalizeStrategy))
-                return s;
-            if (op == OperationType.CONVERT && (s instanceof AudioConverterStrategy || s instanceof MetadataScraperStrategy))
-                return s;
-            if (op == OperationType.MOVE && s instanceof FileMigrateStrategy) return s;
-            if (op == OperationType.SPLIT && s instanceof CueSplitterStrategy) return s;
-            if (op == OperationType.DELETE && s instanceof FileCleanupStrategy) return s;
-            if (op == OperationType.UNZIP && s instanceof FileUnzipStrategy) return s;
-        }
-        return null;
     }
 
     private static class Spacer extends Region {

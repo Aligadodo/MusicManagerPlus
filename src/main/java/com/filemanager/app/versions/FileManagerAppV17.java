@@ -78,7 +78,7 @@ public class FileManagerAppV17 extends Application implements IManagerAppInterfa
     private final File lastConfigFile = new File(System.getProperty("user.home"), ".echo_music_manager_v18.config");
     private final List<ChangeRecord> changePreviewList = new ArrayList<>();
     private final StyleFactory styles = new StyleFactory();
-    private final List<AppStrategy> strategyPrototypes = new ArrayList<>();
+    private List<AppStrategy> strategyPrototypes = new ArrayList<>();
     private String bgImagePath = "";
     private Stage primaryStage;
     private List<ChangeRecord> fullChangeList = new ArrayList<>();
@@ -129,7 +129,7 @@ public class FileManagerAppV17 extends Application implements IManagerAppInterfa
         primaryStage.setTitle("Echo Music Manager - Aero Edition");
 
         // 1. 初始化策略
-        initStrategyPrototypes();
+        this.strategyPrototypes = AppStrategyFactory.getAppStrategies();
 
         // 2. 初始化全局控件 (必须在构建 UI 前完成，防止 NPE)
         initGlobalControls();
@@ -429,7 +429,7 @@ public class FileManagerAppV17 extends Application implements IManagerAppInterfa
                         try {
                             Platform.runLater(() -> rec.setStatus(ExecStatus.RUNNING));
                             // [修改] 策略执行时不再传递线程数，只负责逻辑
-                            AppStrategy s = findStrategyForOp(rec.getOpType());
+                            AppStrategy s = AppStrategyFactory.findStrategyForOp(rec.getOpType(), pipelineStrategies);
                             logAndFile("开始: " + rec.getNewName());
                             if (s != null) {
                                 s.execute(rec);
@@ -991,19 +991,6 @@ public class FileManagerAppV17 extends Application implements IManagerAppInterfa
         }
     }
 
-    // --- Strategies ---
-    private void initStrategyPrototypes() {
-        strategyPrototypes.add(new AdvancedRenameStrategy());
-        strategyPrototypes.add(new AudioConverterStrategy());
-        strategyPrototypes.add(new FileMigrateStrategy());
-        strategyPrototypes.add(new AlbumDirNormalizeStrategy());
-        strategyPrototypes.add(new TrackNumberStrategy());
-        strategyPrototypes.add(new CueSplitterStrategy());
-        strategyPrototypes.add(new MetadataScraperStrategy());
-        strategyPrototypes.add(new FileCleanupStrategy());
-        strategyPrototypes.add(new FileUnzipStrategy());
-    }
-
     private void addStrategyStep(AppStrategy template) {
         if (template != null) {
             try {
@@ -1016,21 +1003,6 @@ public class FileManagerAppV17 extends Application implements IManagerAppInterfa
             } catch (Exception e) {
             }
         }
-    }
-
-    private AppStrategy findStrategyForOp(OperationType op) {
-        for (int i = pipelineStrategies.size() - 1; i >= 0; i--) {
-            AppStrategy s = pipelineStrategies.get(i);
-            if (op == OperationType.RENAME && (s instanceof AdvancedRenameStrategy || s instanceof TrackNumberStrategy || s instanceof AlbumDirNormalizeStrategy))
-                return s;
-            if (op == OperationType.CONVERT && (s instanceof AudioConverterStrategy || s instanceof MetadataScraperStrategy))
-                return s;
-            if (op == OperationType.MOVE && s instanceof FileMigrateStrategy) return s;
-            if (op == OperationType.SPLIT && s instanceof CueSplitterStrategy) return s;
-            if (op == OperationType.DELETE && s instanceof FileCleanupStrategy) return s;
-            if (op == OperationType.UNZIP && s instanceof FileUnzipStrategy) return s;
-        }
-        return null;
     }
 
     // [新增] 通用：创建统一风格的微型图标按钮

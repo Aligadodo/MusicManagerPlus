@@ -280,7 +280,7 @@ public class MetadataScraperStrategy extends AppStrategy {
 
                     if (metaChanged) {
                         rec.setChanged(true);
-                        rec.setOpType(OperationType.CONVERT);
+                        rec.setOpType(OperationType.SCRAPER);
                         rec.getExtraParams().putAll(params);
                         rec.getExtraParams().put("scraper_active", "true");
                         if (pOverwrite) rec.getExtraParams().put("scraper_overwrite", "true");
@@ -321,7 +321,7 @@ public class MetadataScraperStrategy extends AppStrategy {
                         if (pOverwrite || !targetCover.exists()) {
                             Map<String, String> p = new HashMap<>();
                             p.put("url", coverUrl);
-                            ChangeRecord coverRec = new ChangeRecord("下载: 专辑封面", "cover.jpg", parentDir, true, targetCover.getAbsolutePath(), OperationType.CONVERT, p, ExecStatus.PENDING);
+                            ChangeRecord coverRec = new ChangeRecord("下载: 专辑封面", "cover.jpg", parentDir, true, targetCover.getAbsolutePath(), OperationType.SCRAPER, p, ExecStatus.PENDING);
                             coverRec.getExtraParams().put("task_type", "DOWNLOAD_COVER");
                             results.add(coverRec);
                         }
@@ -344,7 +344,7 @@ public class MetadataScraperStrategy extends AppStrategy {
                             p.put("artist", guess.getArtist());
                         }
 
-                        ChangeRecord infoRec = new ChangeRecord("生成: 专辑资料", "AlbumInfo.txt", parentDir, true, targetInfo.getAbsolutePath(), OperationType.CONVERT, p, ExecStatus.PENDING);
+                        ChangeRecord infoRec = new ChangeRecord("生成: 专辑资料", "AlbumInfo.txt", parentDir, true, targetInfo.getAbsolutePath(), OperationType.SCRAPER, p, ExecStatus.PENDING);
                         infoRec.getExtraParams().put("task_type", "GENERATE_INFO");
                         results.add(infoRec);
                     }

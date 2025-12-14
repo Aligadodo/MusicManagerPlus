@@ -65,7 +65,7 @@ public class FileManagerPlusApp extends Application implements IAppController, I
     // --- Core Data ---
     private final ObservableList<File> sourceRoots = FXCollections.observableArrayList();
     private final ObservableList<AppStrategy> pipelineStrategies = FXCollections.observableArrayList();
-    private final List<AppStrategy> strategyPrototypes = new ArrayList<>();
+    private List<AppStrategy> strategyPrototypes = new ArrayList<>();
     private final List<ChangeRecord> changePreviewList = new ArrayList<>();
     private final ConcurrentLinkedQueue<String> logQueue = new ConcurrentLinkedQueue<>();
     private final File lastConfigFile = new File(System.getProperty("user.home"), ".fmplus_config.properties");
@@ -108,7 +108,7 @@ public class FileManagerPlusApp extends Application implements IAppController, I
         // 1. 基础服务初始化
         this.styles = new StyleFactory(currentTheme);
         this.configManager = new ConfigFileManager(this);
-        initStrategyPrototypes();
+        this.strategyPrototypes = AppStrategyFactory.getAppStrategies();
 
         // 2. 视图模块初始化 (替代原 initGlobalControls)
         // 实例化各个 View，它们会在内部创建自己的 UI 控件
@@ -151,18 +151,6 @@ public class FileManagerPlusApp extends Application implements IAppController, I
 
         startLogUpdater();
         primaryStage.show();
-    }
-
-    private void initStrategyPrototypes() {
-        strategyPrototypes.add(new AdvancedRenameStrategy());
-        strategyPrototypes.add(new AudioConverterStrategy());
-        strategyPrototypes.add(new FileMigrateStrategy());
-        strategyPrototypes.add(new AlbumDirNormalizeStrategy());
-        strategyPrototypes.add(new TrackNumberStrategy());
-        strategyPrototypes.add(new CueSplitterStrategy());
-        strategyPrototypes.add(new MetadataScraperStrategy());
-        strategyPrototypes.add(new FileCleanupStrategy());
-        strategyPrototypes.add(new FileUnzipStrategy());
     }
 
     // --- UI Layout Orchestration ---
@@ -426,7 +414,7 @@ public class FileManagerPlusApp extends Application implements IAppController, I
                     executorService.submit(() -> {
                         try {
                             Platform.runLater(() -> rec.setStatus(ExecStatus.RUNNING));
-                            AppStrategy s = findStrategyForOp(rec.getOpType());
+                            AppStrategy s = AppStrategyFactory.findStrategyForOp(rec.getOpType(), pipelineStrategies);
                             if (s != null) {
                                 s.execute(rec);
                                 Platform.runLater(() -> rec.setStatus(ExecStatus.SUCCESS));
@@ -510,20 +498,6 @@ public class FileManagerPlusApp extends Application implements IAppController, I
                 f = fullChangeList.stream().filter(r -> r.getStatus() == ExecStatus.FAILED).count();
         String tm = ms > 0 ? String.format("%.1fs", ms / 1000.0) : "-";
         Platform.runLater(() -> previewView.updateStatsDisplay(t, c, s, f, tm));
-    }
-
-    private AppStrategy findStrategyForOp(OperationType op) {
-        for (int i = pipelineStrategies.size() - 1; i >= 0; i--) {
-            AppStrategy s = pipelineStrategies.get(i);
-            // 简单匹配，实际应更严谨
-            if (op.name().equals("RENAME") && s instanceof AdvancedRenameStrategy) return s;
-            if (op.name().equals("CONVERT") && (s instanceof AudioConverterStrategy || s instanceof MetadataScraperStrategy || s instanceof FileUnzipStrategy))
-                return s;
-            if (op.name().equals("MOVE") && s instanceof FileMigrateStrategy) return s;
-            if (op.name().equals("SPLIT") && s instanceof CueSplitterStrategy) return s;
-            if (op.name().equals("DELETE") && s instanceof FileCleanupStrategy) return s;
-        }
-        return null;
     }
 
     private List<File> scanFilesRobust(File root, int maxDepth, List<String> exts, Consumer<String> msg) {

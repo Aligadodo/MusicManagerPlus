@@ -19,10 +19,13 @@ import javafx.scene.input.TransferMode;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.util.StringConverter;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.io.File;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Properties;
 
 public class ComposeView {
     private final IAppController app;
@@ -242,7 +245,16 @@ public class ComposeView {
             @Override public AppStrategy fromString(String s) { return null; }
         });
 
-        JFXButton btnAddStep = styles.createActionButton("添加步骤", "#2ecc71", () -> app.addStrategyStep(cbAdd.getValue()));
+        JFXButton btnAddStep = styles.createActionButton("添加步骤", "#2ecc71",
+                () -> {
+                    try {
+                        AppStrategy strategy = cbAdd.getValue().getClass().getDeclaredConstructor().newInstance();
+                        strategy.loadConfig(new Properties());
+                        app.addStrategyStep(strategy);
+                    } catch (Exception e) {
+                        app.log("组件添加失败:"+ ExceptionUtils.getStackTrace(e));
+                    }
+                });
         pipeActions.getChildren().addAll(cbAdd, btnAddStep);
 
         centerPanel.getChildren().addAll(pipelineListView, pipeActions);

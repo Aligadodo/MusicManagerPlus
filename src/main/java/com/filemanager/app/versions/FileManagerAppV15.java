@@ -110,7 +110,7 @@ public class FileManagerAppV15 extends Application implements IManagerAppInterfa
     private double bgOpacity = 0.9;
     private String themeColor = "#3498db";
 
-    private final List<AppStrategy> strategyPrototypes = new ArrayList<>();
+    private List<AppStrategy> strategyPrototypes = new ArrayList<>();
 
     public static void main(String[] args) {
         launch(args);
@@ -121,7 +121,7 @@ public class FileManagerAppV15 extends Application implements IManagerAppInterfa
         this.primaryStage = primaryStage;
         primaryStage.setTitle("Echo - 音乐文件管理专家 v15.1");
 
-        initStrategyPrototypes();
+        this.strategyPrototypes = AppStrategyFactory.getAppStrategies();
         loadGlobalConfig(lastConfigFile);
 
         // 构建层叠根布局
@@ -481,18 +481,6 @@ public class FileManagerAppV15 extends Application implements IManagerAppInterfa
 
     // ==================== 2. 核心逻辑实现 ====================
 
-    private void initStrategyPrototypes() {
-        strategyPrototypes.add(new AdvancedRenameStrategy());
-        strategyPrototypes.add(new AudioConverterStrategy());
-        strategyPrototypes.add(new FileMigrateStrategy());
-        strategyPrototypes.add(new AlbumDirNormalizeStrategy());
-        strategyPrototypes.add(new TrackNumberStrategy());
-        strategyPrototypes.add(new CueSplitterStrategy());
-        strategyPrototypes.add(new MetadataScraperStrategy());
-        strategyPrototypes.add(new FileCleanupStrategy());
-        strategyPrototypes.add(new FileUnzipStrategy());
-    }
-
     private void addStrategyStep() {
         AppStrategy template = cbStrategyTemplates.getValue();
         if (template != null) {
@@ -636,7 +624,7 @@ public class FileManagerAppV15 extends Application implements IManagerAppInterfa
                         if (isCancelled()) return;
                         try {
                             Platform.runLater(() -> rec.setStatus(ExecStatus.RUNNING));
-                            AppStrategy s = findStrategyForOp(rec.getOpType());
+                            AppStrategy s = AppStrategyFactory.findStrategyForOp(rec.getOpType(), pipelineStrategies);
                             if (s != null) {
                                 s.execute(rec);
                                 Platform.runLater(() -> rec.setStatus(ExecStatus.SUCCESS));
@@ -1044,20 +1032,6 @@ public class FileManagerAppV15 extends Application implements IManagerAppInterfa
         final String[] units = new String[]{"B", "KB", "MB", "GB", "TB"};
         int digitGroups = (int) (Math.log10(size) / Math.log10(1024));
         return new DecimalFormat("#,##0.#").format(size / Math.pow(1024, digitGroups)) + " " + units[digitGroups];
-    }
-
-    private AppStrategy findStrategyForOp(OperationType op) {
-        for (int i = pipelineStrategies.size() - 1; i >= 0; i--) {
-            AppStrategy s = pipelineStrategies.get(i);
-            if (op == OperationType.RENAME && (s instanceof AdvancedRenameStrategy || s instanceof TrackNumberStrategy || s instanceof AlbumDirNormalizeStrategy))
-                return s;
-            if (op == OperationType.CONVERT && s instanceof AudioConverterStrategy) return s;
-            if (op == OperationType.MOVE && s instanceof FileMigrateStrategy) return s;
-            if (op == OperationType.SPLIT && s instanceof CueSplitterStrategy) return s;
-            if (op == OperationType.DELETE && s instanceof FileCleanupStrategy) return s;
-            if (op == OperationType.UNZIP && s instanceof FileUnzipStrategy) return s;
-        }
-        return null;
     }
 
     // --- Conditions UI ---

@@ -1,6 +1,7 @@
 package com.filemanager.app.versions;
 
 import com.filemanager.app.IManagerAppInterface;
+import com.filemanager.app.SortedProperties;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.RuleCondition;
 import com.filemanager.model.RuleConditionGroup;
@@ -77,11 +78,11 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
     private final ObservableList<File> sourceRoots = FXCollections.observableArrayList();
     private final ObservableList<AppStrategy> pipelineStrategies = FXCollections.observableArrayList();
     private final ConcurrentLinkedQueue<String> logQueue = new ConcurrentLinkedQueue<>();
-    private final Properties appProps = new Properties();
+    private final Properties appProps = new SortedProperties();
     private final File lastConfigFile = new File(System.getProperty("user.home"), ".echo_music_manager_v18.config");
     private final List<ChangeRecord> changePreviewList = new ArrayList<>();
     private final StyleFactory styles = new StyleFactory();
-    private final List<AppStrategy> strategyPrototypes = new ArrayList<>();
+    private List<AppStrategy> strategyPrototypes = new ArrayList<>();
     private String bgImagePath = "";
     private Stage primaryStage;
     private List<ChangeRecord> fullChangeList = new ArrayList<>();
@@ -133,7 +134,7 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
         primaryStage.setTitle("Echo Music Manager - Aero Edition");
 
         // 1. 初始化策略
-        initStrategyPrototypes();
+        this.strategyPrototypes = AppStrategyFactory.getAppStrategies();
 
         // 2. 初始化全局控件 (必须在构建 UI 前完成，防止 NPEf)
         initGlobalControls();
@@ -433,7 +434,7 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
                         try {
                             Platform.runLater(() -> rec.setStatus(ExecStatus.RUNNING));
                             // [修改] 策略执行时不再传递线程数，只负责逻辑
-                            AppStrategy s = findStrategyForOp(rec.getOpType());
+                            AppStrategy s = AppStrategyFactory.findStrategyForOp(rec.getOpType(), pipelineStrategies);
                             logAndFile("开始: " + rec.getNewName());
                             if (s != null) {
                                 s.execute(rec);
@@ -860,7 +861,6 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
 
             // 保存流水线配置
             propsSavePipeline(appProps);
-
             appProps.store(os, "Echo Music Manager Config");
             showToast("配置已保存");
         } catch (Exception e) {
@@ -917,9 +917,19 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
         p.setProperty("pl.size", String.valueOf(pipelineStrategies.size()));
         for (int i = 0; i < pipelineStrategies.size(); i++) {
             AppStrategy s = pipelineStrategies.get(i);
-            s.saveConfig(p);
+            Properties subP = new Properties();
+            s.saveConfig(subP);
             String pre = "pl." + i + ".";
-            p.setProperty(pre + "cls", s.getClass().getName());
+            // 保存类名以便反射
+            p.setProperty(pre + "class", s.getClass().getName());
+
+            // 让策略保存自己的参数
+            // 这里使用一个临时的 Props 来捕获策略的参数，然后加上前缀存入全局 Props
+            Properties strategyProps = new Properties();
+            s.saveConfig(strategyProps);
+            for (String key : strategyProps.stringPropertyNames()) {
+                p.setProperty(pre + "param." + key, strategyProps.getProperty(key));
+            }
 
             // 保存条件组
             int gSize = s.getConditionGroups().size();
@@ -945,7 +955,7 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
         int s = Integer.parseInt(p.getProperty("pl.size", "0"));
         for (int i = 0; i < s; i++) {
             String pre = "pl." + i + ".";
-            String cls = p.getProperty(pre + "cls");
+            String cls = p.getProperty(pre + "class");
             if (cls == null) continue;
             try {
                 Class<?> clazz = Class.forName(cls);
@@ -953,12 +963,14 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
                 st.setContext(this);
 
                 // Load Params
-                Properties sp = new Properties();
-                String pp = pre + "p.";
-                for (String k : p.stringPropertyNames()) {
-                    if (k.startsWith(pp)) sp.setProperty(k.substring(pp.length()), p.getProperty(k));
+                Properties strategyProps = new Properties();
+                String paramPrefix = pre + "param.";
+                for (String key : p.stringPropertyNames()) {
+                    if (key.startsWith(paramPrefix)) {
+                        strategyProps.setProperty(key.substring(paramPrefix.length()), p.getProperty(key));
+                    }
                 }
-                st.loadConfig(sp);
+                st.loadConfig(strategyProps);
 
                 // [新增] Load Condition Groups
                 st.getConditionGroups().clear();
@@ -984,46 +996,19 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
         }
     }
 
-    // --- Strategies ---
-    private void initStrategyPrototypes() {
-        strategyPrototypes.add(new AdvancedRenameStrategy());
-        strategyPrototypes.add(new AudioConverterStrategy());
-        strategyPrototypes.add(new FileMigrateStrategy());
-        strategyPrototypes.add(new AlbumDirNormalizeStrategy());
-        strategyPrototypes.add(new TrackNumberStrategy());
-        strategyPrototypes.add(new CueSplitterStrategy());
-        strategyPrototypes.add(new MetadataScraperStrategy());
-        strategyPrototypes.add(new FileCleanupStrategy());
-        strategyPrototypes.add(new FileUnzipStrategy());
-    }
-
     private void addStrategyStep(AppStrategy template) {
         if (template != null) {
             try {
                 AppStrategy n = template.getClass().getDeclaredConstructor().newInstance();
                 n.setContext(this);
-                n.loadConfig(appProps);
+                n.loadConfig(new Properties());
                 pipelineStrategies.add(n);
                 pipelineListView.getSelectionModel().select(n);
                 invalidatePreview("添加步骤");
             } catch (Exception e) {
+                this.log("组件添加失败:"+ ExceptionUtils.getStackTrace(e));
             }
         }
-    }
-
-    private AppStrategy findStrategyForOp(OperationType op) {
-        for (int i = pipelineStrategies.size() - 1; i >= 0; i--) {
-            AppStrategy s = pipelineStrategies.get(i);
-            if (op == OperationType.RENAME && (s instanceof AdvancedRenameStrategy || s instanceof TrackNumberStrategy || s instanceof AlbumDirNormalizeStrategy))
-                return s;
-            if (op == OperationType.CONVERT && (s instanceof AudioConverterStrategy || s instanceof MetadataScraperStrategy))
-                return s;
-            if (op == OperationType.MOVE && s instanceof FileMigrateStrategy) return s;
-            if (op == OperationType.SPLIT && s instanceof CueSplitterStrategy) return s;
-            if (op == OperationType.DELETE && s instanceof FileCleanupStrategy) return s;
-            if (op == OperationType.UNZIP && s instanceof FileUnzipStrategy) return s;
-        }
-        return null;
     }
 
     // [新增] 通用：创建统一风格的微型图标按钮

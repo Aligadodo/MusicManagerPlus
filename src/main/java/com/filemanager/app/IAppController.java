@@ -63,4 +63,6 @@ public interface IAppController {
 
     String getBgImagePath();
     void setBgImagePath(String bgPath);
+
+    public void log(String s);
 }
