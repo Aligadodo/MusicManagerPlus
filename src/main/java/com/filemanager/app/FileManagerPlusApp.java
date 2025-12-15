@@ -3,6 +3,8 @@ package com.filemanager.app;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.ThemeConfig;
 import com.filemanager.strategy.*;
+import com.filemanager.tool.file.ConcurrentFileWalker;
+import com.filemanager.tool.file.ParallelStreamWalker;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
 import com.filemanager.ui.*;
@@ -37,6 +39,7 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 import lombok.Getter;
 import lombok.Setter;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.controlsfx.control.CheckComboBox;
 
 import java.awt.*;
@@ -412,25 +415,28 @@ public class FileManagerPlusApp extends Application implements IAppController, I
                 for (ChangeRecord rec : todos) {
                     if (isCancelled()) break;
                     executorService.submit(() -> {
+                        if (isCancelled()) return;
                         try {
                             Platform.runLater(() -> rec.setStatus(ExecStatus.RUNNING));
+                            // [修改] 策略执行时不再传递线程数，只负责逻辑
                             AppStrategy s = AppStrategyFactory.findStrategyForOp(rec.getOpType(), pipelineStrategies);
+                            logAndFile("开始处理: " + rec.getFileHandle().getAbsolutePath());
                             if (s != null) {
                                 s.execute(rec);
-                                Platform.runLater(() -> rec.setStatus(ExecStatus.SUCCESS));
-                                logAndFile("成功: " + rec.getNewName());
+                                rec.setStatus(ExecStatus.SUCCESS);
+                                logAndFile("成功处理: " + rec.getFileHandle().getAbsolutePath());
                             } else {
-                                Platform.runLater(() -> rec.setStatus(ExecStatus.SKIPPED));
+                                rec.setStatus(ExecStatus.SKIPPED);
                             }
                         } catch (Exception e) {
-                            Platform.runLater(() -> rec.setStatus(ExecStatus.FAILED));
-                            logAndFile("失败: " + e.getMessage());
+                            rec.setStatus(ExecStatus.FAILED);
+                            logAndFile("失败处理: " + rec.getFileHandle().getAbsolutePath() + ",原因" + e.getMessage());
+                            logAndFile("失败详细原因:" + ExceptionUtils.getStackTrace(e));
                         } finally {
                             int c = curr.incrementAndGet();
                             updateProgress(c, total);
-                            if (c % 5 == 0) Platform.runLater(() -> {
+                            if (c % 100 == 0) Platform.runLater(() -> {
                                 updateStats(System.currentTimeMillis() - startT);
-                                previewView.refresh(); // 刷新表格
                             });
                         }
                     });
@@ -442,6 +448,7 @@ public class FileManagerPlusApp extends Application implements IAppController, I
                         break;
                     }
                 }
+                updateStats(System.currentTimeMillis() - startT);
                 return null;
             }
         };
@@ -505,7 +512,8 @@ public class FileManagerPlusApp extends Application implements IAppController, I
         AtomicInteger countIgnore = new AtomicInteger(0);
         List<File> list = new ArrayList<>();
         if (!root.exists()) return list;
-        try (Stream<Path> s = Files.walk(root.toPath(), maxDepth)) {
+        int threads = getSpGlobalThreads().getValue();
+        try (Stream<Path> s = ParallelStreamWalker.walk(root.toPath(), maxDepth, threads)) {
             list = s.filter(p -> {
                 try {
                     File f = p.toFile();
@@ -544,8 +552,6 @@ public class FileManagerPlusApp extends Application implements IAppController, I
                 }
                 return true;
             }).map(Path::toFile).collect(Collectors.toList());
-        } catch (IOException e) {
-            log("扫描异常: " + e.getMessage());
         }
         String msgStr = "目录下(总共)：" + root.getAbsolutePath()
                 + "，已扫描" + countScan.get() + "个文件"

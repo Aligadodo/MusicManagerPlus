@@ -6,6 +6,8 @@ import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.RuleCondition;
 import com.filemanager.model.RuleConditionGroup;
 import com.filemanager.strategy.*;
+import com.filemanager.tool.file.ConcurrentFileWalker;
+import com.filemanager.tool.file.ParallelStreamWalker;
 import com.filemanager.type.ConditionType;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
@@ -345,7 +347,7 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
         resetProgressUI("初始化扫描...", false);
         changePreviewList.clear();
         previewTable.setRoot(null);
-
+        updateStats(0);
         for (AppStrategy s : pipelineStrategies) s.captureParams();
         int maxDepth = "仅当前目录".equals(cbRecursionMode.getValue()) ? 1 : ("递归所有子目录".equals(cbRecursionMode.getValue()) ? Integer.MAX_VALUE : spRecursionDepth.getValue());
         List<String> exts = new ArrayList<>(ccbFileTypes.getCheckModel().getCheckedItems());
@@ -435,23 +437,23 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
                             Platform.runLater(() -> rec.setStatus(ExecStatus.RUNNING));
                             // [修改] 策略执行时不再传递线程数，只负责逻辑
                             AppStrategy s = AppStrategyFactory.findStrategyForOp(rec.getOpType(), pipelineStrategies);
-                            logAndFile("开始: " + rec.getNewName());
+                            logAndFile("开始处理: " + rec.getFileHandle().getAbsolutePath());
                             if (s != null) {
                                 s.execute(rec);
-                                Platform.runLater(() -> rec.setStatus(ExecStatus.SUCCESS));
+                                rec.setStatus(ExecStatus.SUCCESS);
                                 succ.incrementAndGet();
-                                logAndFile("成功: " + rec.getNewName());
+                                logAndFile("成功处理: " + rec.getFileHandle().getAbsolutePath());
                             } else {
-                                Platform.runLater(() -> rec.setStatus(ExecStatus.SKIPPED));
+                                rec.setStatus(ExecStatus.SKIPPED);
                             }
                         } catch (Exception e) {
-                            Platform.runLater(() -> rec.setStatus(ExecStatus.FAILED));
-                            logAndFile("失败: " + rec.getNewName() + "原因" + e.getMessage());
-                            logAndFile("失败详细原因: " + rec.getNewName() + "原因" + ExceptionUtils.getStackTrace(e));
+                            rec.setStatus(ExecStatus.FAILED);
+                            logAndFile("失败处理: " + rec.getFileHandle().getAbsolutePath() + ",原因" + e.getMessage());
+                            logAndFile("失败详细原因:" + ExceptionUtils.getStackTrace(e));
                         } finally {
                             int c = curr.incrementAndGet();
                             updateProgress(c, total);
-                            if (c % 10 == 0) Platform.runLater(() -> {
+                            if (c % 100 == 0) Platform.runLater(() -> {
                                 updateStats(System.currentTimeMillis() - startT);
                                 previewTable.refresh();
                             });
@@ -465,6 +467,8 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
                         break;
                     }
                 }
+                updateStats(System.currentTimeMillis() - startT);
+                previewTable.refresh();
                 return null;
             }
         };
@@ -622,7 +626,8 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
         AtomicInteger countIgnore = new AtomicInteger(0);
         List<File> list = new ArrayList<>();
         if (!root.exists()) return list;
-        try (Stream<Path> s = Files.walk(root.toPath(), maxDepth)) {
+        int threads = spGlobalThreads.getValue();
+        try (Stream<Path> s = ParallelStreamWalker.walk(root.toPath(), maxDepth, threads)) {
             list = s.filter(p -> {
                 try {
                     File f = p.toFile();
@@ -661,8 +666,6 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
                 }
                 return true;
             }).map(Path::toFile).collect(Collectors.toList());
-        } catch (IOException e) {
-            log("扫描异常: " + e.getMessage());
         }
         String msgStr = "目录下(总共)：" + root.getAbsolutePath()
                 + "，已扫描" + countScan.get() + "个文件"

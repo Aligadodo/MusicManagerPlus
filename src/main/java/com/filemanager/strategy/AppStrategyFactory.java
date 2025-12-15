@@ -18,6 +18,7 @@ public class AppStrategyFactory {
         strategyPrototypes.add(new MetadataScraperStrategy());
         strategyPrototypes.add(new FileCleanupStrategy());
         strategyPrototypes.add(new FileUnzipStrategy());
+        strategyPrototypes.add(new CueFileRenameStrategy());
         return strategyPrototypes;
     }
 
@@ -33,6 +34,7 @@ public class AppStrategyFactory {
             if (op == OperationType.MOVE && s instanceof FileMigrateStrategy) return s;
             if (op == OperationType.SPLIT && s instanceof CueSplitterStrategy) return s;
             if (op == OperationType.DELETE && s instanceof FileCleanupStrategy) return s;
+            if (op == OperationType.CUE_RENAME && s instanceof CueFileRenameStrategy) return s;
         }
         return null;
     }

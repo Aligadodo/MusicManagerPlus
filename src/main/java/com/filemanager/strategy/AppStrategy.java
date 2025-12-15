@@ -12,6 +12,7 @@ import lombok.Getter;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Properties;
 import java.util.function.BiConsumer;
@@ -79,5 +80,10 @@ public abstract class AppStrategy {
     public void captureParams() {
     }
 
-    public abstract String getDescription() ;
+    public abstract String getDescription();
+
+    protected ChangeRecord getTargetFile(File file, Collection<ChangeRecord> changeRecords) {
+        return changeRecords.stream().filter(changeRecord -> changeRecord.getFileHandle().equals(file) &&
+                file.getName().equals(changeRecord.getFileHandle().getName())).findFirst().orElse(null);
+    }
 }

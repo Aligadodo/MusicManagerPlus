@@ -1,14 +1,18 @@
 package com.filemanager.strategy;
 
 import com.filemanager.model.ChangeRecord;
-import com.filemanager.type.ExecStatus;
+import com.filemanager.model.FileStatisticInfo;
+import com.filemanager.tool.file.FileRegexReplacer;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
-import com.filemanager.util.MetadataHelper;
+import com.jfoenix.controls.JFXComboBox;
 import javafx.application.Platform;
+import javafx.collections.FXCollections;
 import javafx.scene.Node;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -16,28 +20,33 @@ import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
  * demo
  */
 public class CueFileRenameStrategy extends AppStrategy {
-    private final TextField txtTemplate;
-    private String pTemplate;
+    private final JFXComboBox<String> mode;
+    private final TextField fileName;
+    private String pMode;
+    private String pFileName;
 
     public CueFileRenameStrategy() {
-        txtTemplate = new TextField("%artist% - %year% - %album%");
-        txtTemplate.setPromptText("例如: %year% %album% 或 %artist%/[%year%] %album%");
+        mode = new JFXComboBox<>(FXCollections.observableArrayList("全自动修改"));
+        mode.getSelectionModel().select(0);
+        fileName = new TextField("album");
     }
 
     @Override
     public String getName() {
-        return "专辑目录标准化";
+        return "专辑文件重命名";
     }
 
     @Override
     public void captureParams() {
-        pTemplate = txtTemplate.getText();
+        pMode = mode.getValue();
+        pFileName = fileName.getText();
     }
 
     @Override
@@ -47,89 +56,106 @@ public class CueFileRenameStrategy extends AppStrategy {
 
     @Override
     public void saveConfig(Properties props) {
-        props.setProperty("adn_template", txtTemplate.getText());
+        props.setProperty("mode", mode.getValue());
+        props.setProperty("filename", fileName.getText());
     }
 
     @Override
     public void loadConfig(Properties props) {
-        if (props.containsKey("adn_template")) txtTemplate.setText(props.getProperty("adn_template"));
+        if (props.containsKey("mode")) mode.getSelectionModel().select(props.getProperty("mode"));
+        if (props.containsKey("filename")) fileName.setText(props.getProperty("filename"));
     }
 
     @Override
     public ScanTarget getTargetType() {
-        return ScanTarget.FILES_ONLY;
+        return ScanTarget.FOLDERS_ONLY;
     }
 
     @Override
     public Node getConfigNode() {
         VBox box = new VBox(10);
-        box.getChildren().addAll(createStyledLabel("目录命名模板:"), txtTemplate, createStyledLabel("变量: %artist%, %album%, %year%"));
+        box.getChildren().addAll(createStyledLabel("模式:"), mode, new HBox(10, createStyledLabel("分隔符:"), fileName));
         return box;
     }
 
     @Override
     public void execute(ChangeRecord rec) throws Exception {
-        if (rec.getOpType() == OperationType.ALBUM_RENAME) {
-            File s = rec.getFileHandle();
-            File t = new File(rec.getNewPath());
-            if (s.equals(t)) return;
-            if (!t.getParentFile().exists()) t.getParentFile().mkdirs();
-            Files.move(s.toPath(), t.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        if (rec.getOpType() != OperationType.CUE_RENAME) {
+            return;
+        }
+        File s = rec.getFileHandle();
+        File t = new File(rec.getNewPath());
+        if (!t.getParentFile().exists()) t.getParentFile().mkdirs();
+        Files.move(s.toPath(), t.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        if (t.getName().endsWith(".cue")) {
+            // 修改文件内容
+            FileRegexReplacer.replaceWithAutoCharset(t.getAbsolutePath(), "FILE " + rec.getExtraParams().get("cue_target_name") + " WAVE");
         }
     }
 
     @Override
     public List<ChangeRecord> analyze(List<ChangeRecord> inputRecords, List<File> rootDirs, BiConsumer<Double, String> progressReporter) {
-        Map<String, List<ChangeRecord>> dirGroups = inputRecords.stream()
-                .collect(Collectors.groupingBy(rec -> new File(rec.getNewPath()).getParent()));
-
-        List<ChangeRecord> results = new ArrayList<>();
-        int total = dirGroups.size();
+        int total = inputRecords.size();
         AtomicInteger processed = new AtomicInteger(0);
 
-        for (Map.Entry<String, List<ChangeRecord>> entry : dirGroups.entrySet()) {
-            String parentPath = entry.getKey();
-            List<ChangeRecord> dirFiles = entry.getValue();
-            File parentDir = new File(parentPath);
-
-            Map<String, Integer> artists = new HashMap<>();
-            Map<String, Integer> albums = new HashMap<>();
-            Map<String, Integer> years = new HashMap<>();
-
-            for (ChangeRecord rec : dirFiles) {
-                MetadataHelper.AudioMeta meta = MetadataHelper.getSmartMetadata(rec.getFileHandle(), false);
-                artists.merge(meta.getArtist(), 1, Integer::sum);
-                albums.merge(meta.getAlbum(), 1, Integer::sum);
-                if (!meta.getYear().isEmpty()) years.merge(meta.getYear(), 1, Integer::sum);
-                results.add(rec);
-            }
-
-            String bestArtist = getTopKey(artists, "Unknown Artist");
-            String bestAlbum = getTopKey(albums, parentDir.getName());
-            String bestYear = getTopKey(years, "");
-
-            MetadataHelper.AudioMeta consensus = new MetadataHelper.AudioMeta();
-            consensus.setArtist(bestArtist);
-            consensus.setAlbum(bestAlbum);
-            consensus.setYear(bestYear);
-
-            String newDirName = MetadataHelper.format(pTemplate, consensus).replaceAll("[\\\\/:*?\"<>|]", "_").trim();
-            if (newDirName.endsWith(" - ")) newDirName = newDirName.substring(0, newDirName.length() - 3);
-
-            if (!parentDir.getName().equals(newDirName)) {
-                File targetDir = new File(parentDir.getParentFile(), newDirName);
-                ChangeRecord folderRec = new ChangeRecord(parentDir.getName(), newDirName, parentDir, true, targetDir.getAbsolutePath(), OperationType.ALBUM_RENAME, new HashMap<>(), ExecStatus.PENDING);
-                results.add(folderRec);
-            }
-
+        return inputRecords.parallelStream().map(rec -> {
             int curr = processed.incrementAndGet();
-            if (progressReporter != null && curr % 10 == 0)
-                Platform.runLater(() -> progressReporter.accept((double) curr / total, "分析目录: " + parentDir.getName()));
-        }
-        return results;
+            if (progressReporter != null && curr % 100 == 0) {
+                double p = (double) curr / total;
+                Platform.runLater(() -> progressReporter.accept(p, "规则计算: " + curr + "/" + total));
+            }
+            if (rec.getFileHandle().isFile()) {
+                return rec;
+            }
+            File[] filesUnderDir = rec.getFileHandle().listFiles();
+            if (filesUnderDir == null || filesUnderDir.length == 0) {
+                return rec;
+            }
+            Map<String, File> cueFiles = Arrays.stream(filesUnderDir)
+                    .filter(file -> StringUtils.endsWithIgnoreCase(file.getName(), ".cue"))
+                    .filter(file -> FileRegexReplacer.hasMatchingLine(file.getAbsolutePath()))
+                    .collect(Collectors.toMap(file -> FileStatisticInfo.create(file).oriName, Function.identity()));
+            if (cueFiles.isEmpty()) {
+                return rec;
+            }
+            Map<String, File> targetFiles = new HashMap<>();
+            Arrays.stream(filesUnderDir)
+                    .forEach(file -> {
+                        FileStatisticInfo statisticInfo = FileStatisticInfo.create(file);
+                        if (!statisticInfo.isMusic()) {
+                            return;
+                        }
+                        if (cueFiles.containsKey(statisticInfo.oriName)) {
+                            targetFiles.put(statisticInfo.oriName, file);
+                        }
+                    });
+            int count = 0;
+            for (String ky : targetFiles.keySet()) {
+                ChangeRecord cueFileRecord = getTargetFile(cueFiles.get(ky), inputRecords);
+                ChangeRecord musicFileRecord = getTargetFile(targetFiles.get(ky), inputRecords);
+                if (cueFileRecord != null && musicFileRecord != null) {
+                    count++;
+                    FileStatisticInfo statisticInfo = FileStatisticInfo.create(musicFileRecord.getFileHandle());
+                    String fileNameRank = pFileName + "disk(" + count + ")";
+                    if (targetFiles.size() == 1) {
+                        // 只有一组音轨，无需设置后缀
+                        fileNameRank = pFileName;
+                    }
+                    String targetFileName =  fileNameRank + "." + statisticInfo.type;
+                    musicFileRecord.setNewName(targetFileName);
+                    musicFileRecord.setNewPath(new File(rec.getFileHandle(), targetFileName).getAbsolutePath());
+                    musicFileRecord.setChanged(true);
+                    musicFileRecord.setOpType(OperationType.CUE_RENAME);
+                    cueFileRecord.setNewName(pFileName + ".cue");
+                    cueFileRecord.setNewPath(new File(rec.getFileHandle(), pFileName + ".cue").getAbsolutePath());
+                    cueFileRecord.setChanged(true);
+                    cueFileRecord.getExtraParams().put("cue_target_name", targetFileName);
+                    cueFileRecord.setOpType(OperationType.CUE_RENAME);
+                }
+            }
+            return rec;
+        }).collect(Collectors.toList());
     }
 
-    private String getTopKey(Map<String, Integer> map, String def) {
-        return map.entrySet().stream().max(Map.Entry.comparingByValue()).map(Map.Entry::getKey).orElse(def);
-    }
+
 }
