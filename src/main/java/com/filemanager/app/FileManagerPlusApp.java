@@ -54,6 +54,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -408,6 +409,7 @@ public class FileManagerPlusApp extends Application implements IAppController, I
                 int total = todos.size();
                 AtomicInteger curr = new AtomicInteger(0);
                 long startT = System.currentTimeMillis();
+                AtomicLong lastRefresh = new AtomicLong(System.currentTimeMillis());
 
                 int threads = getSpGlobalThreads().getValue();
                 executorService = Executors.newFixedThreadPool(threads);
@@ -435,9 +437,11 @@ public class FileManagerPlusApp extends Application implements IAppController, I
                         } finally {
                             int c = curr.incrementAndGet();
                             updateProgress(c, total);
-                            if (c % 100 == 0) Platform.runLater(() -> {
-                                updateStats(System.currentTimeMillis() - startT);
-                            });
+                            if (c % 100 == 0 && (System.currentTimeMillis() - lastRefresh.get() > 5000))
+                                Platform.runLater(() -> {
+                                    updateStats(System.currentTimeMillis() - startT);
+                                    lastRefresh.set(System.currentTimeMillis());
+                                });
                         }
                     });
                 }

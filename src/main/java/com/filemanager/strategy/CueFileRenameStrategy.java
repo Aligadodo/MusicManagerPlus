@@ -89,7 +89,7 @@ public class CueFileRenameStrategy extends AppStrategy {
         Files.move(s.toPath(), t.toPath(), StandardCopyOption.REPLACE_EXISTING);
         if (t.getName().endsWith(".cue")) {
             // 修改文件内容
-            FileRegexReplacer.replaceWithAutoCharset(t.getAbsolutePath(), "FILE " + rec.getExtraParams().get("cue_target_name") + " WAVE");
+            FileRegexReplacer.replaceWithAutoCharset(t.getAbsolutePath(), "FILE \"" + rec.getExtraParams().get("cue_target_name") + "\" WAVE");
         }
     }
 
@@ -130,7 +130,9 @@ public class CueFileRenameStrategy extends AppStrategy {
                         }
                     });
             int count = 0;
-            for (String ky : targetFiles.keySet()) {
+            List<String> cueNames = new ArrayList<>(targetFiles.keySet());
+            cueNames.sort(String::compareToIgnoreCase);
+            for (String ky : cueNames) {
                 ChangeRecord cueFileRecord = getTargetFile(cueFiles.get(ky), inputRecords);
                 ChangeRecord musicFileRecord = getTargetFile(targetFiles.get(ky), inputRecords);
                 if (cueFileRecord != null && musicFileRecord != null) {
@@ -146,7 +148,7 @@ public class CueFileRenameStrategy extends AppStrategy {
                     musicFileRecord.setNewPath(new File(rec.getFileHandle(), targetFileName).getAbsolutePath());
                     musicFileRecord.setChanged(true);
                     musicFileRecord.setOpType(OperationType.CUE_RENAME);
-                    cueFileRecord.setNewName(pFileName + ".cue");
+                    cueFileRecord.setNewName(fileNameRank + ".cue");
                     cueFileRecord.setNewPath(new File(rec.getFileHandle(), pFileName + ".cue").getAbsolutePath());
                     cueFileRecord.setChanged(true);
                     cueFileRecord.getExtraParams().put("cue_target_name", targetFileName);

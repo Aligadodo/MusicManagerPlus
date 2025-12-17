@@ -6,7 +6,6 @@ import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.RuleCondition;
 import com.filemanager.model.RuleConditionGroup;
 import com.filemanager.strategy.*;
-import com.filemanager.tool.file.ConcurrentFileWalker;
 import com.filemanager.tool.file.ParallelStreamWalker;
 import com.filemanager.type.ConditionType;
 import com.filemanager.type.ExecStatus;
@@ -37,7 +36,6 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.input.DragEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
@@ -52,7 +50,6 @@ import org.controlsfx.control.CheckComboBox;
 
 import java.awt.*;
 import java.io.*;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
@@ -60,6 +57,7 @@ import java.util.List;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -423,6 +421,7 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
                 AtomicInteger curr = new AtomicInteger(0);
                 AtomicInteger succ = new AtomicInteger(0);
                 long startT = System.currentTimeMillis();
+                AtomicLong lastRefresh = new AtomicLong(System.currentTimeMillis());
 
                 // [修改] 使用全局配置的线程数初始化线程池
                 int initialThreads = spGlobalThreads.getValue();
@@ -453,10 +452,12 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
                         } finally {
                             int c = curr.incrementAndGet();
                             updateProgress(c, total);
-                            if (c % 100 == 0) Platform.runLater(() -> {
-                                updateStats(System.currentTimeMillis() - startT);
-                                previewTable.refresh();
-                            });
+                            if (c % 100 == 0 && (System.currentTimeMillis() - lastRefresh.get() > 5000))
+                                Platform.runLater(() -> {
+                                    updateStats(System.currentTimeMillis() - startT);
+                                    lastRefresh.set(System.currentTimeMillis());
+                                    previewTable.refresh();
+                                });
                         }
                     });
                 }
