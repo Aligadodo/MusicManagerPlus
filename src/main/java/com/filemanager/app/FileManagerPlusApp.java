@@ -422,17 +422,17 @@ public class FileManagerPlusApp extends Application implements IAppController, I
                             Platform.runLater(() -> rec.setStatus(ExecStatus.RUNNING));
                             // [修改] 策略执行时不再传递线程数，只负责逻辑
                             AppStrategy s = AppStrategyFactory.findStrategyForOp(rec.getOpType(), pipelineStrategies);
-                            logAndFile("开始处理: " + rec.getFileHandle().getAbsolutePath());
+                            logAndFile("开始处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().name() + ",目标路径：" + rec.getNewPath());
                             if (s != null) {
                                 s.execute(rec);
                                 rec.setStatus(ExecStatus.SUCCESS);
-                                logAndFile("成功处理: " + rec.getFileHandle().getAbsolutePath());
+                                logAndFile("成功处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().name() + ",目标路径：" + rec.getNewPath());
                             } else {
                                 rec.setStatus(ExecStatus.SKIPPED);
                             }
                         } catch (Exception e) {
                             rec.setStatus(ExecStatus.FAILED);
-                            logAndFile("失败处理: " + rec.getFileHandle().getAbsolutePath() + ",原因" + e.getMessage());
+                            logAndFile("失败处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().name() + ",目标路径：" + rec.getNewPath() + ",原因" + e.getMessage());
                             logAndFile("失败详细原因:" + ExceptionUtils.getStackTrace(e));
                         } finally {
                             int c = curr.incrementAndGet();

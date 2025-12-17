@@ -4,6 +4,7 @@ import com.ibm.icu.text.CharsetDetector;
 import com.ibm.icu.text.CharsetMatch;
 
 import java.io.*;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -42,39 +43,6 @@ public class FileRegexReplacer {
     }
 
 
-    /**
-     * 使用 ICU4J 库推断文件的最可能编码。
-     *
-     * @param filePath 文件路径
-     * @return 推断出的编码名称 (如 "GBK", "UTF-8")
-     * @throws IOException 如果读取文件失败
-     */
-    private static String guessCharset(String filePath) throws IOException {
-        // 读取文件的前一部分字节进行分析
-        byte[] bytes = new byte[4096];
-        int length = 0;
-        try (FileInputStream fis = new FileInputStream(filePath)) {
-            length = fis.read(bytes);
-        }
-
-        // 使用 CharsetDetector 进行检测
-        CharsetDetector detector = new CharsetDetector();
-        detector.setText(bytes);
-
-        // 获取最佳匹配结果
-        CharsetMatch match = detector.detect();
-
-        if (match != null) {
-            // 返回推断出的编码，例如 "GBK", "UTF-8"
-            String charset = match.getName();
-            System.out.println("🤖 自动推断文件编码为: " + charset + " (置信度: " + match.getConfidence() + "%)");
-            return charset;
-        } else {
-            // 如果检测失败，退回到 Java 默认的 UTF-8 (或系统默认)
-            System.out.println("⚠️ 编码自动检测失败，回退到 UTF-8。");
-            return "UTF-8";
-        }
-    }
 
     /**
      * 自动检测编码，读取文件并替换内容，统一以 UTF-8 编码写回。
@@ -85,7 +53,7 @@ public class FileRegexReplacer {
      */
     public static void replaceWithAutoCharset(String filePath, String newLine) throws IOException {
         // 1. 自动检测源文件编码
-        String sourceCharset = guessCharset(filePath);
+        Charset sourceCharset = FileEncodingUtil.guessCharset(filePath);
 
         List<String> fileContent = new ArrayList<>();
         boolean lineReplaced = false;

@@ -5,7 +5,8 @@ import com.filemanager.app.SortedProperties;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.RuleCondition;
 import com.filemanager.model.RuleConditionGroup;
-import com.filemanager.strategy.*;
+import com.filemanager.strategy.AppStrategy;
+import com.filemanager.strategy.AppStrategyFactory;
 import com.filemanager.tool.file.ParallelStreamWalker;
 import com.filemanager.type.ConditionType;
 import com.filemanager.type.ExecStatus;
@@ -372,19 +373,11 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
                     AppStrategy strategy = pipelineStrategies.get(i);
                     updateMessage("分析步骤 " + (i + 1) + ": " + strategy.getName());
                     List<ChangeRecord> stepResults = strategy.analyze(currentRecords, sourceRoots, (p, m) -> updateProgress(p, 1.0));
-                    Map<String, ChangeRecord> resultMap = stepResults.stream().collect(Collectors.toMap(r -> r.getFileHandle().getAbsolutePath(), r -> r, (o, n) -> n));
-                    for (ChangeRecord original : currentRecords) {
-                        ChangeRecord update = resultMap.get(original.getFileHandle().getAbsolutePath());
-                        if (update != null) {
-                            original.setNewName(update.getNewName());
-                            original.setNewPath(update.getNewPath());
-                            if (update.isChanged()) {
-                                original.setChanged(true);
-                                original.setOpType(update.getOpType());
-                                original.setExtraParams(update.getExtraParams());
-                            }
-                        }
+                    if (stepResults.size() > currentRecords.size()) {
+                        updateMessage("分析步骤 " + (i + 1) + ": " + strategy.getName() + "预计增加文件" + (stepResults.size() - currentRecords.size()) + "个");
                     }
+                    currentRecords.clear();
+                    currentRecords.addAll(stepResults);
                 }
                 updateMessage("构建视图...");
                 return currentRecords;
@@ -436,18 +429,18 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
                             Platform.runLater(() -> rec.setStatus(ExecStatus.RUNNING));
                             // [修改] 策略执行时不再传递线程数，只负责逻辑
                             AppStrategy s = AppStrategyFactory.findStrategyForOp(rec.getOpType(), pipelineStrategies);
-                            logAndFile("开始处理: " + rec.getFileHandle().getAbsolutePath());
+                            logAndFile("开始处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().name() + ",目标路径：" + rec.getNewPath());
                             if (s != null) {
                                 s.execute(rec);
                                 rec.setStatus(ExecStatus.SUCCESS);
                                 succ.incrementAndGet();
-                                logAndFile("成功处理: " + rec.getFileHandle().getAbsolutePath());
+                                logAndFile("成功处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().name() + ",目标路径：" + rec.getNewPath());
                             } else {
                                 rec.setStatus(ExecStatus.SKIPPED);
                             }
                         } catch (Exception e) {
                             rec.setStatus(ExecStatus.FAILED);
-                            logAndFile("失败处理: " + rec.getFileHandle().getAbsolutePath() + ",原因" + e.getMessage());
+                            logAndFile("失败处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().name() + ",目标路径：" + rec.getNewPath() + ",原因" + e.getMessage());
                             logAndFile("失败详细原因:" + ExceptionUtils.getStackTrace(e));
                         } finally {
                             int c = curr.incrementAndGet();
@@ -647,7 +640,7 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
                     for (String e : exts) if (n.endsWith("." + e)) return true;
                     countIgnore.incrementAndGet();
                     return false;
-                }finally {
+                } finally {
                     countScan.incrementAndGet();
                     if (countScan.incrementAndGet() % 1000 == 0) {
                         String msgStr = "目录下：" + root.getAbsolutePath()
@@ -746,7 +739,7 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
         String time = new SimpleDateFormat("HH:mm:ss.SSS").format(new Date());
         String msg = "[" + time + "] --- " + s;
         log(msg);
-        if(fileLogger!=null) fileLogger.println(msg);
+        if (fileLogger != null) fileLogger.println(msg);
     }
 
 
@@ -916,6 +909,7 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
             e.printStackTrace();
         }
     }
+
     // --- [变更] 配置保存逻辑 (支持嵌套组) ---
     private void propsSavePipeline(Properties p) {
         p.setProperty("pl.size", String.valueOf(pipelineStrategies.size()));
@@ -1010,7 +1004,7 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
                 pipelineListView.getSelectionModel().select(n);
                 invalidatePreview("添加步骤");
             } catch (Exception e) {
-                this.log("组件添加失败:"+ ExceptionUtils.getStackTrace(e));
+                this.log("组件添加失败:" + ExceptionUtils.getStackTrace(e));
             }
         }
     }
@@ -1093,7 +1087,8 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
         header.setAlignment(Pos.CENTER_LEFT);
         Label lblTitle = new Label("条件组 " + index + " (且 AND)");
         lblTitle.setStyle("-fx-font-weight: bold; -fx-text-fill: #555;");
-        Region spacer = new Region(); HBox.setHgrow(spacer, Priority.ALWAYS);
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
         JFXButton btnDelGroup = createButton("✕", e -> onDeleteGroup.run());
         btnDelGroup.setStyle("-fx-text-fill: red; -fx-background-color: transparent;");
         header.getChildren().addAll(lblTitle, spacer, btnDelGroup);
@@ -1105,7 +1100,8 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
             row.setAlignment(Pos.CENTER_LEFT);
             Label lblC = new Label("• " + cond.toString());
             lblC.setTextFill(Color.web("#333"));
-            Region sp = new Region(); HBox.setHgrow(sp, Priority.ALWAYS);
+            Region sp = new Region();
+            HBox.setHgrow(sp, Priority.ALWAYS);
             JFXButton btnDelC = createButton("−", e -> {
                 group.remove(cond);
                 if (group.getConditions().isEmpty()) {
@@ -1132,7 +1128,7 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
         cbType.getSelectionModel().selectedItemProperty().addListener((o, old, val) -> {
             boolean needsVal = val.needsValue();
             txtVal.setDisable(!needsVal);
-            if(!needsVal) txtVal.clear();
+            if (!needsVal) txtVal.clear();
         });
 
         JFXButton btnAdd = createButton("+", e -> {
@@ -1147,30 +1143,6 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
 
         groupBox.getChildren().addAll(header, condList, new Separator(), addForm);
         return groupBox;
-    }
-
-    private static class Spacer extends Region {
-        public Spacer() {
-            HBox.setHgrow(this, Priority.ALWAYS);
-        }
-    }
-
-    // --- Styles ---
-    private static class ThemeConfig implements Cloneable {
-        String accentColor = "#3498db";
-        String textColor = "#333333";
-        double glassOpacity = 0.65;
-        boolean isDarkBackground = false;
-        double cornerRadius = 10.0;
-
-        @Override
-        public ThemeConfig clone() {
-            try {
-                return (ThemeConfig) super.clone();
-            } catch (Exception e) {
-                return new ThemeConfig();
-            }
-        }
     }
 
     private void refreshConfigPanel(AppStrategy strategy) {
@@ -1213,6 +1185,30 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
         styles.forceDarkText(configContainer);
     }
 
+    private static class Spacer extends Region {
+        public Spacer() {
+            HBox.setHgrow(this, Priority.ALWAYS);
+        }
+    }
+
+    // --- Styles ---
+    private static class ThemeConfig implements Cloneable {
+        String accentColor = "#3498db";
+        String textColor = "#333333";
+        double glassOpacity = 0.65;
+        boolean isDarkBackground = false;
+        double cornerRadius = 10.0;
+
+        @Override
+        public ThemeConfig clone() {
+            try {
+                return (ThemeConfig) super.clone();
+            } catch (Exception e) {
+                return new ThemeConfig();
+            }
+        }
+    }
+
     // [修改] ComposeView 类：移除成员变量遮蔽，直接使用主类的字段
     private class ComposeView {
         private final FileManagerAppV18_Stable app;
@@ -1223,8 +1219,14 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
         // private ListView<AppStrategy> pipelineListView;
         // private VBox configContainer;
 
-        public ComposeView(FileManagerAppV18_Stable app) { this.app = app; buildUI(); }
-        public Node getViewNode() { return viewNode; }
+        public ComposeView(FileManagerAppV18_Stable app) {
+            this.app = app;
+            buildUI();
+        }
+
+        public Node getViewNode() {
+            return viewNode;
+        }
 
         private void buildUI() {
             viewNode = new VBox(20);
@@ -1241,14 +1243,18 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
 
             GridPane grid = new GridPane();
             grid.setHgap(20);
-            ColumnConstraints col1 = new ColumnConstraints(); col1.setPercentWidth(30);
-            ColumnConstraints col2 = new ColumnConstraints(); col2.setPercentWidth(30);
-            ColumnConstraints col3 = new ColumnConstraints(); col3.setPercentWidth(40);
+            ColumnConstraints col1 = new ColumnConstraints();
+            col1.setPercentWidth(30);
+            ColumnConstraints col2 = new ColumnConstraints();
+            col2.setPercentWidth(30);
+            ColumnConstraints col3 = new ColumnConstraints();
+            col3.setPercentWidth(40);
             grid.getColumnConstraints().addAll(col1, col2, col3);
 
             // --- Left Panel (Source) ---
             VBox leftPanel = styles.createGlassPane();
-            leftPanel.setPadding(new Insets(15)); leftPanel.setSpacing(10);
+            leftPanel.setPadding(new Insets(15));
+            leftPanel.setSpacing(10);
 
             // 初始化主类成员 sourceListView
             sourceListView = new ListView<>(app.sourceRoots);
@@ -1312,11 +1318,15 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
             HBox srcBtns = new HBox(10);
             srcBtns.getChildren().addAll(
                     styles.createActionButton("添加", null, app::addDirectoryAction),
-                    styles.createActionButton("清空", "#e74c3c", () -> { app.sourceRoots.clear(); app.invalidatePreview("清空源"); })
+                    styles.createActionButton("清空", "#e74c3c", () -> {
+                        app.sourceRoots.clear();
+                        app.invalidatePreview("清空源");
+                    })
             );
 
             TitledPane tpFilters = new TitledPane("全局筛选", app.createGlobalFiltersUI());
-            tpFilters.setCollapsible(true); tpFilters.setExpanded(true);
+            tpFilters.setCollapsible(true);
+            tpFilters.setExpanded(true);
             tpFilters.setStyle("-fx-text-fill: " + currentTheme.textColor + ";");
 
             leftPanel.getChildren().addAll(sourceListView, srcBtns, tpFilters);
@@ -1324,7 +1334,8 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
 
             // --- Center Panel (Pipeline) ---
             VBox centerPanel = styles.createGlassPane();
-            centerPanel.setPadding(new Insets(15)); centerPanel.setSpacing(10);
+            centerPanel.setPadding(new Insets(15));
+            centerPanel.setSpacing(10);
 
             // 初始化主类成员 pipelineListView
             pipelineListView = new ListView<>(app.pipelineStrategies);
@@ -1410,13 +1421,23 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
             });
 
             // 监听选中，调用主类的 refreshConfigPanel
-            pipelineListView.getSelectionModel().selectedItemProperty().addListener((o,old,val) -> refreshConfigPanel(val));
+            pipelineListView.getSelectionModel().selectedItemProperty().addListener((o, old, val) -> refreshConfigPanel(val));
 
             HBox pipeActions = new HBox(5);
             cbStrategyTemplates = new JFXComboBox<>(FXCollections.observableArrayList(app.strategyPrototypes));
             cbStrategyTemplates.setPromptText("选择功能...");
             cbStrategyTemplates.setPrefWidth(150);
-            cbStrategyTemplates.setConverter(new javafx.util.StringConverter<AppStrategy>() { @Override public String toString(AppStrategy o) { return o.getName(); } @Override public AppStrategy fromString(String s) { return null; } });
+            cbStrategyTemplates.setConverter(new javafx.util.StringConverter<AppStrategy>() {
+                @Override
+                public String toString(AppStrategy o) {
+                    return o.getName();
+                }
+
+                @Override
+                public AppStrategy fromString(String s) {
+                    return null;
+                }
+            });
 
             JFXButton btnAddStep = styles.createActionButton("添加步骤", "#2ecc71", () -> app.addStrategyStep(cbStrategyTemplates.getValue()));
 

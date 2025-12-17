@@ -20,6 +20,8 @@ public class ChangeRecord {
     private OperationType opType;
     private Map<String, String> extraParams = new HashMap<>();
     private ExecStatus status = ExecStatus.PENDING;
+    private boolean isCreate = false;
+    private boolean isDeleteOrMove = false;
 
     // 链式处理中的中间状态文件（如果不为空，说明这是上一步产生的临时状态）
     private File intermediateFile;

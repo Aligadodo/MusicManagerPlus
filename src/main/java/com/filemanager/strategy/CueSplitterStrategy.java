@@ -1,6 +1,8 @@
 package com.filemanager.strategy;
 
-import com.filemanager.model.*;
+import com.filemanager.model.ChangeRecord;
+import com.filemanager.model.CueSheet;
+import com.filemanager.tool.file.CueParser;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
@@ -8,28 +10,23 @@ import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXComboBox;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
-import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
-import javafx.scene.layout.*;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import net.bramp.ffmpeg.FFmpeg;
 import net.bramp.ffmpeg.FFmpegExecutor;
 import net.bramp.ffmpeg.builder.FFmpegBuilder;
 import net.bramp.ffmpeg.builder.FFmpegOutputBuilder;
 
-import java.io.*;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
+import java.io.File;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -179,11 +176,11 @@ public class CueSplitterStrategy extends AppStrategy {
                 Platform.runLater(() -> progressReporter.accept((double) c / total, "解析 CUE: " + cueFile.getName()));
 
             // 解析
-            CueSheet cueSheet = parseCueSheet(cueFile);
-            if (cueSheet == null || cueSheet.getTracks().isEmpty()) return Stream.empty();
+            CueSheet cueSheet = CueParser.parse(cueFile.toPath());
+            if (cueSheet == null || cueSheet.tracks.isEmpty()) return Stream.empty();
 
             // 定位音频源文件
-            File sourceAudio = locateAudioFile(cueFile, cueSheet.getAudioFilename());
+            File sourceAudio = locateAudioFile(cueFile, cueSheet.fileName);
             if (sourceAudio == null) return Stream.empty();
 
             // 确定输出目录
@@ -194,60 +191,51 @@ public class CueSplitterStrategy extends AppStrategy {
             else outputDir = new File(cueFile.getParentFile(), pRelPath);
 
             List<ChangeRecord> tracks = new ArrayList<>();
-            List<CueTrack> cueTracks = cueSheet.getTracks();
+            List<CueSheet.CueTrack> cueTracks = cueSheet.tracks;
 
             for (int i = 0; i < cueTracks.size(); i++) {
-                CueTrack t = cueTracks.get(i);
+                CueSheet.CueTrack t = cueTracks.get(i);
 
                 // 计算起止时间
-                double startTime = t.getIndex01();
-                if (!pIgnorePregap && t.getIndex00() >= 0 && t.getIndex00() < t.getIndex01()) {
-                    startTime = t.getIndex00();
-                }
+                long startTime = t.startTimeMs;
 
-                Double duration = null;
+                long duration = 0L;
                 if (i < cueTracks.size() - 1) {
-                    CueTrack next = cueTracks.get(i + 1);
-                    double nextStart = next.getIndex01();
-                    if (!pIgnorePregap && next.getIndex00() >= 0) {
-                        nextStart = next.getIndex01();
-                    }
-                    duration = nextStart - startTime;
+                    CueSheet.CueTrack next = cueTracks.get(i + 1);
+                    duration = next.startTimeMs - startTime;
                 }
 
                 // 构建文件名
-                String trackTitle = t.getTitle().isEmpty() ? "Unknown" : t.getTitle();
+                String trackTitle = t.title.isEmpty() ? "Unknown" : t.title;
                 String safeTitle = trackTitle.replaceAll("[\\\\/:*?\"<>|]", "_");
-                String trackName = String.format("%02d - %s.%s", t.getNumber(), safeTitle, ext);
+                String trackName = String.format("%02d - %s.%s", t.number, safeTitle, ext);
                 File targetFile = new File(outputDir, trackName);
 
                 // 继承全局信息
-                String artist = t.getPerformer();
-                if (artist == null || artist.isEmpty()) artist = cueSheet.getPerformer();
-                String album = cueSheet.getTitle();
+                String artist = t.performer;
+                if (artist == null || artist.isEmpty()) artist = cueSheet.albumPerformer;
+                String album = cueSheet.albumTitle;
 
                 // 格式化时长用于展示 (MM:SS)
                 String durationStr = "??:??";
-                if (duration != null) {
-                    int totalSec = (int) Math.round(duration);
+                if (duration != 0L) {
+                    int totalSec = Math.round(duration / 1000);
                     durationStr = String.format("%02d:%02d", totalSec / 60, totalSec % 60);
                 }
 
                 // [核心优化] 丰富预览信息：[01] 歌名 - 歌手 [04:20]
-                String displayInfo = String.format("[%02d] %s - %s [%s]", t.getNumber(), trackTitle, artist, durationStr);
+                String displayInfo = String.format("[%02d] %s - %s [%s]", t.number, trackTitle, artist, durationStr);
 
                 Map<String, String> params = new HashMap<>();
                 params.put("source", sourceAudio.getAbsolutePath());
                 // 存入双精度秒数
-                params.put("start", String.format(Locale.US, "%.4f", startTime));
-                if (duration != null) params.put("duration", String.format(Locale.US, "%.4f", duration));
+                params.put("start", String.format(Locale.US, "%d", startTime));
+                if (duration != 0) params.put("duration", String.format(Locale.US, "%d", duration));
 
                 params.put("meta_title", trackTitle);
                 params.put("meta_artist", artist);
                 params.put("meta_album", album);
-                params.put("meta_track", String.valueOf(t.getNumber()));
-                if (cueSheet.getGenre() != null) params.put("meta_genre", cueSheet.getGenre());
-                if (cueSheet.getDate() != null) params.put("meta_date", cueSheet.getDate());
+                params.put("meta_track", String.valueOf(t.number));
 
                 params.put("format", ext);
                 params.put("ffmpeg", pFFmpeg);
@@ -295,8 +283,7 @@ public class CueSplitterStrategy extends AppStrategy {
         builder.setInput(p.get("source"));
 
         // [修复] 时间转换：秒(String) -> 毫秒(long)
-        double startSeconds = Double.parseDouble(p.get("start"));
-        long startMillis = (long) (startSeconds * 1000);
+        long startMillis = Long.parseLong(p.get("start"));
 
         // 输出配置
         FFmpegOutputBuilder out = builder.addOutput(target.getAbsolutePath())
@@ -306,8 +293,7 @@ public class CueSplitterStrategy extends AppStrategy {
                 .addExtraArgs("-map_metadata", "-1");
 
         if (p.containsKey("duration")) {
-            double durationSeconds = Double.parseDouble(p.get("duration"));
-            long durationMillis = (long) (durationSeconds * 1000);
+            long durationMillis = Long.parseLong(p.get("duration"));
             out.setDuration(durationMillis, TimeUnit.MILLISECONDS);
         }
 
@@ -348,97 +334,5 @@ public class CueSplitterStrategy extends AppStrategy {
             }
         }
         return null;
-    }
-
-    private CueSheet parseCueSheet(File file) {
-        CueSheet sheet = new CueSheet();
-        try {
-            byte[] bytes = Files.readAllBytes(file.toPath());
-            String content;
-            try {
-                content = new String(bytes, StandardCharsets.UTF_8);
-                if (content.contains("") && !isUtf8(bytes)) {
-                    throw new Exception("Not UTF-8");
-                }
-            } catch (Exception e) {
-                content = new String(bytes, Charset.forName("GBK"));
-            }
-
-            String[] lines = content.split("\\r?\\n");
-            CueTrack currentTrack = null;
-
-            Pattern pRem = Pattern.compile("^\\s*REM\\s+(\\w+)\\s+(.*)", Pattern.CASE_INSENSITIVE);
-            Pattern pPerf = Pattern.compile("^\\s*PERFORMER\\s+\"(.*)\"", Pattern.CASE_INSENSITIVE);
-            Pattern pTitle = Pattern.compile("^\\s*TITLE\\s+\"(.*)\"", Pattern.CASE_INSENSITIVE);
-            Pattern pFile = Pattern.compile("^\\s*FILE\\s+\"(.*)\"", Pattern.CASE_INSENSITIVE);
-            Pattern pTrack = Pattern.compile("^\\s*TRACK\\s+(\\d+)\\s+AUDIO", Pattern.CASE_INSENSITIVE);
-            Pattern pIndex = Pattern.compile("^\\s*INDEX\\s+(\\d+)\\s+(\\d+):(\\d+):(\\d+)", Pattern.CASE_INSENSITIVE);
-
-            for (String line : lines) {
-                if (line.trim().isEmpty()) continue;
-                Matcher m;
-
-                if ((m = pTrack.matcher(line)).find()) {
-                    currentTrack = new CueTrack();
-                    currentTrack.setNumber(Integer.parseInt(m.group(1)));
-                    sheet.getTracks().add(currentTrack);
-                } else if ((m = pIndex.matcher(line)).find()) {
-                    if (currentTrack != null) {
-                        int idx = Integer.parseInt(m.group(1));
-                        int mm = Integer.parseInt(m.group(2));
-                        int ss = Integer.parseInt(m.group(3));
-                        int ff = Integer.parseInt(m.group(4));
-                        // MM:SS:FF (1 sec = 75 frames)
-                        double seconds = mm * 60 + ss + (ff / 75.0);
-                        if (idx == 1) currentTrack.setIndex01(seconds);
-                        else if (idx == 0) currentTrack.setIndex00(seconds);
-                    }
-                } else if ((m = pTitle.matcher(line)).find()) {
-                    String t = m.group(1);
-                    if (currentTrack != null) currentTrack.setTitle(t);
-                    else sheet.setTitle(t);
-                } else if ((m = pPerf.matcher(line)).find()) {
-                    String p = m.group(1);
-                    if (currentTrack != null) currentTrack.setPerformer(p);
-                    else sheet.setPerformer(p);
-                } else if ((m = pFile.matcher(line)).find()) {
-                    sheet.setAudioFilename(m.group(1));
-                } else if ((m = pRem.matcher(line)).find()) {
-                    String key = m.group(1).toUpperCase();
-                    String val = m.group(2).replace("\"", "").trim();
-                    if ("DATE".equals(key)) sheet.setDate(val);
-                    if ("GENRE".equals(key)) sheet.setGenre(val);
-                }
-            }
-        } catch (Exception e) {
-            System.err.println("CUE Parse Error: " + e.getMessage());
-            return null;
-        }
-        return sheet;
-    }
-
-    private boolean isUtf8(byte[] raw) {
-        return raw.length >= 3 && (raw[0] & 0xFF) == 0xEF && (raw[1] & 0xFF) == 0xBB && (raw[2] & 0xFF) == 0xBF;
-    }
-
-    @Data
-    @NoArgsConstructor
-    private static class CueSheet {
-        private String title = "";
-        private String performer = "Unknown Artist";
-        private String audioFilename;
-        private String date;
-        private String genre;
-        private List<CueTrack> tracks = new ArrayList<>();
-    }
-
-    @Data
-    @NoArgsConstructor
-    private static class CueTrack {
-        private int number;
-        private String title = "";
-        private String performer;
-        private double index00 = -1;
-        private double index01 = 0;
     }
 }
