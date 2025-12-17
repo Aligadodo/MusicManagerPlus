@@ -46,6 +46,7 @@ import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.controlsfx.control.CheckComboBox;
 
@@ -60,6 +61,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -103,6 +105,7 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
     private Spinner<Integer> spRecursionDepth;
     private CheckComboBox<String> ccbFileTypes;
     private Spinner<Integer> spGlobalThreads; // [新增] 全局线程数控制
+    private TextField numberDisplay;// [新增] 预览数量限制
     // --- Tab 2 Components (需在 initGlobalControls 中初始化) ---
     private TreeTableView<ChangeRecord> previewTable;
     private ProgressBar mainProgressBar;
@@ -197,13 +200,25 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
             }
         });
 
+        // 设置预览数量 默认200
+        numberDisplay = new TextField("200");
+        UnaryOperator<TextFormatter.Change> filter = change -> {
+            String text = change.getControlNewText();
+            // 正则表达式：允许为空，或者只允许数字
+            if (text.matches("\\d*")) {
+                return change;
+            }
+            return null; // 拒绝修改
+        };
+        numberDisplay.setTextFormatter(new TextFormatter<>(filter));
+
         // Filter Controls
         cbRecursionMode = new JFXComboBox<>(FXCollections.observableArrayList("仅当前目录", "递归所有子目录", "指定目录深度"));
         cbRecursionMode.getSelectionModel().select(1);
         spRecursionDepth = new Spinner<>(1, 20, 2);
         spRecursionDepth.setEditable(true);
         ccbFileTypes = new CheckComboBox<>(FXCollections.observableArrayList(
-                "mp3", "flac", "wav", "m4a", "ape", "dsf", "dff", "dts", "iso", "jpg", "png", "nfo", "cue",
+                "[directory]", "[compressed]", "[music]", "mp3", "flac", "wav", "m4a", "ape", "dsf", "dff", "dts", "iso", "jpg", "png", "nfo", "cue",
                 "rar", "zip", "7z", "tar", "gz", "bz2"));
         ccbFileTypes.getCheckModel().checkAll();
 
@@ -326,7 +341,9 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
                 styles.createNormalLabel("递归模式:"), cbRecursionMode, spRecursionDepth,
                 styles.createNormalLabel("文件扩展名:"), ccbFileTypes,
                 new Separator(),
-                styles.createNormalLabel("并发线程数 (动态):"), spGlobalThreads
+                styles.createNormalLabel("并发线程数 (动态):"), spGlobalThreads,
+                new Separator(),
+                styles.createNormalLabel("显示数量限制:"), numberDisplay
         );
         return box;
     }
@@ -496,6 +513,12 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
             protected TreeItem<ChangeRecord> call() {
                 TreeItem<ChangeRecord> root = new TreeItem<>(new ChangeRecord());
                 root.setExpanded(true);
+                String numberLimit = numberDisplay.getText();
+                int limit = 1000;
+                if (StringUtils.isNoneBlank(numberLimit) && StringUtils.isNumeric(numberLimit)) {
+                    limit = Integer.parseInt(numberLimit);
+                }
+                AtomicInteger count = new AtomicInteger();
                 for (ChangeRecord r : fullChangeList) {
                     if (hide && !r.isChanged() && r.getStatus() != ExecStatus.FAILED) continue;
                     if (!search.isEmpty() && !r.getOriginalName().toLowerCase().contains(search)) continue;
@@ -504,7 +527,12 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
                     else if ("成功".equals(status)) sm = r.getStatus() == ExecStatus.SUCCESS;
                     else if ("失败".equals(status)) sm = r.getStatus() == ExecStatus.FAILED;
                     if (!sm) continue;
+                    count.incrementAndGet();
                     root.getChildren().add(new TreeItem<>(r));
+                    if (count.get() > limit) {
+                        log("注意：实时预览数据限制为" + limit + "条！");
+                        break;
+                    }
                 }
                 return root;
             }

@@ -39,6 +39,7 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 import lombok.Getter;
 import lombok.Setter;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.controlsfx.control.CheckComboBox;
 
@@ -478,6 +479,12 @@ public class FileManagerPlusApp extends Application implements IAppController, I
             protected TreeItem<ChangeRecord> call() {
                 TreeItem<ChangeRecord> root = new TreeItem<>(new ChangeRecord());
                 root.setExpanded(true);
+                String numberLimit = globalSettingsView.getNumberDisplay().getText();
+                int limit = 1000;
+                if (StringUtils.isNoneBlank(numberLimit) && StringUtils.isNumeric(numberLimit)) {
+                    limit = Integer.parseInt(numberLimit);
+                }
+                AtomicInteger count = new AtomicInteger();
                 for (ChangeRecord r : fullChangeList) {
                     if (h && !r.isChanged() && r.getStatus() != ExecStatus.FAILED) continue;
                     if (!s.isEmpty() && !r.getOriginalName().toLowerCase().contains(s)) continue;
@@ -486,7 +493,12 @@ public class FileManagerPlusApp extends Application implements IAppController, I
                     else if ("成功".equals(st)) sm = r.getStatus() == ExecStatus.SUCCESS;
                     else if ("失败".equals(st)) sm = r.getStatus() == ExecStatus.FAILED;
                     if (!sm) continue;
+                    count.incrementAndGet();
                     root.getChildren().add(new TreeItem<>(r));
+                    if(count.get()>limit){
+                        log("注意：实时预览数据限制为"+limit+"条！");
+                        break;
+                    }
                 }
                 return root;
             }

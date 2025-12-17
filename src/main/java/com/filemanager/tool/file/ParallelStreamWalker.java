@@ -1,14 +1,21 @@
 package com.filemanager.tool.file;
 
 import lombok.var;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.*;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.Spliterator;
 import java.util.Spliterators;
-import java.util.concurrent.*;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.RecursiveAction;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -38,6 +45,8 @@ public class ParallelStreamWalker {
             try {
                 // 执行递归扫描
                 pool.invoke(new FileWalkAction(root, maxDepth, queue));
+            } catch (Exception e) {
+                System.out.println("扫描文件失败：" + ExceptionUtils.getStackTrace(e));
             } finally {
                 // 扫描结束（无论成功失败），放入结束标记
                 offerMarker(queue);
