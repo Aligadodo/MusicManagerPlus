@@ -5,8 +5,10 @@ import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.RuleCondition;
 import com.filemanager.model.RuleConditionGroup;
 import com.filemanager.type.ScanTarget;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
+import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
 import lombok.Getter;
 
@@ -85,5 +87,12 @@ public abstract class AppStrategy {
     protected ChangeRecord getTargetFile(File file, Collection<ChangeRecord> changeRecords) {
         return changeRecords.stream().filter(changeRecord -> changeRecord.getFileHandle().equals(file) &&
                 file.getName().equals(changeRecord.getFileHandle().getName())).findFirst().orElse(null);
+    }
+
+    protected HBox createParamPair(String labelText, Node control) {
+        HBox hb = new HBox(5);
+        hb.setAlignment(Pos.CENTER_LEFT);
+        hb.getChildren().addAll(new Label(labelText), control);
+        return hb;
     }
 }
