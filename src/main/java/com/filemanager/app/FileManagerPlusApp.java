@@ -599,7 +599,7 @@ public class FileManagerPlusApp extends Application implements IAppController, I
         previewView.bindProgress(t);
         t.setOnFailed(e -> {
             finishTaskUI("出错");
-            log("❌ " + e.getSource().getException());
+            log("❌ 失败: " + ExceptionUtils.getStackTrace(e.getSource().getException()));
             closeFileLogger();
         });
         t.setOnCancelled(e -> {

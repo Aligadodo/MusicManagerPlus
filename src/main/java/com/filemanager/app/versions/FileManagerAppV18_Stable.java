@@ -620,7 +620,7 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
         mainProgressBar.progressProperty().bind(t.progressProperty());
         t.setOnFailed(e -> {
             finishTaskUI("出错");
-            log("❌ 失败: " + e.getSource().getException());
+            log("❌ 失败: " + ExceptionUtils.getStackTrace(e.getSource().getException()));
             closeFileLogger();
         });
         t.setOnCancelled(e -> {

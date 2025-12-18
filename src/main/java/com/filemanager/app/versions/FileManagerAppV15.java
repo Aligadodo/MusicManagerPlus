@@ -32,6 +32,7 @@ import javafx.scene.text.FontWeight;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.controlsfx.control.CheckComboBox;
 
 import java.awt.Desktop;
@@ -842,7 +843,7 @@ public class FileManagerAppV15 extends Application implements IManagerAppInterfa
         mainProgressBar.progressProperty().bind(t.progressProperty());
         t.setOnFailed(e -> {
             finishTaskUI("出错");
-            log("❌ 失败: " + e.getSource().getException());
+            log("❌ 失败: " + ExceptionUtils.getStackTrace(e.getSource().getException()));
             closeFileLogger();
         });
         t.setOnCancelled(e -> {
