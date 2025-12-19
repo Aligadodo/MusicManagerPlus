@@ -16,6 +16,7 @@ import net.bramp.ffmpeg.FFmpeg;
 import net.bramp.ffmpeg.FFmpegExecutor;
 import net.bramp.ffmpeg.builder.FFmpegBuilder;
 import net.bramp.ffmpeg.builder.FFmpegOutputBuilder;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -56,8 +57,9 @@ public class AbstractFfmpegStrategy extends AppStrategy {
     protected String pChannels;
 
     public AbstractFfmpegStrategy() {
-        cbTargetFormat = new JFXComboBox<>(FXCollections.observableArrayList("FLAC", "WAV", "WAV (CD标准)", "MP3", "ALAC", "AAC", "OGG"));
-        cbTargetFormat.getSelectionModel().select("FLAC");
+        cbTargetFormat = new JFXComboBox<>(FXCollections.observableArrayList("WAV (CD标准)", "FLAC", "WAV",  "MP3", "ALAC", "AAC", "OGG"));
+        cbTargetFormat.setTooltip(new Tooltip("WAV CD标准会按照16bit转录音频文件，反之则按照24bit转录，对CD刻录场景的播放会有负面影响。"));
+        cbTargetFormat.getSelectionModel().select(0);
 
         cbOutputDirMode = new JFXComboBox<>(FXCollections.observableArrayList(
                 "原目录 (Source)",
@@ -67,7 +69,7 @@ public class AbstractFfmpegStrategy extends AppStrategy {
         cbOutputDirMode.getSelectionModel().select(1);
 
         txtRelativePath = new TextField("");
-        updateDefaultPathPrompt("FLAC");
+        updateDefaultPathPrompt("WAV");
 
         cbSampleRate = new JFXComboBox<>(FXCollections.observableArrayList("保持原样 (Original)", "44100", "48000", "88200", "96000", "192000"));
         cbSampleRate.getSelectionModel().select(1);
@@ -90,7 +92,7 @@ public class AbstractFfmpegStrategy extends AppStrategy {
         chkOverwrite.setSelected(false);
         chkOverwrite.setTooltip(new Tooltip("如果不勾选，遇到已存在的目标文件将跳过处理。"));
 
-        chkForceFilenameMeta = new CheckBox("忽略原Tag，强制用文件名重构元数据");
+        chkForceFilenameMeta = new CheckBox("忽略原始文件标签（强制用文件名重构元数据）");
         chkForceFilenameMeta.setTooltip(new Tooltip("勾选此项可解决严重的乱码问题，完全丢弃源文件信息，仅依据文件名和目录名生成Tag。"));
         chkForceFilenameMeta.setSelected(false);
 
@@ -239,12 +241,22 @@ public class AbstractFfmpegStrategy extends AppStrategy {
 
     @Override
     public void saveConfig(Properties props) {
-        if (cbTargetFormat.getValue() != null) props.setProperty("ac_format", cbTargetFormat.getValue());
-        if (cbOutputDirMode.getValue() != null) props.setProperty("ac_outMode", cbOutputDirMode.getValue());
-        if (txtRelativePath.getText() != null) props.setProperty("ac_pRelPath ", txtRelativePath.getText());
-        if (txtFFmpegPath.getText() != null) props.setProperty("ac_ffmpeg", txtFFmpegPath.getText());
+        if (cbTargetFormat.getValue() != null) {
+            props.setProperty("ac_format", cbTargetFormat.getValue());
+        }
+        if (cbOutputDirMode.getValue() != null) {
+            props.setProperty("ac_outMode", cbOutputDirMode.getValue());
+        }
+        if (txtRelativePath.getText() != null) {
+            props.setProperty("ac_pRelPath ", txtRelativePath.getText());
+        }
+        if (txtFFmpegPath.getText() != null) {
+            props.setProperty("ac_ffmpeg", txtFFmpegPath.getText());
+        }
         props.setProperty("ac_useCache", String.valueOf(chkEnableCache.isSelected()));
-        if (txtCacheDir.getText() != null) props.setProperty("ac_cacheDir", txtCacheDir.getText());
+        if (txtCacheDir.getText() != null) {
+            props.setProperty("ac_cacheDir", txtCacheDir.getText());
+        }
         props.setProperty("ac_forceMeta", String.valueOf(chkForceFilenameMeta.isSelected()));
         props.setProperty("ac_overwrite", String.valueOf(chkOverwrite.isSelected()));
         props.setProperty("ac_innerThreads", String.valueOf(spFfmpegThreads.getValue()));
@@ -254,27 +266,42 @@ public class AbstractFfmpegStrategy extends AppStrategy {
 
     @Override
     public void loadConfig(Properties props) {
-        if (props.containsKey("ac_format")) cbTargetFormat.getSelectionModel().select(props.getProperty("ac_format"));
-        if (props.containsKey("ac_outMode"))
+        if (props.containsKey("ac_format")) {
+            cbTargetFormat.getSelectionModel().select(props.getProperty("ac_format"));
+        }
+        if (props.containsKey("ac_outMode")) {
             cbOutputDirMode.getSelectionModel().select(props.getProperty("ac_outMode"));
-        if (props.containsKey("ac_pRelPath ")) txtRelativePath.setText(props.getProperty("ac_pRelPath "));
-        if (props.containsKey("ac_ffmpeg")) txtFFmpegPath.setText(props.getProperty("ac_ffmpeg"));
-        if (props.containsKey("ac_useCache"))
+        }
+        if (props.containsKey("ac_pRelPath ")) {
+            txtRelativePath.setText(props.getProperty("ac_pRelPath "));
+        }
+        if (props.containsKey("ac_ffmpeg")) {
+            txtFFmpegPath.setText(props.getProperty("ac_ffmpeg"));
+        }
+        if (props.containsKey("ac_useCache")) {
             chkEnableCache.setSelected(Boolean.parseBoolean(props.getProperty("ac_useCache")));
-        if (props.containsKey("ac_cacheDir")) txtCacheDir.setText(props.getProperty("ac_cacheDir"));
-        if (props.containsKey("ac_forceMeta"))
+        }
+        if (props.containsKey("ac_cacheDir")) {
+            txtCacheDir.setText(props.getProperty("ac_cacheDir"));
+        }
+        if (props.containsKey("ac_forceMeta")) {
             chkForceFilenameMeta.setSelected(Boolean.parseBoolean(props.getProperty("ac_forceMeta")));
-        if (props.containsKey("ac_overwrite"))
+        }
+        if (props.containsKey("ac_overwrite")) {
             chkOverwrite.setSelected(Boolean.parseBoolean(props.getProperty("ac_overwrite")));
+        }
         if (props.containsKey("ac_innerThreads")) {
             try {
                 spFfmpegThreads.getValueFactory().setValue(Integer.parseInt(props.getProperty("ac_innerThreads")));
             } catch (Exception e) {
             }
         }
-        if (props.containsKey("ac_sampleRate"))
+        if (props.containsKey("ac_sampleRate")) {
             cbSampleRate.getSelectionModel().select(props.getProperty("ac_sampleRate"));
-        if (props.containsKey("ac_channels")) cbChannels.getSelectionModel().select(props.getProperty("ac_channels"));
+        }
+        if (props.containsKey("ac_channels")) {
+            cbChannels.getSelectionModel().select(props.getProperty("ac_channels"));
+        }
     }
 
     @Override
@@ -314,7 +341,7 @@ public class AbstractFfmpegStrategy extends AppStrategy {
                 .overrideOutputFiles(true);
 
         if (params.containsKey("innerThreads")) {
-            builder.addExtraArgs("-threads", params.get("innerThreads"));
+            builder = builder.addExtraArgs("-threads", params.get("innerThreads"));
         }
 
         FFmpegOutputBuilder outputBuilder = builder.addOutput(target.getAbsolutePath())
@@ -322,52 +349,53 @@ public class AbstractFfmpegStrategy extends AppStrategy {
                 .setAudioCodec(params.getOrDefault("codec", "flac"));
         if (params.containsKey("start")) {
             long startMillis = Long.parseLong(params.get("start"));
-            outputBuilder.setStartOffset(startMillis, TimeUnit.MILLISECONDS);
+            outputBuilder = outputBuilder.setStartOffset(startMillis, TimeUnit.MILLISECONDS);
         }
         if (params.containsKey("duration")) {
             long durationMillis = Long.parseLong(params.get("duration"));
-            outputBuilder.setDuration(durationMillis, TimeUnit.MILLISECONDS);
+            outputBuilder = outputBuilder.setDuration(durationMillis, TimeUnit.MILLISECONDS);
         }
-        outputBuilder.addExtraArgs("-map", "0:a:0");
+        outputBuilder = outputBuilder.addExtraArgs("-map", "0:a:0");
 
         if (mapMetadata) {
-            outputBuilder.addExtraArgs("-map_metadata", "0");
+            outputBuilder = outputBuilder.addExtraArgs("-map_metadata", "0");
             if (target.getName().toLowerCase().endsWith(".mp3")) {
-                outputBuilder.addExtraArgs("-id3v2_version", "3");
+                outputBuilder = outputBuilder.addExtraArgs("-id3v2_version", "3");
             }
         } else {
-            outputBuilder.addExtraArgs("-map_metadata", "-1");
+            outputBuilder = outputBuilder.addExtraArgs("-map_metadata", "-1");
             MetadataHelper.AudioMeta meta = MetadataHelper.getSmartMetadata(source, true);
-            if (!meta.getTitle().isEmpty()) outputBuilder.addMetaTag("title", meta.getTitle());
-            if (!meta.getArtist().isEmpty()) outputBuilder.addMetaTag("artist", meta.getArtist());
-            if (!meta.getAlbum().isEmpty()) outputBuilder.addMetaTag("album", meta.getAlbum());
-            if (!meta.getYear().isEmpty()) outputBuilder.addMetaTag("date", meta.getYear());
-            if (!meta.getTrack().isEmpty()) outputBuilder.addMetaTag("track", meta.getTrack());
-            if (params.containsKey("meta_title")) outputBuilder.addMetaTag("title", params.get("meta_title"));
-            if (params.containsKey("meta_artist")) outputBuilder.addMetaTag("artist", params.get("meta_artist"));
-            if (params.containsKey("meta_album")) outputBuilder.addMetaTag("album", params.get("meta_album"));
-            if (params.containsKey("meta_track")) outputBuilder.addMetaTag("track", params.get("meta_track"));
-            if (params.containsKey("meta_genre")) outputBuilder.addMetaTag("genre", params.get("meta_genre"));
-            if (params.containsKey("meta_date")) outputBuilder.addMetaTag("date", params.get("meta_date"));
-            outputBuilder.addMetaTag("comment", "Processed by Echo Music Manager");
+            if (!meta.getTitle().isEmpty()) outputBuilder = outputBuilder.addMetaTag("title", meta.getTitle());
+            if (!meta.getArtist().isEmpty()) outputBuilder = outputBuilder.addMetaTag("artist", meta.getArtist());
+            if (!meta.getAlbum().isEmpty()) outputBuilder = outputBuilder.addMetaTag("album", meta.getAlbum());
+            if (!meta.getYear().isEmpty()) outputBuilder = outputBuilder.addMetaTag("date", meta.getYear());
+            if (!meta.getTrack().isEmpty()) outputBuilder = outputBuilder.addMetaTag("track", meta.getTrack());
+            if (params.containsKey("meta_title")) outputBuilder = outputBuilder.addMetaTag("title", params.get("meta_title"));
+            if (params.containsKey("meta_artist")) outputBuilder = outputBuilder.addMetaTag("artist", params.get("meta_artist"));
+            if (params.containsKey("meta_album")) outputBuilder = outputBuilder.addMetaTag("album", params.get("meta_album"));
+            if (params.containsKey("meta_track")) outputBuilder = outputBuilder.addMetaTag("track", params.get("meta_track"));
+            if (params.containsKey("meta_genre")) outputBuilder = outputBuilder.addMetaTag("genre", params.get("meta_genre"));
+            if (params.containsKey("meta_date")) outputBuilder = outputBuilder.addMetaTag("date", params.get("meta_date"));
+            outputBuilder = outputBuilder.addMetaTag("comment", "Processed by Echo Music Manager");
         }
 
         // 统一参数读取：params 中的 key 已经是 sampleRate 和 channels
-        outputBuilder.setAudioSampleRate(44100);
+        outputBuilder = outputBuilder.setAudioSampleRate(44100);
         if (params.containsKey("sampleRate")) {
             try {
-                outputBuilder.setAudioSampleRate(Integer.parseInt(params.get("sampleRate")));
+                outputBuilder = outputBuilder.setAudioSampleRate(Integer.parseInt(params.get("sampleRate")));
             } catch (NumberFormatException ignored) {
             }
         }
-        outputBuilder.setAudioChannels(2);
+        outputBuilder = outputBuilder.setAudioChannels(2);
         if (params.containsKey("channels")) {
             try {
-                outputBuilder.setAudioChannels(Integer.parseInt(params.get("channels")));
+                outputBuilder = outputBuilder.setAudioChannels(Integer.parseInt(params.get("channels")));
             } catch (NumberFormatException ignored) {
             }
         }
-        new FFmpegExecutor(ffmpeg).createJob(builder).run();
+        log("执行ffmpeg命令： "+ StringUtils.join(outputBuilder.buildOptions()," "));
+        new FFmpegExecutor(ffmpeg).createJob(outputBuilder.done()).run();
     }
 
 

@@ -3,8 +3,8 @@ package com.filemanager.app;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.ThemeConfig;
 import com.filemanager.strategy.*;
-import com.filemanager.tool.file.ConcurrentFileWalker;
-import com.filemanager.tool.file.ParallelStreamWalker;
+import com.filemanager.util.file.FileLockManager;
+import com.filemanager.util.file.ParallelStreamWalker;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
 import com.filemanager.ui.*;
@@ -45,15 +45,17 @@ import org.controlsfx.control.CheckComboBox;
 
 import java.awt.*;
 import java.io.*;
-import java.nio.file.Files;
 import java.nio.file.Path;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
@@ -70,11 +72,11 @@ public class FileManagerPlusApp extends Application implements IAppController, I
     // --- Core Data ---
     private final ObservableList<File> sourceRoots = FXCollections.observableArrayList();
     private final ObservableList<AppStrategy> pipelineStrategies = FXCollections.observableArrayList();
-    private List<AppStrategy> strategyPrototypes = new ArrayList<>();
     private final List<ChangeRecord> changePreviewList = new ArrayList<>();
     private final ConcurrentLinkedQueue<String> logQueue = new ConcurrentLinkedQueue<>();
     private final File lastConfigFile = new File(System.getProperty("user.home"), ".fmplus_config.properties");
     private final ThemeConfig currentTheme = new ThemeConfig();
+    private List<AppStrategy> strategyPrototypes = new ArrayList<>();
     private Stage primaryStage;
     // --- Infrastructure ---
     private ConfigFileManager configManager;
@@ -359,14 +361,14 @@ public class FileManagerPlusApp extends Application implements IAppController, I
             @Override
             protected List<ChangeRecord> call() throws Exception {
                 long t0 = System.currentTimeMillis();
-                updateMessage("扫描源文件...");
+                updateMessage("▶ ▶ ▶ 扫描源文件...");
                 List<File> initialFiles = new ArrayList<>();
                 for (File r : sourceRoots) {
                     if (isCancelled()) break;
                     initialFiles.addAll(scanFilesRobust(r, maxDepth, exts, this::updateMessage));
                 }
                 if (isCancelled()) return null;
-                log("扫描完成，共 " + initialFiles.size() + " 个文件。");
+                log("▶ ▶ ▶ 扫描完成，共 " + initialFiles.size() + " 个文件。");
 
                 List<ChangeRecord> currentRecords = initialFiles.stream()
                         .map(f -> new ChangeRecord(f.getName(), f.getName(), f, false, f.getAbsolutePath(), OperationType.NONE))
@@ -375,7 +377,7 @@ public class FileManagerPlusApp extends Application implements IAppController, I
                 for (int i = 0; i < pipelineStrategies.size(); i++) {
                     if (isCancelled()) break;
                     AppStrategy strategy = pipelineStrategies.get(i);
-                    updateMessage("执行步骤 " + (i + 1) + ": " + strategy.getName());
+                    updateMessage("▶ ▶ ▶ 执行步骤 " + (i + 1) + ": " + strategy.getName());
                     currentRecords = strategy.analyze(currentRecords, sourceRoots, (p, m) -> updateProgress(p, 1.0));
                 }
                 return currentRecords;
@@ -385,7 +387,7 @@ public class FileManagerPlusApp extends Application implements IAppController, I
         task.setOnSucceeded(e -> {
             fullChangeList = task.getValue();
             refreshPreviewTableFilter();
-            finishTaskUI("预览完成");
+            finishTaskUI("✅️预览完成");
             boolean hasChanges = fullChangeList.stream().anyMatch(ChangeRecord::isChanged);
             previewView.getBtnExecute().setDisable(!hasChanges);
         });
@@ -396,55 +398,85 @@ public class FileManagerPlusApp extends Application implements IAppController, I
     @Override
     public void runPipelineExecution() {
         if (fullChangeList.isEmpty()) return;
-        long count = fullChangeList.stream().filter(ChangeRecord::isChanged).count();
+        long count = fullChangeList.stream().filter(record -> record.isChanged()
+                && record.getOpType() != OperationType.NONE
+                && record.getStatus() != ExecStatus.SKIPPED).count();
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "执行 " + count + " 个变更?", ButtonType.YES, ButtonType.NO);
         if (alert.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) return;
 
         resetProgressUI("执行中...", true);
         if (getChkSaveLog().isSelected()) initFileLogger();
-
+        long startT = System.currentTimeMillis();
         Task<Void> task = new Task<Void>() {
             @Override
             protected Void call() throws Exception {
-                List<ChangeRecord> todos = fullChangeList.stream().filter(ChangeRecord::isChanged).collect(Collectors.toList());
+                List<ChangeRecord> todos = fullChangeList.stream()
+                        .filter(record -> record.isChanged()
+                                && record.getOpType() != OperationType.NONE
+                                && record.getStatus() != ExecStatus.SKIPPED)
+                        .collect(Collectors.toList());
                 int total = todos.size();
                 AtomicInteger curr = new AtomicInteger(0);
-                long startT = System.currentTimeMillis();
+
                 AtomicLong lastRefresh = new AtomicLong(System.currentTimeMillis());
 
                 int threads = getSpGlobalThreads().getValue();
                 executorService = Executors.newFixedThreadPool(threads);
+                log("▶ ▶ ▶ 任务启动，并发线程: " + threads);
+                log("▶ ▶ ▶ 注意：部分任务依赖同一个原始文件，会因为加锁导致串行执行，任务会一直轮询！");
 
-                for (ChangeRecord rec : todos) {
-                    if (isCancelled()) break;
-                    executorService.submit(() -> {
-                        if (isCancelled()) return;
-                        try {
-                            Platform.runLater(() -> rec.setStatus(ExecStatus.RUNNING));
-                            // [修改] 策略执行时不再传递线程数，只负责逻辑
-                            AppStrategy s = AppStrategyFactory.findStrategyForOp(rec.getOpType(), pipelineStrategies);
-                            logAndFile("开始处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().name() + ",目标路径：" + rec.getNewPath());
-                            if (s != null) {
-                                s.execute(rec);
-                                rec.setStatus(ExecStatus.SUCCESS);
-                                logAndFile("成功处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().name() + ",目标路径：" + rec.getNewPath());
-                            } else {
-                                rec.setStatus(ExecStatus.SKIPPED);
-                            }
-                        } catch (Exception e) {
-                            rec.setStatus(ExecStatus.FAILED);
-                            logAndFile("失败处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().name() + ",目标路径：" + rec.getNewPath() + ",原因" + e.getMessage());
-                            logAndFile("失败详细原因:" + ExceptionUtils.getStackTrace(e));
-                        } finally {
-                            int c = curr.incrementAndGet();
-                            updateProgress(c, total);
-                            if (c % 100 == 0 && (System.currentTimeMillis() - lastRefresh.get() > 5000))
-                                Platform.runLater(() -> {
-                                    updateStats(System.currentTimeMillis() - startT);
-                                    lastRefresh.set(System.currentTimeMillis());
-                                });
+                AtomicInteger round = new AtomicInteger(1);
+                log("▶ ▶ ▶ 第[" + round.incrementAndGet() + "]轮任务扫描，剩余待执行任务数：" + todos.size());
+                while (!todos.isEmpty() && !isCancelled()) {
+                    AtomicBoolean anyChange = new AtomicBoolean(false);
+                    for (ChangeRecord rec : todos) {
+                        if (isCancelled()) {
+                            break;
                         }
-                    });
+                        // 检查文件锁
+                        if (FileLockManager.isLocked(rec.getFileHandle())) continue;
+                        // 对原始文件加逻辑锁，避免并发操作同一个文件
+                        if (!FileLockManager.lock(rec.getFileHandle())) continue;
+                        anyChange.set(true);
+                        if (isCancelled()) continue;
+                        executorService.submit(() -> {
+                            try {
+                                rec.setStatus(ExecStatus.RUNNING);
+                                // [修改] 策略执行时不再传递线程数，只负责逻辑
+                                AppStrategy s = AppStrategyFactory.findStrategyForOp(rec.getOpType(), pipelineStrategies);
+                                log("▶ 开始处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().getName() + ",目标路径：" + rec.getNewPath());
+                                if (s != null) {
+                                    s.execute(rec);
+                                    rec.setStatus(ExecStatus.SUCCESS);
+                                    log("✅️ 成功处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().getName() + ",目标路径：" + rec.getNewPath() + "，耗时：");
+                                } else {
+                                    rec.setStatus(ExecStatus.SKIPPED);
+                                }
+                            } catch (Exception e) {
+                                rec.setStatus(ExecStatus.FAILED);
+                                log("❌ 失败处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().getName() + ",目标路径：" + rec.getNewPath() + ",原因" + e.getMessage());
+                                log("❌ 失败详细原因:" + ExceptionUtils.getStackTrace(e));
+                            } finally {
+                                // 文件解锁
+                                FileLockManager.unlock(rec.getFileHandle());
+                                int c = curr.incrementAndGet();
+                                updateProgress(c, total);
+                                if (c % 100 == 0 && (System.currentTimeMillis() - lastRefresh.get() > 5000))
+                                    Platform.runLater(() -> {
+                                        updateStats(System.currentTimeMillis() - startT);
+                                        lastRefresh.set(System.currentTimeMillis());
+                                        previewView.refresh();
+                                    });
+                            }
+                        });
+                    }
+                    if (anyChange.get()) {
+                        // 捞回那些因为被加锁未执行的变更，继续尝试执行
+                        todos = todos.stream().filter(rec -> rec.getStatus() == ExecStatus.PENDING).collect(Collectors.toList());
+                        log("▶ ▶ ▶ 第[" + round.incrementAndGet() + "]轮任务扫描，剩余待执行任务数：" + todos.size());
+                    }
+                    // 适当Sleep，避免反复刷数据
+                    Thread.sleep(2000);
                 }
                 executorService.shutdown();
                 while (!executorService.awaitTermination(500, TimeUnit.MILLISECONDS)) {
@@ -454,11 +486,14 @@ public class FileManagerPlusApp extends Application implements IAppController, I
                     }
                 }
                 updateStats(System.currentTimeMillis() - startT);
+                previewView.refresh();
                 return null;
             }
         };
+        updateStats(System.currentTimeMillis() - startT);
+
         task.setOnSucceeded(e -> {
-            finishTaskUI("执行完成");
+            finishTaskUI("➡ ➡ ➡ 执行完成 ⬅ ⬅ ⬅");
             closeFileLogger();
         });
         handleTaskLifecycle(task);
@@ -495,8 +530,8 @@ public class FileManagerPlusApp extends Application implements IAppController, I
                     if (!sm) continue;
                     count.incrementAndGet();
                     root.getChildren().add(new TreeItem<>(r));
-                    if(count.get()>limit){
-                        log("注意：实时预览数据限制为"+limit+"条！");
+                    if (count.get() > limit) {
+                        log("注意：实时预览数据限制为" + limit + "条！");
                         break;
                     }
                 }
@@ -548,7 +583,7 @@ public class FileManagerPlusApp extends Application implements IAppController, I
                     for (String e : exts) if (n.endsWith("." + e)) return true;
                     countIgnore.incrementAndGet();
                     return false;
-                }finally {
+                } finally {
                     countScan.incrementAndGet();
                     if (countScan.incrementAndGet() % 1000 == 0) {
                         String msgStr = "目录下：" + root.getAbsolutePath()
@@ -614,7 +649,7 @@ public class FileManagerPlusApp extends Application implements IAppController, I
             isTaskRunning = false;
             if (currentTask != null) currentTask.cancel();
             if (executorService != null) executorService.shutdownNow();
-            log("停止");
+            log("🛑 强制停止");
             finishTaskUI("已停止");
         }
     }
@@ -680,13 +715,14 @@ public class FileManagerPlusApp extends Application implements IAppController, I
         previewView.getBtnExecute().setDisable(true);
     }
 
+    @Override
+    // --- Config IO (包含线程数保存) ---
     public void log(String s) {
-        logQueue.offer(s);
-    }
-
-    private void logAndFile(String s) {
-        log(s);
-        if (fileLogger != null) fileLogger.println(s);
+        // 增加时间戳
+        String time = new SimpleDateFormat("HH:mm:ss.SSS").format(new Date());
+        String msg = "[" + time + "] ➡➡➡ " + s;
+        logQueue.offer(msg);
+        if (fileLogger != null) fileLogger.println(msg);
     }
 
     // --- Config & Log IO ---

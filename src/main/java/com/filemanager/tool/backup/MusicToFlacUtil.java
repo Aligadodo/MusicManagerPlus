@@ -1,4 +1,4 @@
-package com.filemanager.tool;
+package com.filemanager.tool.backup;
 
 import com.filemanager.rule.Rule;
 import com.filemanager.util.FileUtil;
@@ -15,21 +15,20 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class MusicToMp3Util {
-    private static final String music_types = "flac,wav";
+public class MusicToFlacUtil {
     private static final List<Rule> rulesOfTrans = new ArrayList<>();
     private static final List<Rule> rulesOfCopy = new ArrayList<>();
 
     static {
 
-        rulesOfTrans.add(new Rule("-", music_types));
-        rulesOfCopy.add(new Rule("-", "mp3,lrc"));
+        rulesOfTrans.add(new Rule("-", "aiff,ape,dfd,dsf,iso"));
+        rulesOfCopy.add(new Rule("-", "flac,lrc"));
 //        rules.add(new Rule("",music_types).regex(".*[\\u4e00-\\u9fa5]{2,}.*"));
     }
 
     public static void main(String[] args) throws InterruptedException {
         System.out.println("begin !");
-        syncDir("Q:\\音乐存档（MP3格式）\\","H:\\" );
+        syncDir("H:\\音乐存档（转flac格式）\\", "Q:\\音乐存档（DSD格式）" );
 //        renameFiles("L:\\", rules);
         System.out.println("done !");
     }
@@ -68,9 +67,6 @@ public class MusicToMp3Util {
                                     Rule rule = rulesOfTrans.stream().filter(fileTransRule -> fileTransRule.isApply(file)).findFirst().orElse(null);
                                     Rule rule2 = rulesOfCopy.stream().filter(fileTransRule -> fileTransRule.isApply(file)).findFirst().orElse(null);
                                     if(rule2==null&&rule==null){
-                                        return;
-                                    }
-                                    if(file.getPath().contains("8-待整理")){
                                         return;
                                     }
                                     File destDirectory = new File(file.getParentFile().getPath().replace("H:\\",destDir)+File.separator);
@@ -139,7 +135,7 @@ public class MusicToMp3Util {
             audio.setChannels(2);
             audio.setSamplingRate(44100);
             EncodingAttributes attrs = new EncodingAttributes();
-            attrs.setOutputFormat("mp3");
+            attrs.setOutputFormat("flac");
             attrs.setAudioAttributes(audio);
             Encoder encoder = new Encoder();
             encoder.encode(new MultimediaObject(source), target, attrs);

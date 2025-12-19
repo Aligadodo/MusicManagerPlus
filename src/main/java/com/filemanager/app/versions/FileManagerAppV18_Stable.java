@@ -7,10 +7,12 @@ import com.filemanager.model.RuleCondition;
 import com.filemanager.model.RuleConditionGroup;
 import com.filemanager.strategy.AppStrategy;
 import com.filemanager.strategy.AppStrategyFactory;
-import com.filemanager.tool.file.ParallelStreamWalker;
 import com.filemanager.type.ConditionType;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
+import com.filemanager.util.file.FileLockManager;
+import com.filemanager.util.file.FileSizeFormatUtil;
+import com.filemanager.util.file.ParallelStreamWalker;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXCheckBox;
 import com.jfoenix.controls.JFXComboBox;
@@ -58,6 +60,7 @@ import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
@@ -372,14 +375,14 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
             @Override
             protected List<ChangeRecord> call() throws Exception {
                 long t0 = System.currentTimeMillis();
-                updateMessage("扫描源文件...");
+                updateMessage("▶ ▶ ▶ 扫描源文件...");
                 List<File> initialFiles = new ArrayList<>();
                 for (File r : sourceRoots) {
                     if (isCancelled()) break;
                     initialFiles.addAll(scanFilesRobust(r, maxDepth, exts, this::updateMessage));
                 }
                 if (isCancelled()) return null;
-                log("扫描完成，共 " + initialFiles.size() + " 个文件。");
+                log("▶ ▶ ▶ 扫描完成，共 " + initialFiles.size() + " 个文件。");
 
                 List<ChangeRecord> currentRecords = initialFiles.stream()
                         .map(f -> new ChangeRecord(f.getName(), f.getName(), f, false, f.getAbsolutePath(), OperationType.NONE))
@@ -388,15 +391,15 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
                 for (int i = 0; i < pipelineStrategies.size(); i++) {
                     if (isCancelled()) break;
                     AppStrategy strategy = pipelineStrategies.get(i);
-                    updateMessage("分析步骤 " + (i + 1) + ": " + strategy.getName());
+                    updateMessage("▶ ▶ ▶ 分析步骤 " + (i + 1) + ": " + strategy.getName());
                     List<ChangeRecord> stepResults = strategy.analyze(currentRecords, sourceRoots, (p, m) -> updateProgress(p, 1.0));
                     if (stepResults.size() > currentRecords.size()) {
-                        updateMessage("分析步骤 " + (i + 1) + ": " + strategy.getName() + "预计增加文件" + (stepResults.size() - currentRecords.size()) + "个");
+                        updateMessage("▶ ▶ ▶ 分析步骤 " + (i + 1) + ": " + strategy.getName() + "预计增加文件" + (stepResults.size() - currentRecords.size()) + "个");
                     }
                     currentRecords.clear();
                     currentRecords.addAll(stepResults);
                 }
-                updateMessage("构建视图...");
+                updateMessage("▶ ▶ ▶ 构建视图...");
                 return currentRecords;
             }
         };
@@ -414,19 +417,24 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
     }
 
     public void runPipelineExecution() {
-        long count = fullChangeList.stream().filter(ChangeRecord::isChanged).count();
+        long count = fullChangeList.stream().filter(record -> record.isChanged()
+                && record.getOpType() != OperationType.NONE
+                && record.getStatus() != ExecStatus.SKIPPED).count();
         if (count == 0) return;
 
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "确定执行 " + count + " 个变更吗？", ButtonType.YES, ButtonType.NO);
         if (alert.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) return;
 
-        resetProgressUI("正在执行...", true);
+        resetProgressUI("▶ ▶ ▶ 正在执行...", true);
         if (chkSaveLog.isSelected()) initFileLogger();
 
         Task<Void> task = new Task<Void>() {
             @Override
             protected Void call() throws Exception {
-                List<ChangeRecord> todos = fullChangeList.stream().filter(ChangeRecord::isChanged).collect(Collectors.toList());
+                List<ChangeRecord> todos = fullChangeList.stream()
+                        .filter(record -> record.isChanged()
+                                && record.getOpType() != OperationType.NONE
+                                && record.getStatus() != ExecStatus.SKIPPED).collect(Collectors.toList());
                 int total = todos.size();
                 AtomicInteger curr = new AtomicInteger(0);
                 AtomicInteger succ = new AtomicInteger(0);
@@ -436,40 +444,61 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
                 // [修改] 使用全局配置的线程数初始化线程池
                 int initialThreads = spGlobalThreads.getValue();
                 executorService = Executors.newFixedThreadPool(initialThreads);
-                log("任务启动，并发线程: " + initialThreads);
-
-                for (ChangeRecord rec : todos) {
-                    if (isCancelled()) break;
-                    executorService.submit(() -> {
-                        if (isCancelled()) return;
-                        try {
-                            Platform.runLater(() -> rec.setStatus(ExecStatus.RUNNING));
-                            // [修改] 策略执行时不再传递线程数，只负责逻辑
-                            AppStrategy s = AppStrategyFactory.findStrategyForOp(rec.getOpType(), pipelineStrategies);
-                            logAndFile("开始处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().name() + ",目标路径：" + rec.getNewPath());
-                            if (s != null) {
-                                s.execute(rec);
-                                rec.setStatus(ExecStatus.SUCCESS);
-                                succ.incrementAndGet();
-                                logAndFile("成功处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().name() + ",目标路径：" + rec.getNewPath());
-                            } else {
-                                rec.setStatus(ExecStatus.SKIPPED);
-                            }
-                        } catch (Exception e) {
-                            rec.setStatus(ExecStatus.FAILED);
-                            logAndFile("失败处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().name() + ",目标路径：" + rec.getNewPath() + ",原因" + e.getMessage());
-                            logAndFile("失败详细原因:" + ExceptionUtils.getStackTrace(e));
-                        } finally {
-                            int c = curr.incrementAndGet();
-                            updateProgress(c, total);
-                            if (c % 100 == 0 && (System.currentTimeMillis() - lastRefresh.get() > 5000))
-                                Platform.runLater(() -> {
-                                    updateStats(System.currentTimeMillis() - startT);
-                                    lastRefresh.set(System.currentTimeMillis());
-                                    previewTable.refresh();
-                                });
+                log("▶ ▶ ▶ 任务启动，并发线程: " + initialThreads);
+                log("▶ ▶ ▶ 注意：部分任务依赖同一个原始文件，会因为加锁导致串行执行，任务会一直轮询！");
+                AtomicInteger round = new AtomicInteger(1);
+                log("▶ ▶ ▶ 第[" + round.incrementAndGet() + "]轮任务扫描，剩余待执行任务数：" + todos.size());
+                while (!todos.isEmpty() && !isCancelled()) {
+                    AtomicBoolean anyChange = new AtomicBoolean(false);
+                    for (ChangeRecord rec : todos) {
+                        if (isCancelled()) {
+                            break;
                         }
-                    });
+                        // 检查文件锁
+                        if (FileLockManager.isLocked(rec.getFileHandle())) continue;
+                        // 对原始文件加逻辑锁，避免并发操作同一个文件
+                        if (!FileLockManager.lock(rec.getFileHandle())) continue;
+                        anyChange.set(true);
+                        if (isCancelled()) continue;
+                        executorService.submit(() -> {
+                            try {
+                                rec.setStatus(ExecStatus.RUNNING);
+                                // [修改] 策略执行时不再传递线程数，只负责逻辑
+                                AppStrategy s = AppStrategyFactory.findStrategyForOp(rec.getOpType(), pipelineStrategies);
+                                log("▶ 开始处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().getName() + ",目标路径：" + rec.getNewPath());
+                                if (s != null) {
+                                    s.execute(rec);
+                                    rec.setStatus(ExecStatus.SUCCESS);
+                                    succ.incrementAndGet();
+                                    log("✅️ 成功处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().getName() + ",目标路径：" + rec.getNewPath() + "，耗时：");
+                                } else {
+                                    rec.setStatus(ExecStatus.SKIPPED);
+                                }
+                            } catch (Exception e) {
+                                rec.setStatus(ExecStatus.FAILED);
+                                log("❌ 失败处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().getName() + ",目标路径：" + rec.getNewPath() + ",原因" + e.getMessage());
+                                log("❌ 失败详细原因:" + ExceptionUtils.getStackTrace(e));
+                            } finally {
+                                // 文件解锁
+                                FileLockManager.unlock(rec.getFileHandle());
+                                int c = curr.incrementAndGet();
+                                updateProgress(c, total);
+                                if (c % 100 == 0 && (System.currentTimeMillis() - lastRefresh.get() > 5000))
+                                    Platform.runLater(() -> {
+                                        updateStats(System.currentTimeMillis() - startT);
+                                        lastRefresh.set(System.currentTimeMillis());
+                                        previewTable.refresh();
+                                    });
+                            }
+                        });
+                    }
+                    if (anyChange.get()) {
+                        // 捞回那些因为被加锁未执行的变更，继续尝试执行
+                        todos = todos.stream().filter(rec -> rec.getStatus() == ExecStatus.PENDING).collect(Collectors.toList());
+                        log("▶ ▶ ▶ 第[" + round.incrementAndGet() + "]轮任务扫描，剩余待执行任务数：" + todos.size());
+                    }
+                    // 适当Sleep，避免反复刷数据
+                    Thread.sleep(2000);
                 }
                 executorService.shutdown();
                 while (!executorService.awaitTermination(500, TimeUnit.MILLISECONDS)) {
@@ -484,9 +513,10 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
             }
         };
         task.setOnSucceeded(e -> {
-            finishTaskUI("执行完成");
+            finishTaskUI("➡ ➡ ➡ 执行完成 ⬅ ⬅ ⬅");
             closeFileLogger();
             btnExecute.setDisable(false);
+            FileLockManager.clearAllLocks();
         });
         handleTaskLifecycle(task);
         new Thread(task).start();
@@ -551,7 +581,7 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
         c1.setCellValueFactory(p -> new SimpleStringProperty(p.getValue().getValue().getOriginalName()));
         c1.setPrefWidth(250);
         TreeTableColumn<ChangeRecord, String> cS = new TreeTableColumn<>("大小");
-        cS.setCellValueFactory(p -> new SimpleStringProperty(formatFileSize(p.getValue().getValue().getFileHandle())));
+        cS.setCellValueFactory(p -> new SimpleStringProperty(FileSizeFormatUtil.formatFileSize(p.getValue().getValue().getFileHandle())));
         cS.setPrefWidth(80);
         TreeTableColumn<ChangeRecord, String> c2 = new TreeTableColumn<>("目标");
         c2.setCellValueFactory(p -> new SimpleStringProperty(p.getValue().getValue().getNewName()));
@@ -636,6 +666,7 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
             if (executorService != null) executorService.shutdownNow();
             log("🛑 强制停止");
             finishTaskUI("已停止");
+            FileLockManager.clearAllLocks();
         }
     }
 
@@ -757,16 +788,13 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
         uiUpdater.start();
     }
 
-    public void log(String s) {
-        logQueue.offer(s);
-    }
-
+    @Override
     // --- Config IO (包含线程数保存) ---
-    private void logAndFile(String s) {
+    public void log(String s) {
         // 增加时间戳
         String time = new SimpleDateFormat("HH:mm:ss.SSS").format(new Date());
-        String msg = "[" + time + "] --- " + s;
-        log(msg);
+        String msg = "[" + time + "] ➡ ➡ ➡ " + s;
+        logQueue.offer(s);
         if (fileLogger != null) fileLogger.println(msg);
     }
 
@@ -819,24 +847,6 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
         a.show();
     }
 
-    private String formatFileSize(File file) {
-        if (file == null) {
-            return "-";
-        }
-        long s = file.length();
-        if (s <= 0) return "0";
-        final String[] u = {"B", "KB", "MB", "GB"};
-        int d = (int) (Math.log10(s) / Math.log10(1024));
-        return new DecimalFormat("#,##0.#").format(s / Math.pow(1024, d)) + " " + u[d];
-    }
-
-    private VBox styledHeader(String t, String s) {
-        VBox v = new VBox(2);
-        Label l1 = styles.createHeader(t);
-        Label l2 = styles.createInfoLabel(s);
-        v.getChildren().addAll(l1, l2);
-        return v;
-    }
 
     private JFXButton createButton(String t, javafx.event.EventHandler<javafx.event.ActionEvent> h) {
         return styles.createActionButton(t, null, () -> h.handle(null));

@@ -3,6 +3,7 @@ package com.filemanager.ui;
 
 import com.filemanager.app.IAppController;
 import com.filemanager.model.ChangeRecord;
+import com.filemanager.util.file.FileSizeFormatUtil;
 import com.jfoenix.controls.*;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -17,7 +18,7 @@ import lombok.Getter;
 
 @Getter
 public class PreviewView {
-    private final IAppController controller;
+    private final IAppController app;
     private final StyleFactory styles;
     private VBox viewNode;
     private Tab tabPreview;
@@ -31,9 +32,9 @@ public class PreviewView {
     private JFXCheckBox chkHideUnchanged;
     private JFXButton btnExecute, btnStop;
 
-    public PreviewView(IAppController controller) {
-        this.controller = controller;
-        this.styles = controller.getStyleFactory();
+    public PreviewView(IAppController app) {
+        this.app = app;
+        this.styles = app.getStyleFactory();
         this.tabPreview = new Tab("预览");
         initControls();
         buildUI();
@@ -52,8 +53,8 @@ public class PreviewView {
         etaLabel = styles.createNormalLabel("");
         statsLabel = styles.createHeader("总计: 0");
         
-        btnExecute = styles.createActionButton("执行变更", "#27ae60", controller::runPipelineExecution);
-        btnStop = styles.createActionButton("停止", "#e74c3c", controller::forceStop);
+        btnExecute = styles.createActionButton("执行变更", "#27ae60", app::runPipelineExecution);
+        btnStop = styles.createActionButton("停止", "#e74c3c", app::forceStop);
         btnStop.setDisable(true);
         btnExecute.setDisable(true);
         
@@ -80,7 +81,7 @@ public class PreviewView {
         previewTable.setColumnResizePolicy(TreeTableView.CONSTRAINED_RESIZE_POLICY);
         previewTable.setStyle("-fx-background-color:rgba(255,255,255,0.4);-fx-base:rgba(255,255,255,0.1);");
         VBox.setVgrow(previewTable, Priority.ALWAYS);
-        
+        setupPreviewColumns();
         viewNode.getChildren().addAll(toolbar, dash, previewTable);
     }
     
@@ -102,6 +103,51 @@ public class PreviewView {
     public void updateStatsDisplay(long t, long c, long s,long f, String tm) {
         statsLabel.setText(String.format("文件总数:%d 需要变更:%d 操作成功:%d 操作失败:%d 过程耗时:%s", t, c, s, f, tm));
     }
+
+    private void setupPreviewColumns() {
+        TreeTableColumn<ChangeRecord, String> c1 = new TreeTableColumn<>("源文件");
+        c1.setCellValueFactory(p -> new SimpleStringProperty(p.getValue().getValue().getOriginalName()));
+        c1.setPrefWidth(250);
+        TreeTableColumn<ChangeRecord, String> cS = new TreeTableColumn<>("大小");
+        cS.setCellValueFactory(p -> new SimpleStringProperty(FileSizeFormatUtil.formatFileSize(p.getValue().getValue().getFileHandle())));
+        cS.setPrefWidth(80);
+        TreeTableColumn<ChangeRecord, String> c2 = new TreeTableColumn<>("目标");
+        c2.setCellValueFactory(p -> new SimpleStringProperty(p.getValue().getValue().getNewName()));
+        c2.setPrefWidth(250);
+        c2.setCellFactory(c -> new TreeTableCell<ChangeRecord, String>() {
+            @Override
+            protected void updateItem(String i, boolean e) {
+                super.updateItem(i, e);
+                setText(i);
+                try {
+                    if (getTreeTableRow().getItem() != null && (i != null && !i.equals(getTreeTableRow().getItem().getOriginalName())))
+                        setTextFill(Color.web("#27ae60"));
+                    else setTextFill(Color.BLACK);
+                } catch (Exception e1) {
+                    setTextFill(Color.BLACK);
+                }
+            }
+        });
+        TreeTableColumn<ChangeRecord, String> c3 = new TreeTableColumn<>("状态");
+        c3.setCellValueFactory(p -> new SimpleStringProperty(p.getValue().getValue().getStatus().toString()));
+        c3.setPrefWidth(80);
+        TreeTableColumn<ChangeRecord, String> c4 = new TreeTableColumn<>("路径");
+        c4.setCellValueFactory(p -> new SimpleStringProperty(p.getValue().getValue().getNewPath()));
+        c4.setPrefWidth(350);
+        previewTable.getColumns().setAll(c1, cS, c2, c3, c4);
+        previewTable.setRowFactory(tv -> {
+            TreeTableRow<ChangeRecord> row = new TreeTableRow<>();
+            ContextMenu cm = new ContextMenu();
+            MenuItem i1 = new MenuItem("打开文件");
+            i1.setOnAction(e -> app.openFileInSystem(row.getItem().getFileHandle()));
+            MenuItem i2 = new MenuItem("打开目录");
+            i2.setOnAction(e -> app.openParentDirectory(row.getItem().getFileHandle()));
+            cm.getItems().addAll(i1, i2);
+            row.contextMenuProperty().bind(javafx.beans.binding.Bindings.when(row.emptyProperty()).then((ContextMenu) null).otherwise(cm));
+            return row;
+        });
+    }
+    
     public void refresh() { previewTable.refresh(); }
 
     // Getters

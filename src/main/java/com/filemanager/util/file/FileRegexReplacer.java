@@ -1,7 +1,4 @@
-package com.filemanager.tool.file;
-
-import com.ibm.icu.text.CharsetDetector;
-import com.ibm.icu.text.CharsetMatch;
+package com.filemanager.util.file;
 
 import java.io.*;
 import java.nio.charset.Charset;

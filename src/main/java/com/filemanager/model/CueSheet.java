@@ -30,7 +30,8 @@ public class CueSheet {
         public int number;
         public String title;
         public String performer;
-        public long startTimeMs; // 转换后的毫秒数
+        public long filetartTimeMs; //
+        public long soundStartTimeMs; // 转换后的毫秒数
         public String rawTime;
     }
 }

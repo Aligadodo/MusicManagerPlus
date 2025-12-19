@@ -417,7 +417,7 @@ public class FileManagerAppV14_Stable extends Application implements IManagerApp
                 pipelineListView.getSelectionModel().select(newStep);
                 invalidatePreview("添加步骤");
             } catch (Exception e) {
-                log("添加失败: " + e.getMessage());
+                log("❌ 添加失败: " + e.getMessage());
             }
         }
     }
@@ -506,7 +506,7 @@ public class FileManagerAppV14_Stable extends Application implements IManagerApp
             props.store(fos, "Config");
             log("配置已保存至: " + file.getName());
         } catch (Exception e) {
-            log("保存失败: " + e.getMessage());
+            log("❌ 保存失败: " + e.getMessage());
         }
     }
 
@@ -548,13 +548,13 @@ public class FileManagerAppV14_Stable extends Application implements IManagerApp
                     strategy.loadConfig(strategyProps);
                     pipelineStrategies.add(strategy);
                 } catch (Exception ex) {
-                    log("加载策略失败: " + ex.getMessage());
+                    log("❌ 加载策略失败: " + ex.getMessage());
                 }
             }
             if (!pipelineStrategies.isEmpty()) pipelineListView.getSelectionModel().select(0);
             log("配置已加载: " + file.getName());
         } catch (Exception e) {
-            log("加载失败: " + e.getMessage());
+            log("❌ 加载失败: " + e.getMessage());
         }
     }
 
@@ -635,13 +635,13 @@ public class FileManagerAppV14_Stable extends Application implements IManagerApp
                                 s.execute(r);
                                 Platform.runLater(() -> r.setStatus(ExecStatus.SUCCESS));
                                 succ.incrementAndGet();
-                                logAndFile("成功: " + r.getNewName());
+                                logAndFile("✅️成功: " + r.getNewName());
                             } else {
                                 Platform.runLater(() -> r.setStatus(ExecStatus.SKIPPED));
                             }
                         } catch (Exception e) {
                             Platform.runLater(() -> r.setStatus(ExecStatus.FAILED));
-                            logAndFile("失败: " + e.getMessage());
+                            logAndFile("❌ 失败: " + e.getMessage());
                         } finally {
                             int c = curr.incrementAndGet();
                             updateProgress(c, total);

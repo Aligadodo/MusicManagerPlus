@@ -1,4 +1,4 @@
-package com.filemanager.tool;
+package com.filemanager.tool.backup;
 
 import com.filemanager.model.FileStatisticInfo;
 import com.filemanager.model.MusicInfo;
@@ -12,7 +12,6 @@ import org.jaudiotagger.tag.FieldKey;
 import org.jaudiotagger.tag.Tag;
 import com.filemanager.rule.Rule;
 import com.filemanager.util.FileUtil;
-import com.filemanager.util.MusicNameParserUtil;
 
 import java.io.File;
 import java.io.IOException;

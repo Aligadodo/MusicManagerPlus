@@ -1,4 +1,4 @@
-package com.filemanager.tool.file;
+package com.filemanager.util.file;
 
 import com.ibm.icu.text.CharsetDetector;
 import com.ibm.icu.text.CharsetMatch;

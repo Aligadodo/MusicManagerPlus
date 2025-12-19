@@ -2,7 +2,7 @@ package com.filemanager.strategy;
 
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.FileStatisticInfo;
-import com.filemanager.tool.file.FileRegexReplacer;
+import com.filemanager.util.file.FileRegexReplacer;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
 import com.jfoenix.controls.JFXComboBox;

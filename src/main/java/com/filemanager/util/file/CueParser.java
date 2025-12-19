@@ -1,7 +1,6 @@
-package com.filemanager.tool.file;
+package com.filemanager.util.file;
 
 import com.filemanager.model.CueSheet;
-import lombok.SneakyThrows;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.nio.file.*;
@@ -53,12 +52,12 @@ public class CueParser {
                         if (value.startsWith("01")) { // Index 01 是音轨起始点
                             String timeStr = value.split("\\s+")[1];
                             currentCueTrack.rawTime = timeStr;
-                            currentCueTrack.startTimeMs = cueTimeToMs(timeStr);
+                            currentCueTrack.soundStartTimeMs = cueTimeToMs(timeStr);
                         }
                         if (value.startsWith("01")) { // Index 01 是音轨起始点
                             String timeStr = value.split("\\s+")[1];
                             currentCueTrack.rawTime = timeStr;
-                            currentCueTrack.startTimeMs = cueTimeToMs(timeStr);
+                            currentCueTrack.soundStartTimeMs = cueTimeToMs(timeStr);
                         }
                         break;
                 }

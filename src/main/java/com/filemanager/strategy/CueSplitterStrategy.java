@@ -2,30 +2,16 @@ package com.filemanager.strategy;
 
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.CueSheet;
-import com.filemanager.tool.file.CueParser;
+import com.filemanager.util.file.CueParser;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
-import com.jfoenix.controls.JFXButton;
-import com.jfoenix.controls.JFXComboBox;
 import javafx.application.Platform;
-import javafx.collections.FXCollections;
 import javafx.scene.Node;
-import javafx.scene.control.*;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.VBox;
-import javafx.stage.FileChooser;
-import net.bramp.ffmpeg.FFmpeg;
-import net.bramp.ffmpeg.FFmpegExecutor;
-import net.bramp.ffmpeg.builder.FFmpegBuilder;
-import net.bramp.ffmpeg.builder.FFmpegOutputBuilder;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.io.File;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
@@ -127,12 +113,12 @@ public class CueSplitterStrategy extends AbstractFfmpegStrategy {
                     CueSheet.CueTrack t = cueTracks.get(i);
 
                     // 计算起止时间
-                    long startTime = t.startTimeMs;
+                    long startTime = t.soundStartTimeMs;
 
                     long duration = 0L;
                     if (i < cueTracks.size() - 1) {
                         CueSheet.CueTrack next = cueTracks.get(i + 1);
-                        duration = next.startTimeMs - startTime;
+                        duration = next.soundStartTimeMs - startTime;
                     }
                     // 构建文件名
                     String trackTitle = t.title.isEmpty() ? "Unknown" : t.title;
@@ -155,13 +141,16 @@ public class CueSplitterStrategy extends AbstractFfmpegStrategy {
                     String displayInfo = String.format("[%02d] %s - %s [%s]", t.number, trackTitle, artist, durationStr);
                     File targetFile = new File(params.get("parentPath"), trackName);
                     // 忽略已存在的文件
-                    if (targetFile.exists()) {
+                    boolean targetExists = targetFile.exists();
+                    if (targetExists && !pOverwrite) {
                         continue;
                     }
                     params.put("source", sourceAudio.getAbsolutePath());
                     // 存入双精度秒数
                     params.put("start", String.format(Locale.US, "%d", startTime));
-                    if (duration != 0) params.put("duration", String.format(Locale.US, "%d", duration));
+                    if (duration != 0) {
+                        params.put("duration", String.format(Locale.US, "%d", duration));
+                    }
                     if (t.title != null) {
                         params.put("meta_title", t.title);
                         params.put("meta_artist", artist);
