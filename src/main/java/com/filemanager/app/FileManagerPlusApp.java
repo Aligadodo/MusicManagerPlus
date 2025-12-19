@@ -439,22 +439,22 @@ public class FileManagerPlusApp extends Application implements IAppController, I
                         if (!FileLockManager.lock(rec.getFileHandle())) continue;
                         anyChange.set(true);
                         if (isCancelled()) continue;
+                        rec.setStatus(ExecStatus.RUNNING);
                         executorService.submit(() -> {
                             try {
-                                rec.setStatus(ExecStatus.RUNNING);
                                 // [修改] 策略执行时不再传递线程数，只负责逻辑
                                 AppStrategy s = AppStrategyFactory.findStrategyForOp(rec.getOpType(), pipelineStrategies);
-                                log("▶ 开始处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().getName() + ",目标路径：" + rec.getNewPath());
+                                log("▶ 开始处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().getName() + ",目标路径：" + rec.getNewName());
                                 if (s != null) {
                                     s.execute(rec);
                                     rec.setStatus(ExecStatus.SUCCESS);
-                                    log("✅️ 成功处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().getName() + ",目标路径：" + rec.getNewPath() + "，耗时：");
+                                    log("✅️ 成功处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().getName() + ",目标路径：" + rec.getNewName() + "，耗时：");
                                 } else {
                                     rec.setStatus(ExecStatus.SKIPPED);
                                 }
                             } catch (Exception e) {
                                 rec.setStatus(ExecStatus.FAILED);
-                                log("❌ 失败处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().getName() + ",目标路径：" + rec.getNewPath() + ",原因" + e.getMessage());
+                                log("❌ 失败处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().getName() + ",目标路径：" + rec.getNewName() + ",原因" + e.getMessage());
                                 log("❌ 失败详细原因:" + ExceptionUtils.getStackTrace(e));
                             } finally {
                                 // 文件解锁

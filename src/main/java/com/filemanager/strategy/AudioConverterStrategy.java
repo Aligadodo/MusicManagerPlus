@@ -87,7 +87,7 @@ public class AudioConverterStrategy extends AbstractFfmpegStrategy {
                         double p = (double) curr / total;
                         Platform.runLater(() -> progressReporter.accept(p, "分析音频: " + curr + "/" + total));
                     }
-                    Map<String, String> param = getParams(virtualInput.getParentFile());
+                    Map<String, String> param = getParams(virtualInput.getParentFile(), name);
                     String newName = name.substring(0, dotIndex) + "." + param.get("format");
                     File targetFile = new File(param.get("parentPath"), newName);
                     ExecStatus status = ExecStatus.PENDING;

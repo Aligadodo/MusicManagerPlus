@@ -107,11 +107,11 @@ public class CueSplitterStrategy extends AbstractFfmpegStrategy {
             List<ChangeRecord> tracks = new ArrayList<>();
             List<CueSheet.CueTrack> cueTracks = cueSheet.tracks;
 
-            Map<String, String> params = getParams(sourceAudio.getParentFile());
+
             try {
                 for (int i = 0; i < cueTracks.size(); i++) {
                     CueSheet.CueTrack t = cueTracks.get(i);
-
+                    Map<String, String> params = getParams(sourceAudio.getParentFile(), "Track-"+t.number);
                     // 计算起止时间
                     long startTime = t.soundStartTimeMs;
 
@@ -146,8 +146,8 @@ public class CueSplitterStrategy extends AbstractFfmpegStrategy {
                         continue;
                     }
                     params.put("source", sourceAudio.getAbsolutePath());
-                    // 存入双精度秒数
-                    params.put("start", String.format(Locale.US, "%d", startTime));
+                    // 存入毫秒数
+                    params.put("start", startTime+"");
                     if (duration != 0) {
                         params.put("duration", String.format(Locale.US, "%d", duration));
                     }

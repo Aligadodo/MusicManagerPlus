@@ -39,6 +39,7 @@ public class AbstractFfmpegStrategy extends AppStrategy {
     protected final JFXComboBox<String> cbChannels;
     protected final TextField txtFFmpegPath;
     protected final CheckBox chkEnableCache;
+    protected final CheckBox chkEnableTempSuffix;
     protected final TextField txtCacheDir;
     protected final CheckBox chkForceFilenameMeta;
 
@@ -50,6 +51,7 @@ public class AbstractFfmpegStrategy extends AppStrategy {
     protected boolean pOverwrite;
     protected String pFFmpeg;
     protected boolean pUseCache;
+    protected boolean pUseTempSuffix;
     protected String pCacheDir;
     protected boolean pForceMeta;
     protected int pInnerThreads;
@@ -57,7 +59,7 @@ public class AbstractFfmpegStrategy extends AppStrategy {
     protected String pChannels;
 
     public AbstractFfmpegStrategy() {
-        cbTargetFormat = new JFXComboBox<>(FXCollections.observableArrayList("WAV (CD标准)", "FLAC", "WAV",  "MP3", "ALAC", "AAC", "OGG"));
+        cbTargetFormat = new JFXComboBox<>(FXCollections.observableArrayList("WAV (CD标准)", "FLAC", "WAV", "MP3", "ALAC", "AAC", "OGG"));
         cbTargetFormat.setTooltip(new Tooltip("WAV CD标准会按照16bit转录音频文件，反之则按照24bit转录，对CD刻录场景的播放会有负面影响。"));
         cbTargetFormat.getSelectionModel().select(0);
 
@@ -102,7 +104,10 @@ public class AbstractFfmpegStrategy extends AppStrategy {
         txtFFmpegPath = new TextField("ffmpeg");
         txtFFmpegPath.setPromptText("Path to ffmpeg executable");
 
-        chkEnableCache = new CheckBox("启用 SSD 缓存暂存 (解决IO瓶颈)");
+        chkEnableCache = new CheckBox("启用 SSD 缓存暂存(解决IO瓶颈)");
+        chkEnableTempSuffix = new CheckBox("启用.temp文件后缀(SSD缓存启用时不生效)");
+        chkEnableTempSuffix.disableProperty().bind(chkEnableCache.selectedProperty());
+
         txtCacheDir = new TextField();
         txtCacheDir.setPromptText("SSD 缓存目录路径");
     }
@@ -156,7 +161,7 @@ public class AbstractFfmpegStrategy extends AppStrategy {
 
         // 3. 处理选项
         VBox optionsBox = new VBox(8);
-        optionsBox.getChildren().addAll(chkOverwrite, chkForceFilenameMeta, chkEnableCache);
+        optionsBox.getChildren().addAll(chkOverwrite, chkForceFilenameMeta, chkEnableCache, chkEnableTempSuffix);
 
         // 4. 路径与缓存
         GridPane pathGrid = new GridPane();
@@ -232,6 +237,7 @@ public class AbstractFfmpegStrategy extends AppStrategy {
         pOverwrite = chkOverwrite.isSelected();
         pFFmpeg = txtFFmpegPath.getText();
         pUseCache = chkEnableCache.isSelected();
+        pUseTempSuffix = chkEnableTempSuffix.isSelected();
         pCacheDir = txtCacheDir.getText();
         pForceMeta = chkForceFilenameMeta.isSelected();
         pInnerThreads = spFfmpegThreads.getValue();
@@ -254,6 +260,7 @@ public class AbstractFfmpegStrategy extends AppStrategy {
             props.setProperty("ac_ffmpeg", txtFFmpegPath.getText());
         }
         props.setProperty("ac_useCache", String.valueOf(chkEnableCache.isSelected()));
+        props.setProperty("ac_useTempSuffix", String.valueOf(chkEnableTempSuffix.isSelected()));
         if (txtCacheDir.getText() != null) {
             props.setProperty("ac_cacheDir", txtCacheDir.getText());
         }
@@ -280,6 +287,9 @@ public class AbstractFfmpegStrategy extends AppStrategy {
         }
         if (props.containsKey("ac_useCache")) {
             chkEnableCache.setSelected(Boolean.parseBoolean(props.getProperty("ac_useCache")));
+        }
+        if (props.containsKey("ac_useTempSuffix")) {
+            chkEnableTempSuffix.setSelected(Boolean.parseBoolean(props.getProperty("ac_useTempSuffix")));
         }
         if (props.containsKey("ac_cacheDir")) {
             txtCacheDir.setText(props.getProperty("ac_cacheDir"));
@@ -370,12 +380,18 @@ public class AbstractFfmpegStrategy extends AppStrategy {
             if (!meta.getAlbum().isEmpty()) outputBuilder = outputBuilder.addMetaTag("album", meta.getAlbum());
             if (!meta.getYear().isEmpty()) outputBuilder = outputBuilder.addMetaTag("date", meta.getYear());
             if (!meta.getTrack().isEmpty()) outputBuilder = outputBuilder.addMetaTag("track", meta.getTrack());
-            if (params.containsKey("meta_title")) outputBuilder = outputBuilder.addMetaTag("title", params.get("meta_title"));
-            if (params.containsKey("meta_artist")) outputBuilder = outputBuilder.addMetaTag("artist", params.get("meta_artist"));
-            if (params.containsKey("meta_album")) outputBuilder = outputBuilder.addMetaTag("album", params.get("meta_album"));
-            if (params.containsKey("meta_track")) outputBuilder = outputBuilder.addMetaTag("track", params.get("meta_track"));
-            if (params.containsKey("meta_genre")) outputBuilder = outputBuilder.addMetaTag("genre", params.get("meta_genre"));
-            if (params.containsKey("meta_date")) outputBuilder = outputBuilder.addMetaTag("date", params.get("meta_date"));
+            if (params.containsKey("meta_title"))
+                outputBuilder = outputBuilder.addMetaTag("title", params.get("meta_title"));
+            if (params.containsKey("meta_artist"))
+                outputBuilder = outputBuilder.addMetaTag("artist", params.get("meta_artist"));
+            if (params.containsKey("meta_album"))
+                outputBuilder = outputBuilder.addMetaTag("album", params.get("meta_album"));
+            if (params.containsKey("meta_track"))
+                outputBuilder = outputBuilder.addMetaTag("track", params.get("meta_track"));
+            if (params.containsKey("meta_genre"))
+                outputBuilder = outputBuilder.addMetaTag("genre", params.get("meta_genre"));
+            if (params.containsKey("meta_date"))
+                outputBuilder = outputBuilder.addMetaTag("date", params.get("meta_date"));
             outputBuilder = outputBuilder.addMetaTag("comment", "Processed by Echo Music Manager");
         }
 
@@ -394,12 +410,12 @@ public class AbstractFfmpegStrategy extends AppStrategy {
             } catch (NumberFormatException ignored) {
             }
         }
-        log("执行ffmpeg命令： "+ StringUtils.join(outputBuilder.buildOptions()," "));
+        log("▶ 执行ffmpeg命令： " + StringUtils.join(outputBuilder.done().build(), " "));
         new FFmpegExecutor(ffmpeg).createJob(outputBuilder.done()).run();
     }
 
 
-    protected Map<String, String> getParams(File parentDir) {
+    protected Map<String, String> getParams(File parentDir, String tempName) {
         Map<String, String> params = new HashMap<>();
         // [核心优化] 默认目录名逻辑
         if (pRelPath == null || pRelPath.trim().isEmpty()) {
@@ -475,6 +491,8 @@ public class AbstractFfmpegStrategy extends AppStrategy {
             String tempFileName = UUID.randomUUID().toString();
             File stagingFile = new File(pCacheDir, tempFileName);
             params.put("stagingPath", stagingFile.getAbsolutePath());
+        } else if (pUseTempSuffix) {
+            params.put("stagingPath", new File(parentPath, tempName + ".temp").getAbsolutePath());
         }
         return params;
     }
