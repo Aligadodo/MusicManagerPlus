@@ -55,7 +55,6 @@ import org.controlsfx.control.CheckComboBox;
 import java.awt.*;
 import java.io.*;
 import java.nio.file.Path;
-import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.*;
@@ -76,7 +75,7 @@ import java.util.stream.Stream;
  * 3. Fluid UX: 使用侧边栏导航，操作路径更清晰。
  * 4. 更好地操作性和更多的组件
  */
-public class FileManagerAppV18_Stable extends Application implements IManagerAppInterface {
+public class FileManagerAppV20_Stable extends Application implements IManagerAppInterface {
 
     // --- 外观配置 ---
     private static final ThemeConfig currentTheme = new ThemeConfig();
@@ -1249,7 +1248,7 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
 
     // [修改] ComposeView 类：移除成员变量遮蔽，直接使用主类的字段
     private class ComposeView {
-        private final FileManagerAppV18_Stable app;
+        private final FileManagerAppV20_Stable app;
         private VBox viewNode;
         private ListView<File> sourceListView;
         private JFXComboBox<AppStrategy> cbStrategyTemplates;
@@ -1257,7 +1256,7 @@ public class FileManagerAppV18_Stable extends Application implements IManagerApp
         // private ListView<AppStrategy> pipelineListView;
         // private VBox configContainer;
 
-        public ComposeView(FileManagerAppV18_Stable app) {
+        public ComposeView(FileManagerAppV20_Stable app) {
             this.app = app;
             buildUI();
         }

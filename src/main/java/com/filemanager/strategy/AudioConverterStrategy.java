@@ -24,7 +24,10 @@ public class AudioConverterStrategy extends AbstractFfmpegStrategy {
     public AudioConverterStrategy() {
         super();
     }
-
+    @Override
+    public String getDefaultDirPrefix() {
+        return "Convert";
+    }
     @Override
     public String getName() {
         return "音频格式转换";

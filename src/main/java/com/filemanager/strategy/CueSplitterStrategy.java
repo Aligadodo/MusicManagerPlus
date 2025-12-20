@@ -2,10 +2,10 @@ package com.filemanager.strategy;
 
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.CueSheet;
-import com.filemanager.util.file.CueParser;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
+import com.filemanager.util.file.CueParserUtil;
 import javafx.application.Platform;
 import javafx.scene.Node;
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -24,6 +24,11 @@ import java.util.stream.Stream;
 public class CueSplitterStrategy extends AbstractFfmpegStrategy {
     public CueSplitterStrategy() {
         super();
+    }
+
+    @Override
+    public String getDefaultDirPrefix() {
+        return "Splite";
     }
 
     @Override
@@ -66,6 +71,7 @@ public class CueSplitterStrategy extends AbstractFfmpegStrategy {
         if (rec.getOpType() != OperationType.SPLIT) return;
         super.execute(rec);
     }
+
     // --- 核心逻辑：分析 ---
     @Override
     public List<ChangeRecord> analyze(List<ChangeRecord> inputRecords, List<File> rootDirs, BiConsumer<Double, String> progressReporter) {
@@ -98,47 +104,43 @@ public class CueSplitterStrategy extends AbstractFfmpegStrategy {
                 Platform.runLater(() -> progressReporter.accept((double) c / total, "解析 CUE: " + cueFile.getName()));
 
             // 解析
-            CueSheet cueSheet = CueParser.parse(cueFile.toPath());
-            if (cueSheet == null || cueSheet.tracks.isEmpty()) return Stream.empty();
+            CueSheet cueSheet = CueParserUtil.parse(cueFile.toPath());
+            if (cueSheet == null || cueSheet.getTracks().isEmpty()) return Stream.empty();
+
+            // 分轨的cue文件无需再切分
+            if (cueSheet.getCountFiles() == cueSheet.getTracks().size()) {
+                log("自动忽略。已切分的分轨文件，无需重新切分，直接用格式转换组件即可处理："+cueFile.getAbsolutePath());
+                return Stream.empty();
+            }
 
             // 定位音频源文件
-            File sourceAudio = locateAudioFile(cueFile, cueSheet.fileName);
+            File sourceAudio = CueParserUtil.locateAudioFile(cueFile, cueSheet.getAlbumFileName());
             if (sourceAudio == null) return Stream.empty();
             List<ChangeRecord> tracks = new ArrayList<>();
-            List<CueSheet.CueTrack> cueTracks = cueSheet.tracks;
-
+            List<CueSheet.CueTrack> cueTracks = cueSheet.getTracks();
 
             try {
                 for (int i = 0; i < cueTracks.size(); i++) {
                     CueSheet.CueTrack t = cueTracks.get(i);
-                    Map<String, String> params = getParams(sourceAudio.getParentFile(), "Track-"+t.number);
-                    // 计算起止时间
-                    long startTime = t.soundStartTimeMs;
+                    Map<String, String> params = getParams(sourceAudio.getParentFile(), "Track-" + t.getNumber());
 
-                    long duration = 0L;
-                    if (i < cueTracks.size() - 1) {
-                        CueSheet.CueTrack next = cueTracks.get(i + 1);
-                        duration = next.soundStartTimeMs - startTime;
+                    sourceAudio = CueParserUtil.locateAudioFile(cueFile, t.getFormatedFileName());
+                    if (sourceAudio == null) {
+                        continue;
                     }
+
+                    // 起止时间
+                    long startTime = t.getSoundStartTimeMs();
+                    long duration = t.getDuration();
+
                     // 构建文件名
-                    String trackTitle = t.title.isEmpty() ? "Unknown" : t.title;
-                    String safeTitle = trackTitle.replaceAll("[\\\\/:*?\"<>|]", "_");
-                    String trackName = String.format("%02d - %s.%s", t.number, safeTitle, params.get("format"));
+                    String trackName = t.getFormatedTrackName(params.get("format"));
 
                     // 继承全局信息
-                    String artist = t.performer;
-                    if (artist == null || artist.isEmpty()) artist = cueSheet.albumPerformer;
-                    String album = cueSheet.albumTitle;
-
-                    // 格式化时长用于展示 (MM:SS)
-                    String durationStr = "??:??";
-                    if (duration != 0L) {
-                        int totalSec = Math.round(duration / 1000);
-                        durationStr = String.format("%02d:%02d", totalSec / 60, totalSec % 60);
-                    }
-
+                    String artist = t.getPerformer();
+                    String album = cueSheet.getAlbumTitle();
                     // [核心优化] 丰富预览信息：[01] 歌名 - 歌手 [04:20]
-                    String displayInfo = String.format("[%02d] %s - %s [%s]", t.number, trackTitle, artist, durationStr);
+                    String displayInfo = t.getDisplayInfo();
                     File targetFile = new File(params.get("parentPath"), trackName);
                     // 忽略已存在的文件
                     boolean targetExists = targetFile.exists();
@@ -147,15 +149,15 @@ public class CueSplitterStrategy extends AbstractFfmpegStrategy {
                     }
                     params.put("source", sourceAudio.getAbsolutePath());
                     // 存入毫秒数
-                    params.put("start", startTime+"");
+                    params.put("start", startTime + "");
                     if (duration != 0) {
                         params.put("duration", String.format(Locale.US, "%d", duration));
                     }
-                    if (t.title != null) {
-                        params.put("meta_title", t.title);
+                    if (t.getTitle() != null) {
+                        params.put("meta_title", t.getTitle());
                         params.put("meta_artist", artist);
                         params.put("meta_album", album);
-                        params.put("meta_track", String.valueOf(t.number));
+                        params.put("meta_track", String.valueOf(t.getNumber()));
                     }
                     ChangeRecord trackRec = new ChangeRecord(
                             displayInfo, // 使用富信息作为源展示
@@ -180,31 +182,4 @@ public class CueSplitterStrategy extends AbstractFfmpegStrategy {
         return result;
     }
 
-
-    // ==================== CUE 解析与辅助 ====================
-    private File locateAudioFile(File cueFile, String declaredName) {
-        File dir = cueFile.getParentFile();
-        if (declaredName != null && !declaredName.isEmpty()) {
-            File f = new File(dir, declaredName);
-            if (f.exists()) return f;
-        }
-
-        String baseName = cueFile.getName();
-        int dot = baseName.lastIndexOf('.');
-        if (dot > 0) baseName = baseName.substring(0, dot);
-
-        String[] exts = {".flac", ".wav", ".ape", ".m4a", ".dsf", ".dff", ".tak", ".tta", ".wv"};
-        for (String ext : exts) {
-            File f = new File(dir, baseName + ext);
-            if (f.exists()) return f;
-            if (declaredName != null) {
-                int d2 = declaredName.lastIndexOf('.');
-                if (d2 > 0) {
-                    File f2 = new File(dir, declaredName.substring(0, d2) + ext);
-                    if (f2.exists()) return f2;
-                }
-            }
-        }
-        return null;
-    }
 }

@@ -424,9 +424,8 @@ public class FileManagerPlusApp extends Application implements IAppController, I
                 executorService = Executors.newFixedThreadPool(threads);
                 log("▶ ▶ ▶ 任务启动，并发线程: " + threads);
                 log("▶ ▶ ▶ 注意：部分任务依赖同一个原始文件，会因为加锁导致串行执行，任务会一直轮询！");
-
+                log("▶ ▶ ▶ 第[" + 1 + "]轮任务扫描，总待执行任务数：" + todos.size());
                 AtomicInteger round = new AtomicInteger(1);
-                log("▶ ▶ ▶ 第[" + round.incrementAndGet() + "]轮任务扫描，剩余待执行任务数：" + todos.size());
                 while (!todos.isEmpty() && !isCancelled()) {
                     AtomicBoolean anyChange = new AtomicBoolean(false);
                     for (ChangeRecord rec : todos) {
@@ -461,12 +460,13 @@ public class FileManagerPlusApp extends Application implements IAppController, I
                                 FileLockManager.unlock(rec.getFileHandle());
                                 int c = curr.incrementAndGet();
                                 updateProgress(c, total);
-                                if (c % 100 == 0 && (System.currentTimeMillis() - lastRefresh.get() > 5000))
-                                    Platform.runLater(() -> {
-                                        updateStats(System.currentTimeMillis() - startT);
-                                        lastRefresh.set(System.currentTimeMillis());
-                                        previewView.refresh();
-                                    });
+                                if (c % 10 == 0 || (System.currentTimeMillis() - lastRefresh.get() > 5000)) {
+                                    updateStats(System.currentTimeMillis() - startT);
+                                }
+                                if (c % 100 == 0 && (System.currentTimeMillis() - lastRefresh.get() > 5000)) {
+                                    lastRefresh.set(System.currentTimeMillis());
+                                    refreshPreviewTableFilter();
+                                }
                             }
                         });
                     }
@@ -486,7 +486,7 @@ public class FileManagerPlusApp extends Application implements IAppController, I
                     }
                 }
                 updateStats(System.currentTimeMillis() - startT);
-                previewView.refresh();
+                refreshPreviewTableFilter();
                 return null;
             }
         };

@@ -16,6 +16,8 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import lombok.Getter;
 
+import java.io.File;
+
 @Getter
 public class PreviewView {
     private final IAppController app;
@@ -47,6 +49,9 @@ public class PreviewView {
         cbStatusFilter.getSelectionModel().select(0);
         chkHideUnchanged = new JFXCheckBox("仅显示变更");
         chkHideUnchanged.setSelected(true);
+        txtSearchFilter.textProperty().addListener((o, old, v) -> app.refreshPreviewTableFilter());
+        cbStatusFilter.valueProperty().addListener((o, old, v) -> app.refreshPreviewTableFilter());
+        chkHideUnchanged.selectedProperty().addListener((o, old, v) -> app.refreshPreviewTableFilter());
         
         mainProgressBar = new ProgressBar(0);
         progressLabel = styles.createNormalLabel("就绪");
@@ -138,11 +143,15 @@ public class PreviewView {
         previewTable.setRowFactory(tv -> {
             TreeTableRow<ChangeRecord> row = new TreeTableRow<>();
             ContextMenu cm = new ContextMenu();
-            MenuItem i1 = new MenuItem("打开文件");
+            MenuItem i1 = new MenuItem("打开原始文件");
             i1.setOnAction(e -> app.openFileInSystem(row.getItem().getFileHandle()));
-            MenuItem i2 = new MenuItem("打开目录");
+            MenuItem i2 = new MenuItem("打开原始目录");
             i2.setOnAction(e -> app.openParentDirectory(row.getItem().getFileHandle()));
-            cm.getItems().addAll(i1, i2);
+            MenuItem i3 = new MenuItem("打开目标文件");
+            i3.setOnAction(e -> app.openFileInSystem(new File(row.getItem().getNewPath())));
+            MenuItem i4 = new MenuItem("打开目标目录");
+            i4.setOnAction(e -> app.openParentDirectory(new File(row.getItem().getNewPath()).getParentFile()));
+            cm.getItems().addAll(i1, i2, i3, i4);
             row.contextMenuProperty().bind(javafx.beans.binding.Bindings.when(row.emptyProperty()).then((ContextMenu) null).otherwise(cm));
             return row;
         });

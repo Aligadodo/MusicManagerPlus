@@ -26,7 +26,7 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 
-public class AbstractFfmpegStrategy extends AppStrategy {
+public abstract class AbstractFfmpegStrategy extends AppStrategy {
     // --- UI 组件 ---
     protected final JFXComboBox<String> cbTargetFormat;
     protected final JFXComboBox<String> cbOutputDirMode;
@@ -107,15 +107,18 @@ public class AbstractFfmpegStrategy extends AppStrategy {
         chkEnableCache = new CheckBox("启用 SSD 缓存暂存(解决IO瓶颈)");
         chkEnableTempSuffix = new CheckBox("启用.temp文件后缀(SSD缓存启用时不生效)");
         chkEnableTempSuffix.disableProperty().bind(chkEnableCache.selectedProperty());
+        chkEnableTempSuffix.setSelected(true);
 
         txtCacheDir = new TextField();
         txtCacheDir.setPromptText("SSD 缓存目录路径");
     }
 
+    public abstract String getDefaultDirPrefix();
+
     protected void updateDefaultPathPrompt(String format) {
         if (format == null) return;
         String cleanFormat = format.split(" ")[0].toUpperCase();
-        txtRelativePath.setPromptText("默认: Converted - " + cleanFormat);
+        txtRelativePath.setPromptText("默认: " + getDefaultDirPrefix() + " - " + cleanFormat);
     }
 
     @Override
@@ -420,7 +423,7 @@ public class AbstractFfmpegStrategy extends AppStrategy {
         // [核心优化] 默认目录名逻辑
         if (pRelPath == null || pRelPath.trim().isEmpty()) {
             String cleanFormat = pFormat != null ? pFormat.split(" ")[0].toUpperCase() : "UNK";
-            pRelPath = "Converted - " + cleanFormat;
+            pRelPath = getDefaultDirPrefix() + " - " + cleanFormat;
         }
         if (pUseCache && (pCacheDir == null || pCacheDir.trim().isEmpty() || !new File(pCacheDir).isDirectory())) {
             pUseCache = false;
