@@ -10,9 +10,9 @@ import com.filemanager.strategy.AppStrategyFactory;
 import com.filemanager.type.ConditionType;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
-import com.filemanager.util.file.FileLockManager;
+import com.filemanager.util.file.FileLockManagerUtil;
 import com.filemanager.util.file.FileSizeFormatUtil;
-import com.filemanager.util.file.ParallelStreamWalker;
+import com.filemanager.tool.ParallelStreamWalker;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXCheckBox;
 import com.jfoenix.controls.JFXComboBox;
@@ -454,9 +454,9 @@ public class FileManagerAppV20_Stable extends Application implements IManagerApp
                             break;
                         }
                         // 检查文件锁
-                        if (FileLockManager.isLocked(rec.getFileHandle())) continue;
+                        if (FileLockManagerUtil.isLocked(rec.getFileHandle())) continue;
                         // 对原始文件加逻辑锁，避免并发操作同一个文件
-                        if (!FileLockManager.lock(rec.getFileHandle())) continue;
+                        if (!FileLockManagerUtil.lock(rec.getFileHandle())) continue;
                         anyChange.set(true);
                         if (isCancelled()) continue;
                         rec.setStatus(ExecStatus.RUNNING);
@@ -479,7 +479,7 @@ public class FileManagerAppV20_Stable extends Application implements IManagerApp
                                 log("❌ 失败详细原因:" + ExceptionUtils.getStackTrace(e));
                             } finally {
                                 // 文件解锁
-                                FileLockManager.unlock(rec.getFileHandle());
+                                FileLockManagerUtil.unlock(rec.getFileHandle());
                                 int c = curr.incrementAndGet();
                                 updateProgress(c, total);
                                 if (c % 100 == 0 && (System.currentTimeMillis() - lastRefresh.get() > 5000))
@@ -515,7 +515,7 @@ public class FileManagerAppV20_Stable extends Application implements IManagerApp
             finishTaskUI("➡ ➡ ➡ 执行完成 ⬅ ⬅ ⬅");
             closeFileLogger();
             btnExecute.setDisable(false);
-            FileLockManager.clearAllLocks();
+            FileLockManagerUtil.clearAllLocks();
         });
         handleTaskLifecycle(task);
         new Thread(task).start();
@@ -665,7 +665,7 @@ public class FileManagerAppV20_Stable extends Application implements IManagerApp
             if (executorService != null) executorService.shutdownNow();
             log("🛑 强制停止");
             finishTaskUI("已停止");
-            FileLockManager.clearAllLocks();
+            FileLockManagerUtil.clearAllLocks();
         }
     }
 

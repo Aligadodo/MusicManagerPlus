@@ -33,7 +33,7 @@ public class CueSplitterStrategy extends AbstractFfmpegStrategy {
 
     @Override
     public String getName() {
-        return "CUE 整轨自动切割 (CUE Splitter)";
+        return "CUE整轨自动切割";
     }
 
     @Override

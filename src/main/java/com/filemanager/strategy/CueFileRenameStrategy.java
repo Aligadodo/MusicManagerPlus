@@ -2,7 +2,7 @@ package com.filemanager.strategy;
 
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.FileStatisticInfo;
-import com.filemanager.util.file.FileRegexReplacer;
+import com.filemanager.util.file.FileRegexReplaceUtil;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
 import com.jfoenix.controls.JFXComboBox;
@@ -89,7 +89,7 @@ public class CueFileRenameStrategy extends AppStrategy {
         Files.move(s.toPath(), t.toPath(), StandardCopyOption.REPLACE_EXISTING);
         if (t.getName().endsWith(".cue")) {
             // 修改文件内容
-            FileRegexReplacer.replaceWithAutoCharset(t.getAbsolutePath(), "FILE \"" + rec.getExtraParams().get("cue_target_name") + "\" WAVE");
+            FileRegexReplaceUtil.replaceWithAutoCharset(t.getAbsolutePath(), "FILE \"" + rec.getExtraParams().get("cue_target_name") + "\" WAVE");
         }
     }
 
@@ -113,7 +113,7 @@ public class CueFileRenameStrategy extends AppStrategy {
             }
             Map<String, File> cueFiles = Arrays.stream(filesUnderDir)
                     .filter(file -> StringUtils.endsWithIgnoreCase(file.getName(), ".cue"))
-                    .filter(file -> FileRegexReplacer.hasMatchingLine(file.getAbsolutePath()))
+                    .filter(file -> FileRegexReplaceUtil.hasMatchingLine(file.getAbsolutePath()))
                     .collect(Collectors.toMap(file -> FileStatisticInfo.create(file).oriName, Function.identity()));
             if (cueFiles.isEmpty()) {
                 return rec;

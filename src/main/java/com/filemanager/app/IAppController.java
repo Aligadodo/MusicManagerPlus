@@ -33,7 +33,6 @@ public interface IAppController {
     JFXTextField getTxtSearchFilter();
     JFXComboBox<String> getCbStatusFilter();
     JFXCheckBox getChkHideUnchanged();
-    JFXCheckBox getChkSaveLog();
     Spinner<Integer> getSpGlobalThreads();
 
     // --- 业务操作 ---

@@ -151,12 +151,12 @@ public class FileUnzipStrategy extends AppStrategy {
 
     @Override
     public String getName() {
-        return "批量智能解压 (SSD极速版)";
+        return "批量智能解压工具";
     }
 
     @Override
     public String getDescription() {
-        return "针对 SSD 优化，移除 IO 限制。支持多密码匹配及外部引擎调用。";
+        return "支持对压缩文件自动解压，并支持内置算法和7zip程序功能等解压方式，使得功能更稳定和扩展性更强。（请按照默认路径将7zip安装到C盘下，以支持自动识别路径）";
     }
 
     @Override

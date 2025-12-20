@@ -42,7 +42,7 @@ public class FileMigrateStrategy extends AppStrategy {
 
     @Override
     public String getName() {
-        return "文件归档/整理";
+        return "文件归档和移动";
     }
 
     @Override

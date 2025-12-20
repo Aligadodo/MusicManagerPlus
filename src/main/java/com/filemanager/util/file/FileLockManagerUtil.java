@@ -7,7 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * 模拟文件锁管理类 (基于内存)
  */
-public class FileLockManager {
+public class FileLockManagerUtil {
 
     // 使用线程安全的 Set 来存储已加锁的文件路径
     private static final Set<String> lockedFiles = ConcurrentHashMap.newKeySet();

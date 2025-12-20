@@ -40,7 +40,7 @@ public class TrackNumberStrategy extends AppStrategy {
 
     @Override
     public String getName() {
-        return "歌曲序号补全";
+        return "歌曲序号补全工具";
     }
 
     @Override

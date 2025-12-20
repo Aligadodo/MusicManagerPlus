@@ -3,8 +3,8 @@ package com.filemanager.app;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.ThemeConfig;
 import com.filemanager.strategy.*;
-import com.filemanager.util.file.FileLockManager;
-import com.filemanager.util.file.ParallelStreamWalker;
+import com.filemanager.util.file.FileLockManagerUtil;
+import com.filemanager.tool.ParallelStreamWalker;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
 import com.filemanager.ui.*;
@@ -46,10 +46,8 @@ import org.controlsfx.control.CheckComboBox;
 import java.awt.*;
 import java.io.*;
 import java.nio.file.Path;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
@@ -318,12 +316,6 @@ public class FileManagerPlusApp extends Application implements IAppController, I
         return previewView.getChkHideUnchanged();
     }
 
-    // 委托给 LogView
-    @Override
-    public JFXCheckBox getChkSaveLog() {
-        return logView.getChkSaveLog();
-    }
-
     public void refreshPipelineSelection() {
         if (!pipelineStrategies.isEmpty() && composeView != null) composeView.selectFirstStrategy();
     }
@@ -405,7 +397,6 @@ public class FileManagerPlusApp extends Application implements IAppController, I
         if (alert.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) return;
 
         resetProgressUI("执行中...", true);
-        if (getChkSaveLog().isSelected()) initFileLogger();
         long startT = System.currentTimeMillis();
         Task<Void> task = new Task<Void>() {
             @Override
@@ -433,9 +424,9 @@ public class FileManagerPlusApp extends Application implements IAppController, I
                             break;
                         }
                         // 检查文件锁
-                        if (FileLockManager.isLocked(rec.getFileHandle())) continue;
+                        if (FileLockManagerUtil.isLocked(rec.getFileHandle())) continue;
                         // 对原始文件加逻辑锁，避免并发操作同一个文件
-                        if (!FileLockManager.lock(rec.getFileHandle())) continue;
+                        if (!FileLockManagerUtil.lock(rec.getFileHandle())) continue;
                         anyChange.set(true);
                         if (isCancelled()) continue;
                         rec.setStatus(ExecStatus.RUNNING);
@@ -457,7 +448,7 @@ public class FileManagerPlusApp extends Application implements IAppController, I
                                 log("❌ 失败详细原因:" + ExceptionUtils.getStackTrace(e));
                             } finally {
                                 // 文件解锁
-                                FileLockManager.unlock(rec.getFileHandle());
+                                FileLockManagerUtil.unlock(rec.getFileHandle());
                                 int c = curr.incrementAndGet();
                                 updateProgress(c, total);
                                 if (c % 10 == 0 || (System.currentTimeMillis() - lastRefresh.get() > 5000)) {
@@ -718,11 +709,8 @@ public class FileManagerPlusApp extends Application implements IAppController, I
     @Override
     // --- Config IO (包含线程数保存) ---
     public void log(String s) {
-        // 增加时间戳
-        String time = new SimpleDateFormat("HH:mm:ss.SSS").format(new Date());
-        String msg = "[" + time + "] ➡➡➡ " + s;
-        logQueue.offer(msg);
-        if (fileLogger != null) fileLogger.println(msg);
+        logQueue.offer(s);
+        if (fileLogger != null) fileLogger.println(s);
     }
 
     // --- Config & Log IO ---

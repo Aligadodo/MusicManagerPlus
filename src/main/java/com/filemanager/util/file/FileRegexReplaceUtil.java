@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
-public class FileRegexReplacer {
+public class FileRegexReplaceUtil {
 
     // 正则表达式：匹配以 "FILE" 开头，以 "WAVE" 结尾的行
     // ^ 表示行的开始
