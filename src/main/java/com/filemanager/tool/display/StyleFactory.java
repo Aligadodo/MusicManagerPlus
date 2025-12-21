@@ -1,11 +1,10 @@
-package com.filemanager.tool;
+package com.filemanager.tool.display;
 
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.ThemeConfig;
 import com.jfoenix.controls.JFXButton;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
-import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -41,14 +40,21 @@ public class StyleFactory {
         return l;
     }
 
+    public static Node createSeparator() {
+        return new Separator();
+    }
+
     public static Label createHeader(String text) {
-        return createLabel(text, 16, true);
+        Label label = createLabel(text, 18, true);
+        label.minWidth(30);
+        return label;
     }
 
-    public static Label createNormalLabel(String text) {
-        return createLabel(text, 12, false);
+    public static Label createChapter(String text) {
+        Label label = createLabel(text, 16, true);
+        label.minWidth(30);
+        return label;
     }
-
 
     public static Label createDescLabel(String text) {
         Label label = new Label(text);
@@ -56,14 +62,17 @@ public class StyleFactory {
         return label;
     }
 
-    public static Label createParamLabel(String text) {
-        Label label = new Label(text);
-        label.setTextFill(Color.web("#333333"));
+    public static AutoShrinkLabel createParamLabel(String text) {
+        AutoShrinkLabel label = new AutoShrinkLabel(text);
+        label.minWidth(70);
+        label.maxWidth(70);
         return label;
     }
 
-    public static HBox createParamPair(String labelText, Node control) {
-        return createHBoxPanel(createParamLabel(labelText), new Region(), control);
+    public static HBox createParamPairLine(String labelText, Node control) {
+        HBox hBox = createHBox(createParamLabel(labelText), new Region(), control);
+        hBox.setSpacing(3);
+        return hBox;
     }
 
     public static Label createInfoLabel(String text) {
@@ -76,7 +85,7 @@ public class StyleFactory {
         TextArea logArea = new TextArea();
         logArea.setEditable(false);
         logArea.getStyleClass().add("glass-pane");
-        logArea.setStyle(String.format("-fx-background-color: rgba(255,255,255,%.2f); -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s;",
+        logArea.setStyle(String.format("-fx-background-color: #e6dfe3; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s;",
                 theme.getGlassOpacity(), theme.getCornerRadius(), theme.getTextColor()));
         return logArea;
     }
@@ -95,10 +104,6 @@ public class StyleFactory {
         btn.setPadding(new Insets(5, 5, 5, 5));
         if (action != null) btn.setOnAction(e -> action.run());
         return btn;
-    }
-
-    public static JFXButton createButton(String t, EventHandler<ActionEvent> h) {
-        return createActionButton(t, null, () -> h.handle(null));
     }
 
     /**
@@ -148,16 +153,26 @@ public class StyleFactory {
      *
      * @return
      */
-    public static HBox createHBoxPanel(Node... subNodes) {
+    public static HBox createHBox(Node... subNodes) {
         HBox p = new HBox();
         p.getStyleClass().add("glass-pane");
+        for (Node subNode : subNodes) {
+            p.getChildren().add(subNode);
+        }
+        return p;
+    }
+
+    /**
+     * 创建透明的横向容器
+     *
+     * @return
+     */
+    public static HBox createHBoxPanel(Node... subNodes) {
+        HBox p = createHBox(subNodes);
         p.setStyle(String.format("-fx-background-color: rgba(255,255,255,%.2f); -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s;",
                 theme.getGlassOpacity(), theme.getCornerRadius(), theme.getTextColor()));
         p.setPadding(new Insets(5, 5, 5, 5));
         p.setSpacing(5);
-        for (Node subNode : subNodes) {
-            p.getChildren().add(subNode);
-        }
         return p;
     }
 
@@ -194,10 +209,11 @@ public class StyleFactory {
         column.setPrefWidth(prefWidth);
         column.setMinWidth(minWidth);
         column.setMaxWidth(maxWidth);
-        column.setStyle("-fx-background-color: #b2b2b2; -fx-border-color: #999; -fx-border-radius: 3; -fx-padding: 2 6 2 6; -fx-font-size: 10px;");
+        column.setStyle("-fx-border-color: #eee; -fx-border-radius: 1; -fx-padding: 2 6 2 6; -fx-font-size: 10px;");
         column.setCellFactory(col -> {
             return new TreeTableCell<ChangeRecord, String>() {
                 private final Tooltip tooltip = new Tooltip();
+
                 @Override
                 protected void updateItem(String item, boolean empty) {
                     super.updateItem(item, empty);

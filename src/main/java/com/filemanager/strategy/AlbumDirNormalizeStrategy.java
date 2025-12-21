@@ -1,7 +1,7 @@
 package com.filemanager.strategy;
 
 import com.filemanager.model.ChangeRecord;
-import com.filemanager.tool.StyleFactory;
+import com.filemanager.tool.display.StyleFactory;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
@@ -9,7 +9,6 @@ import com.filemanager.util.MetadataHelper;
 import javafx.application.Platform;
 import javafx.scene.Node;
 import javafx.scene.control.TextField;
-import javafx.scene.layout.VBox;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -64,7 +63,7 @@ public class AlbumDirNormalizeStrategy extends AppStrategy {
     @Override
     public Node getConfigNode() {
         return StyleFactory.createVBoxPanel(
-                StyleFactory.createParamPair("目录命名模板:",txtTemplate),
+                StyleFactory.createParamPairLine("目录命名模板:",txtTemplate),
                 StyleFactory.createDescLabel("变量: %artist%, %album%, %year%"));
     }
 

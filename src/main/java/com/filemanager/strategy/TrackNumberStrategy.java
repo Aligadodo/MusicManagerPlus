@@ -1,6 +1,6 @@
 package com.filemanager.strategy;
 
-import com.filemanager.tool.StyleFactory;
+import com.filemanager.tool.display.StyleFactory;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
@@ -33,7 +33,7 @@ public class TrackNumberStrategy extends AppStrategy {
     public TrackNumberStrategy() {
         cbMode = new JFXComboBox<>(FXCollections.observableArrayList("默认排序 (按文件名/拼音)", "文本列表匹配 (.txt/.nfo)"));
         cbMode.getSelectionModel().select(0);
-        chkPadZero = new CheckBox("双位补零 (01, 02...)");
+        chkPadZero = new CheckBox("双位补零 (如01, 02)");
         chkPadZero.setSelected(true);
         txtSeparator = new TextField(". ");
     }
@@ -76,10 +76,10 @@ public class TrackNumberStrategy extends AppStrategy {
 
     @Override
     public Node getConfigNode() {
-        VBox box = new VBox(10);
-        box.getChildren().addAll(StyleFactory.createParamLabel("模式:"), cbMode,
-                new HBox(10, chkPadZero, StyleFactory.createParamLabel("分隔符:"), txtSeparator));
-        return box;
+        return StyleFactory.createVBoxPanel(
+                StyleFactory.createHBox(StyleFactory.createParamLabel("模式:"), cbMode),
+                StyleFactory.createHBox(chkPadZero),
+                StyleFactory.createHBox(StyleFactory.createParamLabel("分隔符:"), txtSeparator));
     }
 
     @Override

@@ -1,15 +1,11 @@
 package com.filemanager.strategy;
 
 import com.filemanager.app.IAppController;
-import com.filemanager.tool.StyleFactory;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.RuleCondition;
 import com.filemanager.model.RuleConditionGroup;
 import com.filemanager.type.ScanTarget;
-import javafx.geometry.Pos;
 import javafx.scene.Node;
-import javafx.scene.control.Label;
-import javafx.scene.layout.HBox;
 import lombok.Getter;
 
 import java.io.File;

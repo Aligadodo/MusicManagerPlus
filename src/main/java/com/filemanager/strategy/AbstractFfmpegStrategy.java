@@ -1,7 +1,7 @@
 package com.filemanager.strategy;
 
 import com.filemanager.model.ChangeRecord;
-import com.filemanager.tool.StyleFactory;
+import com.filemanager.tool.display.StyleFactory;
 import com.filemanager.type.ScanTarget;
 import com.filemanager.util.MetadataHelper;
 import com.jfoenix.controls.JFXButton;
@@ -129,70 +129,41 @@ public abstract class AbstractFfmpegStrategy extends AppStrategy {
 
     @Override
     public Node getConfigNode() {
-        VBox rootBox = new VBox(15);
-        rootBox.setPadding(new Insets(5, 0, 5, 0));
 
-        // 1. 输出设置
-        GridPane outputGrid = new GridPane();
-        outputGrid.setHgap(10);
-        outputGrid.setVgap(10);
-        outputGrid.add(new Label("目标格式:"), 0, 0);
-        outputGrid.add(cbTargetFormat, 1, 0);
-        outputGrid.add(new Label("输出模式:"), 0, 1);
-        outputGrid.add(cbOutputDirMode, 1, 1);
-        outputGrid.add(txtRelativePath, 2, 1);
 
-        ColumnConstraints colLabel = new ColumnConstraints();
-        colLabel.setMinWidth(70);
-        ColumnConstraints colMid = new ColumnConstraints();
-        colMid.setPrefWidth(160);
-        ColumnConstraints colGrow = new ColumnConstraints();
-        colGrow.setHgrow(Priority.ALWAYS);
-        outputGrid.getColumnConstraints().addAll(colLabel, colMid, colGrow);
-
-        // 2. 音频参数 (FlowPane)
-        VBox audioParamsBox = StyleFactory.createVBoxPanel(
-                StyleFactory.createDescLabel("音频参数详解:"),
-                StyleFactory.createParamPair("FFmpeg线程:", spFfmpegThreads),
-                StyleFactory.createParamPair("采样率(Hz):", cbSampleRate),
-                StyleFactory.createParamPair("声道数:", cbChannels)
-        );
-
-        // 3. 处理选项
-        VBox optionsBox = StyleFactory.createVBoxPanel(chkOverwrite, chkForceFilenameMeta, chkEnableCache, chkEnableTempSuffix);
-
-        // 4. 路径与缓存
-        GridPane pathGrid = new GridPane();
-        pathGrid.setHgap(10);
-        pathGrid.setVgap(10);
-        pathGrid.getColumnConstraints().addAll(colLabel, colGrow, new ColumnConstraints());
-
-        Label lblCache = new Label("缓存目录:");
-        lblCache.disableProperty().bind(chkEnableCache.selectedProperty().not());
-        txtCacheDir.disableProperty().bind(chkEnableCache.selectedProperty().not());
-        JFXButton btnPickCache = new JFXButton("选择");
-        btnPickCache.disableProperty().bind(chkEnableCache.selectedProperty().not());
-        btnPickCache.setOnAction(e -> {
-            DirectoryChooser dc = new DirectoryChooser();
-            File f = dc.showDialog(null);
-            if (f != null) txtCacheDir.setText(f.getAbsolutePath());
-        });
-        pathGrid.add(lblCache, 0, 0);
-        pathGrid.add(txtCacheDir, 1, 0);
-        pathGrid.add(btnPickCache, 2, 0);
-
-        JFXButton btnPickFFmpeg = new JFXButton("浏览");
-        btnPickFFmpeg.setOnAction(e -> {
+        // 1. FFmpeg路径
+        JFXButton btnPickFFmpeg = StyleFactory.createIconButton("浏览","",()-> {
             FileChooser fc = new FileChooser();
             File f = fc.showOpenDialog(null);
             if (f != null) txtFFmpegPath.setText(f.getAbsolutePath());
         });
-        pathGrid.add(new Label("FFmpeg:"), 0, 1);
-        pathGrid.add(txtFFmpegPath, 1, 1);
-        pathGrid.add(btnPickFFmpeg, 2, 1);
 
-        rootBox.getChildren().addAll(new Label("输出设置:"), outputGrid, new Separator(), audioParamsBox, new Separator(), new Label("处理选项:"), optionsBox, pathGrid);
-        return rootBox;
+        // 2. 缓存设置
+        Node lblCache = StyleFactory.createParamLabel("缓存目录:");
+        lblCache.disableProperty().bind(chkEnableCache.selectedProperty().not());
+        txtCacheDir.disableProperty().bind(chkEnableCache.selectedProperty().not());
+        JFXButton btnPickCache = StyleFactory.createActionButton("选择","",()-> {
+            DirectoryChooser dc = new DirectoryChooser();
+            File f = dc.showDialog(null);
+            if (f != null) txtCacheDir.setText(f.getAbsolutePath());
+        });
+
+        btnPickCache.disableProperty().bind(chkEnableCache.selectedProperty().not());
+        return StyleFactory.createVBoxPanel(
+                StyleFactory.createChapter("输出格式设置"),
+                StyleFactory.createParamPairLine("目标格式:", cbTargetFormat),
+                StyleFactory.createParamPairLine("输出模式:", StyleFactory.createHBox(cbOutputDirMode,txtRelativePath)),
+                StyleFactory.createSeparator(),
+                StyleFactory.createChapter("转换参数设置"),
+                StyleFactory.createHBox(StyleFactory.createParamLabel("FFmpeg路径"),txtFFmpegPath,btnPickFFmpeg),
+                StyleFactory.createParamPairLine("FFmpeg线程:", spFfmpegThreads),
+                StyleFactory.createParamPairLine("采样率(Hz):", cbSampleRate),
+                StyleFactory.createParamPairLine("声道数:", cbChannels),
+                StyleFactory.createSeparator(),
+                StyleFactory.createChapter("文件处理选项"),
+                StyleFactory.createVBoxPanel(chkOverwrite, chkForceFilenameMeta, chkEnableCache, chkEnableTempSuffix),
+                StyleFactory.createHBox(lblCache, txtCacheDir,btnPickCache)
+        );
     }
 
     @Override

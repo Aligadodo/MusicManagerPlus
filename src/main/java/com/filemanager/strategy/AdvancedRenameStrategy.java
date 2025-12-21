@@ -1,7 +1,7 @@
 package com.filemanager.strategy;
 
 
-import com.filemanager.tool.StyleFactory;
+import com.filemanager.tool.display.StyleFactory;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.RuleCondition;
 import com.filemanager.type.ConditionType;
@@ -53,7 +53,7 @@ public class AdvancedRenameStrategy extends AppStrategy {
         lvRules.setPrefHeight(150);
 
         btnAddRule = StyleFactory.createActionButton("添加规则", "#3498db", () -> showRuleEditDialog(null));
-        btnRemoveRule = StyleFactory.createActionButton("添加规则", "#e74c3c", () -> {
+        btnRemoveRule = StyleFactory.createActionButton("删除规则", "#e74c3c", () -> {
             RenameRule s = lvRules.getSelectionModel().getSelectedItem();
             if (s != null) {
                 lvRules.getItems().remove(s);
@@ -87,20 +87,12 @@ public class AdvancedRenameStrategy extends AppStrategy {
     @Override
     public Node getConfigNode() {
         VBox r = StyleFactory.createVBoxPanel();
-        HBox t = StyleFactory.createHBoxPanel(btnAddRule, btnRemoveRule, btnMoveUp, btnMoveDown);
-        t.setAlignment(Pos.CENTER_LEFT);
-
-        GridPane g = new GridPane();
-        g.setHgap(10);
-        g.setVgap(5);
-        g.add(StyleFactory.createParamLabel("处理范围:"), 0, 0);
-        g.add(cbProcessScope, 1, 0);
-        g.add(StyleFactory.createParamLabel("跨盘动作:"), 2, 0);
-        g.add(cbCrossDriveMode, 3, 0);
-        g.setStyle("-fx-background-color: rgba(255,255,255,0.5); -fx-background-radius: 20; -fx-padding: 5 15; -fx-text-fill: #333333;");
-
-
-        r.getChildren().addAll(StyleFactory.createParamLabel("规则链 (从上至下依次执行):"), lvRules, t, new Separator(), g);
+        r.getChildren().addAll(StyleFactory.createParamLabel("规则链 (从上至下依次执行):"),
+                lvRules,
+                StyleFactory.createHBox(btnAddRule, btnRemoveRule, btnMoveUp, btnMoveDown),
+                StyleFactory.createSeparator(),
+                StyleFactory.createHBox(StyleFactory.createParamLabel("处理范围:"), cbProcessScope),
+                StyleFactory.createHBox(StyleFactory.createParamLabel("跨盘动作:"), cbCrossDriveMode));
         return r;
     }
 
@@ -408,9 +400,9 @@ public class AdvancedRenameStrategy extends AppStrategy {
             } else {
                 VBox v = new VBox(3);
                 String cond = item.conditions.isEmpty() ? "无条件" : item.conditions.stream().map(RuleCondition::toString).collect(Collectors.joining(" & "));
-                Label l1 = StyleFactory.createParamLabel("若: " + cond);
+                Label l1 = StyleFactory.createDescLabel("若: " + cond);
                 l1.setStyle("-fx-font-size: 11px;");
-                Label l2 = StyleFactory.createParamLabel(item.getActionDesc());
+                Label l2 = StyleFactory.createDescLabel(item.getActionDesc());
                 l2.setStyle("-fx-font-weight: bold;");
                 v.getChildren().addAll(l1, l2);
                 setGraphic(v);

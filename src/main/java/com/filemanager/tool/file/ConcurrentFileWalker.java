@@ -1,4 +1,4 @@
-package com.filemanager.tool;
+package com.filemanager.tool.file;
 
 import java.io.IOException;
 import java.nio.file.*;

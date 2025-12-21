@@ -55,7 +55,6 @@ public class SmartLogAppender {
             // 3. 初始化流（使用 UTF-8，追加模式，自动刷新）
             this.fileWriter = new PrintWriter(new BufferedWriter(
                     new OutputStreamWriter(new FileOutputStream(logFile, true), StandardCharsets.UTF_8)), true);
-            
             appendLog("▶ ▶ ▶ 日志文件已创建: " + logFile.getAbsolutePath());
         } catch (IOException e) {
             appendLog("▶ ▶ ▶ 初始化日志文件失败: " + e.getMessage());
@@ -68,8 +67,7 @@ public class SmartLogAppender {
      */
     public void appendLog(String message) {
         String timestamp = LocalDateTime.now().format(logFormatter);
-        String msg = "[" + timestamp + "] ➡➡➡ " + message;
-
+        String msg = "[" + timestamp + "] ➡➡➡ " + message + "\n";
         // --- 1. 线程安全的文件写入 ---
         synchronized (lock) {
             if (fileWriter != null) {
@@ -78,7 +76,6 @@ public class SmartLogAppender {
                 // 但为了极致安全，重要日志可以保留 flush()
             }
         }
-
         // --- 2. JavaFX UI 更新 ---
         // Platform.runLater 内部是线程安全的队列，无需加锁
         Platform.runLater(() -> {

@@ -1,6 +1,6 @@
 package com.filemanager.strategy;
 
-import com.filemanager.tool.StyleFactory;
+import com.filemanager.tool.display.StyleFactory;
 import com.filemanager.model.*;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
@@ -142,10 +142,8 @@ public class MetadataScraperStrategy extends AppStrategy {
         grid.add(spThreads, 1, 1);
 
         VBox checks = new VBox(8);
-        Label l1 = StyleFactory.createParamLabel("单曲处理:");
-        l1.setStyle("-fx-font-weight: bold; -fx-font-size: 12px;");
-        Label l2 = StyleFactory.createParamLabel("专辑处理 (每个目录一份):");
-        l2.setStyle("-fx-font-weight: bold; -fx-font-size: 12px;");
+        Label l1 = StyleFactory.createDescLabel("单曲处理:");
+        Label l2 = StyleFactory.createDescLabel("专辑处理 (每个目录一份):");
 
         checks.getChildren().addAll(
                 l1, chkUpdateBasicMeta, chkFetchLyrics,

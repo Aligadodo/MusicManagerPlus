@@ -2,7 +2,6 @@ package com.filemanager.app;
 
 import com.filemanager.model.ThemeConfig;
 import com.filemanager.strategy.AppStrategy;
-import com.filemanager.tool.StyleFactory;
 import com.jfoenix.controls.JFXCheckBox;
 import com.jfoenix.controls.JFXComboBox;
 import com.jfoenix.controls.JFXTextField;

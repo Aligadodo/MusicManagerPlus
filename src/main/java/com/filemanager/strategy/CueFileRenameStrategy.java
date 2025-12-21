@@ -1,17 +1,16 @@
 package com.filemanager.strategy;
 
-import com.filemanager.tool.StyleFactory;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.FileStatisticInfo;
-import com.filemanager.util.file.FileRegexReplaceUtil;
+import com.filemanager.tool.display.StyleFactory;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
+import com.filemanager.util.file.FileRegexReplaceUtil;
 import com.jfoenix.controls.JFXComboBox;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.scene.Node;
 import javafx.scene.control.TextField;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import org.apache.commons.lang3.StringUtils;
 
@@ -75,8 +74,8 @@ public class CueFileRenameStrategy extends AppStrategy {
     @Override
     public Node getConfigNode() {
         VBox box = new VBox(10);
-        box.getChildren().addAll(StyleFactory.createParamLabel("模式:"), mode,
-                new HBox(10, StyleFactory.createParamLabel("分隔符:"), fileName));
+        box.getChildren().addAll(StyleFactory.createParamPairLine("模式:", mode),
+                StyleFactory.createParamPairLine("分隔符:", fileName));
         return box;
     }
 
@@ -146,7 +145,7 @@ public class CueFileRenameStrategy extends AppStrategy {
                         // 只有一组音轨，无需设置后缀
                         fileNameRank = pFileName;
                     }
-                    String targetFileName =  fileNameRank + "." + statisticInfo.type;
+                    String targetFileName = fileNameRank + "." + statisticInfo.type;
                     musicFileRecord.setNewName(targetFileName);
                     musicFileRecord.setNewPath(new File(rec.getFileHandle(), targetFileName).getAbsolutePath());
                     musicFileRecord.setChanged(true);

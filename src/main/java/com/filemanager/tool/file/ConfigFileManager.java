@@ -1,4 +1,4 @@
-package com.filemanager.tool;
+package com.filemanager.tool.file;
 
 import com.filemanager.app.FileManagerPlusApp;
 import com.filemanager.model.RuleCondition;

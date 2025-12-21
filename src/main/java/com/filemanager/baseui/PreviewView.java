@@ -3,8 +3,8 @@ package com.filemanager.baseui;
 
 import com.filemanager.app.IAppController;
 import com.filemanager.model.ChangeRecord;
-import com.filemanager.tool.DetailWindowHelper;
-import com.filemanager.tool.StyleFactory;
+import com.filemanager.tool.display.DetailWindowHelper;
+import com.filemanager.tool.display.StyleFactory;
 import com.filemanager.util.file.FileSizeFormatUtil;
 import com.jfoenix.controls.JFXCheckBox;
 import com.jfoenix.controls.JFXComboBox;
@@ -58,8 +58,8 @@ public class PreviewView {
         chkHideUnchanged.selectedProperty().addListener((o, old, v) -> app.refreshPreviewTableFilter());
 
         mainProgressBar = new ProgressBar(0);
-        progressLabel = StyleFactory.createNormalLabel("就绪");
-        runningLabel = StyleFactory.createNormalLabel("无执行中任务");
+        progressLabel = StyleFactory.createChapter("就绪");
+        runningLabel = StyleFactory.createChapter("无执行中任务");
         statsLabel = StyleFactory.createHeader("暂无统计信息");
 
         previewTable = new TreeTableView<>();
@@ -76,14 +76,13 @@ public class PreviewView {
         HBox filterBox = new HBox(10);
         filterBox.setAlignment(Pos.CENTER_LEFT);
         filterBox.setStyle("-fx-background-color:rgba(255,255,255,0.5);-fx-background-radius:20;-fx-padding:5 15;");
-        filterBox.getChildren().addAll(StyleFactory.createNormalLabel("筛选:"), txtSearchFilter, cbStatusFilter, chkHideUnchanged);
+        filterBox.getChildren().addAll(StyleFactory.createChapter("筛选:"), txtSearchFilter, cbStatusFilter, chkHideUnchanged);
         toolbar.getChildren().addAll(filterBox);
-        mainProgressBar.setPrefWidth(Double.MAX_VALUE);
         // Dashboard
         HBox progressBox = StyleFactory.createHBoxPanel(
-                StyleFactory.createNormalLabel("进度:"),
+                StyleFactory.createChapter("进度:"),
                 progressLabel,
-                StyleFactory.createNormalLabel("  "),
+                StyleFactory.createChapter("  "),
                 mainProgressBar);
         VBox dash = StyleFactory.createVBoxPanel(progressBox,
                 StyleFactory.createHBoxPanel(runningLabel),

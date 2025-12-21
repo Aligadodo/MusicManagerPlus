@@ -1,6 +1,6 @@
 package com.filemanager.strategy;
 
-import com.filemanager.tool.StyleFactory;
+import com.filemanager.tool.display.StyleFactory;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
@@ -81,15 +81,14 @@ public class FileMigrateStrategy extends AppStrategy {
     @Override
     public Node getConfigNode() {
         VBox box = new VBox(10);
-        JFXButton btn = new JFXButton("浏览");
-        btn.setOnAction(e -> {
+        JFXButton btn = StyleFactory.createActionButton("浏览目录" ,"#3498db", () -> {
             DirectoryChooser dc = new DirectoryChooser();
             File f = dc.showDialog(null);
             if (f != null) txtDestDir.setText(f.getAbsolutePath());
         });
-        box.getChildren().addAll(StyleFactory.createParamLabel("目标根目录:"),
-                new HBox(10, txtDestDir, btn),
-                StyleFactory.createParamLabel("结构模板 (/分隔):"), txtPathPattern, chkCleanEmpty);
+        box.getChildren().addAll(
+                StyleFactory.createHBox(StyleFactory.createParamLabel("目标根目录:"), txtDestDir, btn),
+                StyleFactory.createHBox(StyleFactory.createParamLabel("结构模板 (/分隔):"), txtPathPattern, chkCleanEmpty));
         return box;
     }
 

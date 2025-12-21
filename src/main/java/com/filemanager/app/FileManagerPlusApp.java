@@ -5,9 +5,9 @@ import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.ThemeConfig;
 import com.filemanager.strategy.AppStrategy;
 import com.filemanager.strategy.AppStrategyFactory;
-import com.filemanager.tool.ConfigFileManager;
-import com.filemanager.tool.ParallelStreamWalker;
-import com.filemanager.tool.StyleFactory;
+import com.filemanager.tool.file.ConfigFileManager;
+import com.filemanager.tool.file.ParallelStreamWalker;
+import com.filemanager.tool.display.StyleFactory;
 import com.filemanager.tool.log.LogInfo;
 import com.filemanager.tool.log.LogType;
 import com.filemanager.type.ExecStatus;
@@ -43,7 +43,6 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 import lombok.Getter;
 import lombok.Setter;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.controlsfx.control.CheckComboBox;
 
@@ -215,7 +214,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
         statusBar.setAlignment(Pos.CENTER_LEFT);
         Label lblStatusIcon = new Label("●");
         lblStatusIcon.setTextFill(Color.GREEN);
-        Label lblReady = StyleFactory.createNormalLabel("就绪");
+        Label lblReady = StyleFactory.createChapter("就绪");
         statusBar.getChildren().addAll(lblStatusIcon, lblReady); // Stats are now managed by PreviewView internally or via explicit update
         root.setBottom(statusBar);
 
@@ -344,10 +343,9 @@ public class FileManagerPlusApp extends Application implements IAppController {
         for (AppStrategy s : pipelineStrategies) s.captureParams();
 
         // 从 GlobalSettingsView 获取参数
-        int maxDepth = "仅当前目录".equals(getCbRecursionMode().getValue()) ? 1 :
-                ("递归所有子目录".equals(getCbRecursionMode().getValue()) ? Integer.MAX_VALUE : getSpRecursionDepth().getValue());
+        int maxDepth = "当前目录".equals(getCbRecursionMode().getValue()) ? 1 :
+                ("全部文件".equals(getCbRecursionMode().getValue()) ? Integer.MAX_VALUE : getSpRecursionDepth().getValue());
         List<String> exts = new ArrayList<>(getCcbFileTypes().getCheckModel().getCheckedItems());
-
 
         Task<List<ChangeRecord>> task = new Task<List<ChangeRecord>>() {
             @Override
@@ -392,7 +390,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
         if (fullChangeList.isEmpty()) return;
         long count = fullChangeList.stream().filter(record -> record.isChanged()
                 && record.getOpType() != OperationType.NONE
-                && record.getStatus() != ExecStatus.SKIPPED).count();
+                && record.getStatus() == ExecStatus.PENDING).count();
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "执行 " + count + " 个变更?", ButtonType.YES, ButtonType.NO);
         if (alert.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) return;
         resetProgressUI("执行中...");
@@ -403,7 +401,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
                 List<ChangeRecord> todos = fullChangeList.stream()
                         .filter(record -> record.isChanged()
                                 && record.getOpType() != OperationType.NONE
-                                && record.getStatus() != ExecStatus.SKIPPED)
+                                && record.getStatus() == ExecStatus.PENDING)
                         .collect(Collectors.toList());
                 int total = todos.size();
                 AtomicInteger curr = new AtomicInteger(0);
@@ -485,9 +483,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
         };
         updateStats(System.currentTimeMillis() - startT);
 
-        task.setOnSucceeded(e -> {
-            finishTaskUI("➡ ➡ ➡ 执行完成 ⬅ ⬅ ⬅");
-        });
+        task.setOnSucceeded(e -> finishTaskUI("➡ ➡ ➡ 执行完成 ⬅ ⬅ ⬅"));
         handleTaskLifecycle(task);
         new Thread(task).start();
     }
@@ -763,12 +759,12 @@ public class FileManagerPlusApp extends Application implements IAppController {
                 applyAppearance();
             }
         });
-        g.add(StyleFactory.createNormalLabel("Color:"), 0, 0);
+        g.add(StyleFactory.createChapter("Color:"), 0, 0);
         g.add(cp, 1, 0);
-        g.add(StyleFactory.createNormalLabel("Opacity:"), 0, 1);
+        g.add(StyleFactory.createChapter("Opacity:"), 0, 1);
         g.add(sl, 1, 1);
         g.add(chk, 1, 2);
-        g.add(StyleFactory.createNormalLabel("BG:"), 0, 3);
+        g.add(StyleFactory.createChapter("BG:"), 0, 3);
         g.add(new HBox(5, tp, bp), 1, 3);
         d.getDialogPane().setContent(g);
         d.setResultConverter(b -> b);

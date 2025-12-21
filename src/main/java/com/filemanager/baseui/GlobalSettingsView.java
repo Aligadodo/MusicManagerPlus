@@ -1,7 +1,7 @@
 package com.filemanager.baseui;
 
 import com.filemanager.app.IAppController;
-import com.filemanager.tool.StyleFactory;
+import com.filemanager.tool.display.StyleFactory;
 import com.jfoenix.controls.JFXComboBox;
 import javafx.collections.FXCollections;
 import javafx.scene.Node;
@@ -60,11 +60,11 @@ public class GlobalSettingsView {
     private void buildUI() {
         viewNode = StyleFactory.createVBoxPanel();
         viewNode.getChildren().addAll(
-                StyleFactory.createParamPair("文件扫描模式:", cbRecursionMode),
-                StyleFactory.createParamPair("文件扫描层级:", spRecursionDepth),
-                StyleFactory.createParamPair("文件类型筛选:", ccbFileTypes),
-                StyleFactory.createParamPair("并发线程数量:", spGlobalThreads),
-                StyleFactory.createParamPair("显示数量限制:", numberDisplay)
+                StyleFactory.createParamPairLine("文件扫描模式:", cbRecursionMode),
+                StyleFactory.createParamPairLine("文件扫描层级:", spRecursionDepth),
+                StyleFactory.createParamPairLine("文件类型筛选:", ccbFileTypes),
+                StyleFactory.createParamPairLine("并发线程数量:", spGlobalThreads),
+                StyleFactory.createParamPairLine("显示数量限制:", numberDisplay)
         );
     }
 

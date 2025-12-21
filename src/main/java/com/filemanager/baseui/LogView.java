@@ -1,7 +1,7 @@
 package com.filemanager.baseui;
 
 import com.filemanager.app.IAppController;
-import com.filemanager.tool.StyleFactory;
+import com.filemanager.tool.display.StyleFactory;
 import com.filemanager.tool.log.LogInfo;
 import com.filemanager.tool.log.LogType;
 import com.filemanager.tool.log.SmartLogAppender;
@@ -63,9 +63,9 @@ public class LogView {
                 LogInfo s;
                 while ((s = logQueue.poll()) != null) {
                     if (s.getType() == LogType.ERROR) {
-                        errorLogAppender.appendLog(s.getMessage() + "\n");
+                        errorLogAppender.appendLog(s.getMessage());
                     } else {
-                        infoLogAppender.appendLog(s.getMessage() + "\n");
+                        infoLogAppender.appendLog(s.getMessage());
                     }
                 }
             }
