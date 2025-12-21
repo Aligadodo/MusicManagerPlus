@@ -1,14 +1,12 @@
-package com.filemanager.tool;
+package com.filemanager.tool.log;
 
 import javafx.application.Platform;
 import javafx.scene.control.TextArea;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Date;
 
 /**
  * 智能日志管理类
@@ -58,9 +56,9 @@ public class SmartLogAppender {
             this.fileWriter = new PrintWriter(new BufferedWriter(
                     new OutputStreamWriter(new FileOutputStream(logFile, true), StandardCharsets.UTF_8)), true);
             
-            appendLog("日志文件已创建: " + logFile.getAbsolutePath());
+            appendLog("▶ ▶ ▶ 日志文件已创建: " + logFile.getAbsolutePath());
         } catch (IOException e) {
-            appendLog("初始化日志文件失败: " + e.getMessage());
+            appendLog("▶ ▶ ▶ 初始化日志文件失败: " + e.getMessage());
         }
     }
 

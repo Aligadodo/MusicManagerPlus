@@ -28,7 +28,7 @@ public class CueSplitterStrategy extends AbstractFfmpegStrategy {
 
     @Override
     public String getDefaultDirPrefix() {
-        return "Splite";
+        return "Split";
     }
 
     @Override

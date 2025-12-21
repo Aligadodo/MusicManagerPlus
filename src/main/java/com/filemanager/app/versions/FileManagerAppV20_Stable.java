@@ -1,6 +1,6 @@
 package com.filemanager.app.versions;
 
-import com.filemanager.app.IManagerAppInterface;
+import com.filemanager.app.IAppController;
 import com.filemanager.app.SortedProperties;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.RuleCondition;
@@ -75,7 +75,7 @@ import java.util.stream.Stream;
  * 3. Fluid UX: 使用侧边栏导航，操作路径更清晰。
  * 4. 更好地操作性和更多的组件
  */
-public class FileManagerAppV20_Stable extends Application implements IManagerAppInterface {
+public class FileManagerAppV20_Stable extends Application implements IAppController {
 
     // --- 外观配置 ---
     private static final ThemeConfig currentTheme = new ThemeConfig();
@@ -531,7 +531,8 @@ public class FileManagerAppV20_Stable extends Application implements IManagerApp
     }
 
 
-    private void refreshPreviewTableFilter() {
+    @Override
+    public void refreshPreviewTableFilter() {
         if (fullChangeList.isEmpty()) return;
         String search = txtSearchFilter.getText() != null ? txtSearchFilter.getText().toLowerCase() : "";
         String status = cbStatusFilter.getValue();
@@ -658,7 +659,8 @@ public class FileManagerAppV20_Stable extends Application implements IManagerApp
         });
     }
 
-    private void forceStop() {
+    @Override
+    public void forceStop() {
         if (isTaskRunning) {
             isTaskRunning = false;
             if (currentTask != null) currentTask.cancel();
@@ -731,7 +733,8 @@ public class FileManagerAppV20_Stable extends Application implements IManagerApp
     }
 
     // --- Appearance & Config ---
-    private void showAppearanceDialog() {
+    @Override
+    public void showAppearanceDialog() {
         Dialog<ButtonType> dialog = new Dialog<>();
         dialog.setTitle("界面设置");
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
@@ -797,6 +800,22 @@ public class FileManagerAppV20_Stable extends Application implements IManagerApp
         if (fileLogger != null) fileLogger.println(msg);
     }
 
+    @Override
+    // --- Config IO (包含线程数保存) ---
+    public void logError(String s) {
+        // 增加时间戳
+        String time = new SimpleDateFormat("HH:mm:ss.SSS").format(new Date());
+        String msg = "[" + time + "] ➡ ➡ ➡ " + s;
+        logQueue.offer(s);
+        if (fileLogger != null) fileLogger.println(msg);
+    }
+
+
+    @Override
+    public void displayRunning(String s) {
+
+    }
+
 
     private void initFileLogger() {
         try {
@@ -812,13 +831,84 @@ public class FileManagerAppV20_Stable extends Application implements IManagerApp
         }
     }
 
-    private void addDirectoryAction() {
+    @Override
+    public ObservableList<File> getSourceRoots() {
+        return null;
+    }
+
+    @Override
+    public ObservableList<AppStrategy> getPipelineStrategies() {
+        return null;
+    }
+
+    @Override
+    public List<AppStrategy> getStrategyPrototypes() {
+        return Collections.emptyList();
+    }
+
+    @Override
+    public com.filemanager.model.ThemeConfig getCurrentTheme() {
+        return null;
+    }
+
+    @Override
+    public com.filemanager.ui.StyleFactory getStyleFactory() {
+        return null;
+    }
+
+    @Override
+    public JFXComboBox<String> getCbRecursionMode() {
+        return null;
+    }
+
+    @Override
+    public Spinner<Integer> getSpRecursionDepth() {
+        return null;
+    }
+
+    @Override
+    public CheckComboBox<String> getCcbFileTypes() {
+        return null;
+    }
+
+    @Override
+    public JFXTextField getTxtSearchFilter() {
+        return null;
+    }
+
+    @Override
+    public JFXComboBox<String> getCbStatusFilter() {
+        return null;
+    }
+
+    @Override
+    public JFXCheckBox getChkHideUnchanged() {
+        return null;
+    }
+
+    @Override
+    public Spinner<Integer> getSpGlobalThreads() {
+        return null;
+    }
+
+    @Override
+    public void addDirectoryAction() {
         DirectoryChooser dc = new DirectoryChooser();
         File f = dc.showDialog(primaryStage);
         if (f != null && !sourceRoots.contains(f)) {
             sourceRoots.add(f);
             invalidatePreview("源增加");
         }
+    }
+
+    @Override
+    public void removeSourceDir(File dir) {
+
+    }
+
+    @Override
+    public void clearSourceDirs() {
+
     }
 
     public void invalidatePreview(String r) {
@@ -830,14 +920,16 @@ public class FileManagerAppV20_Stable extends Application implements IManagerApp
         btnExecute.setDisable(true);
     }
 
-    private void openFileInSystem(File f) {
+    @Override
+    public void openFileInSystem(File f) {
         try {
             if (f != null && f.exists()) Desktop.getDesktop().open(f);
         } catch (Exception e) {
         }
     }
 
-    private void openParentDirectory(File f) {
+    @Override
+    public void openParentDirectory(File f) {
         if (f != null) openFileInSystem(f.isDirectory() ? f : f.getParentFile());
     }
 
@@ -861,16 +953,28 @@ public class FileManagerAppV20_Stable extends Application implements IManagerApp
     }
 
     // --- Config IO ---
-    private void saveConfigAction() {
+    @Override
+    public void saveConfigAction() {
         FileChooser fc = new FileChooser();
         File f = fc.showSaveDialog(primaryStage);
         if (f != null) saveGlobalConfig(f);
     }
 
-    private void loadConfigAction() {
+    @Override
+    public void loadConfigAction() {
         FileChooser fc = new FileChooser();
         File f = fc.showOpenDialog(primaryStage);
         if (f != null) loadGlobalConfig(f);
+    }
+
+    @Override
+    public String getBgImagePath() {
+        return "";
+    }
+
+    @Override
+    public void setBgImagePath(String bgPath) {
+
     }
 
     // [修复 1] 保存配置：在写入前清理旧的流水线数据，防止脏数据残留
@@ -1031,7 +1135,8 @@ public class FileManagerAppV20_Stable extends Application implements IManagerApp
         }
     }
 
-    private void addStrategyStep(AppStrategy template) {
+    @Override
+    public void addStrategyStep(AppStrategy template) {
         if (template != null) {
             try {
                 AppStrategy n = template.getClass().getDeclaredConstructor().newInstance();
@@ -1044,6 +1149,11 @@ public class FileManagerAppV20_Stable extends Application implements IManagerApp
                 this.log("组件添加失败:" + ExceptionUtils.getStackTrace(e));
             }
         }
+    }
+
+    @Override
+    public void removeStrategyStep(AppStrategy strategy) {
+
     }
 
     // [新增] 通用：创建统一风格的微型图标按钮

@@ -28,7 +28,7 @@ public class PreviewView {
     // UI Components
     private TreeTableView<ChangeRecord> previewTable;
     private ProgressBar mainProgressBar;
-    private Label progressLabel, etaLabel, statsLabel;
+    private Label progressLabel, etaLabel, runningLabel, statsLabel;
     private JFXTextField txtSearchFilter;
     private JFXComboBox<String> cbStatusFilter;
     private JFXCheckBox chkHideUnchanged;
@@ -56,6 +56,7 @@ public class PreviewView {
         mainProgressBar = new ProgressBar(0);
         progressLabel = styles.createNormalLabel("就绪");
         etaLabel = styles.createNormalLabel("");
+        runningLabel = styles.createNormalLabel("无执行中任务");
         statsLabel = styles.createHeader("总计: 0");
         
         btnExecute = styles.createActionButton("执行变更", "#27ae60", app::runPipelineExecution);
@@ -105,6 +106,11 @@ public class PreviewView {
         progressLabel.textProperty().bind(task.messageProperty());
         mainProgressBar.progressProperty().bind(task.progressProperty());
     }
+
+    public void updateRunningInfo(String message) {
+        runningLabel.setText(message);
+    }
+
     public void updateStatsDisplay(long t, long c, long s,long f, String tm) {
         statsLabel.setText(String.format("文件总数:%d 需要变更:%d 操作成功:%d 操作失败:%d 过程耗时:%s", t, c, s, f, tm));
     }

@@ -2,12 +2,13 @@ package com.filemanager.app;
 
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.ThemeConfig;
-import com.filemanager.strategy.*;
-import com.filemanager.util.file.FileLockManagerUtil;
+import com.filemanager.strategy.AppStrategy;
+import com.filemanager.strategy.AppStrategyFactory;
 import com.filemanager.tool.ParallelStreamWalker;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
 import com.filemanager.ui.*;
+import com.filemanager.util.file.FileLockManagerUtil;
 import com.jfoenix.controls.*;
 import javafx.animation.AnimationTimer;
 import javafx.animation.FadeTransition;
@@ -44,7 +45,9 @@ import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.controlsfx.control.CheckComboBox;
 
 import java.awt.*;
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -65,7 +68,7 @@ import java.util.stream.Stream;
  * 主程序类，负责核心逻辑、数据持有和控制器实现。
  * 视图逻辑已拆分至 com.filemanager.ui 包。
  */
-public class FileManagerPlusApp extends Application implements IAppController, IManagerAppInterface {
+public class FileManagerPlusApp extends Application implements IAppController {
 
     // --- Core Data ---
     private final ObservableList<File> sourceRoots = FXCollections.observableArrayList();
@@ -89,7 +92,6 @@ public class FileManagerPlusApp extends Application implements IAppController, I
     private PreviewView previewView;
     private LogView logView;
     // --- Task & Threading ---
-    private PrintWriter fileLogger;
     private ExecutorService executorService;
     private Task<?> currentTask;
     private volatile boolean isTaskRunning = false;
@@ -149,7 +151,6 @@ public class FileManagerPlusApp extends Application implements IAppController, I
         primaryStage.setOnCloseRequest(e -> {
             configManager.saveConfig(lastConfigFile);
             forceStop();
-            closeFileLogger();
             Platform.exit();
             System.exit(0);
         });
@@ -349,6 +350,7 @@ public class FileManagerPlusApp extends Application implements IAppController, I
                 ("递归所有子目录".equals(getCbRecursionMode().getValue()) ? Integer.MAX_VALUE : getSpRecursionDepth().getValue());
         List<String> exts = new ArrayList<>(getCcbFileTypes().getCheckModel().getCheckedItems());
 
+
         Task<List<ChangeRecord>> task = new Task<List<ChangeRecord>>() {
             @Override
             protected List<ChangeRecord> call() throws Exception {
@@ -369,7 +371,7 @@ public class FileManagerPlusApp extends Application implements IAppController, I
                 for (int i = 0; i < pipelineStrategies.size(); i++) {
                     if (isCancelled()) break;
                     AppStrategy strategy = pipelineStrategies.get(i);
-                    updateMessage("▶ ▶ ▶ 执行步骤 " + (i + 1) + ": " + strategy.getName());
+                    updateMessage("▶ ▶ ▶ 总共" + pipelineStrategies.size() + "步，步骤 " + (i + 1) + ": " + strategy.getName() + "执行中，进度显示在进度条中~");
                     currentRecords = strategy.analyze(currentRecords, sourceRoots, (p, m) -> updateProgress(p, 1.0));
                 }
                 return currentRecords;
@@ -395,7 +397,6 @@ public class FileManagerPlusApp extends Application implements IAppController, I
                 && record.getStatus() != ExecStatus.SKIPPED).count();
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "执行 " + count + " 个变更?", ButtonType.YES, ButtonType.NO);
         if (alert.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) return;
-
         resetProgressUI("执行中...", true);
         long startT = System.currentTimeMillis();
         Task<Void> task = new Task<Void>() {
@@ -429,6 +430,7 @@ public class FileManagerPlusApp extends Application implements IAppController, I
                         if (!FileLockManagerUtil.lock(rec.getFileHandle())) continue;
                         anyChange.set(true);
                         if (isCancelled()) continue;
+                        displayRunning("▶ 开始处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().getName());
                         rec.setStatus(ExecStatus.RUNNING);
                         executorService.submit(() -> {
                             try {
@@ -438,6 +440,7 @@ public class FileManagerPlusApp extends Application implements IAppController, I
                                 if (s != null) {
                                     s.execute(rec);
                                     rec.setStatus(ExecStatus.SUCCESS);
+                                    displayRunning("✅️ 成功处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().getName());
                                     log("✅️ 成功处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().getName() + ",目标路径：" + rec.getNewName() + "，耗时：");
                                 } else {
                                     rec.setStatus(ExecStatus.SKIPPED);
@@ -485,7 +488,6 @@ public class FileManagerPlusApp extends Application implements IAppController, I
 
         task.setOnSucceeded(e -> {
             finishTaskUI("➡ ➡ ➡ 执行完成 ⬅ ⬅ ⬅");
-            closeFileLogger();
         });
         handleTaskLifecycle(task);
         new Thread(task).start();
@@ -626,11 +628,9 @@ public class FileManagerPlusApp extends Application implements IAppController, I
         t.setOnFailed(e -> {
             finishTaskUI("出错");
             log("❌ 失败: " + ExceptionUtils.getStackTrace(e.getSource().getException()));
-            closeFileLogger();
         });
         t.setOnCancelled(e -> {
             finishTaskUI("已取消");
-            closeFileLogger();
         });
     }
 
@@ -692,11 +692,6 @@ public class FileManagerPlusApp extends Application implements IAppController, I
     }
 
     @Override
-    public void clearLog() {
-        logView.clearLog();
-    }
-
-    @Override
     public void invalidatePreview(String r) {
         if (!fullChangeList.isEmpty()) {
             fullChangeList.clear();
@@ -710,7 +705,17 @@ public class FileManagerPlusApp extends Application implements IAppController, I
     // --- Config IO (包含线程数保存) ---
     public void log(String s) {
         logQueue.offer(s);
-        if (fileLogger != null) fileLogger.println(s);
+    }
+
+    @Override
+    public void logError(String s) {
+        logQueue.offer(s);
+    }
+
+    @Override
+    // --- Config IO (包含线程数保存) ---
+    public void displayRunning(String s) {
+        Platform.runLater(() -> previewView.updateRunningInfo(s));
     }
 
     // --- Config & Log IO ---
@@ -791,20 +796,6 @@ public class FileManagerPlusApp extends Application implements IAppController, I
             }
         };
         uiUpdater.start();
-    }
-
-    private void initFileLogger() {
-        try {
-            fileLogger = new PrintWriter(new FileWriter("exec.log", true), true);
-        } catch (Exception e) {
-        }
-    }
-
-    private void closeFileLogger() {
-        if (fileLogger != null) {
-            fileLogger.close();
-            fileLogger = null;
-        }
     }
 
     private void showToast(String msg) {

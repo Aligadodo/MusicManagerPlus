@@ -6,6 +6,7 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.Label;
 import javafx.scene.control.Labeled;
+import javafx.scene.control.TextArea;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
@@ -42,6 +43,12 @@ public class StyleFactory {
         Label l = createLabel(text, 10, false);
         l.setTextFill(Color.GRAY); 
         return l;
+    }
+
+    public TextArea createTextArea() {
+        TextArea logArea = new TextArea();
+        logArea.setEditable(false);
+        return logArea;
     }
 
     public JFXButton createActionButton(String text, String colorOverride, Runnable action) {

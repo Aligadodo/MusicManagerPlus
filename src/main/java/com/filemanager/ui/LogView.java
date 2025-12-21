@@ -1,16 +1,14 @@
 package com.filemanager.ui;
 
 import com.filemanager.app.IAppController;
-import com.filemanager.tool.SmartLogAppender;
+import com.filemanager.tool.log.SmartLogAppender;
 import com.jfoenix.controls.JFXButton;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TextArea;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import lombok.Getter;
 
@@ -28,15 +26,10 @@ public class LogView {
         this.controller = controller;
         this.styles = controller.getStyleFactory();
         this.tabLog = new Tab("日志");
-        initControls();
+        this.logArea = styles.createTextArea();
+        this.logAppender = new SmartLogAppender(logArea, 500);
         buildUI();
         this.tabLog.setContent(viewNode);
-    }
-
-    private void initControls() {
-        logArea = new TextArea();
-        logArea.setEditable(false);
-        logAppender = new SmartLogAppender(logArea, 500);
     }
 
     private void buildUI() {
@@ -46,11 +39,9 @@ public class LogView {
         tools.setPadding(new Insets(10));
         tools.setAlignment(Pos.CENTER_LEFT);
 
-        JFXButton clr = styles.createActionButton("清空", "#95a5a6", controller::clearLog);
-        Region s = new Region();
-        HBox.setHgrow(s, Priority.ALWAYS);
+        JFXButton clr = styles.createActionButton("清空", "#95a5a6", this::clearLog);
 
-        tools.getChildren().addAll(styles.createHeader("运行日志"), s, clr);
+        tools.getChildren().addAll(styles.createHeader("运行日志"), clr);
 
         logArea.setStyle("-fx-font-family:'Consolas'; -fx-control-inner-background: rgba(255,255,255,0.8);");
         VBox.setVgrow(logArea, Priority.ALWAYS);

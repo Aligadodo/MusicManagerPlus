@@ -1,6 +1,6 @@
 package com.filemanager.strategy;
 
-import com.filemanager.app.IManagerAppInterface;
+import com.filemanager.app.IAppController;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.RuleCondition;
 import com.filemanager.model.RuleConditionGroup;
@@ -19,9 +19,12 @@ import java.util.List;
 import java.util.Properties;
 import java.util.function.BiConsumer;
 
+/**
+ * @author 28667
+ */
 @Getter
 public abstract class AppStrategy {
-    protected IManagerAppInterface app;
+    protected IAppController app;
     // 通用条件配置接口 (UI调用)
     // 通用前置条件 (所有策略都支持)
     @Getter
@@ -36,7 +39,7 @@ public abstract class AppStrategy {
         return label;
     }
 
-    public void setContext(IManagerAppInterface app) {
+    public void setContext(IAppController app) {
         this.app = app;
     }
 
