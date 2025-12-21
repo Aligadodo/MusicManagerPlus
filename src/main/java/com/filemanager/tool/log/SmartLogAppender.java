@@ -31,16 +31,16 @@ public class SmartLogAppender {
      * @param textArea 要绑定的 JavaFX TextArea
      * @param maxLines UI 界面最多显示的行数
      */
-    public SmartLogAppender(TextArea textArea, int maxLines) {
+    public SmartLogAppender(TextArea textArea, int maxLines, String suffix) {
         this.textArea = textArea;
         this.maxLines = maxLines;
-        initFileWriter();
+        initFileWriter(suffix);
     }
 
     /**
      * 内部初始化：创建文件夹和日志文件流
      */
-    private void initFileWriter() {
+    private void initFileWriter(String suffix) {
         try {
             // 1. 确保 logs 文件夹存在
             File logDir = new File("logs");
@@ -49,7 +49,7 @@ public class SmartLogAppender {
             }
 
             // 2. 生成基于当前时间的文件名
-            String fileName = LocalDateTime.now().format(fileFormatter) + ".log";
+            String fileName = LocalDateTime.now().format(fileFormatter) + suffix;
             File logFile = new File(logDir, fileName);
 
             // 3. 初始化流（使用 UTF-8，追加模式，自动刷新）

@@ -31,8 +31,9 @@ public class GlobalSettingsView {
     public GlobalSettingsView(IAppController controller) {
         this.controller = controller;
         this.styles = controller.getStyleFactory();
-        initControls();
-        buildUI();
+        this.initControls();
+        this.buildUI();
+        this.styles.setBasicStyle(viewNode);
     }
 
     private void initControls() {
@@ -46,7 +47,7 @@ public class GlobalSettingsView {
         ccbFileTypes = new CheckComboBox<>(FXCollections.observableArrayList("[directory]", "[compressed]", "[music]", "mp3", "flac", "wav", "m4a", "ape", "dsf", "dff", "dts", "iso", "jpg", "png", "nfo", "cue", "tak"));
         ccbFileTypes.getCheckModel().checkAll();
 
-        spGlobalThreads = new Spinner<>(1, 128, 4);
+        spGlobalThreads = new Spinner<>(1, 32, 4);
         spGlobalThreads.setEditable(true);
 
         // 设置预览数量 默认200

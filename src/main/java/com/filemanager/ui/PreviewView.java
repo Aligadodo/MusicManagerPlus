@@ -38,8 +38,9 @@ public class PreviewView {
         this.app = app;
         this.styles = app.getStyleFactory();
         this.tabPreview = new Tab("预览");
-        initControls();
-        buildUI();
+        this.initControls();
+        this.buildUI();
+        this.styles.setBasicStyle(viewNode);
         this.tabPreview.setContent(viewNode);
     }
     

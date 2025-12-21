@@ -17,8 +17,11 @@ import javafx.scene.text.FontWeight;
  * 负责生成风格统一的界面元素
  */
 public class StyleFactory {
-    
+
     private final ThemeConfig theme;
+    String baseStyle = "-fx-background-color: transparent; -fx-border-radius: 3; ";
+    // 悬停样式
+    String hoverStyle = "-fx-background-color: #eee; -fx-border-radius: 3;  ";
 
     public StyleFactory(ThemeConfig theme) {
         this.theme = theme;
@@ -41,7 +44,7 @@ public class StyleFactory {
 
     public Label createInfoLabel(String text) {
         Label l = createLabel(text, 10, false);
-        l.setTextFill(Color.GRAY); 
+        l.setTextFill(Color.GRAY);
         return l;
     }
 
@@ -51,11 +54,16 @@ public class StyleFactory {
         return logArea;
     }
 
-    public JFXButton createActionButton(String text, String colorOverride, Runnable action) {
+    public JFXButton createButton(String text) {
         JFXButton btn = new JFXButton(text);
+        return btn;
+    }
+
+    public JFXButton createActionButton(String text, String colorOverride, Runnable action) {
+        JFXButton btn = createButton(text);
         String color = colorOverride != null ? colorOverride : theme.getAccentColor();
-        btn.setStyle(String.format("-fx-background-color: %s; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: %.1f; -fx-cursor: hand;", 
-            color, theme.getCornerRadius()));
+        btn.setStyle(String.format("-fx-background-color: %s; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: %.1f; -fx-cursor: hand;",
+                color, theme.getCornerRadius()));
         if (action != null) btn.setOnAction(e -> action.run());
         return btn;
     }
@@ -68,35 +76,35 @@ public class StyleFactory {
      * [新增] 创建行内图标按钮 (如删除、上移下移)
      */
     public JFXButton createIconButton(String iconText, String colorHex, Runnable action) {
-        JFXButton btn = new JFXButton(iconText);
+        JFXButton btn = createButton(iconText);
         String textColor = colorHex != null ? colorHex : "#555";
-        
+
         // 基础样式
         String baseStyle = String.format("-fx-background-color: transparent; -fx-border-color: #ccc; -fx-border-radius: 3; -fx-padding: 2 6 2 6; -fx-font-size: 10px; -fx-text-fill: %s;", textColor);
         // 悬停样式
         String hoverStyle = String.format("-fx-background-color: #eee; -fx-border-color: #999; -fx-border-radius: 3; -fx-padding: 2 6 2 6; -fx-font-size: 10px; -fx-text-fill: %s;", textColor);
-        
+
         btn.setStyle(baseStyle);
-        
+
         btn.setOnAction(e -> {
             if (action != null) action.run();
             e.consume(); // 防止事件冒泡选中列表行
         });
-        
+
         btn.setOnMouseEntered(e -> btn.setStyle(hoverStyle));
         btn.setOnMouseExited(e -> btn.setStyle(baseStyle));
-        
+
         return btn;
     }
 
     public VBox createGlassPane() {
         VBox p = new VBox();
         p.getStyleClass().add("glass-pane");
-        p.setStyle(String.format("-fx-background-color: rgba(255,255,255,%.2f); -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s;", 
-            theme.getGlassOpacity(), theme.getCornerRadius(), theme.getTextColor()));
+        p.setStyle(String.format("-fx-background-color: rgba(255,255,255,%.2f); -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s;",
+                theme.getGlassOpacity(), theme.getCornerRadius(), theme.getTextColor()));
         return p;
     }
-    
+
     public VBox createSectionHeader(String title, String subtitle) {
         VBox v = new VBox(2);
         v.getChildren().addAll(createHeader(title), createInfoLabel(subtitle));
@@ -104,7 +112,7 @@ public class StyleFactory {
     }
 
     public void forceDarkText(Node node) {
-        if (node instanceof Labeled) ((Labeled)node).setTextFill(Color.web(theme.getTextColor()));
+        if (node instanceof Labeled) ((Labeled) node).setTextFill(Color.web(theme.getTextColor()));
         if (node instanceof Parent) {
             for (Node child : ((Parent) node).getChildrenUnmodifiable()) forceDarkText(child);
         }
@@ -112,7 +120,7 @@ public class StyleFactory {
 
     // [新增] 通用：创建统一风格的微型图标按钮
     public JFXButton createSmallIconButton(String text, javafx.event.EventHandler<javafx.event.ActionEvent> handler) {
-        JFXButton btn = new JFXButton(text);
+        JFXButton btn = createButton(text);
         btn.setStyle("-fx-background-color: transparent; -fx-border-color: #ccc; -fx-border-radius: 3; -fx-padding: 2 6 2 6; -fx-font-size: 10px;");
         btn.setTextFill(Color.web("#555"));
         btn.setOnAction(e -> {
@@ -123,5 +131,18 @@ public class StyleFactory {
         btn.setOnMouseEntered(e -> btn.setStyle("-fx-background-color: #eee; -fx-border-color: #999; -fx-border-radius: 3; -fx-padding: 2 6 2 6; -fx-font-size: 10px;"));
         btn.setOnMouseExited(e -> btn.setStyle("-fx-background-color: transparent; -fx-border-color: #ccc; -fx-border-radius: 3; -fx-padding: 2 6 2 6; -fx-font-size: 10px;"));
         return btn;
+    }
+
+
+    public void setBasicStyle(Node node) {
+//        node.setStyle(baseStyle);
+//        if (node instanceof Labeled) {
+//            ((Labeled) node).setTextFill(Color.web(theme.getTextColor()));
+//        }
+//        if (node instanceof Parent) {
+//            for (Node c : ((Parent) node).getChildrenUnmodifiable()) {
+//                setBasicStyle(c);
+//            }
+//        }
     }
 }

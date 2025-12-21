@@ -5,12 +5,13 @@ import com.filemanager.model.ThemeConfig;
 import com.filemanager.strategy.AppStrategy;
 import com.filemanager.strategy.AppStrategyFactory;
 import com.filemanager.tool.ParallelStreamWalker;
+import com.filemanager.tool.log.LogInfo;
+import com.filemanager.tool.log.LogType;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
 import com.filemanager.ui.*;
 import com.filemanager.util.file.FileLockManagerUtil;
 import com.jfoenix.controls.*;
-import javafx.animation.AnimationTimer;
 import javafx.animation.FadeTransition;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -47,12 +48,10 @@ import org.controlsfx.control.CheckComboBox;
 import java.awt.*;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -73,8 +72,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
     // --- Core Data ---
     private final ObservableList<File> sourceRoots = FXCollections.observableArrayList();
     private final ObservableList<AppStrategy> pipelineStrategies = FXCollections.observableArrayList();
-    private final List<ChangeRecord> changePreviewList = new ArrayList<>();
-    private final ConcurrentLinkedQueue<String> logQueue = new ConcurrentLinkedQueue<>();
+
     private final File lastConfigFile = new File(System.getProperty("user.home"), ".fmplus_config.properties");
     private final ThemeConfig currentTheme = new ThemeConfig();
     private List<AppStrategy> strategyPrototypes = new ArrayList<>();
@@ -95,7 +93,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
     private ExecutorService executorService;
     private Task<?> currentTask;
     private volatile boolean isTaskRunning = false;
-    private AnimationTimer uiUpdater;
+
     // --- UI Containers ---
     private StackPane rootContainer;
     private ImageView backgroundImageView;
@@ -155,7 +153,6 @@ public class FileManagerPlusApp extends Application implements IAppController {
             System.exit(0);
         });
 
-        startLogUpdater();
         primaryStage.show();
     }
 
@@ -338,8 +335,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
         mainTabPane.getSelectionModel().select(previewView.getTab());
         switchView(previewView.getViewNode());
 
-        resetProgressUI("正在扫描...", false);
-        changePreviewList.clear();
+        resetProgressUI("正在扫描...");
         previewView.getPreviewTable().setRoot(null);
 
         // 捕获所有策略参数
@@ -397,7 +393,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
                 && record.getStatus() != ExecStatus.SKIPPED).count();
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "执行 " + count + " 个变更?", ButtonType.YES, ButtonType.NO);
         if (alert.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) return;
-        resetProgressUI("执行中...", true);
+        resetProgressUI("执行中...");
         long startT = System.currentTimeMillis();
         Task<Void> task = new Task<Void>() {
             @Override
@@ -447,8 +443,8 @@ public class FileManagerPlusApp extends Application implements IAppController {
                                 }
                             } catch (Exception e) {
                                 rec.setStatus(ExecStatus.FAILED);
-                                log("❌ 失败处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().getName() + ",目标路径：" + rec.getNewName() + ",原因" + e.getMessage());
-                                log("❌ 失败详细原因:" + ExceptionUtils.getStackTrace(e));
+                                logError("❌ 失败处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().getName() + ",目标路径：" + rec.getNewName() + ",原因" + e.getMessage());
+                                logError("❌ 失败详细原因:" + ExceptionUtils.getStackTrace(e));
                             } finally {
                                 // 文件解锁
                                 FileLockManagerUtil.unlock(rec.getFileHandle());
@@ -591,7 +587,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
                 try {
                     path.toFile();
                 } catch (Exception e) {
-                    log(path + " 扫描异常: " + e.getMessage());
+                    logError(path + " 文件扫描异常: " + e.getMessage());
                     return false;
                 }
                 return true;
@@ -609,7 +605,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
     }
 
     // --- Task UI State ---
-    private void resetProgressUI(String msg, boolean isExec) {
+    private void resetProgressUI(String msg) {
         isTaskRunning = true;
         currentTask = null;
         previewView.setRunningState(true);
@@ -627,7 +623,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
         previewView.bindProgress(t);
         t.setOnFailed(e -> {
             finishTaskUI("出错");
-            log("❌ 失败: " + ExceptionUtils.getStackTrace(e.getSource().getException()));
+            logError("❌ 失败: " + ExceptionUtils.getStackTrace(e.getSource().getException()));
         });
         t.setOnCancelled(e -> {
             finishTaskUI("已取消");
@@ -704,12 +700,12 @@ public class FileManagerPlusApp extends Application implements IAppController {
     @Override
     // --- Config IO (包含线程数保存) ---
     public void log(String s) {
-        logQueue.offer(s);
+        logView.appendLog(new LogInfo(LogType.INFO, s));
     }
 
     @Override
     public void logError(String s) {
-        logQueue.offer(s);
+        logView.appendLog(new LogInfo(LogType.ERROR, s));
     }
 
     @Override
@@ -785,17 +781,6 @@ public class FileManagerPlusApp extends Application implements IAppController {
             }
         }
         if (composeView != null) composeView.refreshList();
-    }
-
-    private void startLogUpdater() {
-        uiUpdater = new AnimationTimer() {
-            @Override
-            public void handle(long now) {
-                String s;
-                while ((s = logQueue.poll()) != null) if (logView != null) logView.appendLog(s);
-            }
-        };
-        uiUpdater.start();
     }
 
     private void showToast(String msg) {
