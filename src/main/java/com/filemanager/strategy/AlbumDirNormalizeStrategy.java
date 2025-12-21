@@ -1,13 +1,13 @@
 package com.filemanager.strategy;
 
 import com.filemanager.model.ChangeRecord;
+import com.filemanager.tool.StyleFactory;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
 import com.filemanager.util.MetadataHelper;
 import javafx.application.Platform;
 import javafx.scene.Node;
-import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
 
@@ -63,9 +63,9 @@ public class AlbumDirNormalizeStrategy extends AppStrategy {
 
     @Override
     public Node getConfigNode() {
-        VBox box = new VBox(10);
-        box.getChildren().addAll(createStyledLabel("目录命名模板:"), txtTemplate, createStyledLabel("变量: %artist%, %album%, %year%"));
-        return box;
+        return StyleFactory.createVBoxPanel(
+                StyleFactory.createParamPair("目录命名模板:",txtTemplate),
+                StyleFactory.createDescLabel("变量: %artist%, %album%, %year%"));
     }
 
     @Override
@@ -119,7 +119,8 @@ public class AlbumDirNormalizeStrategy extends AppStrategy {
 
             if (!parentDir.getName().equals(newDirName)) {
                 File targetDir = new File(parentDir.getParentFile(), newDirName);
-                ChangeRecord folderRec = new ChangeRecord(parentDir.getName(), newDirName, parentDir, true, targetDir.getAbsolutePath(), OperationType.ALBUM_RENAME, new HashMap<>(), ExecStatus.PENDING);
+                ChangeRecord folderRec = new ChangeRecord(parentDir.getName(), newDirName, parentDir, true,
+                        targetDir.getAbsolutePath(), OperationType.ALBUM_RENAME, new HashMap<>(), ExecStatus.PENDING);
                 results.add(folderRec);
             }
 

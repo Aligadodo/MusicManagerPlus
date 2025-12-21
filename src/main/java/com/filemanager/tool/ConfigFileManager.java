@@ -1,5 +1,6 @@
-package com.filemanager.app;
+package com.filemanager.tool;
 
+import com.filemanager.app.FileManagerPlusApp;
 import com.filemanager.model.RuleCondition;
 import com.filemanager.model.RuleConditionGroup;
 import com.filemanager.model.ThemeConfig;
@@ -107,8 +108,7 @@ public class ConfigFileManager {
             app.log("配置已加载: " + file.getName());
             
         } catch (Exception e) {
-            app.log("配置加载失败: " + e.getMessage());
-            e.printStackTrace();
+            app.logError("配置加载失败: " + e.getMessage());
         }
     }
 

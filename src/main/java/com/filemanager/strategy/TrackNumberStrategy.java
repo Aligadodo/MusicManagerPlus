@@ -1,5 +1,6 @@
 package com.filemanager.strategy;
 
+import com.filemanager.tool.StyleFactory;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
@@ -8,7 +9,6 @@ import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.scene.Node;
 import javafx.scene.control.CheckBox;
-import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -77,7 +77,8 @@ public class TrackNumberStrategy extends AppStrategy {
     @Override
     public Node getConfigNode() {
         VBox box = new VBox(10);
-        box.getChildren().addAll(createStyledLabel("模式:"), cbMode, new HBox(10, chkPadZero, createStyledLabel("分隔符:"), txtSeparator));
+        box.getChildren().addAll(StyleFactory.createParamLabel("模式:"), cbMode,
+                new HBox(10, chkPadZero, StyleFactory.createParamLabel("分隔符:"), txtSeparator));
         return box;
     }
 

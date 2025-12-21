@@ -1,6 +1,7 @@
-package com.filemanager.ui;
+package com.filemanager.baseui;
 
 import com.filemanager.app.IAppController;
+import com.filemanager.tool.StyleFactory;
 import com.filemanager.tool.log.LogInfo;
 import com.filemanager.tool.log.LogType;
 import com.filemanager.tool.log.SmartLogAppender;
@@ -11,6 +12,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TextArea;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import lombok.Getter;
@@ -20,41 +22,36 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 @Getter
 public class LogView {
     private final IAppController controller;
-    private final StyleFactory styles;
     private final Tab tabLog;
     private final ConcurrentLinkedQueue<LogInfo> logQueue = new ConcurrentLinkedQueue<>();
     private final TextArea logArea;
-    private final SmartLogAppender infoLogAppender;
-    private final SmartLogAppender errorLogAppender;
+    private final SmartLogAppender infoLogAppender,errorLogAppender;
     private VBox viewNode;
 
     public LogView(IAppController controller) {
         this.controller = controller;
-        this.styles = controller.getStyleFactory();
         this.tabLog = new Tab("日志");
-        this.logArea = styles.createTextArea();
+        this.logArea = StyleFactory.createTextArea();
         this.infoLogAppender = new SmartLogAppender(logArea, 500, ".info.log");
         this.errorLogAppender = new SmartLogAppender(logArea, 500, ".error.log");
         this.buildUI();
         this.tabLog.setContent(viewNode);
-        this.styles.setBasicStyle(viewNode);
+        StyleFactory.setBasicStyle(viewNode);
         this.startLogUpdater();
     }
 
     private void buildUI() {
         viewNode = new VBox(15);
         viewNode.setPadding(new Insets(10));
-        VBox tools = styles.createGlassPane();
-        tools.setPadding(new Insets(10));
-        tools.setAlignment(Pos.CENTER_LEFT);
-
-        JFXButton clr = styles.createActionButton("清空", "#95a5a6", this::clearLog);
-
-        tools.getChildren().addAll(styles.createHeader("运行日志"), clr);
+        JFXButton clr = StyleFactory.createActionButton("清空日志", "#dcbecf", this::clearLog);
+        JFXButton btnScrollTop = StyleFactory.createActionButton("查看顶部", "#dcbecf", () -> logArea.setScrollTop(0));
+        JFXButton btnScrollBottom = StyleFactory.createActionButton("查看底部", "#dcbecf", () -> logArea.setScrollTop(Double.MAX_VALUE));
 
         logArea.setStyle("-fx-font-family:'Consolas'; -fx-control-inner-background: rgba(255,255,255,0.8);");
         VBox.setVgrow(logArea, Priority.ALWAYS);
 
+        HBox tools = StyleFactory.createHBoxPanel(clr,btnScrollTop, btnScrollBottom);
+        tools.setAlignment(Pos.CENTER_RIGHT);
         viewNode.getChildren().addAll(tools, logArea);
     }
 

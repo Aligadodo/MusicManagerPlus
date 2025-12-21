@@ -104,7 +104,12 @@ public class CueSplitterStrategy extends AbstractFfmpegStrategy {
                 Platform.runLater(() -> progressReporter.accept((double) c / total, "解析 CUE: " + cueFile.getName()));
 
             // 解析
-            CueSheet cueSheet = CueParserUtil.parse(cueFile.toPath());
+            CueSheet cueSheet = null;
+            try {
+                cueSheet = CueParserUtil.parse(cueFile.toPath());
+            } catch (Exception e) {
+                logError("Cue文件解析失败，跳过：: " + cueFile.toPath() + "，错误详情：" + ExceptionUtils.getStackTrace(e));
+            }
             if (cueSheet == null || cueSheet.getTracks().isEmpty()) return Stream.empty();
 
             // 分轨的cue文件无需再切分
@@ -173,7 +178,7 @@ public class CueSplitterStrategy extends AbstractFfmpegStrategy {
                 }
                 return tracks.stream();
             } catch (Exception e) {
-                log("Cue文件解析失败，跳过：: " + cueFile.toPath() + "，错误详情：" + ExceptionUtils.getStackTrace(e));
+                logError("Cue文件解析失败，跳过：: " + cueFile.toPath() + "，错误详情：" + ExceptionUtils.getStackTrace(e));
             }
             return Stream.empty();
         }).collect(Collectors.toList());

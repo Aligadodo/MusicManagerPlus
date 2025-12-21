@@ -2,11 +2,12 @@ package com.filemanager.app;
 
 import com.filemanager.model.ThemeConfig;
 import com.filemanager.strategy.AppStrategy;
-import com.filemanager.ui.StyleFactory;
+import com.filemanager.tool.StyleFactory;
 import com.jfoenix.controls.JFXCheckBox;
 import com.jfoenix.controls.JFXComboBox;
 import com.jfoenix.controls.JFXTextField;
 import javafx.collections.ObservableList;
+import javafx.scene.Node;
 import javafx.scene.control.Spinner;
 import org.controlsfx.control.CheckComboBox;
 
@@ -29,8 +30,6 @@ public interface IAppController {
     List<AppStrategy> getStrategyPrototypes();
 
     ThemeConfig getCurrentTheme();
-
-    StyleFactory getStyleFactory();
 
     // --- 全局控件引用 (供 View 布局使用) ---
     JFXComboBox<String> getCbRecursionMode();
@@ -90,4 +89,5 @@ public interface IAppController {
     // --- Config IO (包含线程数保存) ---
     void displayRunning(String s);
 
+    Node getGlobalSettingsView();
 }

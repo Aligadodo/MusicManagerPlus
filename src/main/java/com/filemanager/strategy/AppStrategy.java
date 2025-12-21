@@ -1,6 +1,7 @@
 package com.filemanager.strategy;
 
 import com.filemanager.app.IAppController;
+import com.filemanager.tool.StyleFactory;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.RuleCondition;
 import com.filemanager.model.RuleConditionGroup;
@@ -9,7 +10,6 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
-import javafx.scene.paint.Color;
 import lombok.Getter;
 
 import java.io.File;
@@ -33,18 +33,16 @@ public abstract class AppStrategy {
     // [修改] 升级为条件组列表 (OR关系)
     protected List<RuleConditionGroup> conditionGroups = new ArrayList<>();
 
-    protected static Label createStyledLabel(String text) {
-        Label label = new Label(text);
-        label.setTextFill(Color.web("#333333"));
-        return label;
-    }
-
     public void setContext(IAppController app) {
         this.app = app;
     }
 
     protected void log(String msg) {
         if (app != null) app.log(msg);
+    }
+
+    protected void logError(String msg) {
+        if (app != null) app.logError(msg);
     }
 
     // [新增] 便捷日志方法 (子类可直接调用 log("xxx"))
@@ -92,10 +90,4 @@ public abstract class AppStrategy {
                 file.getName().equals(changeRecord.getFileHandle().getName())).findFirst().orElse(null);
     }
 
-    protected HBox createParamPair(String labelText, Node control) {
-        HBox hb = new HBox(5);
-        hb.setAlignment(Pos.CENTER_LEFT);
-        hb.getChildren().addAll(new Label(labelText), control);
-        return hb;
-    }
 }

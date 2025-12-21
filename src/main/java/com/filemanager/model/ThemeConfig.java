@@ -24,7 +24,7 @@ public class ThemeConfig implements Cloneable {
     private boolean isDarkBackground = false;
     
     // 组件圆角半径
-    private double cornerRadius = 10.0;
+    private double cornerRadius = 5.0;
 
     @Override
     public ThemeConfig clone() {

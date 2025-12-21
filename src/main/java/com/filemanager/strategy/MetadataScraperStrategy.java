@@ -1,5 +1,6 @@
 package com.filemanager.strategy;
 
+import com.filemanager.tool.StyleFactory;
 import com.filemanager.model.*;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
@@ -135,15 +136,15 @@ public class MetadataScraperStrategy extends AppStrategy {
         GridPane grid = new GridPane();
         grid.setHgap(10);
         grid.setVgap(10);
-        grid.add(createStyledLabel("数据源:"), 0, 0);
+        grid.add(StyleFactory.createParamLabel("数据源:"), 0, 0);
         grid.add(cbSource, 1, 0);
-        grid.add(createStyledLabel("网络并发:"), 0, 1);
+        grid.add(StyleFactory.createParamLabel("网络并发:"), 0, 1);
         grid.add(spThreads, 1, 1);
 
         VBox checks = new VBox(8);
-        Label l1 = createStyledLabel("单曲处理:");
+        Label l1 = StyleFactory.createParamLabel("单曲处理:");
         l1.setStyle("-fx-font-weight: bold; -fx-font-size: 12px;");
-        Label l2 = createStyledLabel("专辑处理 (每个目录一份):");
+        Label l2 = StyleFactory.createParamLabel("专辑处理 (每个目录一份):");
         l2.setStyle("-fx-font-weight: bold; -fx-font-size: 12px;");
 
         checks.getChildren().addAll(
@@ -154,7 +155,7 @@ public class MetadataScraperStrategy extends AppStrategy {
                 chkOverwrite
         );
 
-        box.getChildren().addAll(grid, new Separator(), checks, createStyledLabel("实时日志:"), txtPreviewLog);
+        box.getChildren().addAll(grid, new Separator(), checks, StyleFactory.createParamLabel("实时日志:"), txtPreviewLog);
         return box;
     }
 
@@ -321,7 +322,8 @@ public class MetadataScraperStrategy extends AppStrategy {
                         if (pOverwrite || !targetCover.exists()) {
                             Map<String, String> p = new HashMap<>();
                             p.put("url", coverUrl);
-                            ChangeRecord coverRec = new ChangeRecord("下载: 专辑封面", "cover.jpg", parentDir, true, targetCover.getAbsolutePath(), OperationType.SCRAPER, p, ExecStatus.PENDING);
+                            ChangeRecord coverRec = new ChangeRecord("下载: 专辑封面", "cover.jpg", parentDir,
+                                    true, targetCover.getAbsolutePath(), OperationType.SCRAPER, p, ExecStatus.PENDING);
                             coverRec.getExtraParams().put("task_type", "DOWNLOAD_COVER");
                             results.add(coverRec);
                         }
@@ -344,7 +346,8 @@ public class MetadataScraperStrategy extends AppStrategy {
                             p.put("artist", guess.getArtist());
                         }
 
-                        ChangeRecord infoRec = new ChangeRecord("生成: 专辑资料", "AlbumInfo.txt", parentDir, true, targetInfo.getAbsolutePath(), OperationType.SCRAPER, p, ExecStatus.PENDING);
+                        ChangeRecord infoRec = new ChangeRecord("生成: 专辑资料", "AlbumInfo.txt", parentDir,
+                                true, targetInfo.getAbsolutePath(), OperationType.SCRAPER, p, ExecStatus.PENDING);
                         infoRec.getExtraParams().put("task_type", "GENERATE_INFO");
                         results.add(infoRec);
                     }
@@ -426,6 +429,7 @@ public class MetadataScraperStrategy extends AppStrategy {
                         // 如果文件名有序号，title没有，可以尝试组合
                     }
                 } catch (Exception e) {
+
                 }
                 sb.append(String.format("%-50s %s\n", title, time));
             }
@@ -436,7 +440,7 @@ public class MetadataScraperStrategy extends AppStrategy {
         try {
             Files.write(target.toPath(), sb.toString().getBytes(StandardCharsets.UTF_8));
         } catch (IOException e) {
-            e.printStackTrace();
+            logError("音频信息刮削失败，源文件："+rec.getFileHandle().getAbsolutePath());
         }
     }
 
@@ -487,14 +491,13 @@ public class MetadataScraperStrategy extends AppStrategy {
     // --- 网络与辅助 ---
 
     private ScrapedResult searchITunes(String artist, String titleOrAlbum, boolean isAlbumSearch) {
+        String term = artist + " " + titleOrAlbum;
+        String entity = isAlbumSearch ? "album" : "song";
+        String urlStr = null;
         try {
-            String term = artist + " " + titleOrAlbum;
-            String entity = isAlbumSearch ? "album" : "song";
-            String urlStr = "https://itunes.apple.com/search?term=" + URLEncoder.encode(term, "UTF-8") + "&media=music&entity=" + entity + "&limit=1";
-
             String json = httpGet(urlStr);
             if (json == null || !json.contains("resultCount")) return null;
-
+            urlStr = "https://itunes.apple.com/search?term=" + URLEncoder.encode(term, "UTF-8") + "&media=music&entity=" + entity + "&limit=1";
             ScrapedResult res = new ScrapedResult();
             res.artist = extractJsonValue(json, "artistName");
             res.album = extractJsonValue(json, "collectionName"); // Album Name
@@ -513,24 +516,22 @@ public class MetadataScraperStrategy extends AppStrategy {
             }
             return res;
         } catch (Exception e) {
+            logError("音频信息刮削失败，地址："+urlStr);
             return null;
         }
     }
 
     // ... (httpGet, downloadBytes, extractJsonValue, Lyrics Providers 同前，保持不变) ...
-    private String httpGet(String urlStr) {
-        try {
-            URL url = new URL(urlStr);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setConnectTimeout(3000);
-            conn.setReadTimeout(3000);
-            conn.setRequestMethod("GET");
-            if (conn.getResponseCode() == 200) {
-                try (Scanner scanner = new Scanner(conn.getInputStream(), StandardCharsets.UTF_8.name())) {
-                    return scanner.useDelimiter("\\A").next();
-                }
+    private String httpGet(String urlStr) throws Exception{
+        URL url = new URL(urlStr);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setConnectTimeout(3000);
+        conn.setReadTimeout(3000);
+        conn.setRequestMethod("GET");
+        if (conn.getResponseCode() == 200) {
+            try (Scanner scanner = new Scanner(conn.getInputStream(), StandardCharsets.UTF_8.name())) {
+                return scanner.useDelimiter("\\A").next();
             }
-        } catch (Exception e) {
         }
         return null;
     }
@@ -548,6 +549,7 @@ public class MetadataScraperStrategy extends AppStrategy {
                 return out.toByteArray();
             }
         } catch (Exception e) {
+            logError("音频信息刮削失败，地址："+urlStr);
             return null;
         }
     }

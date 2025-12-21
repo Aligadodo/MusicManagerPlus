@@ -569,7 +569,7 @@ public class FileUnzipStrategy extends AppStrategy {
                     deleteDirectoryRecursively(wrapperDir);
                 }
             } catch (IOException e) {
-                System.err.println("Smart move failed: " + e.getMessage());
+                logError("Smart move failed: " + e.getMessage());
             }
         }
     }

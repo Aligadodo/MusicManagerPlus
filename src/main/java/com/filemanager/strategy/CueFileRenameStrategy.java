@@ -1,5 +1,6 @@
 package com.filemanager.strategy;
 
+import com.filemanager.tool.StyleFactory;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.FileStatisticInfo;
 import com.filemanager.util.file.FileRegexReplaceUtil;
@@ -74,7 +75,8 @@ public class CueFileRenameStrategy extends AppStrategy {
     @Override
     public Node getConfigNode() {
         VBox box = new VBox(10);
-        box.getChildren().addAll(createStyledLabel("模式:"), mode, new HBox(10, createStyledLabel("分隔符:"), fileName));
+        box.getChildren().addAll(StyleFactory.createParamLabel("模式:"), mode,
+                new HBox(10, StyleFactory.createParamLabel("分隔符:"), fileName));
         return box;
     }
 
@@ -89,7 +91,8 @@ public class CueFileRenameStrategy extends AppStrategy {
         Files.move(s.toPath(), t.toPath(), StandardCopyOption.REPLACE_EXISTING);
         if (t.getName().endsWith(".cue")) {
             // 修改文件内容
-            FileRegexReplaceUtil.replaceWithAutoCharset(t.getAbsolutePath(), "FILE \"" + rec.getExtraParams().get("cue_target_name") + "\" WAVE");
+            FileRegexReplaceUtil.replaceWithAutoCharset(t.getAbsolutePath(),
+                    "FILE \"" + rec.getExtraParams().get("cue_target_name") + "\" WAVE");
         }
     }
 

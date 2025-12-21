@@ -1,15 +1,17 @@
 package com.filemanager.app;
 
+import com.filemanager.baseui.*;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.ThemeConfig;
 import com.filemanager.strategy.AppStrategy;
 import com.filemanager.strategy.AppStrategyFactory;
+import com.filemanager.tool.ConfigFileManager;
 import com.filemanager.tool.ParallelStreamWalker;
+import com.filemanager.tool.StyleFactory;
 import com.filemanager.tool.log.LogInfo;
 import com.filemanager.tool.log.LogType;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
-import com.filemanager.ui.*;
 import com.filemanager.util.file.FileLockManagerUtil;
 import com.jfoenix.controls.*;
 import javafx.animation.FadeTransition;
@@ -72,14 +74,14 @@ public class FileManagerPlusApp extends Application implements IAppController {
     // --- Core Data ---
     private final ObservableList<File> sourceRoots = FXCollections.observableArrayList();
     private final ObservableList<AppStrategy> pipelineStrategies = FXCollections.observableArrayList();
-
+    private List<AppStrategy> strategyPrototypes;
     private final File lastConfigFile = new File(System.getProperty("user.home"), ".fmplus_config.properties");
     private final ThemeConfig currentTheme = new ThemeConfig();
-    private List<AppStrategy> strategyPrototypes = new ArrayList<>();
+    // --- UI Controls ---
+    private JFXButton btnGo, btnExecute, btnStop;
     private Stage primaryStage;
     // --- Infrastructure ---
     private ConfigFileManager configManager;
-    private StyleFactory styles;
     @Getter
     @Setter
     private String bgImagePath = "";
@@ -93,7 +95,6 @@ public class FileManagerPlusApp extends Application implements IAppController {
     private ExecutorService executorService;
     private Task<?> currentTask;
     private volatile boolean isTaskRunning = false;
-
     // --- UI Containers ---
     private StackPane rootContainer;
     private ImageView backgroundImageView;
@@ -111,7 +112,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
         primaryStage.setTitle("Echo Music Manager - Plus Edition");
 
         // 1. 基础服务初始化
-        this.styles = new StyleFactory(currentTheme);
+        StyleFactory.initStyleFactory(currentTheme);
         this.configManager = new ConfigFileManager(this);
         this.strategyPrototypes = AppStrategyFactory.getAppStrategies();
 
@@ -176,13 +177,19 @@ public class FileManagerPlusApp extends Application implements IAppController {
         viewMenu.getItems().add(themeItem);
         menuBar.getMenus().addAll(fileMenu, viewMenu);
 
+        btnGo = StyleFactory.createActionButton("预览", null, this::runPipelineAnalysis);
+        btnExecute = StyleFactory.createActionButton("执行", "#27ae60", this::runPipelineExecution);
+        btnStop = StyleFactory.createActionButton("停止", "#e74c3c", this::forceStop);
+        btnStop.setDisable(true);
+        btnExecute.setDisable(true);
         HBox header = new HBox(15);
         header.setPadding(new Insets(10, 20, 10, 20));
         header.setAlignment(Pos.CENTER_LEFT);
         Label logo = new Label("ECHO MANAGER PLUS");
         logo.setFont(Font.font("Segoe UI", FontWeight.BLACK, 20));
         logo.setTextFill(Color.web(currentTheme.getAccentColor()));
-        header.getChildren().addAll(logo, new Region(), menuBar);
+
+        header.getChildren().addAll(logo, new Region(), menuBar, btnGo, btnExecute, btnStop);
         HBox.setHgrow(header.getChildren().get(1), Priority.ALWAYS);
         VBox top = new VBox(header, new Separator());
         root.setTop(top);
@@ -208,7 +215,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
         statusBar.setAlignment(Pos.CENTER_LEFT);
         Label lblStatusIcon = new Label("●");
         lblStatusIcon.setTextFill(Color.GREEN);
-        Label lblReady = styles.createNormalLabel("就绪");
+        Label lblReady = StyleFactory.createNormalLabel("就绪");
         statusBar.getChildren().addAll(lblStatusIcon, lblReady); // Stats are now managed by PreviewView internally or via explicit update
         root.setBottom(statusBar);
 
@@ -219,7 +226,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
     }
 
     private VBox createSideMenu() {
-        VBox menu = styles.createGlassPane();
+        VBox menu = StyleFactory.createVBoxPanel();
         menu.setPrefWidth(120);
         menu.setPadding(new Insets(30, 20, 30, 20));
         menu.setSpacing(15);
@@ -227,9 +234,9 @@ public class FileManagerPlusApp extends Application implements IAppController {
 
         VBox navBox = new VBox(3);
         navBox.getChildren().addAll(
-                styles.createActionButton("任务编排", null, () -> switchView(composeView.getViewNode())),
-                styles.createActionButton("预览执行", null, () -> switchView(previewView.getViewNode())),
-                styles.createActionButton("运行日志", null, () -> switchView(logView.getViewNode()))
+                StyleFactory.createActionButton("任务编排", null, () -> switchView(composeView.getViewNode())),
+                StyleFactory.createActionButton("预览执行", null, () -> switchView(previewView.getViewNode())),
+                StyleFactory.createActionButton("运行日志", null, () -> switchView(logView.getViewNode()))
         );
         navBox.setAlignment(Pos.CENTER);
 
@@ -270,11 +277,6 @@ public class FileManagerPlusApp extends Application implements IAppController {
     @Override
     public ThemeConfig getCurrentTheme() {
         return currentTheme;
-    }
-
-    @Override
-    public StyleFactory getStyleFactory() {
-        return styles;
     }
 
     // 委托给 GlobalSettingsView
@@ -377,9 +379,9 @@ public class FileManagerPlusApp extends Application implements IAppController {
         task.setOnSucceeded(e -> {
             fullChangeList = task.getValue();
             refreshPreviewTableFilter();
-            finishTaskUI("✅️预览完成");
+            finishTaskUI("➡ ➡ ➡ 预览完成 ⬅ ⬅ ⬅");
             boolean hasChanges = fullChangeList.stream().anyMatch(ChangeRecord::isChanged);
-            previewView.getBtnExecute().setDisable(!hasChanges);
+            btnExecute.setDisable(!hasChanges);
         });
         handleTaskLifecycle(task);
         new Thread(task).start();
@@ -443,6 +445,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
                                 }
                             } catch (Exception e) {
                                 rec.setStatus(ExecStatus.FAILED);
+                                rec.setFailReason(ExceptionUtils.getStackTrace(e));
                                 logError("❌ 失败处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().getName() + ",目标路径：" + rec.getNewName() + ",原因" + e.getMessage());
                                 logError("❌ 失败详细原因:" + ExceptionUtils.getStackTrace(e));
                             } finally {
@@ -503,11 +506,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
             protected TreeItem<ChangeRecord> call() {
                 TreeItem<ChangeRecord> root = new TreeItem<>(new ChangeRecord());
                 root.setExpanded(true);
-                String numberLimit = globalSettingsView.getNumberDisplay().getText();
-                int limit = 1000;
-                if (StringUtils.isNoneBlank(numberLimit) && StringUtils.isNumeric(numberLimit)) {
-                    limit = Integer.parseInt(numberLimit);
-                }
+                int limit = globalSettingsView.getNumberDisplay().getValue();
                 AtomicInteger count = new AtomicInteger();
                 for (ChangeRecord r : fullChangeList) {
                     if (h && !r.isChanged() && r.getStatus() != ExecStatus.FAILED) continue;
@@ -608,25 +607,31 @@ public class FileManagerPlusApp extends Application implements IAppController {
     private void resetProgressUI(String msg) {
         isTaskRunning = true;
         currentTask = null;
-        previewView.setRunningState(true);
-        previewView.updateProgress(msg, -1);
+        this.setRunningState(true);
+        previewView.updateProgress(msg);
     }
 
     private void finishTaskUI(String msg) {
         isTaskRunning = false;
-        previewView.setRunningState(false);
-        previewView.updateProgress(msg, 1.0);
+        this.setRunningState(false);
+        previewView.updateProgress(msg);
+    }
+
+    // UI Update Methods
+    public void setRunningState(boolean running) {
+        btnExecute.setDisable(running);
+        btnStop.setDisable(!running);
     }
 
     private void handleTaskLifecycle(Task<?> t) {
         currentTask = t;
         previewView.bindProgress(t);
         t.setOnFailed(e -> {
-            finishTaskUI("出错");
+            finishTaskUI("❌ ❌ ❌ 出错 ❌ ❌ ❌");
             logError("❌ 失败: " + ExceptionUtils.getStackTrace(e.getSource().getException()));
         });
         t.setOnCancelled(e -> {
-            finishTaskUI("已取消");
+            finishTaskUI("🛑 🛑 🛑 已取消 🛑 🛑 🛑");
         });
     }
 
@@ -637,7 +642,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
             if (currentTask != null) currentTask.cancel();
             if (executorService != null) executorService.shutdownNow();
             log("🛑 强制停止");
-            finishTaskUI("已停止");
+            finishTaskUI("🛑 🛑 🛑 已停止 🛑 🛑 🛑");
         }
     }
 
@@ -694,7 +699,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
             previewView.getPreviewTable().setRoot(null);
             log(r);
         }
-        previewView.getBtnExecute().setDisable(true);
+        btnExecute.setDisable(true);
     }
 
     @Override
@@ -712,6 +717,11 @@ public class FileManagerPlusApp extends Application implements IAppController {
     // --- Config IO (包含线程数保存) ---
     public void displayRunning(String s) {
         Platform.runLater(() -> previewView.updateRunningInfo(s));
+    }
+
+    @Override
+    public Node getGlobalSettingsView() {
+        return globalSettingsView.getViewNode();
     }
 
     // --- Config & Log IO ---
@@ -753,12 +763,12 @@ public class FileManagerPlusApp extends Application implements IAppController {
                 applyAppearance();
             }
         });
-        g.add(styles.createNormalLabel("Color:"), 0, 0);
+        g.add(StyleFactory.createNormalLabel("Color:"), 0, 0);
         g.add(cp, 1, 0);
-        g.add(styles.createNormalLabel("Opacity:"), 0, 1);
+        g.add(StyleFactory.createNormalLabel("Opacity:"), 0, 1);
         g.add(sl, 1, 1);
         g.add(chk, 1, 2);
-        g.add(styles.createNormalLabel("BG:"), 0, 3);
+        g.add(StyleFactory.createNormalLabel("BG:"), 0, 3);
         g.add(new HBox(5, tp, bp), 1, 3);
         d.getDialogPane().setContent(g);
         d.setResultConverter(b -> b);

@@ -15,69 +15,64 @@ public class CueParserUtil {
     private static final Pattern PATTERN = Pattern.compile("([A-Z]+)\\s+(.*)");
 
 
-    public static CueSheet parse(Path path) {
-        try {
-            CueSheet cue = new CueSheet();
-            CueSheet.CueTrack currentCueTrack = null;
+    public static CueSheet parse(Path path) throws Exception{
+        CueSheet cue = new CueSheet();
+        CueSheet.CueTrack currentCueTrack = null;
 
-            // CUE 常见编码为 GBK 或 UTF-8
-            List<String> lines = Files.readAllLines(path, FileEncodingUtil.guessCharset(path.toString()));
+        // CUE 常见编码为 GBK 或 UTF-8
+        List<String> lines = Files.readAllLines(path, FileEncodingUtil.guessCharset(path.toString()));
 
-            for (String line : lines) {
-                line = line.trim();
-                if (line.isEmpty()) continue;
+        for (String line : lines) {
+            line = line.trim();
+            if (line.isEmpty()) continue;
 
-                Matcher m = PATTERN.matcher(line);
-                if (!m.find()) continue;
+            Matcher m = PATTERN.matcher(line);
+            if (!m.find()) continue;
 
-                String command = m.group(1);
-                // 去掉引号
-                String value = m.group(2).replace("\"", "").trim();
+            String command = m.group(1);
+            // 去掉引号
+            String value = m.group(2).replace("\"", "").trim();
 
-                switch (command) {
-                    case "TITLE":
-                        if (currentCueTrack == null) cue.albumTitle = value;
-                        else currentCueTrack.title = value;
-                        break;
-                    case "PERFORMER":
-                        if (currentCueTrack == null) cue.albumPerformer = value;
-                        else currentCueTrack.performer = value;
-                        break;
-                    case "FILE":
-                        // 格式通常是 "filename.flac" WAVE
-                        String filename = value.split("(?i) WAVE|MP3|FLAC")[0];
-                        cue.allFiles.add(filename);
-                        if (currentCueTrack == null) cue.albumFileName = filename;
-                        else currentCueTrack.fileName = filename;
-                        break;
-                    case "TRACK":
-                        currentCueTrack = new CueSheet.CueTrack();
-                        currentCueTrack.number = Integer.parseInt(value.split(" ")[0]);
-                        currentCueTrack.cueSheet = cue;
-                        cue.tracks.add(currentCueTrack);
-                        break;
-                    case "INDEX":
-                        // Index 01 是音轨起始点
-                        if (value.startsWith("01")) {
-                            String timeStr = value.split("\\s+")[1];
-                            currentCueTrack.rawStartTime = timeStr;
-                            currentCueTrack.soundStartTimeMs = cueTimeToMs(timeStr);
-                        }
-                        // Index 02 是音轨结束点
-                        if (value.startsWith("02")) {
-                            String timeStr = value.split("\\s+")[1];
-                            currentCueTrack.rawEndTime = timeStr;
-                            currentCueTrack.soundEndTimeMs = cueTimeToMs(timeStr);
-                        }
-                        break;
-                }
+            switch (command) {
+                case "TITLE":
+                    if (currentCueTrack == null) cue.albumTitle = value;
+                    else currentCueTrack.title = value;
+                    break;
+                case "PERFORMER":
+                    if (currentCueTrack == null) cue.albumPerformer = value;
+                    else currentCueTrack.performer = value;
+                    break;
+                case "FILE":
+                    // 格式通常是 "filename.flac" WAVE
+                    String filename = value.split("(?i) WAVE|MP3|FLAC")[0];
+                    cue.allFiles.add(filename);
+                    if (currentCueTrack == null) cue.albumFileName = filename;
+                    else currentCueTrack.fileName = filename;
+                    break;
+                case "TRACK":
+                    currentCueTrack = new CueSheet.CueTrack();
+                    currentCueTrack.number = Integer.parseInt(value.split(" ")[0]);
+                    currentCueTrack.cueSheet = cue;
+                    cue.tracks.add(currentCueTrack);
+                    break;
+                case "INDEX":
+                    // Index 01 是音轨起始点
+                    if (value.startsWith("01")) {
+                        String timeStr = value.split("\\s+")[1];
+                        currentCueTrack.rawStartTime = timeStr;
+                        currentCueTrack.soundStartTimeMs = cueTimeToMs(timeStr);
+                    }
+                    // Index 02 是音轨结束点
+                    if (value.startsWith("02")) {
+                        String timeStr = value.split("\\s+")[1];
+                        currentCueTrack.rawEndTime = timeStr;
+                        currentCueTrack.soundEndTimeMs = cueTimeToMs(timeStr);
+                    }
+                    break;
             }
-            updateTrackInfo(cue);
-            return cue;
-        } catch (Throwable e) {
-            System.out.println("Cue文件解析失败: " + path + ExceptionUtils.getStackTrace(e));
-            return null;
         }
+        updateTrackInfo(cue);
+        return cue;
     }
 
     /**

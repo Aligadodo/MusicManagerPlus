@@ -1,6 +1,7 @@
 package com.filemanager.strategy;
 
 import com.filemanager.model.ChangeRecord;
+import com.filemanager.tool.StyleFactory;
 import com.filemanager.type.ScanTarget;
 import com.filemanager.util.MetadataHelper;
 import com.jfoenix.controls.JFXButton;
@@ -150,21 +151,15 @@ public abstract class AbstractFfmpegStrategy extends AppStrategy {
         outputGrid.getColumnConstraints().addAll(colLabel, colMid, colGrow);
 
         // 2. 音频参数 (FlowPane)
-        VBox audioParamsBox = new VBox(5);
-        audioParamsBox.getChildren().add(new Label("音频参数详解:"));
-        FlowPane paramsFlow = new FlowPane();
-        paramsFlow.setHgap(20);
-        paramsFlow.setVgap(10);
-        paramsFlow.getChildren().addAll(
-                createParamPair("FFmpeg线程:", spFfmpegThreads),
-                createParamPair("采样率(Hz):", cbSampleRate),
-                createParamPair("声道数:", cbChannels)
+        VBox audioParamsBox = StyleFactory.createVBoxPanel(
+                StyleFactory.createDescLabel("音频参数详解:"),
+                StyleFactory.createParamPair("FFmpeg线程:", spFfmpegThreads),
+                StyleFactory.createParamPair("采样率(Hz):", cbSampleRate),
+                StyleFactory.createParamPair("声道数:", cbChannels)
         );
-        audioParamsBox.getChildren().add(paramsFlow);
 
         // 3. 处理选项
-        VBox optionsBox = new VBox(8);
-        optionsBox.getChildren().addAll(chkOverwrite, chkForceFilenameMeta, chkEnableCache, chkEnableTempSuffix);
+        VBox optionsBox = StyleFactory.createVBoxPanel(chkOverwrite, chkForceFilenameMeta, chkEnableCache, chkEnableTempSuffix);
 
         // 4. 路径与缓存
         GridPane pathGrid = new GridPane();

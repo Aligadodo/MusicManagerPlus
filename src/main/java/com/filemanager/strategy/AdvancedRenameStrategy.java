@@ -1,6 +1,7 @@
 package com.filemanager.strategy;
 
 
+import com.filemanager.tool.StyleFactory;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.RuleCondition;
 import com.filemanager.type.ConditionType;
@@ -48,29 +49,21 @@ public class AdvancedRenameStrategy extends AppStrategy {
     public AdvancedRenameStrategy() {
         lvRules = new ListView<>();
         lvRules.setCellFactory(p -> new RuleListCell());
-        lvRules.setPlaceholder(createStyledLabel("暂无规则，请点击下方添加..."));
+        lvRules.setPlaceholder(StyleFactory.createParamLabel("暂无规则，请点击下方添加..."));
         lvRules.setPrefHeight(150);
 
-        btnAddRule = new JFXButton("添加规则");
-        btnAddRule.setStyle("-fx-background-color: #3498db;");
-        btnAddRule.setOnAction(e -> showRuleEditDialog(null));
-
-        btnRemoveRule = new JFXButton("删除选中");
-        btnRemoveRule.setStyle("-fx-background-color: #e74c3c;");
-        btnRemoveRule.setOnAction(e -> {
+        btnAddRule = StyleFactory.createActionButton("添加规则", "#3498db", () -> showRuleEditDialog(null));
+        btnRemoveRule = StyleFactory.createActionButton("添加规则", "#e74c3c", () -> {
             RenameRule s = lvRules.getSelectionModel().getSelectedItem();
-            if (s != null) lvRules.getItems().remove(s);
+            if (s != null) {
+                lvRules.getItems().remove(s);
+            }
         });
-
-        btnMoveUp = new JFXButton("↑(上移)");
-        btnMoveUp.setOnAction(e -> moveRule(-1));
-
-        btnMoveDown = new JFXButton("↓(下移)");
-        btnMoveDown.setOnAction(e -> moveRule(1));
+        btnMoveUp = StyleFactory.createActionButton("↑(上移)", "", ()-> moveRule(-1));
+        btnMoveDown = StyleFactory.createActionButton("↓(下移)", "", ()-> moveRule(-1));
 
         cbCrossDriveMode = new JFXComboBox<>(FXCollections.observableArrayList("移动 (Move)", "复制 (Copy)"));
         cbCrossDriveMode.getSelectionModel().select(0);
-
         cbProcessScope = new JFXComboBox<>(FXCollections.observableArrayList("仅处理文件", "仅处理文件夹", "全部处理"));
         cbProcessScope.getSelectionModel().select(2);
     }
@@ -93,21 +86,21 @@ public class AdvancedRenameStrategy extends AppStrategy {
 
     @Override
     public Node getConfigNode() {
-        VBox r = new VBox(10);
-        HBox t = new HBox(10, btnAddRule, btnRemoveRule, new Separator(javafx.geometry.Orientation.VERTICAL), btnMoveUp, btnMoveDown);
+        VBox r = StyleFactory.createVBoxPanel();
+        HBox t = StyleFactory.createHBoxPanel(btnAddRule, btnRemoveRule, btnMoveUp, btnMoveDown);
         t.setAlignment(Pos.CENTER_LEFT);
 
         GridPane g = new GridPane();
         g.setHgap(10);
         g.setVgap(5);
-        g.add(createStyledLabel("对象:"), 0, 0);
+        g.add(StyleFactory.createParamLabel("处理范围:"), 0, 0);
         g.add(cbProcessScope, 1, 0);
-        g.add(createStyledLabel("跨盘:"), 2, 0);
+        g.add(StyleFactory.createParamLabel("跨盘动作:"), 2, 0);
         g.add(cbCrossDriveMode, 3, 0);
         g.setStyle("-fx-background-color: rgba(255,255,255,0.5); -fx-background-radius: 20; -fx-padding: 5 15; -fx-text-fill: #333333;");
 
 
-        r.getChildren().addAll(createStyledLabel("规则链 (从上至下依次执行):"), lvRules, t, new Separator(), g);
+        r.getChildren().addAll(StyleFactory.createParamLabel("规则链 (从上至下依次执行):"), lvRules, t, new Separator(), g);
         return r;
     }
 
@@ -368,15 +361,15 @@ public class AdvancedRenameStrategy extends AppStrategy {
             txtReplace.setText(existingRule.replaceStr);
         }
 
-        grid.add(createStyledLabel("1. 前置条件:"), 0, 0);
+        grid.add(StyleFactory.createParamLabel("1. 前置条件:"), 0, 0);
         grid.add(new HBox(5, cbCondType, txtCondVal, btnAddCond, btnDelCond), 1, 0);
         grid.add(lvConds, 1, 1);
         grid.add(new Separator(), 0, 2, 2, 1);
-        grid.add(createStyledLabel("2. 执行动作:"), 0, 3);
+        grid.add(StyleFactory.createParamLabel("2. 执行动作:"), 0, 3);
         grid.add(cbAction, 1, 3);
-        grid.add(createStyledLabel("参数 A:"), 0, 4);
+        grid.add(StyleFactory.createParamLabel("参数 A:"), 0, 4);
         grid.add(txtFind, 1, 4);
-        grid.add(createStyledLabel("参数 B:"), 0, 5);
+        grid.add(StyleFactory.createParamLabel("参数 B:"), 0, 5);
         grid.add(txtReplace, 1, 5);
 
         dialog.getDialogPane().setContent(grid);
@@ -415,9 +408,9 @@ public class AdvancedRenameStrategy extends AppStrategy {
             } else {
                 VBox v = new VBox(3);
                 String cond = item.conditions.isEmpty() ? "无条件" : item.conditions.stream().map(RuleCondition::toString).collect(Collectors.joining(" & "));
-                Label l1 = createStyledLabel("若: " + cond);
+                Label l1 = StyleFactory.createParamLabel("若: " + cond);
                 l1.setStyle("-fx-font-size: 11px;");
-                Label l2 = createStyledLabel(item.getActionDesc());
+                Label l2 = StyleFactory.createParamLabel(item.getActionDesc());
                 l2.setStyle("-fx-font-weight: bold;");
                 v.getChildren().addAll(l1, l2);
                 setGraphic(v);
@@ -510,6 +503,7 @@ public class AdvancedRenameStrategy extends AppStrategy {
                         break;
                 }
             } catch (Exception e) {
+                
             }
             return r;
         }

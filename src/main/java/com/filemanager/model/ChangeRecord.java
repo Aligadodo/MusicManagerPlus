@@ -14,12 +14,16 @@ import java.util.Map;
 public class ChangeRecord {
     private String originalName;
     private String newName;
-    private File fileHandle; // 原始文件句柄
+    // 原始文件句柄
+    private File fileHandle;
     private boolean changed;
-    private String newPath;  // 最终路径
+    // 最终路径
+    private String newPath;
     private OperationType opType;
     private Map<String, String> extraParams = new HashMap<>();
     private ExecStatus status = ExecStatus.PENDING;
+    // 失败的原因
+    private String failReason;
     private boolean isCreate = false;
     private boolean isDeleteOrMove = false;
 

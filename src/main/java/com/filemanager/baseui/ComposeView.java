@@ -1,9 +1,10 @@
-package com.filemanager.ui;
+package com.filemanager.baseui;
 
 import com.filemanager.app.IAppController;
 import com.filemanager.model.RuleCondition;
 import com.filemanager.model.RuleConditionGroup;
 import com.filemanager.strategy.AppStrategy;
+import com.filemanager.tool.StyleFactory;
 import com.filemanager.type.ConditionType;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXComboBox;
@@ -27,7 +28,6 @@ import java.util.Properties;
 
 public class ComposeView {
     private final IAppController app;
-    private final StyleFactory styles;
     private VBox viewNode;
     private VBox configContainer;
     private ListView<AppStrategy> pipelineListView;
@@ -35,9 +35,8 @@ public class ComposeView {
 
     public ComposeView(IAppController app) {
         this.app = app;
-        this.styles = app.getStyleFactory();
         this.buildUI();
-        this.styles.setBasicStyle(viewNode);
+        StyleFactory.setBasicStyle(viewNode);
     }
 
     public Node getViewNode() {
@@ -49,9 +48,9 @@ public class ComposeView {
 
         HBox headers = new HBox(20);
         headers.getChildren().addAll(
-                styles.createSectionHeader("1. 源目录", "拖拽添加 / 排序"),
-                styles.createSectionHeader("2. 流水线", "按序执行 / 调整"),
-                styles.createSectionHeader("3. 参数配置", "选中步骤编辑")
+                StyleFactory.createSectionHeader("step1-选择目录", "通过弹窗或者拖拽至空白处来添加需要处理的文件或文件夹。"),
+                StyleFactory.createSectionHeader("step2-流水线配置", "添加必要的处理流程，可同时应用不同的操作。（同一文件只会被成功修改一次）。"),
+                StyleFactory.createSectionHeader("step3-参数配置", "选中步骤并编辑步骤下的参数，支持配置步骤的前置条件，以在特定条件下执行。")
         );
         HBox.setHgrow(headers.getChildren().get(0), Priority.ALWAYS);
         HBox.setHgrow(headers.getChildren().get(1), Priority.ALWAYS);
@@ -68,13 +67,13 @@ public class ComposeView {
         grid.getColumnConstraints().addAll(c1, c2, c3);
 
         // --- Left Panel: Source ---
-        VBox leftPanel = styles.createGlassPane();
+        VBox leftPanel = StyleFactory.createVBoxPanel();
         leftPanel.setPadding(new Insets(15));
         leftPanel.setSpacing(10);
 
         // 初始化主类成员 sourceListView
         sourceListView = new ListView<>(app.getSourceRoots());
-        sourceListView.setPlaceholder(styles.createNormalLabel("拖拽文件夹到此"));
+        sourceListView.setPlaceholder(StyleFactory.createNormalLabel("拖拽文件夹到此"));
         VBox.setVgrow(sourceListView, Priority.ALWAYS);
 
         // [增强] 源目录列表单元格：支持完整路径显示 + 行内操作
@@ -91,18 +90,18 @@ public class ComposeView {
                     BorderPane pane = new BorderPane();
 
                     VBox content = new VBox(2);
-                    Label name = styles.createLabel(item.getName(), 13, true);
-                    Label path = styles.createInfoLabel(item.getAbsolutePath());
+                    Label name = StyleFactory.createLabel(item.getName(), 13, true);
+                    Label path = StyleFactory.createInfoLabel(item.getAbsolutePath());
                     path.setTooltip(new Tooltip(item.getAbsolutePath()));
                     content.getChildren().addAll(name, path);
 
                     HBox actions = new HBox(4);
                     actions.setAlignment(Pos.CENTER_RIGHT);
                     // 文件夹操作：上移、下移、打开、删除
-                    JFXButton btnUp = styles.createSmallIconButton("▲", e -> moveListItem(app.getSourceRoots(), getIndex(), -1));
-                    JFXButton btnDown = styles.createSmallIconButton("▼", e -> moveListItem(app.getSourceRoots(), getIndex(), 1));
-                    JFXButton btnOpen = styles.createSmallIconButton("📂", e -> app.openFileInSystem(item));
-                    JFXButton btnDel = styles.createSmallIconButton("✕", e -> {
+                    JFXButton btnUp = StyleFactory.createSmallIconButton("▲", e -> moveListItem(app.getSourceRoots(), getIndex(), -1));
+                    JFXButton btnDown = StyleFactory.createSmallIconButton("▼", e -> moveListItem(app.getSourceRoots(), getIndex(), 1));
+                    JFXButton btnOpen = StyleFactory.createSmallIconButton("📂", e -> app.openFileInSystem(item));
+                    JFXButton btnDel = StyleFactory.createSmallIconButton("✕", e -> {
                         app.getSourceRoots().remove(item);
                         app.invalidatePreview("移除源目录");
                     });
@@ -133,11 +132,11 @@ public class ComposeView {
 
         HBox srcTools = new HBox(10);
         srcTools.getChildren().addAll(
-                styles.createActionButton("添加目录", null, app::addDirectoryAction),
-                styles.createActionButton("清空", "#e74c3c", app::clearSourceDirs)
+                StyleFactory.createActionButton("添加目录", null, app::addDirectoryAction),
+                StyleFactory.createActionButton("清空", "#e74c3c", app::clearSourceDirs)
         );
 
-        TitledPane tpFilters = new TitledPane("全局筛选", createGlobalFiltersUI());
+        TitledPane tpFilters = new TitledPane("全局筛选", app.getGlobalSettingsView());
         tpFilters.setCollapsible(true);
         tpFilters.setExpanded(true);
         tpFilters.setStyle("-fx-text-fill: " + app.getCurrentTheme().getTextColor() + ";");
@@ -146,7 +145,7 @@ public class ComposeView {
         grid.add(leftPanel, 0, 0);
 
         // --- Center Panel: Pipeline ---
-        VBox centerPanel = styles.createGlassPane();
+        VBox centerPanel = StyleFactory.createVBoxPanel();
         centerPanel.setPadding(new Insets(15));
         centerPanel.setSpacing(10);
 
@@ -167,8 +166,8 @@ public class ComposeView {
                     BorderPane pane = new BorderPane();
 
                     VBox v = new VBox(2);
-                    Label n = styles.createLabel((getIndex() + 1) + ". " + item.getName(), 14, true);
-                    Label d = styles.createInfoLabel(item.getDescription());
+                    Label n = StyleFactory.createLabel((getIndex() + 1) + ". " + item.getName(), 14, true);
+                    Label d = StyleFactory.createInfoLabel(item.getDescription());
                     d.setMaxWidth(180);
                     v.getChildren().addAll(n, d);
 
@@ -177,15 +176,15 @@ public class ComposeView {
 
                     // 策略操作：上移、下移、删除
                     // (注：配置详情通过列表选中触发，这里不需要额外按钮，或者可以加一个 '⚙' 指示)
-                    JFXButton btnUp = styles.createSmallIconButton("▲", e -> {
+                    JFXButton btnUp = StyleFactory.createSmallIconButton("▲", e -> {
                         moveListItem(app.getPipelineStrategies(), getIndex(), -1);
                         pipelineListView.getSelectionModel().select(getIndex()); // 保持选中
                     });
-                    JFXButton btnDown = styles.createSmallIconButton("▼", e -> {
+                    JFXButton btnDown = StyleFactory.createSmallIconButton("▼", e -> {
                         moveListItem(app.getPipelineStrategies(), getIndex(), 1);
                         pipelineListView.getSelectionModel().select(getIndex());
                     });
-                    JFXButton btnDel = styles.createSmallIconButton("✕", e -> {
+                    JFXButton btnDel = StyleFactory.createSmallIconButton("✕", e -> {
                         app.getPipelineStrategies().remove(item);
                         configContainer.getChildren().clear(); // 清空配置面板
                         app.invalidatePreview("步骤移除");
@@ -259,14 +258,14 @@ public class ComposeView {
             }
         });
 
-        JFXButton btnAddStep = styles.createActionButton("添加步骤", "#2ecc71",
+        JFXButton btnAddStep = StyleFactory.createActionButton("添加步骤", "#2ecc71",
                 () -> {
                     try {
                         AppStrategy strategy = cbAdd.getValue().getClass().getDeclaredConstructor().newInstance();
                         strategy.loadConfig(new Properties());
                         app.addStrategyStep(strategy);
                     } catch (Exception e) {
-                        app.log("组件添加失败:" + ExceptionUtils.getStackTrace(e));
+                        app.logError("组件添加失败:" + ExceptionUtils.getStackTrace(e));
                     }
                 });
         pipeActions.getChildren().addAll(cbAdd, btnAddStep);
@@ -275,7 +274,7 @@ public class ComposeView {
         grid.add(centerPanel, 1, 0);
 
         // --- Right Panel: Config ---
-        VBox rightPanel = styles.createGlassPane();
+        VBox rightPanel = StyleFactory.createVBoxPanel();
         rightPanel.setPadding(new Insets(15));
         configContainer = new VBox(10);
         configContainer.setStyle("-fx-background-color: transparent;");
@@ -290,12 +289,8 @@ public class ComposeView {
 
         // --- Bottom ---
         HBox bottom = new HBox();
-        bottom.setAlignment(Pos.CENTER_RIGHT);
-        bottom.setPadding(new Insets(10));
-        JFXButton btnGo = styles.createActionButton("生成预览  ▶", null, app::runPipelineAnalysis);
-        btnGo.setPadding(new Insets(10, 30, 10, 30));
-        bottom.getChildren().add(btnGo);
-
+//        bottom.setAlignment(Pos.CENTER_RIGHT);
+//        bottom.setPadding(new Insets(10));
         viewNode.getChildren().addAll(headers, grid, bottom);
 
         // Auto select first
@@ -326,33 +321,21 @@ public class ComposeView {
         }
     }
 
-    private Node createGlobalFiltersUI() {
-        VBox box = new VBox(10);
-        box.setPadding(new Insets(10));
-        box.setStyle("-fx-background-color: #f9f9f9; -fx-text-fill: #333333;");
-        box.getChildren().addAll(
-                styles.createNormalLabel("递归模式:"), app.getCbRecursionMode(), app.getSpRecursionDepth(),
-                styles.createNormalLabel("文件扩展名:"), app.getCcbFileTypes(),
-                new Separator(), styles.createNormalLabel("全局线程数:"), app.getSpGlobalThreads()
-        );
-        return box;
-    }
-
     public void refreshConfig(AppStrategy s) {
         configContainer.getChildren().clear();
         if (s == null) return;
 
         configContainer.getChildren().addAll(
-                styles.createHeader(s.getName()),
-                styles.createInfoLabel(s.getDescription()),
+                StyleFactory.createHeader(s.getName()),
+                StyleFactory.createInfoLabel(s.getDescription()),
                 new Separator(),
-                styles.createNormalLabel("前置条件 (可选):"),
+                StyleFactory.createNormalLabel("前置条件 (可选):"),
                 createConditionsUI(s),
                 new Separator(),
-                styles.createNormalLabel("参数配置:"),
+                StyleFactory.createNormalLabel("参数配置:"),
                 s.getConfigNode() != null ? s.getConfigNode() : new Label("无")
         );
-        styles.forceDarkText(configContainer);
+        StyleFactory.forceDarkText(configContainer);
     }
 
     private Node createConditionsUI(AppStrategy strategy) {
@@ -393,15 +376,11 @@ public class ComposeView {
         refreshGroups.run();
 
         // 底部：添加新组按钮
-        JFXButton btnAddGroup = styles.createButton("添加条件组 (OR)");
-        btnAddGroup.setStyle("-fx-background-color: #e0f7fa; -fx-text-fill: #006064; -fx-border-color: #b2ebf2; -fx-border-radius: 4; -fx-cursor: hand;");
-        btnAddGroup.setMaxWidth(Double.MAX_VALUE);
-        btnAddGroup.setOnAction(e -> {
+        JFXButton btnAddGroup = StyleFactory.createActionButton("添加条件组 (OR)", "#e0f7fa",()-> {
             strategy.getConditionGroups().add(new RuleConditionGroup());
             refreshConfig(strategy); // 刷新整个面板
             app.invalidatePreview("添加条件组");
         });
-
         rootBox.getChildren().addAll(groupsContainer, btnAddGroup);
         return rootBox;
     }
@@ -414,11 +393,12 @@ public class ComposeView {
         // Header
         HBox header = new HBox(10);
         header.setAlignment(Pos.CENTER_LEFT);
-        Label lblTitle = new Label("条件组 " + index + " (且 AND)");
+        Label lblTitle = StyleFactory.createDescLabel("条件组 " + index + " (一组条件内为且)");
         lblTitle.setStyle("-fx-font-weight: bold; -fx-text-fill: #555;");
+
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        JFXButton btnDelGroup = styles.createButton("✕", e -> onDeleteGroup.run());
+        JFXButton btnDelGroup = StyleFactory.createButton("✕", e -> onDeleteGroup.run());
         btnDelGroup.setStyle("-fx-text-fill: red; -fx-background-color: transparent;");
         header.getChildren().addAll(lblTitle, spacer, btnDelGroup);
 
@@ -431,7 +411,7 @@ public class ComposeView {
             lblC.setTextFill(Color.web("#333"));
             Region sp = new Region();
             HBox.setHgrow(sp, Priority.ALWAYS);
-            JFXButton btnDelC = styles.createButton("−", e -> {
+            JFXButton btnDelC = StyleFactory.createButton("−", e -> {
                 group.remove(cond);
                 if (group.getConditions().isEmpty()) {
                     // 如果组空了，保留组还是删除组？这里保留空组
@@ -460,7 +440,7 @@ public class ComposeView {
             if (!needsVal) txtVal.clear();
         });
 
-        JFXButton btnAdd = styles.createButton("+", e -> {
+        JFXButton btnAdd = StyleFactory.createButton("+", e -> {
             if (cbType.getValue().needsValue() && txtVal.getText().isEmpty()) return;
             group.add(new RuleCondition(cbType.getValue(), txtVal.getText()));
             refreshConfig(strategy);
