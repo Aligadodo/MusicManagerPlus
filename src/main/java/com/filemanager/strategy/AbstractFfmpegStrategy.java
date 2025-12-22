@@ -155,7 +155,7 @@ public abstract class AbstractFfmpegStrategy extends AppStrategy {
                 StyleFactory.createParamPairLine("输出模式:", StyleFactory.createHBox(cbOutputDirMode,txtRelativePath)),
                 StyleFactory.createSeparator(),
                 StyleFactory.createChapter("转换参数设置"),
-                StyleFactory.createHBox(StyleFactory.createParamLabel("FFmpeg路径"),txtFFmpegPath,btnPickFFmpeg),
+                StyleFactory.createParamPairLine("FFmpeg路径:",txtFFmpegPath,btnPickFFmpeg),
                 StyleFactory.createParamPairLine("FFmpeg线程:", spFfmpegThreads),
                 StyleFactory.createParamPairLine("采样率(Hz):", cbSampleRate),
                 StyleFactory.createParamPairLine("声道数:", cbChannels),

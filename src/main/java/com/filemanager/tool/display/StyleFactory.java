@@ -6,15 +6,20 @@ import com.jfoenix.controls.JFXButton;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
+
+import java.util.Collections;
+import java.util.List;
 
 /**
  * UI 组件样式工厂
@@ -41,7 +46,21 @@ public class StyleFactory {
     }
 
     public static Node createSeparator() {
-        return new Separator();
+        Separator separator = new Separator();
+        return separator;
+    }
+
+    /**
+     * 自动把其他组件排挤到左右两侧
+     * @return
+     */
+    public static Node createSpacer() {
+        Region spacer = new Region();
+        spacer.setStyle("-fx-background-color: transparent;");
+        spacer.getStyleClass().add("glass-pane");
+        // 关键核心：设置其在 HBox 中始终自动扩展
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        return spacer;
     }
 
     public static Label createHeader(String text) {
@@ -69,15 +88,18 @@ public class StyleFactory {
         return label;
     }
 
-    public static HBox createParamPairLine(String labelText, Node control) {
-        HBox hBox = createHBox(createParamLabel(labelText), new Region(), control);
+    public static HBox createParamPairLine(String labelText, Node... controls) {
+        HBox hBox = createHBox(createParamLabel(labelText), createSpacer());
+        hBox.getChildren().addAll(controls);
         hBox.setSpacing(3);
         return hBox;
     }
 
-    public static Label createInfoLabel(String text) {
+    public static Label createInfoLabel(String text, int maxWidth) {
         Label l = createLabel(text, 10, false);
         l.setTextFill(Color.GRAY);
+        l.setMaxWidth(maxWidth);
+        l.setWrapText(true);
         return l;
     }
 
@@ -132,19 +154,30 @@ public class StyleFactory {
     }
 
     /**
+     * 创建透明的横向容器
+     *
+     * @return
+     */
+    public static VBox createVBox(Node... subNodes) {
+        VBox p = new VBox();
+        p.setStyle("-fx-background-color: transparent;");
+        p.getStyleClass().add("glass-pane");
+        for (Node subNode : subNodes) {
+            p.getChildren().add(subNode);
+        }
+        return p;
+    }
+
+    /**
      * 创建透明的竖向容器
      *
      * @return
      */
     public static VBox createVBoxPanel(Node... subNodes) {
-        VBox p = new VBox();
-        p.getStyleClass().add("glass-pane");
-        p.setStyle(String.format("-fx-background-color: rgba(255,255,255,%.2f); -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s;",
+        VBox p = createVBox(subNodes);
+        p.setStyle(String.format("-fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s;",
                 theme.getGlassOpacity(), theme.getCornerRadius(), theme.getTextColor()));
         p.setSpacing(5);
-        for (Node subNode : subNodes) {
-            p.getChildren().add(subNode);
-        }
         return p;
     }
 
@@ -155,12 +188,14 @@ public class StyleFactory {
      */
     public static HBox createHBox(Node... subNodes) {
         HBox p = new HBox();
+        p.setStyle("-fx-background-color: transparent;");
         p.getStyleClass().add("glass-pane");
         for (Node subNode : subNodes) {
             p.getChildren().add(subNode);
         }
         return p;
     }
+
 
     /**
      * 创建透明的横向容器
@@ -178,7 +213,7 @@ public class StyleFactory {
 
     public static VBox createSectionHeader(String title, String subtitle) {
         VBox v = new VBox(2);
-        v.getChildren().addAll(createHeader(title), createInfoLabel(subtitle));
+        v.getChildren().addAll(createHeader(title), createInfoLabel(subtitle, 400));
         return v;
     }
 
@@ -235,6 +270,49 @@ public class StyleFactory {
             };
         });
         return column;
+    }
+
+
+    public static HBox createTreeItemMenu(EventHandler<ActionEvent> open, EventHandler<ActionEvent> up, EventHandler<ActionEvent> down, EventHandler<ActionEvent> del) {
+        HBox actions = new HBox(4);
+        actions.setAlignment(Pos.CENTER_RIGHT);
+        // 策略操作：上移、下移、删除
+        // (注：配置详情通过列表选中触发，这里不需要额外按钮，或者可以加一个 '⚙' 指示)
+        if (open != null) {
+            JFXButton openUp = StyleFactory.createSmallIconButton("📂", open);
+            actions.getChildren().add(openUp);
+        }
+        if (up != null) {
+            JFXButton btnUp = StyleFactory.createSmallIconButton("▲", up);
+            actions.getChildren().add(btnUp);
+        }
+        if (down != null) {
+            JFXButton btnDown = StyleFactory.createSmallIconButton("▼", down);
+            actions.getChildren().add(btnDown);
+        }
+        if (del != null) {
+            JFXButton btnDel = StyleFactory.createSmallIconButton("✕", del);
+            btnDel.setTextFill(Color.web("#e74c3c"));
+            actions.getChildren().add(btnDel);
+        }
+        return actions;
+    }
+
+
+
+    /**
+     * 更新列表行选中的样式
+     * @param node
+     * @param selected
+     */
+    public static void updateTreeItemStyle(Node node , boolean selected) {
+        if (selected) {
+            // 选中样式：淡蓝色背景 + 左侧/底部蓝色边框
+            node.setStyle("-fx-background-color: rgba(52, 152, 219, 0.15); -fx-border-color: #3498db; -fx-border-width: 0 0 1 0;");
+        } else {
+            // 默认样式
+            node.setStyle("-fx-background-color: transparent; -fx-border-color: #eee; -fx-border-width: 0 0 1 0;");
+        }
     }
 
     public static void setBasicStyle(Node node) {

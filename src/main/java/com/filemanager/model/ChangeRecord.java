@@ -31,16 +31,21 @@ public class ChangeRecord {
     private File intermediateFile;
 
     public ChangeRecord(String o, String n, File f, boolean c, String p, OperationType op) {
-        this.originalName=o; this.newName=n; this.fileHandle=f; this.changed=c; this.newPath=p; this.opType=op;
+        this.originalName = o;
+        this.newName = n;
+        this.fileHandle = f;
+        this.changed = c && op != null && OperationType.NONE != op;
+        this.newPath = p;
+        this.opType = op;
     }
 
-    public ChangeRecord(String originalName, String name, File fileHandle, boolean b, String absolutePath, OperationType operationType, Map<String, String> params, ExecStatus status) {
+    public ChangeRecord(String originalName, String name, File fileHandle, boolean b, String absolutePath, OperationType op, Map<String, String> params, ExecStatus status) {
         this.originalName = originalName;
         this.newName = name;
         this.fileHandle = fileHandle;
-        this.changed = b;
+        this.changed = b && op != null && OperationType.NONE != op;
         this.newPath = absolutePath;
-        this.opType = operationType;
+        this.opType = op;
         this.extraParams = params;
         this.status = status;
     }

@@ -63,8 +63,8 @@ public class AlbumDirNormalizeStrategy extends AppStrategy {
     @Override
     public Node getConfigNode() {
         return StyleFactory.createVBoxPanel(
-                StyleFactory.createParamPairLine("目录命名模板:",txtTemplate),
-                StyleFactory.createDescLabel("变量: %artist%, %album%, %year%"));
+                StyleFactory.createParamPairLine("目录命名模板:",txtTemplate)
+                );
     }
 
     @Override

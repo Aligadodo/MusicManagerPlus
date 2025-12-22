@@ -1,9 +1,10 @@
 package com.filemanager.strategy;
 
 
-import com.filemanager.tool.display.StyleFactory;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.RuleCondition;
+import com.filemanager.tool.display.NodeUtils;
+import com.filemanager.tool.display.StyleFactory;
 import com.filemanager.type.ConditionType;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
@@ -13,7 +14,6 @@ import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
-import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
@@ -51,7 +51,12 @@ public class AdvancedRenameStrategy extends AppStrategy {
         lvRules.setCellFactory(p -> new RuleListCell());
         lvRules.setPlaceholder(StyleFactory.createParamLabel("暂无规则，请点击下方添加..."));
         lvRules.setPrefHeight(150);
-
+        // 双击打开配置
+        lvRules.setOnMouseClicked(e -> {
+            if (e.getClickCount() > 1 && lvRules.getSelectionModel().getSelectedItem() != null) {
+                showRuleEditDialog(lvRules.getSelectionModel().getSelectedItem());
+            }
+        });
         btnAddRule = StyleFactory.createActionButton("添加规则", "#3498db", () -> showRuleEditDialog(null));
         btnRemoveRule = StyleFactory.createActionButton("删除规则", "#e74c3c", () -> {
             RenameRule s = lvRules.getSelectionModel().getSelectedItem();
@@ -59,8 +64,8 @@ public class AdvancedRenameStrategy extends AppStrategy {
                 lvRules.getItems().remove(s);
             }
         });
-        btnMoveUp = StyleFactory.createActionButton("↑(上移)", "", ()-> moveRule(-1));
-        btnMoveDown = StyleFactory.createActionButton("↓(下移)", "", ()-> moveRule(-1));
+        btnMoveUp = StyleFactory.createActionButton("↑(上移)", "", () -> moveRule(-1));
+        btnMoveDown = StyleFactory.createActionButton("↓(下移)", "", () -> moveRule(-1));
 
         cbCrossDriveMode = new JFXComboBox<>(FXCollections.observableArrayList("移动 (Move)", "复制 (Copy)"));
         cbCrossDriveMode.getSelectionModel().select(0);
@@ -91,8 +96,8 @@ public class AdvancedRenameStrategy extends AppStrategy {
                 lvRules,
                 StyleFactory.createHBox(btnAddRule, btnRemoveRule, btnMoveUp, btnMoveDown),
                 StyleFactory.createSeparator(),
-                StyleFactory.createHBox(StyleFactory.createParamLabel("处理范围:"), cbProcessScope),
-                StyleFactory.createHBox(StyleFactory.createParamLabel("跨盘动作:"), cbCrossDriveMode));
+                StyleFactory.createParamPairLine("处理范围:", cbProcessScope),
+                StyleFactory.createParamPairLine("跨盘动作:", cbCrossDriveMode));
         return r;
     }
 
@@ -389,27 +394,6 @@ public class AdvancedRenameStrategy extends AppStrategy {
         }
     }
 
-    // --- Helper Classes (Need to be static for standalone file) ---
-    static class RuleListCell extends ListCell<RenameRule> {
-        @Override
-        protected void updateItem(RenameRule item, boolean empty) {
-            super.updateItem(item, empty);
-            if (empty || item == null) {
-                setText(null);
-                setGraphic(null);
-            } else {
-                VBox v = new VBox(3);
-                String cond = item.conditions.isEmpty() ? "无条件" : item.conditions.stream().map(RuleCondition::toString).collect(Collectors.joining(" & "));
-                Label l1 = StyleFactory.createDescLabel("若: " + cond);
-                l1.setStyle("-fx-font-size: 11px;");
-                Label l2 = StyleFactory.createDescLabel(item.getActionDesc());
-                l2.setStyle("-fx-font-weight: bold;");
-                v.getChildren().addAll(l1, l2);
-                setGraphic(v);
-            }
-        }
-    }
-
     static class RenameRule {
         List<RuleCondition> conditions;
         ActionType actionType;
@@ -495,7 +479,7 @@ public class AdvancedRenameStrategy extends AppStrategy {
                         break;
                 }
             } catch (Exception e) {
-                
+
             }
             return r;
         }
@@ -542,6 +526,39 @@ public class AdvancedRenameStrategy extends AppStrategy {
             } catch (Exception e) {
             }
             return 0;
+        }
+    }
+
+    // --- Helper Classes (Need to be static for standalone file) ---
+    class RuleListCell extends ListCell<RenameRule> {
+        @Override
+        protected void updateItem(RenameRule item, boolean empty) {
+            super.updateItem(item, empty);
+            if (empty || item == null) {
+                setText(null);
+                setGraphic(null);
+            } else {
+                String cond = item.conditions.isEmpty() ? "无条件" : item.conditions.stream().map(RuleCondition::toString).collect(Collectors.joining(" & "));
+                Label l1 = StyleFactory.createDescLabel("若: " + cond);
+                l1.setStyle("-fx-font-size: 11px;");
+                Label l2 = StyleFactory.createDescLabel(item.getActionDesc());
+                l2.setStyle("-fx-font-weight: bold;");
+                HBox actions = StyleFactory.createTreeItemMenu(
+                        e -> showRuleEditDialog(item),
+                        e -> NodeUtils.moveListItem(getListView().getItems(), getIndex(), -1),
+                        e -> NodeUtils.moveListItem(getListView().getItems(), getIndex(), 1),
+                        e -> getListView().getItems().remove(item)
+                );
+                setGraphic(StyleFactory.createHBox(StyleFactory.createVBox(l1, l2), StyleFactory.createSpacer(), actions));
+            }
+        }
+
+        @Override
+        public void updateSelected(boolean selected) {
+            super.updateSelected(selected);
+            if (!isEmpty() && getItem() != null) {
+                StyleFactory.updateTreeItemStyle(this, selected);
+            }
         }
     }
 }

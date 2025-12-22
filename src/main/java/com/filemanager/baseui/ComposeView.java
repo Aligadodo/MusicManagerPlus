@@ -4,6 +4,7 @@ import com.filemanager.app.IAppController;
 import com.filemanager.model.RuleCondition;
 import com.filemanager.model.RuleConditionGroup;
 import com.filemanager.strategy.AppStrategy;
+import com.filemanager.tool.display.NodeUtils;
 import com.filemanager.tool.display.StyleFactory;
 import com.filemanager.type.ConditionType;
 import com.jfoenix.controls.JFXButton;
@@ -49,9 +50,9 @@ public class ComposeView {
         ColumnConstraints c1 = new ColumnConstraints();
         c1.setPercentWidth(30);
         ColumnConstraints c2 = new ColumnConstraints();
-        c2.setPercentWidth(25);
+        c2.setPercentWidth(35);
         ColumnConstraints c3 = new ColumnConstraints();
-        c3.setPercentWidth(45);
+        c3.setPercentWidth(35);
         grid.getColumnConstraints().addAll(c1, c2, c3);
         grid.add(StyleFactory.createHBoxPanel(StyleFactory.createSectionHeader("step1-选择目录",
                 "通过弹窗或者拖拽至空白处来添加需要处理的文件或文件夹。")), 0, 0);
@@ -93,24 +94,20 @@ public class ComposeView {
                     BorderPane pane = new BorderPane();
 
                     VBox content = new VBox(2);
-                    Label name = StyleFactory.createLabel(item.getName(), 13, true);
-                    Label path = StyleFactory.createInfoLabel(item.getAbsolutePath());
+                    Label name = StyleFactory.createChapter(item.getName());
+                    Label path = StyleFactory.createInfoLabel(item.getAbsolutePath(), 200);
                     path.setTooltip(new Tooltip(item.getAbsolutePath()));
                     content.getChildren().addAll(name, path);
 
-                    HBox actions = new HBox(4);
-                    actions.setAlignment(Pos.CENTER_RIGHT);
-                    // 文件夹操作：上移、下移、打开、删除
-                    JFXButton btnUp = StyleFactory.createSmallIconButton("▲", e -> moveListItem(app.getSourceRoots(), getIndex(), -1));
-                    JFXButton btnDown = StyleFactory.createSmallIconButton("▼", e -> moveListItem(app.getSourceRoots(), getIndex(), 1));
-                    JFXButton btnOpen = StyleFactory.createSmallIconButton("📂", e -> app.openFileInSystem(item));
-                    JFXButton btnDel = StyleFactory.createSmallIconButton("✕", e -> {
-                        app.getSourceRoots().remove(item);
-                        app.invalidatePreview("移除源目录");
-                    });
-                    btnDel.setTextFill(Color.web("#e74c3c")); // 红色删除键
-
-                    actions.getChildren().addAll(btnUp, btnDown, btnOpen, btnDel);
+                    HBox actions = StyleFactory.createTreeItemMenu(
+                            e -> app.openFileInSystem(item),
+                            e -> moveListItem(app.getSourceRoots(), getIndex(), -1),
+                            e -> moveListItem(app.getSourceRoots(), getIndex(), 1),
+                            e -> {
+                                app.getSourceRoots().remove(item);
+                                app.invalidatePreview("移除源目录");
+                            }
+                    );
 
                     pane.setCenter(content);
                     pane.setRight(actions);
@@ -125,6 +122,14 @@ public class ComposeView {
                     setOnDragDropped(e -> handleDragDrop(e));
                 }
             }
+
+            @Override
+            public void updateSelected(boolean selected) {
+                super.updateSelected(selected);
+                if (!isEmpty() && getItem() != null) {
+                    StyleFactory.updateTreeItemStyle(this, selected);
+                }
+            }
         });
         // 列表本身的拖拽支持
         sourceListView.setOnDragOver(e -> {
@@ -132,6 +137,13 @@ public class ComposeView {
             e.consume();
         });
         sourceListView.setOnDragDropped(this::handleDragDrop);
+
+        // 双击打开目录
+        sourceListView.setOnMouseClicked(e -> {
+            if (e.getClickCount() > 1 && sourceListView.getSelectionModel().getSelectedItem() != null) {
+                app.openFileInSystem(sourceListView.getSelectionModel().getSelectedItem());
+            }
+        });
 
         HBox srcTools = new HBox(10);
         srcTools.getChildren().addAll(
@@ -172,42 +184,29 @@ public class ComposeView {
 
                     VBox v = new VBox(2);
                     Label n = StyleFactory.createLabel((getIndex() + 1) + ". " + item.getName(), 14, true);
-                    Label d = StyleFactory.createInfoLabel(item.getDescription());
-                    d.setMaxWidth(180);
+                    Label d = StyleFactory.createInfoLabel(item.getDescription(), 300);
                     v.getChildren().addAll(n, d);
 
-                    HBox actions = new HBox(4);
-                    actions.setAlignment(Pos.CENTER_RIGHT);
-
-                    // 策略操作：上移、下移、删除
-                    // (注：配置详情通过列表选中触发，这里不需要额外按钮，或者可以加一个 '⚙' 指示)
-                    JFXButton btnUp = StyleFactory.createSmallIconButton("▲", e -> {
-                        moveListItem(app.getPipelineStrategies(), getIndex(), -1);
-                        pipelineListView.getSelectionModel().select(getIndex()); // 保持选中
-                    });
-                    JFXButton btnDown = StyleFactory.createSmallIconButton("▼", e -> {
-                        moveListItem(app.getPipelineStrategies(), getIndex(), 1);
-                        pipelineListView.getSelectionModel().select(getIndex());
-                    });
-                    JFXButton btnDel = StyleFactory.createSmallIconButton("✕", e -> {
-                        app.getPipelineStrategies().remove(item);
-                        configContainer.getChildren().clear(); // 清空配置面板
-                        app.invalidatePreview("步骤移除");
-                    });
-                    btnDel.setTextFill(Color.web("#e74c3c"));
-
-                    actions.getChildren().addAll(btnUp, btnDown, btnDel);
+                    HBox actions = StyleFactory.createTreeItemMenu(null, e -> {
+                                moveListItem(app.getPipelineStrategies(), getIndex(), -1);
+                                pipelineListView.getSelectionModel().select(getIndex()); // 保持选中
+                            }, e -> {
+                                moveListItem(app.getPipelineStrategies(), getIndex(), 1);
+                                pipelineListView.getSelectionModel().select(getIndex());
+                            },
+                            e -> {
+                                app.getPipelineStrategies().remove(item);
+                                configContainer.getChildren().clear(); // 清空配置面板
+                                app.invalidatePreview("步骤移除");
+                            }
+                    );
 
                     pane.setCenter(v);
                     pane.setRight(actions);
                     setGraphic(pane);
 
                     // 选中态样式处理
-                    if (isSelected()) {
-                        setStyle("-fx-background-color: rgba(52, 152, 219, 0.15); -fx-border-color: #3498db; -fx-border-width: 0 0 1 0;");
-                    } else {
-                        setStyle("-fx-background-color: transparent; -fx-border-color: #eee; -fx-border-width: 0 0 1 0;");
-                    }
+                    StyleFactory.updateTreeItemStyle(this, isSelected());
                 }
             }
 
@@ -215,17 +214,7 @@ public class ComposeView {
             public void updateSelected(boolean selected) {
                 super.updateSelected(selected);
                 if (!isEmpty() && getItem() != null) {
-                    updateStyle(selected);
-                }
-            }
-
-            private void updateStyle(boolean selected) {
-                if (selected) {
-                    // 选中样式：淡蓝色背景 + 左侧/底部蓝色边框
-                    setStyle("-fx-background-color: rgba(52, 152, 219, 0.15); -fx-border-color: #3498db; -fx-border-width: 0 0 1 0;");
-                } else {
-                    // 默认样式
-                    setStyle("-fx-background-color: transparent; -fx-border-color: #eee; -fx-border-width: 0 0 1 0;");
+                    StyleFactory.updateTreeItemStyle(this, selected);
                 }
             }
 
@@ -263,7 +252,7 @@ public class ComposeView {
             }
         });
 
-        JFXButton btnAddStep = StyleFactory.createActionButton("添加步骤", "#2ecc71",
+        JFXButton btnAddStep = StyleFactory.createActionButton("添加步骤", null,
                 () -> {
                     try {
                         AppStrategy strategy = cbAdd.getValue().getClass().getDeclaredConstructor().newInstance();
@@ -322,12 +311,12 @@ public class ComposeView {
 
         configContainer.getChildren().addAll(
                 StyleFactory.createHeader(s.getName()),
-                StyleFactory.createInfoLabel(s.getDescription()),
+                StyleFactory.createInfoLabel(s.getDescription(), 350),
                 StyleFactory.createSeparator(),
-                StyleFactory.createChapter("前置条件:"),
+                StyleFactory.createChapter("\uD83D\uDD36[前置条件]"),
                 createConditionsUI(s),
                 StyleFactory.createSeparator(),
-                StyleFactory.createChapter("参数配置:"),
+                StyleFactory.createChapter("\uD83D\uDD36[执行参数]"),
                 s.getConfigNode() != null ? s.getConfigNode() : new Label("无")
         );
         StyleFactory.forceDarkText(configContainer);
@@ -344,7 +333,7 @@ public class ComposeView {
             groupsContainer.getChildren().clear();
             List<RuleConditionGroup> groups = strategy.getConditionGroups();
             if (groups.isEmpty()) {
-                Label placeholder = new Label("无限制 (点击下方添加条件组)");
+                Label placeholder = new Label("(点击下方按钮添加条件组)");
                 placeholder.setTextFill(Color.GRAY);
                 groupsContainer.getChildren().add(placeholder);
             } else {
@@ -393,8 +382,7 @@ public class ComposeView {
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        JFXButton btnDelGroup = StyleFactory.createActionButton("删除条件组", "#e74c3c", () -> onDeleteGroup.run());
-        btnDelGroup.setStyle("-fx-text-fill: red; -fx-background-color: transparent;");
+        JFXButton btnDelGroup = StyleFactory.createSmallIconButton("✕✕✕", event -> onDeleteGroup.run());
         header.getChildren().addAll(lblTitle, spacer, btnDelGroup);
 
         // Conditions List
@@ -406,16 +394,24 @@ public class ComposeView {
             lblC.setTextFill(Color.web("#333"));
             Region sp = new Region();
             HBox.setHgrow(sp, Priority.ALWAYS);
-            JFXButton btnDelC = StyleFactory.createActionButton("移除条件", "#e74c3c", () -> {
-                group.remove(cond);
-                if (group.getConditions().isEmpty()) {
-                    // 如果组空了，保留组还是删除组？这里保留空组
-                }
-                refreshConfig(strategy);
-                app.invalidatePreview("移除条件");
-            });
-            btnDelC.setStyle("-fx-text-fill: #e74c3c; -fx-font-size: 10px; -fx-padding: 0 4;");
-            row.getChildren().addAll(lblC, sp, btnDelC);
+            HBox menu = StyleFactory.createTreeItemMenu(null,
+                    e -> {
+                        NodeUtils.moveListItem(group.getConditions(), group.getConditions().indexOf(cond), -1);
+                        refreshConfig(strategy);
+                    },
+                    e -> {
+                        NodeUtils.moveListItem(group.getConditions(), group.getConditions().indexOf(cond), 1);
+                        refreshConfig(strategy);
+                    }
+                    , event -> {
+                        group.remove(cond);
+                        if (group.getConditions().isEmpty()) {
+                            // 如果组空了，保留组还是删除组？这里保留空组
+                        }
+                        refreshConfig(strategy);
+                        app.invalidatePreview("移除条件");
+                    });
+            row.getChildren().addAll(lblC, sp, menu);
             condList.getChildren().add(row);
         }
 

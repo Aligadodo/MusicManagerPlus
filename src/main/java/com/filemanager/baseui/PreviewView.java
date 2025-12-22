@@ -9,6 +9,7 @@ import com.filemanager.util.file.FileSizeFormatUtil;
 import com.jfoenix.controls.JFXCheckBox;
 import com.jfoenix.controls.JFXComboBox;
 import com.jfoenix.controls.JFXTextField;
+import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.concurrent.Task;
@@ -103,10 +104,12 @@ public class PreviewView {
     }
 
     public void updateProgress(String msg) {
-        runningLabel.textProperty().unbind();
-        runningLabel.setText(msg);
-        mainProgressBar.progressProperty().unbind();
-        mainProgressBar.setProgress(1);
+        Platform.runLater(() -> {
+            runningLabel.textProperty().unbind();
+            runningLabel.setText(msg);
+            mainProgressBar.progressProperty().unbind();
+            mainProgressBar.setProgress(1);
+        });
     }
 
     public void bindProgress(Task<?> task) {
@@ -115,11 +118,11 @@ public class PreviewView {
     }
 
     public void updateRunningInfo(String message) {
-        runningLabel.setText(message);
+        Platform.runLater(() -> runningLabel.setText(message));
     }
 
     public void updateStatsDisplay(long t, long c, long s, long f, String tm) {
-        statsLabel.setText(String.format("文件总数:%d 需要变更:%d 操作成功:%d 操作失败:%d 过程耗时:%s", t, c, s, f, tm));
+        Platform.runLater(() -> statsLabel.setText(String.format("文件总数:%d 需要变更:%d 操作成功:%d 操作失败:%d 过程耗时:%s", t, c, s, f, tm)));
     }
 
     private void setupPreviewColumns() {
@@ -142,6 +145,14 @@ public class PreviewView {
                     setTextFill(Color.BLACK);
                 }
             }
+
+            @Override
+            public void updateSelected(boolean selected) {
+                super.updateSelected(selected);
+                if (!isEmpty() && getItem() != null) {
+                    StyleFactory.updateTreeItemStyle(this, selected);
+                }
+            }
         });
         TreeTableColumn<ChangeRecord, String> cS2 = StyleFactory.createTreeTableColumn("目标文件大小", false, 60, 60, 60);
         cS2.setCellValueFactory(p -> new SimpleStringProperty(FileSizeFormatUtil.formatFileSize(new File(p.getValue().getValue().getNewPath()))));
@@ -155,7 +166,7 @@ public class PreviewView {
 
     }
 
-    private void setupPreviewRows(){
+    private void setupPreviewRows() {
         previewTable.setRowFactory(tv -> {
             TreeTableRow<ChangeRecord> row = new TreeTableRow<ChangeRecord>() {
                 @Override
@@ -188,7 +199,7 @@ public class PreviewView {
             // 支持双击查看详情数据
             row.setOnMouseClicked(event -> {
                 // 检查双击且行非空
-                if (event.getClickCount() == 2 && !row.isEmpty()) {
+                if (event.getClickCount() > 1 && !row.isEmpty()) {
                     ChangeRecord item = row.getItem();
                     // 获取当前 Stage 实例
                     Stage currentStage = (Stage) previewTable.getScene().getWindow();

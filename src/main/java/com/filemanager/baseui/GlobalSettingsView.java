@@ -45,7 +45,7 @@ public class GlobalSettingsView {
 
         // 设置预览数量 默认200
         numberDisplay = new JFXComboBox<>(FXCollections.observableArrayList(50, 100, 200, 500));
-        numberDisplay.getSelectionModel().select(1);
+        numberDisplay.getSelectionModel().selectFirst();
 //        UnaryOperator<TextFormatter.Change> filter = change -> {
 //            String text = change.getControlNewText();
 //            // 正则表达式：允许为空，或者只允许数字

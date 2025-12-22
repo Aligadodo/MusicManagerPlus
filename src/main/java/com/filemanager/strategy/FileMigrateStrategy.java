@@ -87,8 +87,9 @@ public class FileMigrateStrategy extends AppStrategy {
             if (f != null) txtDestDir.setText(f.getAbsolutePath());
         });
         box.getChildren().addAll(
-                StyleFactory.createHBox(StyleFactory.createParamLabel("目标根目录:"), txtDestDir, btn),
-                StyleFactory.createHBox(StyleFactory.createParamLabel("结构模板 (/分隔):"), txtPathPattern, chkCleanEmpty));
+                StyleFactory.createParamPairLine("目标根目录:", txtDestDir, btn),
+                StyleFactory.createParamPairLine("结构模板 (/分隔):", txtPathPattern),
+                StyleFactory.createHBox(chkCleanEmpty));
         return box;
     }
 
