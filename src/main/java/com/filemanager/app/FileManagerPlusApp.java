@@ -58,6 +58,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -155,6 +156,16 @@ public class FileManagerPlusApp extends Application implements IAppController {
             forceStop();
             Platform.exit();
             System.exit(0);
+        });
+
+        // [关键逻辑] 监听线程数变化，实时调整运行中的线程池
+        getSpGlobalThreads().valueProperty().addListener((obs, oldVal, newVal) -> {
+            if (isTaskRunning && executorService instanceof ThreadPoolExecutor) {
+                ThreadPoolExecutor tpe = (ThreadPoolExecutor) executorService;
+                tpe.setCorePoolSize(newVal);
+                tpe.setMaximumPoolSize(newVal);
+                log("动态调整线程池大小: " + oldVal + " -> " + newVal);
+            }
         });
 
         primaryStage.show();
@@ -452,7 +463,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
                                 } else {
                                     rec.setStatus(ExecStatus.SKIPPED);
                                 }
-                            } catch (Throwable e) {
+                            } catch (Exception e) {
                                 rec.setStatus(ExecStatus.FAILED);
                                 rec.setFailReason(ExceptionUtils.getStackTrace(e));
                                 logError("❌ 失败处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().getName() + ",目标路径：" + rec.getNewName() + ",原因" + e.getMessage());
@@ -462,10 +473,10 @@ public class FileManagerPlusApp extends Application implements IAppController {
                                 FileLockManagerUtil.unlock(rec.getFileHandle());
                                 int c = curr.incrementAndGet();
                                 updateProgress(c, total);
-                                if (c % 10 == 0 || (System.currentTimeMillis() - lastRefresh.get() > 1000)) {
+                                if (System.currentTimeMillis() - lastRefresh.get() > 1000) {
                                     updateStats(System.currentTimeMillis() - startT);
                                 }
-                                if (c % 10 == 0 && (System.currentTimeMillis() - lastRefresh.get() > 5000)) {
+                                if (System.currentTimeMillis() - lastRefresh.get() > 10000) {
                                     lastRefresh.set(System.currentTimeMillis());
                                     updateStats(System.currentTimeMillis() - startT);
                                     refreshPreviewTableFilter();
@@ -479,7 +490,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
                         log("▶ ▶ ▶ 第[" + round.incrementAndGet() + "]轮任务扫描，剩余待执行任务数：" + todos.size());
                     }
                     // 适当Sleep，避免反复刷数据
-                    Thread.sleep(2000);
+                    Thread.sleep(1000);
                 }
                 executorService.shutdown();
                 while (!executorService.awaitTermination(500, TimeUnit.MILLISECONDS)) {
