@@ -9,11 +9,8 @@ import javafx.scene.Node;
 import lombok.Getter;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Properties;
-import java.util.function.BiConsumer;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @author 28667
@@ -51,7 +48,27 @@ public abstract class AppStrategy {
     public abstract Node getConfigNode(); // 策略特有的配置UI
 
     // 核心分析逻辑
-    public abstract List<ChangeRecord> analyze(List<ChangeRecord> inputRecords, List<File> rootDirs, BiConsumer<Double, String> progressReporter);
+    public List<ChangeRecord> analyzeWithPreCheck(ChangeRecord currentRecord, List<ChangeRecord> inputRecords, List<File> rootDirs) {
+        // 已经变更的文件不支持二次变更
+        if (currentRecord.isChanged()) {
+            return Collections.emptyList();
+        }
+        // 前置条件检查
+        if (!checkConditions(currentRecord)) {
+            return Collections.emptyList();
+        }
+        // 类型检查
+        if (ScanTarget.FILES_ONLY == getTargetType() && currentRecord.getFileHandle().isDirectory()) {
+            return Collections.emptyList();
+        }
+        if (ScanTarget.FOLDERS_ONLY == getTargetType() && currentRecord.getFileHandle().isFile()) {
+            return Collections.emptyList();
+        }
+        return analyze(currentRecord, inputRecords, rootDirs);
+    }
+
+    // 核心分析逻辑
+    public abstract List<ChangeRecord> analyze(ChangeRecord currentRecord, List<ChangeRecord> inputRecords, List<File> rootDirs);
 
     // 核心执行逻辑
     public abstract void execute(ChangeRecord rec) throws Exception;
@@ -63,15 +80,25 @@ public abstract class AppStrategy {
 
 
     // [修改] 校验逻辑：组间为 OR，只要有一个组满足即可
-    protected boolean checkConditions(File f) {
-        if (conditionGroups.isEmpty() && globalConditions.isEmpty()) return true; // 无条件则通过
+    protected boolean checkConditions(ChangeRecord rec) {
+        File f = rec.getFileHandle();
+        // 无条件则通过
+        if (conditionGroups.isEmpty() && globalConditions.isEmpty()) {
+            return true;
+        }
+        // 只要有一组满足 (组内是AND)，则通过
         for (RuleConditionGroup group : conditionGroups) {
-            if (group.test(f)) return true; // 只要有一组满足 (组内是AND)，则通过
+            if (group.test(f)) {
+                return true;
+            }
         }
         for (RuleCondition c : globalConditions) {
-            if (!c.test(f)) return false;
+            if (!c.test(f)) {
+                return false;
+            }
         }
-        return false; // 所有组都不满足
+        // 所有组都不满足
+        return false;
     }
 
     public abstract ScanTarget getTargetType();
@@ -84,6 +111,11 @@ public abstract class AppStrategy {
     protected ChangeRecord getTargetFile(File file, Collection<ChangeRecord> changeRecords) {
         return changeRecords.stream().filter(changeRecord -> changeRecord.getFileHandle().equals(file) &&
                 file.getName().equals(changeRecord.getFileHandle().getName())).findFirst().orElse(null);
+    }
+
+    protected List<ChangeRecord> getFilesUnderDir(File file, Collection<ChangeRecord> changeRecords) {
+        return changeRecords.stream().filter(changeRecord -> changeRecord.getFileHandle().getParentFile().equals(file) &&
+                file.getName().equals(changeRecord.getFileHandle().getParentFile().getName())).collect(Collectors.toList());
     }
 
 }

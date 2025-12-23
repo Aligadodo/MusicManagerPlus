@@ -1,17 +1,21 @@
 package com.filemanager.strategy;
 
-import com.filemanager.model.*;
+import com.filemanager.model.ChangeRecord;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXComboBox;
-import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
-import javafx.scene.control.*;
-import javafx.scene.layout.*;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import org.apache.commons.lang3.StringUtils;
 
@@ -20,11 +24,8 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.nio.file.attribute.FileTime;
 import java.text.DecimalFormat;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiConsumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -184,16 +185,27 @@ public class FileCleanupStrategy extends AppStrategy {
     }
 
     @Override
-    public List<ChangeRecord> analyze(List<ChangeRecord> inputRecords, List<File> rootDirs, BiConsumer<Double, String> progressReporter) {
+    public List<ChangeRecord> analyze(ChangeRecord rec, List<ChangeRecord> inputRecords, List<File> rootDirs) {
         // 1. 根据模式选择分析器
-        List<File> inputFiles = inputRecords.stream().map(ChangeRecord::getFileHandle).collect(Collectors.toList());
+        File f = rec.getFileHandle();
 
         if (pMode == CleanupMode.REMOVE_EMPTY_DIRS) {
-            return analyzeEmptyDirs(inputFiles, rootDirs, progressReporter);
+            if (isDirectoryEmpty(f)) {
+                return Collections.singletonList(createDeleteRecord(f, "空文件夹 (无子文件)"));
+            }
+            return Collections.emptyList();
         } else if (pMode == CleanupMode.DEDUP_FOLDERS) {
-            return analyzeDuplicateFolders(inputFiles, progressReporter);
+            File[] files = f.listFiles();
+            if (f.isFile() || files == null || files.length < 2) {
+                return Collections.emptyList();
+            }
+            return analyzeDuplicateFolders(Arrays.asList(files));
         } else {
-            return analyzeDuplicateFiles(inputFiles, progressReporter);
+            File[] files = f.listFiles();
+            if (f.isFile() || files == null || files.length < 2) {
+                return Collections.emptyList();
+            }
+            return analyzeDuplicateFiles(Arrays.asList(files));
         }
     }
 
@@ -251,19 +263,14 @@ public class FileCleanupStrategy extends AppStrategy {
     /**
      * 1. 智能文件去重
      */
-    private List<ChangeRecord> analyzeDuplicateFiles(List<File> files, BiConsumer<Double, String> reporter) {
+    private List<ChangeRecord> analyzeDuplicateFiles(List<File> files) {
         List<ChangeRecord> result = new ArrayList<>();
         Map<File, List<File>> dirMap = files.stream().filter(File::isFile).collect(Collectors.groupingBy(File::getParentFile));
 
-        int total = dirMap.size();
-        AtomicInteger curr = new AtomicInteger(0);
         // 正则：提取文件名核心 (忽略 (1), - Copy 等)
         Pattern normPattern = Pattern.compile("^(.+?)(\\s*[\\(\\[（].*?[\\)\\]）])?(\\s*-\\s*(副本|Copy))?(\\s*\\(\\d+\\))?(\\.[^.]+)?$");
 
         for (Map.Entry<File, List<File>> entry : dirMap.entrySet()) {
-            if (reporter != null && curr.incrementAndGet() % 20 == 0)
-                Platform.runLater(() -> reporter.accept((double) curr.get() / total, "分析文件: " + entry.getKey().getName()));
-
             // 二级分组：CoreName -> List<File>
             Map<String, List<File>> nameGroup = entry.getValue().stream().collect(Collectors.groupingBy(f -> {
                 String name = f.getName();
@@ -283,19 +290,25 @@ public class FileCleanupStrategy extends AppStrategy {
                     if (pKeepExt != null && !pKeepExt.isEmpty()) {
                         boolean k1 = f1.getName().toLowerCase().endsWith("." + pKeepExt.toLowerCase());
                         boolean k2 = f2.getName().toLowerCase().endsWith("." + pKeepExt.toLowerCase());
-                        if (k1 != k2) return k1 ? 1 : -1;
+                        if (k1 != k2) {
+                            return k1 ? 1 : -1;
+                        }
                     }
 
                     // 2. 体积优先
                     if (pKeepLargest) {
                         int sizeCmp = Long.compare(f1.length(), f2.length());
-                        if (sizeCmp != 0) return sizeCmp;
+                        if (sizeCmp != 0) {
+                            return sizeCmp;
+                        }
                     }
 
                     // 3. 变更时间优先
                     if (pKeepEarliest) {
                         int sizeCmp = Long.compare(f2.lastModified(), f1.lastModified());
-                        if (sizeCmp != 0) return sizeCmp;
+                        if (sizeCmp != 0) {
+                            return sizeCmp;
+                        }
 
                         try {
                             BasicFileAttributes attributes = Files.readAttributes(Paths.get(f1.getPath()), BasicFileAttributes.class);
@@ -323,7 +336,9 @@ public class FileCleanupStrategy extends AppStrategy {
 
                 // 严格检查：必须确保 keeper 存在于 group 中，且不被删除
                 for (File f : group) {
-                    if (f == keeper) continue; // 保留
+                    if (f == keeper) {
+                        continue; // 保留
+                    }
                     result.add(createDeleteRecord(f, "重复副本 (与 " + keeper.getName() + " 内容重复)"));
                 }
             }
@@ -346,18 +361,11 @@ public class FileCleanupStrategy extends AppStrategy {
     /**
      * 2. 文件夹去重 (内容一致性检查)
      */
-    private List<ChangeRecord> analyzeDuplicateFolders(List<File> files, BiConsumer<Double, String> reporter) {
+    private List<ChangeRecord> analyzeDuplicateFolders(List<File> files) {
         List<ChangeRecord> result = new ArrayList<>();
         List<File> dirs = files.stream().filter(File::isDirectory).collect(Collectors.toList());
         Map<File, List<File>> parentMap = dirs.stream().filter(f -> f.getParentFile() != null).collect(Collectors.groupingBy(File::getParentFile));
-
-        int total = parentMap.size();
-        AtomicInteger curr = new AtomicInteger(0);
-
         for (List<File> siblings : parentMap.values()) {
-            if (reporter != null)
-                Platform.runLater(() -> reporter.accept((double) curr.incrementAndGet() / total, "递归分析目录内容..."));
-
             // 计算指纹（包含递归内容）
             Map<File, String> fingerprints = new HashMap<>();
             for (File dir : siblings) {
@@ -368,9 +376,13 @@ public class FileCleanupStrategy extends AppStrategy {
             Map<String, List<File>> dupeGroups = siblings.stream().collect(Collectors.groupingBy(fingerprints::get));
 
             for (Map.Entry<String, List<File>> entry : dupeGroups.entrySet()) {
-                if (entry.getKey().isEmpty()) continue; // 忽略空指纹或无法读取的
+                if (entry.getKey().isEmpty()) {
+                    continue; // 忽略空指纹或无法读取的
+                }
                 List<File> group = entry.getValue();
-                if (group.size() < 2) continue;
+                if (group.size() < 2) {
+                    continue;
+                }
 
                 // 保留名字最短的
                 group.sort(Comparator.comparingInt((File f) -> f.getName().length()));
@@ -424,32 +436,6 @@ public class FileCleanupStrategy extends AppStrategy {
         final String[] units = new String[]{"B", "KB", "MB", "GB", "TB"};
         int digitGroups = (int) (Math.log10(size) / Math.log10(1024));
         return new DecimalFormat("#,##0.#").format(size / Math.pow(1024, digitGroups)) + " " + units[digitGroups];
-    }
-
-    /**
-     * 3. 空文件夹清理
-     */
-    private List<ChangeRecord> analyzeEmptyDirs(List<File> files, List<File> rootDirs, BiConsumer<Double, String> reporter) {
-        List<ChangeRecord> result = new ArrayList<>();
-        // 按路径长度倒序，确保先删除底层空目录
-        List<File> sortedDirs = files.stream().filter(File::isDirectory).sorted((f1, f2) -> Integer.compare(f2.getAbsolutePath().length(), f1.getAbsolutePath().length())).collect(Collectors.toList());
-
-        int total = sortedDirs.size();
-        AtomicInteger processed = new AtomicInteger(0);
-
-        for (File f : sortedDirs) {
-            if (reporter != null && processed.incrementAndGet() % 50 == 0)
-                Platform.runLater(() -> reporter.accept((double) processed.get() / total, "检查空目录..."));
-
-            if (rootDirs.contains(f)) continue; // 保护根目录
-
-            // 检查是否为空（注意：前面的步骤可能删除了文件，但这里是analyze阶段，只能检查当前状态）
-            // 或者我们假设这是一个独立步骤。
-            if (isDirectoryEmpty(f)) {
-                result.add(createDeleteRecord(f, "空文件夹 (无子文件)"));
-            }
-        }
-        return result;
     }
 
     private boolean isDirectoryEmpty(File directory) {

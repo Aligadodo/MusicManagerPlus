@@ -4,14 +4,11 @@ import com.filemanager.model.ChangeRecord;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
-import javafx.application.Platform;
+import com.google.common.collect.Lists;
 import javafx.scene.Node;
 
 import java.io.File;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiConsumer;
-import java.util.stream.Collectors;
 
 /**
  * 音频转换策略 (v19.6 CD Mode Fix)
@@ -24,10 +21,12 @@ public class AudioConverterStrategy extends AbstractFfmpegStrategy {
     public AudioConverterStrategy() {
         super();
     }
+
     @Override
     public String getDefaultDirPrefix() {
         return "Convert";
     }
+
     @Override
     public String getName() {
         return "音频格式转换";
@@ -70,36 +69,28 @@ public class AudioConverterStrategy extends AbstractFfmpegStrategy {
     }
 
     @Override
-    public List<ChangeRecord> analyze(List<ChangeRecord> inputRecords, List<File> rootDirs, BiConsumer<Double, String> progressReporter) {
-        Set<String> sourceExts = new HashSet<>(Arrays.asList("dsf", "dff", "dts", "ape", "wav", "flac", "m4a", "iso", "dfd", "tak", "tta", "wv", "mp3", "aac", "ogg", "wma"));
-        int total = inputRecords.size();
-        AtomicInteger processed = new AtomicInteger(0);
-        return inputRecords.parallelStream()
-                .map(rec -> {
-                    File virtualInput = new File(rec.getNewPath());
-                    if (!checkConditions(virtualInput)) return rec;
-
-                    String name = virtualInput.getName().toLowerCase();
-                    int dotIndex = name.lastIndexOf(".");
-                    if (dotIndex == -1) return rec;
-                    String fileExt = name.substring(dotIndex + 1);
-                    if (!sourceExts.contains(fileExt)) return rec;
-
-                    int curr = processed.incrementAndGet();
-                    if (progressReporter != null && curr % 50 == 0) {
-                        double p = (double) curr / total;
-                        Platform.runLater(() -> progressReporter.accept(p, "分析音频: " + curr + "/" + total));
-                    }
-                    Map<String, String> param = getParams(virtualInput.getParentFile(), name);
-                    String newName = name.substring(0, dotIndex) + "." + param.get("format");
-                    File targetFile = new File(param.get("parentPath"), newName);
-                    ExecStatus status = ExecStatus.PENDING;
-                    boolean targetExists = targetFile.exists();
-                    if (targetExists && !pOverwrite) {
-                        return rec;
-                    }
-                    return new ChangeRecord(rec.getOriginalName(), targetFile.getName(), rec.getFileHandle(), true, targetFile.getAbsolutePath(), OperationType.CONVERT, param, status);
-                })
-                .collect(Collectors.toList());
+    public List<ChangeRecord> analyze(ChangeRecord rec, List<ChangeRecord> inputRecords, List<File> rootDirs) {
+        Set<String> sourceExts = new HashSet<>(Arrays.asList("dsf", "dff", "dts", "ape", "wav", "flac",
+                "m4a", "iso", "dfd", "tak", "tta", "wv", "mp3", "aac", "ogg", "wma"));
+        File virtualInput = new File(rec.getNewPath());
+        String name = virtualInput.getName().toLowerCase();
+        int dotIndex = name.lastIndexOf(".");
+        if (dotIndex == -1) {
+            return Collections.emptyList();
+        }
+        String fileExt = name.substring(dotIndex + 1);
+        if (!sourceExts.contains(fileExt)) {
+            return Collections.emptyList();
+        }
+        Map<String, String> param = getParams(virtualInput.getParentFile(), name);
+        String newName = name.substring(0, dotIndex) + "." + param.get("format");
+        File targetFile = new File(param.get("parentPath"), newName);
+        ExecStatus status = ExecStatus.PENDING;
+        boolean targetExists = targetFile.exists();
+        if (targetExists && !pOverwrite) {
+            return Collections.emptyList();
+        }
+        return Lists.newArrayList(new ChangeRecord(rec.getOriginalName(), targetFile.getName(),
+                rec.getFileHandle(), true, targetFile.getAbsolutePath(), OperationType.CONVERT, param, status));
     }
 }

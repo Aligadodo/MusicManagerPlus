@@ -1,11 +1,11 @@
 package com.filemanager.strategy;
 
 import com.filemanager.model.ChangeRecord;
+import com.filemanager.tool.FileTypeUtil;
 import com.filemanager.tool.display.StyleFactory;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
 import com.jfoenix.controls.JFXComboBox;
-import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.scene.Node;
 import javafx.scene.control.CheckBox;
@@ -14,10 +14,7 @@ import javafx.scene.control.TextField;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.text.Collator;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 public class TrackNumberStrategy extends AppStrategy {
@@ -91,54 +88,39 @@ public class TrackNumberStrategy extends AppStrategy {
     }
 
     @Override
-    public List<ChangeRecord> analyze(List<ChangeRecord> inputRecords, List<File> rootDirs, BiConsumer<Double, String> progressReporter) {
-        Map<String, List<ChangeRecord>> dirGroups = inputRecords.stream()
-                .collect(Collectors.groupingBy(r -> new File(r.getNewPath()).getParent()));
+    public List<ChangeRecord> analyze(ChangeRecord change, List<ChangeRecord> inputRecords, List<File> rootDirs) {
+        File f = change.getFileHandle();
+        File[] files = f.listFiles();
+        if (f.isFile() || files == null || files.length < 2) {
+            return Collections.emptyList();
+        }
+
+        List<ChangeRecord> group = getFilesUnderDir(f, inputRecords).stream()
+                .filter(rec -> FileTypeUtil.isMusicFile(rec.getFileHandle())).collect(Collectors.toList());
 
         List<ChangeRecord> results = new ArrayList<>();
-        int total = dirGroups.size();
-        AtomicInteger processed = new AtomicInteger(0);
-        Collator collator = Collator.getInstance(Locale.CHINA);
+        for (int i = 0; i < group.size(); i++) {
+            ChangeRecord rec = group.get(i);
+            String num = String.valueOf(i + 1);
+            if (pPadZero && i + 1 < 10) num = "0" + num;
 
-        for (List<ChangeRecord> group : dirGroups.values()) {
-            group.sort((r1, r2) -> {
-                String n1 = cleanName(new File(r1.getNewPath()).getName());
-                String n2 = cleanName(new File(r2.getNewPath()).getName());
-                return collator.compare(n1, n2);
-            });
+            File vFile = new File(rec.getNewPath());
+            String oldName = vFile.getName();
+            String ext = "";
+            int dot = oldName.lastIndexOf('.');
+            if (dot > 0) ext = oldName.substring(dot);
 
-            for (int i = 0; i < group.size(); i++) {
-                ChangeRecord rec = group.get(i);
-                if (!checkConditions(new File(rec.getNewPath()))) {
-                    results.add(rec);
-                    continue;
-                }
+            String baseName = cleanName(oldName.substring(0, dot > 0 ? dot : oldName.length()));
+            String newName = num + pSeparator + baseName + ext;
 
-                String num = String.valueOf(i + 1);
-                if (pPadZero && i + 1 < 10) num = "0" + num;
-
-                File vFile = new File(rec.getNewPath());
-                String oldName = vFile.getName();
-                String ext = "";
-                int dot = oldName.lastIndexOf('.');
-                if (dot > 0) ext = oldName.substring(dot);
-
-                String baseName = cleanName(oldName.substring(0, dot > 0 ? dot : oldName.length()));
-                String newName = num + pSeparator + baseName + ext;
-
-                File target = new File(vFile.getParent(), newName);
-                rec.setNewName(newName);
-                rec.setNewPath(target.getAbsolutePath());
-                rec.setChanged(true);
-                rec.setOpType(OperationType.RENAME);
-                results.add(rec);
-            }
-
-            int c = processed.incrementAndGet();
-            if (progressReporter != null)
-                Platform.runLater(() -> progressReporter.accept((double) c / total, "排序目录..."));
+            File target = new File(vFile.getParent(), newName);
+            rec.setNewName(newName);
+            rec.setNewPath(target.getAbsolutePath());
+            rec.setChanged(true);
+            rec.setOpType(OperationType.RENAME);
+            results.add(rec);
         }
-        return results;
+        return Collections.emptyList();
     }
 
     private String cleanName(String s) {

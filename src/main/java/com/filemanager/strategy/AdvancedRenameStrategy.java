@@ -10,7 +10,6 @@ import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXComboBox;
-import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
@@ -27,10 +26,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 public class AdvancedRenameStrategy extends AppStrategy {
@@ -204,71 +202,68 @@ public class AdvancedRenameStrategy extends AppStrategy {
     }
 
     @Override
-    public List<ChangeRecord> analyze(List<ChangeRecord> inputRecords, List<File> roots, BiConsumer<Double, String> progressReporter) {
+    public List<ChangeRecord> analyze(ChangeRecord rec, List<ChangeRecord> inputRecords, List<File> roots) {
         List<RenameRule> rules = pRules;
         boolean isCopy = "复制 (Copy)".equals(pCrossDriveMode);
         boolean pFile = (pProcessScopeIndex == 0 || pProcessScopeIndex == 2);
         boolean pFolder = (pProcessScopeIndex == 1 || pProcessScopeIndex == 2);
 
-        int total = inputRecords.size();
-        AtomicInteger processed = new AtomicInteger(0);
+        File currentVirtualFile = new File(rec.getNewPath());
 
-        return inputRecords.parallelStream().map(rec -> {
-            int curr = processed.incrementAndGet();
-            if (progressReporter != null && curr % 100 == 0) {
-                double p = (double) curr / total;
-                Platform.runLater(() -> progressReporter.accept(p, "规则计算: " + curr + "/" + total));
-            }
+        boolean d = currentVirtualFile.isDirectory();
+        // 注意：Pipeline 中间状态的文件可能不存在，用 isDirectory 判断可能不准
+        // 如果是中间步骤，我们假设如果原始文件是目录，它也是目录
+        if (rec.getFileHandle().isDirectory()) {
+            d = true;
+        } else if (rec.getFileHandle().isFile()) {
+            d = false;
+        }
 
-            File currentVirtualFile = new File(rec.getNewPath());
-            if (!checkConditions(currentVirtualFile)) return rec;
+        if (d && !pFolder) {
+            return Collections.emptyList();
+        }
+        if (!d && !pFile) {
+            return Collections.emptyList();
+        }
 
-            boolean d = currentVirtualFile.isDirectory();
-            // 注意：Pipeline 中间状态的文件可能不存在，用 isDirectory 判断可能不准
-            // 如果是中间步骤，我们假设如果原始文件是目录，它也是目录
-            if (rec.getFileHandle().isDirectory()) d = true;
-            else if (rec.getFileHandle().isFile()) d = false;
-
-            if (d && !pFolder) return rec;
-            if (!d && !pFile) return rec;
-
-            String currentName = currentVirtualFile.getName();
-            boolean appliedAny = false;
-            for (RenameRule rule : rules) {
-                if (rule.matches(currentName)) {
-                    String temp = rule.apply(currentName);
-                    if (!temp.equals(currentName)) {
-                        currentName = temp;
-                        appliedAny = true;
-                    }
+        String currentName = currentVirtualFile.getName();
+        boolean appliedAny = false;
+        for (RenameRule rule : rules) {
+            if (rule.matches(currentName)) {
+                String temp = rule.apply(currentName);
+                if (!temp.equals(currentName)) {
+                    currentName = temp;
+                    appliedAny = true;
                 }
             }
+        }
 
-            if (!appliedAny) return rec;
+        if (!appliedAny) {
+            return Collections.emptyList();
+        }
 
-            File parentDir = currentVirtualFile.getParentFile();
-            File targetFile;
-            OperationType newOp;
+        File parentDir = currentVirtualFile.getParentFile();
+        File targetFile;
+        OperationType newOp;
 
-            if (currentName.contains(File.separator) || (System.getProperty("os.name").toLowerCase().contains("win") && currentName.contains(":"))) {
-                File potentialPath = new File(currentName);
-                targetFile = potentialPath.isAbsolute() ? potentialPath : new File(parentDir, currentName);
-                newOp = isCopy ? OperationType.CONVERT : OperationType.MOVE;
-            } else {
-                targetFile = new File(parentDir, currentName);
-                newOp = OperationType.RENAME;
-            }
+        if (currentName.contains(File.separator) || (System.getProperty("os.name").toLowerCase().contains("win") && currentName.contains(":"))) {
+            File potentialPath = new File(currentName);
+            targetFile = potentialPath.isAbsolute() ? potentialPath : new File(parentDir, currentName);
+            newOp = isCopy ? OperationType.CONVERT : OperationType.MOVE;
+        } else {
+            targetFile = new File(parentDir, currentName);
+            newOp = OperationType.RENAME;
+        }
 
-            rec.setNewName(targetFile.getName());
-            rec.setNewPath(targetFile.getAbsolutePath());
-            rec.setChanged(true);
-            rec.setOpType(newOp);
+        rec.setNewName(targetFile.getName());
+        rec.setNewPath(targetFile.getAbsolutePath());
+        rec.setChanged(true);
+        rec.setOpType(newOp);
 
-            if (newOp == OperationType.CONVERT) {
-                rec.getExtraParams().put("action", "copy");
-            }
-            return rec;
-        }).collect(Collectors.toList());
+        if (newOp == OperationType.CONVERT) {
+            rec.getExtraParams().put("action", "copy");
+        }
+        return Collections.emptyList();
     }
 
     private void showRuleEditDialog(RenameRule existingRule) {

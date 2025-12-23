@@ -7,7 +7,6 @@ import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
 import com.filemanager.util.file.FileRegexReplaceUtil;
 import com.jfoenix.controls.JFXComboBox;
-import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.scene.Node;
 import javafx.scene.control.TextField;
@@ -18,8 +17,6 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -51,7 +48,7 @@ public class CueFileRenameStrategy extends AppStrategy {
 
     @Override
     public String getDescription() {
-        return "为了解决cue文件在部分软件下，由于中文命名导致的无法加载的问题，支持统一调整cue及对应的音频文件命名。";
+        return "为了解决cue文件在部分软件下，由于中文命名导致的无法加载的问题，支持统一调整cue及对应的音频文件命名。请同时扫描cue文件和音频文件，否则不生效。";
     }
 
     @Override
@@ -96,69 +93,59 @@ public class CueFileRenameStrategy extends AppStrategy {
     }
 
     @Override
-    public List<ChangeRecord> analyze(List<ChangeRecord> inputRecords, List<File> rootDirs, BiConsumer<Double, String> progressReporter) {
-        int total = inputRecords.size();
-        AtomicInteger processed = new AtomicInteger(0);
-
-        return inputRecords.parallelStream().map(rec -> {
-            int curr = processed.incrementAndGet();
-            if (progressReporter != null && curr % 100 == 0) {
-                double p = (double) curr / total;
-                Platform.runLater(() -> progressReporter.accept(p, "规则计算: " + curr + "/" + total));
-            }
-            if (rec.getFileHandle().isFile()) {
-                return rec;
-            }
-            File[] filesUnderDir = rec.getFileHandle().listFiles();
-            if (filesUnderDir == null || filesUnderDir.length == 0) {
-                return rec;
-            }
-            Map<String, File> cueFiles = Arrays.stream(filesUnderDir)
-                    .filter(file -> StringUtils.endsWithIgnoreCase(file.getName(), ".cue"))
-                    .filter(file -> FileRegexReplaceUtil.hasMatchingLine(file.getAbsolutePath()))
-                    .collect(Collectors.toMap(file -> FileStatisticInfo.create(file).oriName, Function.identity()));
-            if (cueFiles.isEmpty()) {
-                return rec;
-            }
-            Map<String, File> targetFiles = new HashMap<>();
-            Arrays.stream(filesUnderDir)
-                    .forEach(file -> {
-                        FileStatisticInfo statisticInfo = FileStatisticInfo.create(file);
-                        if (!statisticInfo.isMusic()) {
-                            return;
-                        }
-                        if (cueFiles.containsKey(statisticInfo.oriName)) {
-                            targetFiles.put(statisticInfo.oriName, file);
-                        }
-                    });
-            int count = 0;
-            List<String> cueNames = new ArrayList<>(targetFiles.keySet());
-            cueNames.sort(String::compareToIgnoreCase);
-            for (String ky : cueNames) {
-                ChangeRecord cueFileRecord = getTargetFile(cueFiles.get(ky), inputRecords);
-                ChangeRecord musicFileRecord = getTargetFile(targetFiles.get(ky), inputRecords);
-                if (cueFileRecord != null && musicFileRecord != null) {
-                    count++;
-                    FileStatisticInfo statisticInfo = FileStatisticInfo.create(musicFileRecord.getFileHandle());
-                    String fileNameRank = pFileName + "disk(" + count + ")";
-                    if (targetFiles.size() == 1) {
-                        // 只有一组音轨，无需设置后缀
-                        fileNameRank = pFileName;
+    public List<ChangeRecord> analyze(ChangeRecord rec, List<ChangeRecord> inputRecords, List<File> rootDirs) {
+        if (rec.getFileHandle().isFile()) {
+            return Collections.emptyList();
+        }
+        File[] filesUnderDir = rec.getFileHandle().listFiles();
+        if (filesUnderDir == null || filesUnderDir.length == 0) {
+            return Collections.emptyList();
+        }
+        Map<String, File> cueFiles = Arrays.stream(filesUnderDir)
+                .filter(file -> StringUtils.endsWithIgnoreCase(file.getName(), ".cue"))
+                .filter(file -> FileRegexReplaceUtil.hasMatchingLine(file.getAbsolutePath()))
+                .collect(Collectors.toMap(file -> FileStatisticInfo.create(file).oriName, Function.identity()));
+        if (cueFiles.isEmpty()) {
+            return Collections.emptyList();
+        }
+        Map<String, File> targetFiles = new HashMap<>();
+        Arrays.stream(filesUnderDir)
+                .forEach(file -> {
+                    FileStatisticInfo statisticInfo = FileStatisticInfo.create(file);
+                    if (!statisticInfo.isMusic()) {
+                        return;
                     }
-                    String targetFileName = fileNameRank + "." + statisticInfo.type;
-                    musicFileRecord.setNewName(targetFileName);
-                    musicFileRecord.setNewPath(new File(rec.getFileHandle(), targetFileName).getAbsolutePath());
-                    musicFileRecord.setChanged(true);
-                    musicFileRecord.setOpType(OperationType.CUE_RENAME);
-                    cueFileRecord.setNewName(fileNameRank + ".cue");
-                    cueFileRecord.setNewPath(new File(rec.getFileHandle(), pFileName + ".cue").getAbsolutePath());
-                    cueFileRecord.setChanged(true);
-                    cueFileRecord.getExtraParams().put("cue_target_name", targetFileName);
-                    cueFileRecord.setOpType(OperationType.CUE_RENAME);
+                    if (cueFiles.containsKey(statisticInfo.oriName)) {
+                        targetFiles.put(statisticInfo.oriName, file);
+                    }
+                });
+        int count = 0;
+        List<String> cueNames = new ArrayList<>(targetFiles.keySet());
+        cueNames.sort(String::compareToIgnoreCase);
+        for (String ky : cueNames) {
+            ChangeRecord cueFileRecord = getTargetFile(cueFiles.get(ky), inputRecords);
+            ChangeRecord musicFileRecord = getTargetFile(targetFiles.get(ky), inputRecords);
+            if (cueFileRecord != null && musicFileRecord != null) {
+                count++;
+                FileStatisticInfo statisticInfo = FileStatisticInfo.create(musicFileRecord.getFileHandle());
+                String fileNameRank = pFileName + "disk(" + count + ")";
+                if (targetFiles.size() == 1) {
+                    // 只有一组音轨，无需设置后缀
+                    fileNameRank = pFileName;
                 }
+                String targetFileName = fileNameRank + "." + statisticInfo.type;
+                musicFileRecord.setNewName(targetFileName);
+                musicFileRecord.setNewPath(new File(rec.getFileHandle(), targetFileName).getAbsolutePath());
+                musicFileRecord.setChanged(true);
+                musicFileRecord.setOpType(OperationType.CUE_RENAME);
+                cueFileRecord.setNewName(fileNameRank + ".cue");
+                cueFileRecord.setNewPath(new File(rec.getFileHandle(), pFileName + ".cue").getAbsolutePath());
+                cueFileRecord.setChanged(true);
+                cueFileRecord.getExtraParams().put("cue_target_name", targetFileName);
+                cueFileRecord.setOpType(OperationType.CUE_RENAME);
             }
-            return rec;
-        }).collect(Collectors.toList());
+        }
+        return Collections.emptyList();
     }
 
 

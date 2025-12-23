@@ -7,10 +7,11 @@ import com.filemanager.util.MetadataHelper;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXComboBox;
 import javafx.collections.FXCollections;
-import javafx.geometry.Insets;
 import javafx.scene.Node;
-import javafx.scene.control.*;
-import javafx.scene.layout.*;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.Spinner;
+import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import net.bramp.ffmpeg.FFmpeg;
@@ -25,7 +26,6 @@ import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.function.BiConsumer;
 
 public abstract class AbstractFfmpegStrategy extends AppStrategy {
     // --- UI 组件 ---
@@ -132,7 +132,7 @@ public abstract class AbstractFfmpegStrategy extends AppStrategy {
 
 
         // 1. FFmpeg路径
-        JFXButton btnPickFFmpeg = StyleFactory.createIconButton("浏览","",()-> {
+        JFXButton btnPickFFmpeg = StyleFactory.createIconButton("浏览", "", () -> {
             FileChooser fc = new FileChooser();
             File f = fc.showOpenDialog(null);
             if (f != null) txtFFmpegPath.setText(f.getAbsolutePath());
@@ -142,7 +142,7 @@ public abstract class AbstractFfmpegStrategy extends AppStrategy {
         Node lblCache = StyleFactory.createParamLabel("缓存目录:");
         lblCache.disableProperty().bind(chkEnableCache.selectedProperty().not());
         txtCacheDir.disableProperty().bind(chkEnableCache.selectedProperty().not());
-        JFXButton btnPickCache = StyleFactory.createActionButton("选择","",()-> {
+        JFXButton btnPickCache = StyleFactory.createActionButton("选择", "", () -> {
             DirectoryChooser dc = new DirectoryChooser();
             File f = dc.showDialog(null);
             if (f != null) txtCacheDir.setText(f.getAbsolutePath());
@@ -152,22 +152,22 @@ public abstract class AbstractFfmpegStrategy extends AppStrategy {
         return StyleFactory.createVBoxPanel(
                 StyleFactory.createChapter("输出格式设置"),
                 StyleFactory.createParamPairLine("目标格式:", cbTargetFormat),
-                StyleFactory.createParamPairLine("输出模式:", StyleFactory.createHBox(cbOutputDirMode,txtRelativePath)),
+                StyleFactory.createParamPairLine("输出模式:", StyleFactory.createHBox(cbOutputDirMode, txtRelativePath)),
                 StyleFactory.createSeparator(),
                 StyleFactory.createChapter("转换参数设置"),
-                StyleFactory.createParamPairLine("FFmpeg路径:",txtFFmpegPath,btnPickFFmpeg),
+                StyleFactory.createParamPairLine("FFmpeg路径:", txtFFmpegPath, btnPickFFmpeg),
                 StyleFactory.createParamPairLine("FFmpeg线程:", spFfmpegThreads),
                 StyleFactory.createParamPairLine("采样率(Hz):", cbSampleRate),
                 StyleFactory.createParamPairLine("声道数:", cbChannels),
                 StyleFactory.createSeparator(),
                 StyleFactory.createChapter("文件处理选项"),
                 StyleFactory.createVBoxPanel(chkOverwrite, chkForceFilenameMeta, chkEnableCache, chkEnableTempSuffix),
-                StyleFactory.createHBox(lblCache, txtCacheDir,btnPickCache)
+                StyleFactory.createHBox(lblCache, txtCacheDir, btnPickCache)
         );
     }
 
     @Override
-    public List<ChangeRecord> analyze(List<ChangeRecord> inputRecords, List<File> rootDirs, BiConsumer<Double, String> progressReporter) {
+    public List<ChangeRecord> analyze(ChangeRecord currentRecord, List<ChangeRecord> inputRecords, List<File> rootDirs) {
         return Collections.emptyList();
     }
 

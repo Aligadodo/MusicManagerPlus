@@ -45,8 +45,6 @@ public class ParallelStreamWalker {
             try {
                 // 执行递归扫描
                 pool.invoke(new FileWalkAction(root, maxDepth, queue));
-            } catch (Exception e) {
-                System.out.println("扫描文件失败：" + ExceptionUtils.getStackTrace(e));
             } finally {
                 // 扫描结束（无论成功失败），放入结束标记
                 offerMarker(queue);

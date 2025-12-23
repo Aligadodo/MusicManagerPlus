@@ -206,12 +206,8 @@ public class MetadataScraperStrategy extends AppStrategy {
 
     // --- 核心逻辑：分析阶段 ---
     @Override
-    public List<ChangeRecord> analyze(List<ChangeRecord> inputRecords, List<File> rootDirs, BiConsumer<Double, String> progressReporter) {
-        Platform.runLater(txtPreviewLog::clear);
+    public List<ChangeRecord> analyze(ChangeRecord rec, List<ChangeRecord> inputRecords, List<File> rootDirs) {
         processedAlbumDirs.clear(); // 清除目录缓存
-
-        int total = inputRecords.size();
-        AtomicInteger processed = new AtomicInteger(0);
         AtomicInteger matched = new AtomicInteger(0);
         Set<String> supportedExts = new HashSet<>(Arrays.asList("mp3", "flac", "m4a", "ogg", "wav", "dsf", "dff", "ape"));
 
@@ -219,141 +215,131 @@ public class MetadataScraperStrategy extends AppStrategy {
         // 但 analyze 是并行流，无法简单聚合。
         // 策略：先进行单曲处理，同时利用 Set 锁判定目录是否是第一次遇到。如果是第一次，生成专辑任务。
 
-        return inputRecords.parallelStream().flatMap(rec -> {
-            List<ChangeRecord> results = new ArrayList<>();
-            results.add(rec); // 默认保留原记录，如果修改了会覆盖属性
+        File file = rec.getFileHandle();
+        File parentDir = file.getParentFile();
+        String name = file.getName().toLowerCase();
+        String ext = name.lastIndexOf(".") > 0 ? name.substring(name.lastIndexOf(".") + 1) : "";
+        if (!supportedExts.contains(ext)) {
+            return Collections.emptyList();
+        }
+        List<ChangeRecord> results = new ArrayList<>();
+        // === 1. 单曲元数据处理 ===
+        MetadataHelper.AudioMeta guess = MetadataHelper.extractFromFileSystem(file);
+        ScrapedResult scraperRes = null;
+        boolean metaChanged = false;
 
-            int curr = processed.incrementAndGet();
-            if (progressReporter != null && curr % 5 == 0) {
-                double p = (double) curr / total;
-                Platform.runLater(() -> progressReporter.accept(p, String.format("刮削中: %d/%d", curr, total)));
-            }
+        if (pUpdateBasic || pFetchLyrics) {
+            // 尝试读取现有
+            try {
+                AudioFile f = AudioFileIO.read(file);
+                Tag tag = f.getTag();
 
-            File file = rec.getFileHandle();
-            File parentDir = file.getParentFile();
-            String name = file.getName().toLowerCase();
-            String ext = name.lastIndexOf(".") > 0 ? name.substring(name.lastIndexOf(".") + 1) : "";
-            if (!supportedExts.contains(ext)) return Stream.of(rec);
-
-            // === 1. 单曲元数据处理 ===
-            MetadataHelper.AudioMeta guess = MetadataHelper.extractFromFileSystem(file);
-            ScrapedResult scraperRes = null;
-            boolean metaChanged = false;
-
-            if (pUpdateBasic || pFetchLyrics) {
-                // 尝试读取现有
-                try {
-                    AudioFile f = AudioFileIO.read(file);
-                    Tag tag = f.getTag();
-
-                    // 搜索逻辑
-                    if (pSource.contains("iTunes")) {
-                        // 仅当需要更新Tag或封面时搜索
-                        if (pUpdateBasic && (pOverwrite || tag == null || tag.getFirst(FieldKey.ALBUM).isEmpty())) {
-                            scraperRes = searchITunes(guess.getArtist(), guess.getTitle(), false);
-                        }
+                // 搜索逻辑
+                if (pSource.contains("iTunes")) {
+                    // 仅当需要更新Tag或封面时搜索
+                    if (pUpdateBasic && (pOverwrite || tag == null || tag.getFirst(FieldKey.ALBUM).isEmpty())) {
+                        scraperRes = searchITunes(guess.getArtist(), guess.getTitle(), false);
                     }
+                }
 
-                    // 构建变更参数
-                    Map<String, String> params = new HashMap<>(rec.getExtraParams());
+                // 构建变更参数
+                Map<String, String> params = new HashMap<>(rec.getExtraParams());
 
-                    if (scraperRes != null && pUpdateBasic) {
-                        params.put("meta_title", scraperRes.title);
-                        params.put("meta_artist", scraperRes.artist);
-                        params.put("meta_album", scraperRes.album);
-                        if (scraperRes.year != null) params.put("meta_year", scraperRes.year);
-                        if (scraperRes.genre != null) params.put("meta_genre", scraperRes.genre);
-                        if (scraperRes.coverUrl != null) params.put("meta_cover_url", scraperRes.coverUrl);
+                if (scraperRes != null && pUpdateBasic) {
+                    params.put("meta_title", scraperRes.title);
+                    params.put("meta_artist", scraperRes.artist);
+                    params.put("meta_album", scraperRes.album);
+                    if (scraperRes.year != null) params.put("meta_year", scraperRes.year);
+                    if (scraperRes.genre != null) params.put("meta_genre", scraperRes.genre);
+                    if (scraperRes.coverUrl != null) params.put("meta_cover_url", scraperRes.coverUrl);
+                    metaChanged = true;
+                }
+
+                // 歌词
+                if (pFetchLyrics && (pOverwrite || tag == null || tag.getFirst(FieldKey.LYRICS).isEmpty())) {
+                    int duration = f.getAudioHeader().getTrackLength();
+                    String lrc = lyricsManager.searchLyrics(guess.getArtist(), guess.getTitle(), duration);
+                    if (lrc != null) {
+                        params.put("meta_lyrics_b64", Base64.getEncoder().encodeToString(lrc.getBytes(StandardCharsets.UTF_8)));
                         metaChanged = true;
                     }
+                }
 
-                    // 歌词
-                    if (pFetchLyrics && (pOverwrite || tag == null || tag.getFirst(FieldKey.LYRICS).isEmpty())) {
-                        int duration = f.getAudioHeader().getTrackLength();
-                        String lrc = lyricsManager.searchLyrics(guess.getArtist(), guess.getTitle(), duration);
-                        if (lrc != null) {
-                            params.put("meta_lyrics_b64", Base64.getEncoder().encodeToString(lrc.getBytes(StandardCharsets.UTF_8)));
-                            metaChanged = true;
-                        }
-                    }
+                if (metaChanged) {
+                    rec.setChanged(true);
+                    rec.setOpType(OperationType.SCRAPER);
+                    rec.getExtraParams().putAll(params);
+                    rec.getExtraParams().put("scraper_active", "true");
+                    if (pOverwrite) rec.getExtraParams().put("scraper_overwrite", "true");
+                    rec.setNewName("[更新] " + file.getName());
+                    matched.incrementAndGet();
+                }
+            } catch (Exception e) {
+            }
+        }
 
-                    if (metaChanged) {
-                        rec.setChanged(true);
-                        rec.setOpType(OperationType.SCRAPER);
-                        rec.getExtraParams().putAll(params);
-                        rec.getExtraParams().put("scraper_active", "true");
-                        if (pOverwrite) rec.getExtraParams().put("scraper_overwrite", "true");
-                        rec.setNewName("[更新] " + file.getName());
-                        matched.incrementAndGet();
-                    }
-                } catch (Exception e) {
+        // === 2. 专辑层级处理 (封面文件 & Info.txt) ===
+        // 利用 synchronizedSet 原子性地检查目录是否已处理
+        String dirPath = parentDir.getAbsolutePath();
+        boolean isFirstVisit = processedAlbumDirs.add(dirPath);
+
+        if (isFirstVisit && (pSaveCoverFile || pSaveAlbumInfo)) {
+            // 为了生成 Info.txt，我们需要该目录下所有歌曲的信息。
+            // 由于当前是并行流处理单个文件，我们无法拿到"同目录其他文件"的 Record。
+            // 变通：在 Execute 阶段再去扫描该目录生成内容。Analyze 阶段只生成一个“任务标记”。
+
+            // 搜索专辑信息 (针对整个专辑)
+            // 注意：这里为了性能，只搜一次专辑信息，而不是每首歌都搜
+            ScrapedResult albumRes = null;
+            if (pSource.contains("iTunes") && (pSaveCoverFile || (pSaveAlbumInfo && pScrapeIntro))) {
+                // 用目录名或当前文件的专辑名搜
+                String searchAlbum = guess.getAlbum();
+                if (searchAlbum != null && !searchAlbum.isEmpty() && !searchAlbum.equals("Unknown Album")) {
+                    albumRes = searchITunes(guess.getArtist(), searchAlbum, true); // true = search album entity
                 }
             }
 
-            // === 2. 专辑层级处理 (封面文件 & Info.txt) ===
-            // 利用 synchronizedSet 原子性地检查目录是否已处理
-            String dirPath = parentDir.getAbsolutePath();
-            boolean isFirstVisit = processedAlbumDirs.add(dirPath);
-
-            if (isFirstVisit && (pSaveCoverFile || pSaveAlbumInfo)) {
-                // 为了生成 Info.txt，我们需要该目录下所有歌曲的信息。
-                // 由于当前是并行流处理单个文件，我们无法拿到"同目录其他文件"的 Record。
-                // 变通：在 Execute 阶段再去扫描该目录生成内容。Analyze 阶段只生成一个“任务标记”。
-
-                // 搜索专辑信息 (针对整个专辑)
-                // 注意：这里为了性能，只搜一次专辑信息，而不是每首歌都搜
-                ScrapedResult albumRes = null;
-                if (pSource.contains("iTunes") && (pSaveCoverFile || (pSaveAlbumInfo && pScrapeIntro))) {
-                    // 用目录名或当前文件的专辑名搜
-                    String searchAlbum = guess.getAlbum();
-                    if (searchAlbum != null && !searchAlbum.isEmpty() && !searchAlbum.equals("Unknown Album")) {
-                        albumRes = searchITunes(guess.getArtist(), searchAlbum, true); // true = search album entity
-                    }
-                }
-
-                if (pSaveCoverFile) {
-                    String coverUrl = (albumRes != null) ? albumRes.coverUrl : (scraperRes != null ? scraperRes.coverUrl : null);
-                    // 只有找到了 URL 才生成任务，或者我们生成一个"检查本地提取"的任务？
-                    // 简化：只处理网络下载
-                    if (coverUrl != null) {
-                        File targetCover = new File(parentDir, "cover.jpg");
-                        if (pOverwrite || !targetCover.exists()) {
-                            Map<String, String> p = new HashMap<>();
-                            p.put("url", coverUrl);
-                            ChangeRecord coverRec = new ChangeRecord("下载: 专辑封面", "cover.jpg", parentDir,
-                                    true, targetCover.getAbsolutePath(), OperationType.SCRAPER, p, ExecStatus.PENDING);
-                            coverRec.getExtraParams().put("task_type", "DOWNLOAD_COVER");
-                            results.add(coverRec);
-                        }
-                    }
-                }
-
-                if (pSaveAlbumInfo) {
-                    File targetInfo = new File(parentDir, "AlbumInfo.txt");
-                    if (pOverwrite || !targetInfo.exists()) {
+            if (pSaveCoverFile) {
+                String coverUrl = (albumRes != null) ? albumRes.coverUrl : (scraperRes != null ? scraperRes.coverUrl : null);
+                // 只有找到了 URL 才生成任务，或者我们生成一个"检查本地提取"的任务？
+                // 简化：只处理网络下载
+                if (coverUrl != null) {
+                    File targetCover = new File(parentDir, "cover.jpg");
+                    if (pOverwrite || !targetCover.exists()) {
                         Map<String, String> p = new HashMap<>();
-                        if (albumRes != null) {
-                            p.put("intro", albumRes.intro != null ? albumRes.intro : "");
-                            p.put("album", albumRes.album);
-                            p.put("artist", albumRes.artist);
-                            p.put("year", albumRes.year);
-                            p.put("genre", albumRes.genre);
-                        } else {
-                            // 即使没搜到，也可以生成基于文件列表的 Info
-                            p.put("album", guess.getAlbum());
-                            p.put("artist", guess.getArtist());
-                        }
-
-                        ChangeRecord infoRec = new ChangeRecord("生成: 专辑资料", "AlbumInfo.txt", parentDir,
-                                true, targetInfo.getAbsolutePath(), OperationType.SCRAPER, p, ExecStatus.PENDING);
-                        infoRec.getExtraParams().put("task_type", "GENERATE_INFO");
-                        results.add(infoRec);
+                        p.put("url", coverUrl);
+                        ChangeRecord coverRec = new ChangeRecord("下载: 专辑封面", "cover.jpg", parentDir,
+                                true, targetCover.getAbsolutePath(), OperationType.SCRAPER, p, ExecStatus.PENDING);
+                        coverRec.getExtraParams().put("task_type", "DOWNLOAD_COVER");
+                        results.add(coverRec);
                     }
                 }
             }
 
-            return results.stream();
-        }).collect(Collectors.toList());
+            if (pSaveAlbumInfo) {
+                File targetInfo = new File(parentDir, "AlbumInfo.txt");
+                if (pOverwrite || !targetInfo.exists()) {
+                    Map<String, String> p = new HashMap<>();
+                    if (albumRes != null) {
+                        p.put("intro", albumRes.intro != null ? albumRes.intro : "");
+                        p.put("album", albumRes.album);
+                        p.put("artist", albumRes.artist);
+                        p.put("year", albumRes.year);
+                        p.put("genre", albumRes.genre);
+                    } else {
+                        // 即使没搜到，也可以生成基于文件列表的 Info
+                        p.put("album", guess.getAlbum());
+                        p.put("artist", guess.getArtist());
+                    }
+
+                    ChangeRecord infoRec = new ChangeRecord("生成: 专辑资料", "AlbumInfo.txt", parentDir,
+                            true, targetInfo.getAbsolutePath(), OperationType.SCRAPER, p, ExecStatus.PENDING);
+                    infoRec.getExtraParams().put("task_type", "GENERATE_INFO");
+                    results.add(infoRec);
+                }
+            }
+        }
+        return results;
     }
 
     @Override

@@ -85,8 +85,5 @@ public interface IAppController {
 
     void logError(String s);
 
-    // --- Config IO (包含线程数保存) ---
-    void displayRunning(String s);
-
     Node getGlobalSettingsView();
 }

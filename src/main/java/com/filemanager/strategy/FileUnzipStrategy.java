@@ -4,6 +4,7 @@ import com.filemanager.model.*;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
+import com.google.common.collect.Lists;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXComboBox;
 import javafx.application.Platform;
@@ -282,56 +283,45 @@ public class FileUnzipStrategy extends AppStrategy {
     }
 
     @Override
-    public List<ChangeRecord> analyze(List<ChangeRecord> inputRecords, List<File> rootDirs, BiConsumer<Double, String> progressReporter) {
-        List<ChangeRecord> results = new ArrayList<>();
+    public List<ChangeRecord> analyze(ChangeRecord rec, List<ChangeRecord> inputRecords, List<File> rootDirs) {
         Set<String> archiveExts = new HashSet<>(Arrays.asList("zip", "7z", "rar", "tar", "gz", "jar", "xz", "bz2", "iso"));
+        File file = rec.getFileHandle();
+        String name = file.getName().toLowerCase();
+        int dot = name.lastIndexOf('.');
+        if (dot == -1) return Collections.emptyList();
+        String ext = name.substring(dot + 1);
 
-        int total = inputRecords.size();
-        AtomicInteger processed = new AtomicInteger(0);
+        if (!archiveExts.contains(ext)) return Collections.emptyList();
 
-        return inputRecords.parallelStream().map(rec -> {
-            int curr = processed.incrementAndGet();
-            if (progressReporter != null && curr % 20 == 0) {
-                Platform.runLater(() -> progressReporter.accept((double) curr / total, "分析压缩包: " + curr + "/" + total));
-            }
+        // 1. 计算目标路径
+        File baseDestDir;
+        if (pMode.startsWith("当前目录")) {
+            baseDestDir = file.getParentFile();
+        } else if (pMode.startsWith("指定目录")) {
+            baseDestDir = new File(pCustomPath);
+        } else {
+            baseDestDir = new File(file.getParentFile(), "Extracted_" + file.getName());
+        }
 
-            File file = rec.getFileHandle();
-            String name = file.getName().toLowerCase();
-            int dot = name.lastIndexOf('.');
-            if (dot == -1) return rec;
-            String ext = name.substring(dot + 1);
+        // 预览路径（如果是智能模式，实际路径在执行时才确定，这里显示基础路径）
+        File previewDest = pSmart ? new File(baseDestDir, getBaseName(file.getName())) : baseDestDir;
 
-            if (!archiveExts.contains(ext)) return rec;
+        String displayName = (pEngine.contains("外部") ? "[外部] " : "[内置] ") +
+                (pSmart ? "智能解压 -> " : "解压 -> ") + previewDest.getName();
 
-            // 1. 计算目标路径
-            File baseDestDir;
-            if (pMode.startsWith("当前目录")) {
-                baseDestDir = file.getParentFile();
-            } else if (pMode.startsWith("指定目录")) {
-                baseDestDir = new File(pCustomPath);
-            } else {
-                baseDestDir = new File(file.getParentFile(), "Extracted_" + file.getName());
-            }
+        // 序列化参数
+        Map<String, String> params = new HashMap<>();
+        params.put("baseDest", baseDestDir.getAbsolutePath());
+        params.put("engine", pEngine);
+        params.put("exePath", pExePath);
+        params.put("smart", String.valueOf(pSmart));
+        params.put("overwrite", String.valueOf(pOverwrite));
+        params.put("deleteSuccess", String.valueOf(pDeleteSuccess));
+        params.put("deleteFail", String.valueOf(pDeleteFail));
 
-            // 预览路径（如果是智能模式，实际路径在执行时才确定，这里显示基础路径）
-            File previewDest = pSmart ? new File(baseDestDir, getBaseName(file.getName())) : baseDestDir;
+        return Lists.newArrayList(new ChangeRecord(rec.getOriginalName(), displayName, file, true,
+                previewDest.getAbsolutePath(), OperationType.UNZIP, params, ExecStatus.PENDING));
 
-            String displayName = (pEngine.contains("外部") ? "[外部] " : "[内置] ") +
-                    (pSmart ? "智能解压 -> " : "解压 -> ") + previewDest.getName();
-
-            // 序列化参数
-            Map<String, String> params = new HashMap<>();
-            params.put("baseDest", baseDestDir.getAbsolutePath());
-            params.put("engine", pEngine);
-            params.put("exePath", pExePath);
-            params.put("smart", String.valueOf(pSmart));
-            params.put("overwrite", String.valueOf(pOverwrite));
-            params.put("deleteSuccess", String.valueOf(pDeleteSuccess));
-            params.put("deleteFail", String.valueOf(pDeleteFail));
-
-            return new ChangeRecord(rec.getOriginalName(), displayName, file, true, previewDest.getAbsolutePath(), OperationType.UNZIP, params, ExecStatus.PENDING);
-
-        }).collect(Collectors.toList());
     }
 
     @Override

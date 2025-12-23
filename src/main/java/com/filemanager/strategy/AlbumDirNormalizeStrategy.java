@@ -1,21 +1,18 @@
 package com.filemanager.strategy;
 
 import com.filemanager.model.ChangeRecord;
+import com.filemanager.tool.FileTypeUtil;
 import com.filemanager.tool.display.StyleFactory;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
 import com.filemanager.util.MetadataHelper;
-import javafx.application.Platform;
 import javafx.scene.Node;
 import javafx.scene.control.TextField;
 
 import java.io.File;
 import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 /**
@@ -63,8 +60,8 @@ public class AlbumDirNormalizeStrategy extends AppStrategy {
     @Override
     public Node getConfigNode() {
         return StyleFactory.createVBoxPanel(
-                StyleFactory.createParamPairLine("目录命名模板:",txtTemplate)
-                );
+                StyleFactory.createParamPairLine("目录命名模板:", txtTemplate)
+        );
     }
 
     @Override
@@ -74,60 +71,52 @@ public class AlbumDirNormalizeStrategy extends AppStrategy {
             File t = new File(rec.getNewPath());
             if (s.equals(t)) return;
             if (!t.getParentFile().exists()) t.getParentFile().mkdirs();
-            Files.move(s.toPath(), t.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            Files.move(s.toPath(), t.toPath());
         }
     }
 
     @Override
-    public List<ChangeRecord> analyze(List<ChangeRecord> inputRecords, List<File> rootDirs, BiConsumer<Double, String> progressReporter) {
-        Map<String, List<ChangeRecord>> dirGroups = inputRecords.stream()
-                .collect(Collectors.groupingBy(rec -> new File(rec.getNewPath()).getParent()));
-
-        List<ChangeRecord> results = new ArrayList<>();
-        int total = dirGroups.size();
-        AtomicInteger processed = new AtomicInteger(0);
-
-        for (Map.Entry<String, List<ChangeRecord>> entry : dirGroups.entrySet()) {
-            String parentPath = entry.getKey();
-            List<ChangeRecord> dirFiles = entry.getValue();
-            File parentDir = new File(parentPath);
-
-            Map<String, Integer> artists = new HashMap<>();
-            Map<String, Integer> albums = new HashMap<>();
-            Map<String, Integer> years = new HashMap<>();
-
-            for (ChangeRecord rec : dirFiles) {
-                MetadataHelper.AudioMeta meta = MetadataHelper.getSmartMetadata(rec.getFileHandle(), false);
-                artists.merge(meta.getArtist(), 1, Integer::sum);
-                albums.merge(meta.getAlbum(), 1, Integer::sum);
-                if (!meta.getYear().isEmpty()) years.merge(meta.getYear(), 1, Integer::sum);
-                results.add(rec);
-            }
-
-            String bestArtist = getTopKey(artists, "Unknown Artist");
-            String bestAlbum = getTopKey(albums, parentDir.getName());
-            String bestYear = getTopKey(years, "");
-
-            MetadataHelper.AudioMeta consensus = new MetadataHelper.AudioMeta();
-            consensus.setArtist(bestArtist);
-            consensus.setAlbum(bestAlbum);
-            consensus.setYear(bestYear);
-
-            String newDirName = MetadataHelper.format(pTemplate, consensus).replaceAll("[\\\\/:*?\"<>|]", "_").trim();
-            if (newDirName.endsWith(" - ")) newDirName = newDirName.substring(0, newDirName.length() - 3);
-
-            if (!parentDir.getName().equals(newDirName)) {
-                File targetDir = new File(parentDir.getParentFile(), newDirName);
-                ChangeRecord folderRec = new ChangeRecord(parentDir.getName(), newDirName, parentDir, true,
-                        targetDir.getAbsolutePath(), OperationType.ALBUM_RENAME, new HashMap<>(), ExecStatus.PENDING);
-                results.add(folderRec);
-            }
-
-            int curr = processed.incrementAndGet();
-            if (progressReporter != null && curr % 10 == 0)
-                Platform.runLater(() -> progressReporter.accept((double) curr / total, "分析目录: " + parentDir.getName()));
+    public List<ChangeRecord> analyze(ChangeRecord changeRecord, List<ChangeRecord> inputRecords, List<File> rootDirs) {
+        if (changeRecord.getFileHandle().isFile()) {
+            return Collections.emptyList();
         }
-        return results;
+        String parentPath = changeRecord.getFileHandle().getParentFile().getAbsolutePath();
+        List<ChangeRecord> dirFiles = getFilesUnderDir(changeRecord.getFileHandle(), inputRecords).stream()
+                .filter(file -> FileTypeUtil.isMusicFile(file.getFileHandle())).collect(Collectors.toList());
+        File parentDir = new File(parentPath);
+
+        Map<String, Integer> artists = new HashMap<>();
+        Map<String, Integer> albums = new HashMap<>();
+        Map<String, Integer> years = new HashMap<>();
+
+        for (ChangeRecord rec : dirFiles) {
+            MetadataHelper.AudioMeta meta = MetadataHelper.getSmartMetadata(rec.getFileHandle(), false);
+            artists.merge(meta.getArtist(), 1, Integer::sum);
+            albums.merge(meta.getAlbum(), 1, Integer::sum);
+            if (!meta.getYear().isEmpty()) {
+                years.merge(meta.getYear(), 1, Integer::sum);
+            }
+        }
+
+        String bestArtist = getTopKey(artists, "Unknown Artist");
+        String bestAlbum = getTopKey(albums, parentDir.getName());
+        String bestYear = getTopKey(years, "");
+
+        MetadataHelper.AudioMeta consensus = new MetadataHelper.AudioMeta();
+        consensus.setArtist(bestArtist);
+        consensus.setAlbum(bestAlbum);
+        consensus.setYear(bestYear);
+
+        String newDirName = MetadataHelper.format(pTemplate, consensus).replaceAll("[\\\\/:*?\"<>|]", "_").trim();
+        if (newDirName.endsWith(" - ")) newDirName = newDirName.substring(0, newDirName.length() - 3);
+
+        if (!parentDir.getName().equals(newDirName)) {
+            changeRecord.setChanged(true);
+            changeRecord.setOpType(OperationType.ALBUM_RENAME);
+            changeRecord.setNewPath(newDirName);
+            changeRecord.setStatus(ExecStatus.PENDING);
+        }
+        return Collections.emptyList();
     }
 
     private String getTopKey(Map<String, Integer> map, String def) {
