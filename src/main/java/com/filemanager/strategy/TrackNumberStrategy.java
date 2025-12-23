@@ -1,7 +1,7 @@
 package com.filemanager.strategy;
 
 import com.filemanager.model.ChangeRecord;
-import com.filemanager.tool.FileTypeUtil;
+import com.filemanager.tool.file.FileTypeUtil;
 import com.filemanager.tool.display.StyleFactory;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;

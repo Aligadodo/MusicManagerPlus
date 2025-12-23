@@ -115,6 +115,12 @@ public class CueSplitterStrategy extends AbstractFfmpegStrategy {
             // [核心优化] 丰富预览信息：[01] 歌名 - 歌手 [04:20]
             String displayInfo = t.getDisplayInfo();
             File targetFile = new File(params.get("parentPath"), trackName);
+            if (params.containsKey("doubleCheckParentPath")) {
+                File doubleCheckTargetFile = new File(params.get("doubleCheckParentPath"), trackName);
+                if (doubleCheckTargetFile.exists() && !pOverwrite) {
+                    continue;
+                }
+            }
             // 忽略已存在的文件
             boolean targetExists = targetFile.exists();
             if (targetExists && !pOverwrite) {

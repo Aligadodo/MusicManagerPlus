@@ -2,6 +2,7 @@ package com.filemanager.strategy;
 
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.tool.display.StyleFactory;
+import com.filemanager.tool.file.PathUtils;
 import com.filemanager.type.ScanTarget;
 import com.filemanager.util.MetadataHelper;
 import com.jfoenix.controls.JFXButton;
@@ -40,8 +41,10 @@ public abstract class AbstractFfmpegStrategy extends AppStrategy {
     protected final JFXComboBox<String> cbChannels;
     protected final TextField txtFFmpegPath;
     protected final CheckBox chkEnableCache;
-    protected final CheckBox chkEnableTempSuffix;
     protected final TextField txtCacheDir;
+    protected final CheckBox chkEnableSnap;
+    protected final TextField txtSnapDir;
+    protected final CheckBox chkEnableTempSuffix;
     protected final CheckBox chkForceFilenameMeta;
 
 
@@ -53,7 +56,10 @@ public abstract class AbstractFfmpegStrategy extends AppStrategy {
     protected String pFFmpeg;
     protected boolean pUseCache;
     protected boolean pUseTempSuffix;
+    // 将文件先存储到镜像目录下 避免IO性能低下
+    protected boolean pUseSnapPath;
     protected String pCacheDir;
+    protected String pSnapDir;
     protected boolean pForceMeta;
     protected int pInnerThreads;
     protected String pSampleRate;
@@ -105,13 +111,18 @@ public abstract class AbstractFfmpegStrategy extends AppStrategy {
         txtFFmpegPath = new TextField("ffmpeg");
         txtFFmpegPath.setPromptText("Path to ffmpeg executable");
 
-        chkEnableCache = new CheckBox("启用 SSD 缓存暂存(解决IO瓶颈)");
+        chkEnableCache = new CheckBox("启用SSD缓存暂存(解决IO瓶颈)");
+        chkEnableSnap = new CheckBox("启用镜像存储暂存(需要手动移动文件)");
+        chkEnableCache.disableProperty().bind(chkEnableSnap.selectedProperty());
         chkEnableTempSuffix = new CheckBox("启用.temp文件后缀(SSD缓存启用时不生效)");
         chkEnableTempSuffix.disableProperty().bind(chkEnableCache.selectedProperty());
         chkEnableTempSuffix.setSelected(true);
 
         txtCacheDir = new TextField();
         txtCacheDir.setPromptText("SSD 缓存目录路径");
+
+        txtSnapDir = new TextField();
+        txtSnapDir.setPromptText("镜像存储目录路径");
     }
 
     public abstract String getDefaultDirPrefix();
@@ -148,6 +159,16 @@ public abstract class AbstractFfmpegStrategy extends AppStrategy {
             if (f != null) txtCacheDir.setText(f.getAbsolutePath());
         });
 
+        // 3. 镜像路径设置
+        Node snapCacheLabel = StyleFactory.createParamLabel("镜像目录:");
+        snapCacheLabel.disableProperty().bind(chkEnableSnap.selectedProperty().not());
+        txtSnapDir.disableProperty().bind(chkEnableSnap.selectedProperty().not());
+        JFXButton btnPickSnap = StyleFactory.createActionButton("选择", "", () -> {
+            DirectoryChooser dc = new DirectoryChooser();
+            File f = dc.showDialog(null);
+            if (f != null) txtSnapDir.setText(f.getAbsolutePath());
+        });
+
         btnPickCache.disableProperty().bind(chkEnableCache.selectedProperty().not());
         return StyleFactory.createVBoxPanel(
                 StyleFactory.createChapter("输出格式设置"),
@@ -161,8 +182,9 @@ public abstract class AbstractFfmpegStrategy extends AppStrategy {
                 StyleFactory.createParamPairLine("声道数:", cbChannels),
                 StyleFactory.createSeparator(),
                 StyleFactory.createChapter("文件处理选项"),
-                StyleFactory.createVBoxPanel(chkOverwrite, chkForceFilenameMeta, chkEnableCache, chkEnableTempSuffix),
-                StyleFactory.createHBox(lblCache, txtCacheDir, btnPickCache)
+                StyleFactory.createVBoxPanel(chkOverwrite, chkForceFilenameMeta, chkEnableSnap, chkEnableCache, chkEnableTempSuffix),
+                StyleFactory.createHBox(lblCache, txtSnapDir, btnPickCache),
+                StyleFactory.createHBox(snapCacheLabel, txtCacheDir, btnPickSnap)
         );
     }
 
@@ -208,6 +230,8 @@ public abstract class AbstractFfmpegStrategy extends AppStrategy {
         pUseCache = chkEnableCache.isSelected();
         pUseTempSuffix = chkEnableTempSuffix.isSelected();
         pCacheDir = txtCacheDir.getText();
+        pUseSnapPath = chkEnableSnap.isSelected();
+        pSnapDir = txtSnapDir.getText();
         pForceMeta = chkForceFilenameMeta.isSelected();
         pInnerThreads = spFfmpegThreads.getValue();
         pSampleRate = cbSampleRate.getValue();
@@ -227,6 +251,10 @@ public abstract class AbstractFfmpegStrategy extends AppStrategy {
         }
         if (txtFFmpegPath.getText() != null) {
             props.setProperty("ac_ffmpeg", txtFFmpegPath.getText());
+        }
+        props.setProperty("ac_useSnap", String.valueOf(chkEnableSnap.isSelected()));
+        if (txtSnapDir.getText() != null) {
+            props.setProperty("ac_snapPath", txtSnapDir.getText());
         }
         props.setProperty("ac_useCache", String.valueOf(chkEnableCache.isSelected()));
         props.setProperty("ac_useTempSuffix", String.valueOf(chkEnableTempSuffix.isSelected()));
@@ -280,6 +308,12 @@ public abstract class AbstractFfmpegStrategy extends AppStrategy {
         }
         if (props.containsKey("ac_channels")) {
             cbChannels.getSelectionModel().select(props.getProperty("ac_channels"));
+        }
+        if (props.containsKey("ac_useSnap")) {
+            chkEnableSnap.setSelected(Boolean.parseBoolean(props.getProperty("ac_useSnap")));
+        }
+        if (props.containsKey("ac_snapPath")) {
+            txtSnapDir.setText(props.getProperty("ac_snapPath"));
         }
     }
 
@@ -405,6 +439,12 @@ public abstract class AbstractFfmpegStrategy extends AppStrategy {
         } else {
             parentPath = parentDir.getAbsolutePath();
         }
+
+        if (pUseSnapPath) {
+            params.put("doubleCheckParentPath", parentPath);
+            parentPath = PathUtils.mapToNewRoot(parentPath, pSnapDir);
+        }
+
         params.put("parentPath", parentPath);
 
         // [核心优化] 确定最终参数：如果是 CD 模式，强制覆盖 UI 选项
@@ -456,7 +496,9 @@ public abstract class AbstractFfmpegStrategy extends AppStrategy {
             params.put("codec", "libmp3lame");
         }
 
-        if (pUseCache) {
+        if (pUseSnapPath) {
+            // no staging
+        } else if (pUseCache) {
             String tempFileName = UUID.randomUUID().toString();
             File stagingFile = new File(pCacheDir, tempFileName);
             params.put("stagingPath", stagingFile.getAbsolutePath());

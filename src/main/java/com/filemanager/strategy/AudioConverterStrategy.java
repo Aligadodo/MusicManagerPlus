@@ -90,6 +90,12 @@ public class AudioConverterStrategy extends AbstractFfmpegStrategy {
         if (targetExists && !pOverwrite) {
             return Collections.emptyList();
         }
+        if (param.containsKey("doubleCheckParentPath")) {
+            File doubleCheckTargetFile = new File(param.get("doubleCheckParentPath"), newName);
+            if (doubleCheckTargetFile.exists() && !pOverwrite) {
+                return Collections.emptyList();
+            }
+        }
         return Lists.newArrayList(new ChangeRecord(rec.getOriginalName(), targetFile.getName(),
                 rec.getFileHandle(), true, targetFile.getAbsolutePath(), OperationType.CONVERT, param, status));
     }
