@@ -111,15 +111,15 @@ public abstract class AbstractFfmpegStrategy extends AppStrategy {
         txtFFmpegPath = new TextField("ffmpeg");
         txtFFmpegPath.setPromptText("Path to ffmpeg executable");
 
-        chkEnableCache = new CheckBox("启用SSD缓存暂存(解决IO瓶颈)");
-        chkEnableSnap = new CheckBox("启用镜像存储暂存(需要手动移动文件)");
-        chkEnableCache.disableProperty().bind(chkEnableSnap.selectedProperty());
-        chkEnableTempSuffix = new CheckBox("启用.temp文件后缀(SSD缓存启用时不生效)");
+        chkEnableCache = new CheckBox("启用临时文件缓存(缓解IO瓶颈)");
+        chkEnableSnap = new CheckBox("启用镜像路径暂存(需要手动移动文件)");
+
+        chkEnableTempSuffix = new CheckBox("启用.temp文件后缀(文件缓存启用时不生效)");
         chkEnableTempSuffix.disableProperty().bind(chkEnableCache.selectedProperty());
         chkEnableTempSuffix.setSelected(true);
 
         txtCacheDir = new TextField();
-        txtCacheDir.setPromptText("SSD 缓存目录路径");
+        txtCacheDir.setPromptText("临时文件缓存目录路径");
 
         txtSnapDir = new TextField();
         txtSnapDir.setPromptText("镜像存储目录路径");
@@ -153,23 +153,25 @@ public abstract class AbstractFfmpegStrategy extends AppStrategy {
         Node lblCache = StyleFactory.createParamLabel("缓存目录:");
         lblCache.disableProperty().bind(chkEnableCache.selectedProperty().not());
         txtCacheDir.disableProperty().bind(chkEnableCache.selectedProperty().not());
-        JFXButton btnPickCache = StyleFactory.createActionButton("选择", "", () -> {
+        JFXButton btnPickCache = StyleFactory.createActionButton("选择路径", "", () -> {
             DirectoryChooser dc = new DirectoryChooser();
             File f = dc.showDialog(null);
             if (f != null) txtCacheDir.setText(f.getAbsolutePath());
         });
+        btnPickCache.disableProperty().bind(chkEnableCache.selectedProperty().not());
 
         // 3. 镜像路径设置
         Node snapCacheLabel = StyleFactory.createParamLabel("镜像目录:");
         snapCacheLabel.disableProperty().bind(chkEnableSnap.selectedProperty().not());
         txtSnapDir.disableProperty().bind(chkEnableSnap.selectedProperty().not());
-        JFXButton btnPickSnap = StyleFactory.createActionButton("选择", "", () -> {
+        JFXButton btnPickSnap = StyleFactory.createActionButton("选择路径", "", () -> {
             DirectoryChooser dc = new DirectoryChooser();
             File f = dc.showDialog(null);
             if (f != null) txtSnapDir.setText(f.getAbsolutePath());
         });
+        btnPickSnap.disableProperty().bind(chkEnableSnap.selectedProperty().not());
 
-        btnPickCache.disableProperty().bind(chkEnableCache.selectedProperty().not());
+
         return StyleFactory.createVBoxPanel(
                 StyleFactory.createChapter("输出格式设置"),
                 StyleFactory.createParamPairLine("目标格式:", cbTargetFormat),
@@ -182,9 +184,12 @@ public abstract class AbstractFfmpegStrategy extends AppStrategy {
                 StyleFactory.createParamPairLine("声道数:", cbChannels),
                 StyleFactory.createSeparator(),
                 StyleFactory.createChapter("文件处理选项"),
-                StyleFactory.createVBoxPanel(chkOverwrite, chkForceFilenameMeta, chkEnableSnap, chkEnableCache, chkEnableTempSuffix),
-                StyleFactory.createHBox(lblCache, txtSnapDir, btnPickCache),
-                StyleFactory.createHBox(snapCacheLabel, txtCacheDir, btnPickSnap)
+                StyleFactory.createVBoxPanel(chkOverwrite, chkForceFilenameMeta),
+                chkEnableSnap,
+                StyleFactory.createHBox(snapCacheLabel, txtSnapDir, btnPickSnap),
+                chkEnableCache,
+                StyleFactory.createHBox(lblCache, txtCacheDir, btnPickCache),
+                chkEnableTempSuffix
         );
     }
 
@@ -496,9 +501,7 @@ public abstract class AbstractFfmpegStrategy extends AppStrategy {
             params.put("codec", "libmp3lame");
         }
 
-        if (pUseSnapPath) {
-            // no staging
-        } else if (pUseCache) {
+        if (pUseCache) {
             String tempFileName = UUID.randomUUID().toString();
             File stagingFile = new File(pCacheDir, tempFileName);
             params.put("stagingPath", stagingFile.getAbsolutePath());
