@@ -19,8 +19,6 @@ public class GlobalSettingsView {
     private JFXComboBox<String> cbRecursionMode;
     private Spinner<Integer> spRecursionDepth;
     private CheckComboBox<String> ccbFileTypes;
-    private Spinner<Integer> spGlobalThreads;
-    private JFXComboBox<Integer> numberDisplay;
 
     public GlobalSettingsView(IAppController app) {
         this.app = app;
@@ -40,12 +38,6 @@ public class GlobalSettingsView {
         ccbFileTypes = new CheckComboBox<>(FXCollections.observableArrayList("[directory]", "[compressed]", "[music]", "mp3", "flac", "wav", "m4a", "ape", "dsf", "dff", "dts", "iso", "jpg", "png", "nfo", "cue", "tak"));
         ccbFileTypes.getCheckModel().checkAll();
 
-        spGlobalThreads = new Spinner<>(1, 32, 4);
-        spGlobalThreads.setEditable(true);
-
-        // 设置预览数量 默认200
-        numberDisplay = new JFXComboBox<>(FXCollections.observableArrayList(50, 100, 200, 500));
-        numberDisplay.getSelectionModel().selectFirst();
 //        UnaryOperator<TextFormatter.Change> filter = change -> {
 //            String text = change.getControlNewText();
 //            // 正则表达式：允许为空，或者只允许数字
@@ -62,9 +54,7 @@ public class GlobalSettingsView {
         viewNode.getChildren().addAll(
                 StyleFactory.createParamPairLine("文件扫描模式:", cbRecursionMode),
                 StyleFactory.createParamPairLine("文件扫描层级:", spRecursionDepth),
-                StyleFactory.createParamPairLine("文件类型筛选:", ccbFileTypes),
-                StyleFactory.createParamPairLine("并发线程数量:", spGlobalThreads),
-                StyleFactory.createParamPairLine("显示数量限制:", numberDisplay)
+                StyleFactory.createParamPairLine("文件类型筛选:", ccbFileTypes)
         );
     }
 

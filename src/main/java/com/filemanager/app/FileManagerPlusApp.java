@@ -9,6 +9,7 @@ import com.filemanager.model.ThemeConfig;
 import com.filemanager.strategy.AppStrategy;
 import com.filemanager.strategy.AppStrategyFactory;
 import com.filemanager.tool.MultiThreadTaskEstimator;
+import com.filemanager.tool.display.ProgressBarDisplay;
 import com.filemanager.tool.display.StyleFactory;
 import com.filemanager.tool.file.ConfigFileManager;
 import com.filemanager.tool.file.ParallelStreamWalker;
@@ -16,6 +17,7 @@ import com.filemanager.tool.log.LogInfo;
 import com.filemanager.tool.log.LogType;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
+import com.filemanager.type.TaskStatus;
 import com.filemanager.util.file.FileLockManagerUtil;
 import com.jfoenix.controls.*;
 import javafx.animation.FadeTransition;
@@ -78,7 +80,9 @@ public class FileManagerPlusApp extends Application implements IAppController {
     private final File lastConfigFile = new File(System.getProperty("user.home"), ".fmplus_config.properties");
     private final ThemeConfig currentTheme = new ThemeConfig();
     private final AtomicBoolean isTaskRunning = new AtomicBoolean(false);
-    private long startT = System.currentTimeMillis();
+    private final AtomicLong lastRefresh = new AtomicLong(System.currentTimeMillis());
+    @Getter
+    private long taskStartTimStamp = System.currentTimeMillis();
     private List<AppStrategy> strategyPrototypes;
     // --- UI Controls ---
     private JFXButton btnGo, btnExecute, btnStop;
@@ -88,6 +92,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
     @Getter
     @Setter
     private String bgImagePath = "";
+    @Getter
     private List<ChangeRecord> fullChangeList = new ArrayList<>();
     // --- Modular Views (UI Modules) ---
     private GlobalSettingsView globalSettingsView;
@@ -310,7 +315,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
 
     @Override
     public Spinner<Integer> getSpGlobalThreads() {
-        return globalSettingsView.getSpGlobalThreads();
+        return previewView.getSpGlobalThreads();
     }
 
     // 委托给 PreviewView
@@ -352,13 +357,9 @@ public class FileManagerPlusApp extends Application implements IAppController {
 
         mainTabPane.getSelectionModel().select(previewView.getTab());
         switchView(previewView.getViewNode());
-
         fullChangeList.clear();
-        startT = System.currentTimeMillis();
-        AtomicLong lastRefresh = new AtomicLong(System.currentTimeMillis());
-        updateStats();
-
-        setRunningUI("▶ ▶ ▶ 正在扫描...");
+        taskStartTimStamp = System.currentTimeMillis();
+        setStartTaskUI("▶ ▶ ▶ 正在扫描...", null);
         previewView.getPreviewTable().setRoot(null);
 
         // 捕获所有策略参数
@@ -372,7 +373,6 @@ public class FileManagerPlusApp extends Application implements IAppController {
         Task<List<ChangeRecord>> task = new Task<List<ChangeRecord>>() {
             @Override
             protected List<ChangeRecord> call() throws Exception {
-
                 updateMessage("▶ ▶ ▶ 扫描源文件...");
                 List<File> initialFiles = new ArrayList<>();
                 for (File r : sourceRoots) {
@@ -382,14 +382,13 @@ public class FileManagerPlusApp extends Application implements IAppController {
                 if (isCancelled()) return null;
                 setRunningUI("▶ ▶ ▶ 扫描完成，共 " + initialFiles.size() + " 个文件。");
 
-
                 List<ChangeRecord> currentRecords = initialFiles.stream()
                         .map(f -> new ChangeRecord(f.getName(), f.getName(), f, false, f.getAbsolutePath(), OperationType.NONE))
                         .collect(Collectors.toList());
 
                 int total = currentRecords.size();
                 AtomicInteger processed = new AtomicInteger(0);
-                threadTaskEstimator = new MultiThreadTaskEstimator(initialFiles.size(), 50);
+                threadTaskEstimator = new MultiThreadTaskEstimator(total, Math.max(Math.min(50, total / 20), 1));
                 threadTaskEstimator.start();
                 ConcurrentLinkedDeque<ChangeRecord> newRecords = new ConcurrentLinkedDeque<>();
                 currentRecords.parallelStream().forEach(rec -> {
@@ -410,7 +409,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
                         logError("❌ 分析失败: " + rec.getFileHandle().getAbsolutePath() + ",原因" + e.getMessage());
                         logError("❌ 失败详细原因:" + ExceptionUtils.getStackTrace(e));
                     } finally {
-                        threadTaskEstimator.markUnitCompleted();
+                        threadTaskEstimator.oneCompleted();
                         if (System.currentTimeMillis() - lastRefresh.get() > 1000) {
                             setRunningUI("▶ ▶ ▶ 预览任务进度: " + threadTaskEstimator.getDisplayInfo());
                             lastRefresh.set(System.currentTimeMillis());
@@ -425,11 +424,11 @@ public class FileManagerPlusApp extends Application implements IAppController {
                 return currentRecords;
             }
         };
+        setStartTaskUI("▶ ▶ ▶ 预览中...", task);
 
         task.setOnSucceeded(e -> {
             fullChangeList = task.getValue();
-            refreshPreviewTableFilter();
-            finishTaskUI("➡ ➡ ➡ 预览完成 ⬅ ⬅ ⬅");
+            setFinishTaskUI("➡ ➡ ➡ 预览完成 ⬅ ⬅ ⬅", TaskStatus.SUCCESS);
             boolean hasChanges = fullChangeList.stream().anyMatch(ChangeRecord::isChanged);
             btnExecute.setDisable(!hasChanges);
         });
@@ -448,8 +447,10 @@ public class FileManagerPlusApp extends Application implements IAppController {
         if (alert.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) {
             return;
         }
-        startT = System.currentTimeMillis();
-        setRunningUI("▶ ▶ ▶ 执行中...");
+        btnGo.setDisable(true);
+        btnExecute.setDisable(true);
+        taskStartTimStamp = System.currentTimeMillis();
+
         Task<Void> task = new Task<Void>() {
             @Override
             protected Void call() throws Exception {
@@ -460,18 +461,15 @@ public class FileManagerPlusApp extends Application implements IAppController {
                         .collect(Collectors.toList());
                 int total = todos.size();
                 AtomicInteger curr = new AtomicInteger(0);
-
-                AtomicLong lastRefresh = new AtomicLong(System.currentTimeMillis());
-
                 int threads = getSpGlobalThreads().getValue();
                 executorService = Executors.newFixedThreadPool(threads);
-                threadTaskEstimator = new MultiThreadTaskEstimator(total, 20);
+                threadTaskEstimator = new MultiThreadTaskEstimator(total, Math.max(Math.min(20, total / 20), 1));
                 threadTaskEstimator.start();
                 log("▶ ▶ ▶ 任务启动，并发线程: " + threads);
                 log("▶ ▶ ▶ 注意：部分任务依赖同一个原始文件，会因为加锁导致串行执行，任务会一直轮询！");
                 log("▶ ▶ ▶ 第[" + 1 + "]轮任务扫描，总待执行任务数：" + todos.size());
                 AtomicInteger round = new AtomicInteger(1);
-                while (!todos.isEmpty() && !isCancelled()) {
+                while (!todos.isEmpty() && !isCancelled() && todos.stream().anyMatch(rec -> rec.getStatus() == ExecStatus.PENDING)) {
                     AtomicBoolean anyChange = new AtomicBoolean(false);
                     for (ChangeRecord rec : todos) {
                         if (isCancelled()) {
@@ -481,21 +479,23 @@ public class FileManagerPlusApp extends Application implements IAppController {
                         if (FileLockManagerUtil.isLocked(rec.getFileHandle())) {
                             continue;
                         }
-                        // 对原始文件加逻辑锁，避免并发操作同一个文件
-                        if (!FileLockManagerUtil.lock(rec.getFileHandle())) {
+                        if (rec.getStatus() != ExecStatus.PENDING) {
                             continue;
                         }
-                        anyChange.set(true);
-                        if (isCancelled()) {
-                            continue;
-                        }
-
                         executorService.submit(() -> {
-                            if (rec.getStatus() == ExecStatus.RUNNING) {
-                                return;
+                            synchronized (rec) {
+                                if (rec.getStatus() != ExecStatus.RUNNING) {
+                                    // 对原始文件加逻辑锁，避免并发操作同一个文件
+                                    if (!FileLockManagerUtil.lock(rec.getFileHandle())) {
+                                        return;
+                                    }
+                                    rec.setStatus(ExecStatus.RUNNING);
+                                    anyChange.set(true);
+                                } else {
+                                    return;
+                                }
                             }
                             try {
-                                rec.setStatus(ExecStatus.RUNNING);
                                 // [修改] 策略执行时不再传递线程数，只负责逻辑
                                 AppStrategy s = AppStrategyFactory.findStrategyForOp(rec.getOpType(), pipelineStrategies);
                                 log("▶ 开始处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().getName() + ",目标路径：" + rec.getNewName());
@@ -512,17 +512,13 @@ public class FileManagerPlusApp extends Application implements IAppController {
                                 logError("❌ 失败处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().getName() + ",目标路径：" + rec.getNewName() + ",原因" + e.getMessage());
                                 logError("❌ 失败详细原因:" + ExceptionUtils.getStackTrace(e));
                             } finally {
-                                threadTaskEstimator.markUnitCompleted();
+                                threadTaskEstimator.oneCompleted();
                                 // 文件解锁
                                 FileLockManagerUtil.unlock(rec.getFileHandle());
                                 int c = curr.incrementAndGet();
-                                updateProgress(c, total);
+                                Platform.runLater(() -> updateProgress(c, total));
                                 if (System.currentTimeMillis() - lastRefresh.get() > 1000) {
-                                    updateStats();
-                                }
-                                if (System.currentTimeMillis() - lastRefresh.get() > 10000) {
                                     lastRefresh.set(System.currentTimeMillis());
-                                    updateStats();
                                     setRunningUI("▶ ▶ ▶ 执行任务进度: " + threadTaskEstimator.getDisplayInfo());
                                     refreshPreviewTableFilter();
                                 }
@@ -532,7 +528,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
                     if (anyChange.get()) {
                         // 捞回那些因为被加锁未执行的变更，继续尝试执行
                         todos = todos.stream().filter(rec -> rec.getStatus() == ExecStatus.PENDING).collect(Collectors.toList());
-                        log("▶ ▶ ▶ 第[" + round.incrementAndGet() + "]轮任务扫描，剩余待执行任务数：" + todos.size());
+//                        log("▶ ▶ ▶ 第[" + round.incrementAndGet() + "]轮任务扫描，剩余待执行任务数：" + todos.size());
                     }
                     // 适当Sleep，避免反复刷数据
                     Thread.sleep(1000);
@@ -544,15 +540,11 @@ public class FileManagerPlusApp extends Application implements IAppController {
                         break;
                     }
                 }
-                finishTaskUI("➡ ➡ ➡ 执行完成 ⬅ ⬅ ⬅");
                 return null;
             }
         };
-        task.setOnSucceeded(e -> {
-            updateStats();
-            refreshPreviewTableFilter();
-            finishTaskUI("➡ ➡ ➡ 执行成功 ⬅ ⬅ ⬅");
-        });
+        setStartTaskUI("▶ ▶ ▶ 执行中...", task);
+        task.setOnSucceeded(e -> setFinishTaskUI("➡ ➡ ➡ 执行成功 ⬅ ⬅ ⬅", TaskStatus.SUCCESS));
         handleTaskLifecycle(task);
         new Thread(task).start();
     }
@@ -561,53 +553,11 @@ public class FileManagerPlusApp extends Application implements IAppController {
 
     @Override
     public void refreshPreviewTableFilter() {
-        if (fullChangeList.isEmpty()) return;
-        String s = getTxtSearchFilter().getText().toLowerCase();
-        String st = getCbStatusFilter().getValue();
-        boolean h = getChkHideUnchanged().isSelected();
-
-        Task<TreeItem<ChangeRecord>> t = new Task<TreeItem<ChangeRecord>>() {
-            @Override
-            protected TreeItem<ChangeRecord> call() {
-                TreeItem<ChangeRecord> root = new TreeItem<>(new ChangeRecord());
-                root.setExpanded(true);
-                int limit = globalSettingsView.getNumberDisplay().getValue();
-                AtomicInteger count = new AtomicInteger();
-                for (ChangeRecord r : fullChangeList) {
-                    if (h && !r.isChanged() && r.getStatus() != ExecStatus.FAILED) continue;
-                    if (!s.isEmpty() && !r.getOriginalName().toLowerCase().contains(s)) continue;
-                    boolean sm = true;
-                    if ("执行中".equals(st)) sm = r.getStatus() == ExecStatus.RUNNING;
-                    else if ("成功".equals(st)) sm = r.getStatus() == ExecStatus.SUCCESS;
-                    else if ("失败".equals(st)) sm = r.getStatus() == ExecStatus.FAILED;
-                    if (!sm) continue;
-                    count.incrementAndGet();
-                    root.getChildren().add(new TreeItem<>(r));
-                    if (count.get() > limit) {
-                        log("注意：实时预览数据限制为" + limit + "条！");
-                        break;
-                    }
-                }
-                return root;
-            }
-        };
-        t.setOnSucceeded(e -> {
-            previewView.getPreviewTable().setRoot(t.getValue());
-            updateStats();
-        });
-        t.setOnFailed(e -> {
-            previewView.getPreviewTable().setRoot(t.getValue());
-            updateStats();
-        });
-        new Thread(t).start();
+        previewView.refresh();
     }
 
     private void updateStats() {
-        long t = fullChangeList.size(),
-                c = fullChangeList.stream().filter(ChangeRecord::isChanged).count(),
-                s = fullChangeList.stream().filter(r -> r.getStatus() == ExecStatus.SUCCESS).count(),
-                f = fullChangeList.stream().filter(r -> r.getStatus() == ExecStatus.FAILED).count();
-        previewView.updateStatsDisplay(t, c, s, f, MultiThreadTaskEstimator.formatDuration(System.currentTimeMillis() - startT));
+        previewView.updateStats();
     }
 
     private List<File> scanFilesRobust(File root, int maxDepth, List<String> exts, Consumer<String> msg) {
@@ -674,17 +624,54 @@ public class FileManagerPlusApp extends Application implements IAppController {
     }
 
     // --- Task UI State ---
-    private void setRunningUI(String msg) {
+
+    private void setStartTaskUI(String msg, Task task) {
+        btnStop.setDisable(false);
         isTaskRunning.set(true);
-        currentTask = null;
-        this.setRunningState(true);
-        previewView.updateProgress(msg);
+        lastRefresh.set(System.currentTimeMillis());
+        // 设置进度条为绿色
+        ProgressBarDisplay.updateProgressStatus(previewView.getMainProgressBar(), TaskStatus.RUNNING);
+        previewView.getMainProgressBar().progressProperty().unbind();
+        previewView.getMainProgressBar().progressProperty().set(0);
+        if (task != null) {
+            previewView.getMainProgressBar().progressProperty().bind(task.progressProperty());
+        }
+        previewView.updateRunningProgress(msg);
+        refreshPreviewTableFilter();
+        updateStats();
     }
 
-    private void finishTaskUI(String msg) {
+    private void setRunningUI(String msg) {
+        previewView.updateRunningProgress(msg);
+        updateStats();
+    }
+
+    /**
+     * 状态,建议颜色,Hex 代码,视觉感受
+     * 执行中 (Running),天蓝色,#BDE0FE,清爽、宁静，表示正在进行
+     * 成功 (Success),薄荷绿,#B9FBC0,健康、完成，给予正面反馈
+     * 失败 (Failure),珊瑚粉,#FFADAD,柔和的警告，不刺眼但明确
+     * 取消 (Canceled),奶油黄/淡灰,#FDFFB6,中性色，表示任务已停止
+     *
+     * @param msg
+     * @param status
+     */
+    private void setFinishTaskUI(String msg, TaskStatus status) {
+        btnGo.setDisable(false);
+        btnExecute.setDisable(false);
+        btnStop.setDisable(true);
         isTaskRunning.set(false);
         this.setRunningState(false);
-        previewView.updateProgress(msg);
+        previewView.updateRunningProgress(msg);
+        if (TaskStatus.SUCCESS == status) {
+            previewView.getMainProgressBar().progressProperty().unbind();
+            previewView.getMainProgressBar().progressProperty().set(1.0);
+        }
+        // 设置进度条为颜色
+        ProgressBarDisplay.updateProgressStatus(previewView.getMainProgressBar(), status);
+        refreshPreviewTableFilter();
+        updateStats();
+        currentTask = null;
     }
 
     // UI Update Methods
@@ -697,15 +684,12 @@ public class FileManagerPlusApp extends Application implements IAppController {
         currentTask = t;
         previewView.bindProgress(t);
         t.setOnFailed(e -> {
-            updateStats();
-            refreshPreviewTableFilter();
-            finishTaskUI("❌ ❌ ❌ 出错 ❌ ❌ ❌");
+            btnExecute.setDisable(false);
+            setFinishTaskUI("❌ ❌ ❌ 出错 ❌ ❌ ❌", TaskStatus.FAILURE);
             logError("❌ 失败: " + ExceptionUtils.getStackTrace(e.getSource().getException()));
         });
         t.setOnCancelled(e -> {
-            updateStats();
-            refreshPreviewTableFilter();
-            finishTaskUI("🛑 🛑 🛑 已取消 🛑 🛑 🛑");
+            setFinishTaskUI("🛑 🛑 🛑 已取消 🛑 🛑 🛑", TaskStatus.CANCELED);
         });
     }
 
@@ -713,10 +697,14 @@ public class FileManagerPlusApp extends Application implements IAppController {
     public void forceStop() {
         if (isTaskRunning.get()) {
             isTaskRunning.set(false);
-            if (currentTask != null) currentTask.cancel();
-            if (executorService != null) executorService.shutdownNow();
+            if (currentTask != null) {
+                currentTask.cancel();
+            }
+            if (executorService != null) {
+                executorService.shutdownNow();
+            }
             log("🛑 强制停止");
-            finishTaskUI("🛑 🛑 🛑 已停止 🛑 🛑 🛑");
+            setFinishTaskUI("🛑 🛑 🛑 已停止 🛑 🛑 🛑", TaskStatus.CANCELED);
         }
     }
 

@@ -3,6 +3,8 @@ package com.filemanager.tool.display;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.ThemeConfig;
 import com.jfoenix.controls.JFXButton;
+import javafx.animation.Interpolator;
+import javafx.animation.RotateTransition;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
@@ -15,11 +17,10 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.SVGPath;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
-
-import java.util.Collections;
-import java.util.List;
+import javafx.util.Duration;
 
 /**
  * UI 组件样式工厂
@@ -51,7 +52,61 @@ public class StyleFactory {
     }
 
     /**
+     * 渐变分割线
+     *
+     * @param isVertical
+     * @return
+     */
+    public static Node createSeparatorWithChange(boolean isVertical) {
+        if (isVertical) {
+            // 水平渐变分割线
+            Region hDivider = new Region();
+            hDivider.setPrefHeight(1); // 线条粗细
+            hDivider.setStyle(
+                    "-fx-background-color: linear-gradient(to right, transparent, #D6E9FF 50%, transparent);"
+            );
+            return hDivider;
+        }
+        // 垂直渐变分割线
+        Region vDivider = new Region();
+        vDivider.setPrefWidth(1);
+        vDivider.setStyle(
+                "-fx-background-color: linear-gradient(to bottom, transparent, #D6E9FF 50%, transparent);"
+        );
+        return vDivider;
+    }
+
+    /**
+     * 带提示词的分割线
+     *
+     * @param desc
+     * @return
+     */
+    public static HBox createSeparatorWithDesc(String desc) {
+        // HBox 容器实现：[线条] 文字 [线条]
+        HBox labelDivider = new HBox(10);
+        labelDivider.setAlignment(Pos.CENTER);
+
+        Label label = new Label(desc);
+        label.setStyle("-fx-text-fill: #A0A0A0; -fx-font-size: 11px;");
+
+        Region line1 = new Region();
+        HBox.setHgrow(line1, Priority.ALWAYS);
+        line1.setPrefHeight(1);
+        line1.setStyle("-fx-background-color: #E5E5E5;");
+
+        Region line2 = new Region();
+        HBox.setHgrow(line2, Priority.ALWAYS);
+        line2.setPrefHeight(1);
+        line2.setStyle("-fx-background-color: #E5E5E5;");
+
+        labelDivider.getChildren().addAll(line1, label, line2);
+        return labelDivider;
+    }
+
+    /**
      * 自动把其他组件排挤到左右两侧
+     *
      * @return
      */
     public static Node createSpacer() {
@@ -299,13 +354,13 @@ public class StyleFactory {
     }
 
 
-
     /**
      * 更新列表行选中的样式
+     *
      * @param node
      * @param selected
      */
-    public static void updateTreeItemStyle(Node node , boolean selected) {
+    public static void updateTreeItemStyle(Node node, boolean selected) {
         if (selected) {
             // 选中样式：淡蓝色背景 + 左侧/底部蓝色边框
             node.setStyle("-fx-background-color: rgba(52, 152, 219, 0.15); -fx-border-color: #3498db; -fx-border-width: 0 0 1 0;");
@@ -313,6 +368,36 @@ public class StyleFactory {
             // 默认样式
             node.setStyle("-fx-background-color: transparent; -fx-border-color: #eee; -fx-border-width: 0 0 1 0;");
         }
+    }
+
+    public static Button createRefreshButton(EventHandler<ActionEvent> handler) {
+        // 1. 创建刷新图标的 SVG 路径 (一个圆圈箭头)
+        SVGPath refreshIcon = new SVGPath();
+        refreshIcon.setContent("M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z");
+        refreshIcon.setFill(javafx.scene.paint.Color.WHITE);
+
+        // 2. 创建按钮并设置样式
+        Button btn = new Button();
+        btn.setGraphic(refreshIcon); // 将 SVG 设置为按钮图标
+        btn.setStyle(
+                "-fx-background-color: #BDE0FE;" + // 马卡龙蓝
+                        "-fx-background-radius: 50;" +      // 圆形边框
+                        "-fx-min-width: 20px;" +
+                        "-fx-min-height: 20px;" +
+                        "-fx-cursor: hand;"
+        );
+
+        // 3. 添加旋转动画（点击时触发）
+        RotateTransition rt = new RotateTransition(Duration.millis(600), refreshIcon);
+        rt.setByAngle(360); // 旋转 360 度
+        rt.setCycleCount(1);
+        rt.setInterpolator(Interpolator.EASE_BOTH); // 柔和的启动和停止
+
+        btn.setOnAction(e -> {
+            handler.handle(e);
+            rt.playFromStart();
+        });
+        return btn;
     }
 
     public static void setBasicStyle(Node node) {

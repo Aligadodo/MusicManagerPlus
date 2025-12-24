@@ -1,5 +1,6 @@
 package com.filemanager.app;
 
+import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.ThemeConfig;
 import com.filemanager.strategy.AppStrategy;
 import com.jfoenix.controls.JFXCheckBox;
@@ -20,7 +21,8 @@ import java.util.List;
  * @author 28667
  */
 public interface IAppController {
-
+    List<ChangeRecord> getFullChangeList();
+    long getTaskStartTimStamp();
     // --- 数据获取 ---
     ObservableList<File> getSourceRoots();
 

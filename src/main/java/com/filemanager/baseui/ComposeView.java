@@ -316,7 +316,7 @@ public class ComposeView {
                 StyleFactory.createChapter("\uD83D\uDD36[前置条件]"),
                 createConditionsUI(s),
                 StyleFactory.createSeparator(),
-                StyleFactory.createChapter("\uD83D\uDD36[执行参数]"),
+                StyleFactory.createChapter("\uD83D\uDD36[处理参数]"),
                 s.getConfigNode() != null ? s.getConfigNode() : new Label("无")
         );
         StyleFactory.forceDarkText(configContainer);

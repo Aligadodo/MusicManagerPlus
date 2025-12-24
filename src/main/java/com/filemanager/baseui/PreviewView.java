@@ -3,8 +3,10 @@ package com.filemanager.baseui;
 
 import com.filemanager.app.IAppController;
 import com.filemanager.model.ChangeRecord;
+import com.filemanager.tool.MultiThreadTaskEstimator;
 import com.filemanager.tool.display.DetailWindowHelper;
 import com.filemanager.tool.display.StyleFactory;
+import com.filemanager.type.ExecStatus;
 import com.filemanager.util.file.FileSizeFormatUtil;
 import com.jfoenix.controls.JFXCheckBox;
 import com.jfoenix.controls.JFXComboBox;
@@ -25,6 +27,8 @@ import javafx.stage.Stage;
 import lombok.Getter;
 
 import java.io.File;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Getter
 public class PreviewView {
@@ -34,10 +38,12 @@ public class PreviewView {
     // UI Components
     private TreeTableView<ChangeRecord> previewTable;
     private ProgressBar mainProgressBar;
-    private Label progressLabel, runningLabel, statsLabel;
+    private Label runningLabel, statsLabel;
     private JFXTextField txtSearchFilter;
     private JFXComboBox<String> cbStatusFilter;
     private JFXCheckBox chkHideUnchanged;
+    private Spinner<Integer> spGlobalThreads;
+    private JFXComboBox<Integer> numberDisplay;
 
     public PreviewView(IAppController app) {
         this.app = app;
@@ -50,6 +56,7 @@ public class PreviewView {
 
     private void initControls() {
         txtSearchFilter = new JFXTextField();
+        txtSearchFilter.setPromptText("请输入关键词进行搜索...");
         cbStatusFilter = new JFXComboBox<>(FXCollections.observableArrayList("全部", "执行中", "成功", "失败"));
         cbStatusFilter.getSelectionModel().select(0);
         chkHideUnchanged = new JFXCheckBox("仅显示变更");
@@ -59,66 +66,68 @@ public class PreviewView {
         chkHideUnchanged.selectedProperty().addListener((o, old, v) -> app.refreshPreviewTableFilter());
 
         mainProgressBar = new ProgressBar(0);
-        progressLabel = StyleFactory.createChapter("就绪");
         runningLabel = StyleFactory.createChapter("无执行中任务");
         statsLabel = StyleFactory.createHeader("暂无统计信息");
 
         previewTable = new TreeTableView<>();
+
+        spGlobalThreads = new Spinner<>(1, 32, 10);
+        spGlobalThreads.setEditable(true);
+
+        // 设置预览数量 默认200
+        numberDisplay = new JFXComboBox<>(FXCollections.observableArrayList(50, 100, 200, 500));
+        numberDisplay.getSelectionModel().selectFirst();
     }
 
     private void buildUI() {
         viewNode = new VBox(15);
         viewNode.setPadding(new Insets(10));
+        // 运行参数
+        HBox configBox = StyleFactory.createHBoxPanel(
+                StyleFactory.createChapter("\uD83D\uDD36[运行参数]  "),
+                StyleFactory.createParamPairLine("线程数量:", spGlobalThreads));
 
-        // Toolbar
-        VBox toolbar = StyleFactory.createVBoxPanel();
-        toolbar.setPadding(new Insets(10));
-        toolbar.setSpacing(15);
-        HBox filterBox = new HBox(10);
-        filterBox.setAlignment(Pos.CENTER_LEFT);
-        filterBox.setStyle("-fx-background-color:rgba(255,255,255,0.5);-fx-background-radius:20;-fx-padding:5 15;");
-        filterBox.getChildren().addAll(StyleFactory.createChapter("筛选:"), txtSearchFilter, cbStatusFilter, chkHideUnchanged);
-        toolbar.getChildren().addAll(filterBox);
-        // Dashboard
-        HBox progressBox = StyleFactory.createHBoxPanel(
-                StyleFactory.createChapter("进度:"),
-                progressLabel,
-                StyleFactory.createChapter("  "),
-                mainProgressBar);
-        VBox dash = StyleFactory.createVBoxPanel(progressBox,
-                StyleFactory.createHBoxPanel(runningLabel),
-                StyleFactory.createHBoxPanel(statsLabel));
-        // 进度条自适应扩展
-        mainProgressBar.setMinWidth(600);
+        // 进度显示+信息展示
+        HBox progressBox = StyleFactory.createHBoxPanel(mainProgressBar);
+        progressBox.setAlignment(Pos.CENTER);
+        progressBox.setFillHeight(true);
+        mainProgressBar.setPrefHeight(25);
+        mainProgressBar.setPrefWidth(10000.0);
         HBox.setHgrow(mainProgressBar, Priority.ALWAYS);
-        HBox.setHgrow(progressBox, Priority.ALWAYS);
+        VBox dash = StyleFactory.createVBoxPanel(
+                StyleFactory.createHBoxPanel(StyleFactory.createChapter("\uD83D\uDD36[运行状态]  "), runningLabel),
+                StyleFactory.createHBoxPanel(StyleFactory.createChapter("\uD83D\uDD36[统计信息]  "), statsLabel));
 
-        // Table
+        // 表格过滤器
+        HBox filterBox = StyleFactory.createHBoxPanel(
+                StyleFactory.createChapter("\uD83D\uDD36[筛选条件]  "), txtSearchFilter,
+                StyleFactory.createSeparatorWithChange(false), cbStatusFilter,
+                StyleFactory.createSeparatorWithChange(false), chkHideUnchanged,
+                StyleFactory.createSeparatorWithChange(false),
+                StyleFactory.createParamPairLine("显示数量限制:", numberDisplay),
+                StyleFactory.createSpacer(),
+                StyleFactory.createRefreshButton(e -> refresh()));
+        filterBox.setPadding(new Insets(0,10,0,10));
+
+        // 表格
         previewTable.setShowRoot(false);
         previewTable.setColumnResizePolicy(TreeTableView.CONSTRAINED_RESIZE_POLICY);
         previewTable.setStyle("-fx-background-color:rgba(255,255,255,0.4);-fx-base:rgba(255,255,255,0.1);");
         VBox.setVgrow(previewTable, Priority.ALWAYS);
         setupPreviewColumns();
         setupPreviewRows();
-        viewNode.getChildren().addAll(toolbar, dash, previewTable);
+        viewNode.getChildren().addAll(progressBox, configBox, dash, filterBox, previewTable);
     }
 
-    public void updateProgress(String msg) {
+    public void updateRunningProgress(String msg) {
         Platform.runLater(() -> {
             runningLabel.textProperty().unbind();
             runningLabel.setText(msg);
-            mainProgressBar.progressProperty().unbind();
-            mainProgressBar.setProgress(1);
         });
     }
 
     public void bindProgress(Task<?> task) {
-        progressLabel.textProperty().bind(task.progressProperty().multiply(100).asString("%.0f%%"));
         mainProgressBar.progressProperty().bind(task.progressProperty());
-    }
-
-    public void updateRunningInfo(String message) {
-        Platform.runLater(() -> runningLabel.setText(message));
     }
 
     public void updateStatsDisplay(long t, long c, long s, long f, String tm) {
@@ -211,8 +220,63 @@ public class PreviewView {
         });
     }
 
+    /**
+     * 刷新列表
+     */
     public void refresh() {
-        previewTable.refresh();
+        List<ChangeRecord> fullChangeList = app.getFullChangeList();
+        if (fullChangeList.isEmpty()) return;
+        String s = getTxtSearchFilter().getText().toLowerCase();
+        String st = getCbStatusFilter().getValue();
+        boolean h = getChkHideUnchanged().isSelected();
+
+        Task<TreeItem<ChangeRecord>> t = new Task<TreeItem<ChangeRecord>>() {
+            @Override
+            protected TreeItem<ChangeRecord> call() {
+                TreeItem<ChangeRecord> root = new TreeItem<>(new ChangeRecord());
+                root.setExpanded(true);
+                int limit = numberDisplay.getValue();
+                AtomicInteger count = new AtomicInteger();
+                for (ChangeRecord r : fullChangeList) {
+                    if (h && !r.isChanged() && r.getStatus() != ExecStatus.FAILED) continue;
+                    if (!s.isEmpty() && !r.getOriginalName().toLowerCase().contains(s)) continue;
+                    boolean sm = true;
+                    if ("执行中".equals(st)) sm = r.getStatus() == ExecStatus.RUNNING;
+                    else if ("成功".equals(st)) sm = r.getStatus() == ExecStatus.SUCCESS;
+                    else if ("失败".equals(st)) sm = r.getStatus() == ExecStatus.FAILED;
+                    if (!sm) continue;
+                    count.incrementAndGet();
+                    root.getChildren().add(new TreeItem<>(r));
+                    if (count.get() > limit) {
+                        app.log("注意：实时预览数据限制为" + limit + "条！");
+                        break;
+                    }
+                }
+                return root;
+            }
+        };
+        t.setOnSucceeded(e -> {
+            getPreviewTable().setRoot(t.getValue());
+        });
+        t.setOnFailed(e -> {
+            getPreviewTable().setRoot(t.getValue());
+        });
+        new Thread(t).start();
+        // 顺便也刷新下统计
+        updateStats();
+    }
+
+    /**
+     * 更新统计信息
+     */
+    public void updateStats() {
+        List<ChangeRecord> fullChangeList = app.getFullChangeList();
+        long startT = app.getTaskStartTimStamp();
+        long t = fullChangeList.size(),
+                c = fullChangeList.stream().filter(ChangeRecord::isChanged).count(),
+                s = fullChangeList.stream().filter(r -> r.getStatus() == ExecStatus.SUCCESS).count(),
+                f = fullChangeList.stream().filter(r -> r.getStatus() == ExecStatus.FAILED).count();
+        this.updateStatsDisplay(t, c, s, f, MultiThreadTaskEstimator.formatDuration(System.currentTimeMillis() - startT));
     }
 
     // Getters

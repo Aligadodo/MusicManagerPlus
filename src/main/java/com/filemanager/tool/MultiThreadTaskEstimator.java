@@ -11,7 +11,11 @@ public class MultiThreadTaskEstimator {
     // 总任务数
     private final long totalTasks;
     // 已完成任务数
-    private final AtomicLong completedTasks;
+    private final AtomicLong completedTasks= new AtomicLong(0);
+    // 已失败任务数
+    private final AtomicLong failedTasks= new AtomicLong(0);
+
+
     // 滑动窗口：用于存储最近完成任务的时间戳，计算近期吞吐量
     // 窗口越大越平滑，窗口越小对近期波动越敏感
     private final int windowSize;
@@ -29,7 +33,6 @@ public class MultiThreadTaskEstimator {
      */
     public MultiThreadTaskEstimator(long totalTasks, int windowSize) {
         this.totalTasks = totalTasks;
-        this.completedTasks = new AtomicLong(0);
         this.windowSize = windowSize;
         this.completionWindow = new ConcurrentLinkedDeque<>();
     }
@@ -55,7 +58,7 @@ public class MultiThreadTaskEstimator {
     /**
      * 每当一个子任务完成时调用
      */
-    public void markUnitCompleted() {
+    public void oneCompleted() {
         if (!isStarted || isFinished) return;
 
         long now = System.currentTimeMillis();
@@ -145,6 +148,6 @@ public class MultiThreadTaskEstimator {
                 + " 已执行:" + completedTasks.get()
                 + " 耗时:" + MultiThreadTaskEstimator.formatDuration(System.currentTimeMillis() - startTime)
                 + " 进度:" + getProgressPercentage()
-                + " 预计剩余时间：" + this.getFormattedRemainingTime();
+                + "% 预计剩余时间：" + this.getFormattedRemainingTime();
     }
 }
