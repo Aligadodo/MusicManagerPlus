@@ -85,6 +85,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
     private long taskStartTimStamp = System.currentTimeMillis();
     private List<AppStrategy> strategyPrototypes;
     // --- UI Controls ---
+    private JFXCheckBox autoRun;
     private JFXButton btnGo, btnExecute, btnStop;
     private Stage primaryStage;
     // --- Infrastructure ---
@@ -195,6 +196,8 @@ public class FileManagerPlusApp extends Application implements IAppController {
         viewMenu.getItems().add(themeItem);
         menuBar.getMenus().addAll(fileMenu, viewMenu);
 
+        autoRun = new JFXCheckBox("预览成功立即运行");
+        autoRun.setSelected(true);
         btnGo = StyleFactory.createActionButton("预览", null, this::runPipelineAnalysis);
         btnExecute = StyleFactory.createActionButton("执行", "#27ae60", this::runPipelineExecution);
         btnStop = StyleFactory.createActionButton("停止", "#e74c3c", this::forceStop);
@@ -207,7 +210,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
         logo.setFont(Font.font("Segoe UI", FontWeight.BLACK, 20));
         logo.setTextFill(Color.web(currentTheme.getAccentColor()));
 
-        header.getChildren().addAll(logo, new Region(), menuBar, btnGo, btnExecute, btnStop);
+        header.getChildren().addAll(logo, new Region(), menuBar, autoRun, btnGo, btnExecute, btnStop);
         HBox.setHgrow(header.getChildren().get(1), Priority.ALWAYS);
         VBox top = new VBox(header, new Separator());
         root.setTop(top);
@@ -431,6 +434,9 @@ public class FileManagerPlusApp extends Application implements IAppController {
             setFinishTaskUI("➡ ➡ ➡ 预览完成 ⬅ ⬅ ⬅", TaskStatus.SUCCESS);
             boolean hasChanges = fullChangeList.stream().anyMatch(ChangeRecord::isChanged);
             btnExecute.setDisable(!hasChanges);
+            if (autoRun.isSelected()) {
+                runPipelineExecution();
+            }
         });
         handleTaskLifecycle(task);
         new Thread(task).start();
@@ -443,9 +449,11 @@ public class FileManagerPlusApp extends Application implements IAppController {
         if (count == 0) {
             return;
         }
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "执行 " + count + " 个变更?", ButtonType.YES, ButtonType.NO);
-        if (alert.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) {
-            return;
+        if (!autoRun.isSelected()) {
+            Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "执行 " + count + " 个变更?", ButtonType.YES, ButtonType.NO);
+            if (alert.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) {
+                return;
+            }
         }
         btnGo.setDisable(true);
         btnExecute.setDisable(true);

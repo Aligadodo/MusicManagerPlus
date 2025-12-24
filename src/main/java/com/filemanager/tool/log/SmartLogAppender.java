@@ -84,6 +84,7 @@ public class SmartLogAppender {
         });
     }
 
+
     /**
      * 限制 TextArea 行数
      */
