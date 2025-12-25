@@ -533,13 +533,8 @@ public class FileManagerPlusApp extends Application implements IAppController {
                             }
                         });
                     }
-                    if (anyChange.get()) {
-                        // 捞回那些因为被加锁未执行的变更，继续尝试执行
-                        todos = todos.stream().filter(rec -> rec.getStatus() == ExecStatus.PENDING).collect(Collectors.toList());
-//                        log("▶ ▶ ▶ 第[" + round.incrementAndGet() + "]轮任务扫描，剩余待执行任务数：" + todos.size());
-                    }
                     // 适当Sleep，避免反复刷数据
-                    Thread.sleep(1000);
+                    Thread.sleep(100);
                 }
                 executorService.shutdown();
                 while (!executorService.awaitTermination(500, TimeUnit.MILLISECONDS)) {
