@@ -491,12 +491,12 @@ public class FileManagerPlusApp extends Application implements IAppController {
                             continue;
                         }
                         executorService.submit(() -> {
+                            if (!FileLockManagerUtil.lock(rec.getFileHandle())) {
+                                return;
+                            }
                             synchronized (rec) {
-                                if (rec.getStatus() != ExecStatus.RUNNING) {
+                                if (rec.getStatus() == ExecStatus.PENDING) {
                                     // 对原始文件加逻辑锁，避免并发操作同一个文件
-                                    if (!FileLockManagerUtil.lock(rec.getFileHandle())) {
-                                        return;
-                                    }
                                     rec.setStatus(ExecStatus.RUNNING);
                                     anyChange.set(true);
                                 } else {

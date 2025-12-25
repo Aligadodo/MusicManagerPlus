@@ -29,6 +29,7 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 public abstract class AbstractFfmpegStrategy extends AppStrategy {
+    private static FFmpeg ffmpeg = null;
     // --- UI 组件 ---
     protected final JFXComboBox<String> cbTargetFormat;
     protected final JFXComboBox<String> cbOutputDirMode;
@@ -46,8 +47,6 @@ public abstract class AbstractFfmpegStrategy extends AppStrategy {
     protected final TextField txtSnapDir;
     protected final CheckBox chkEnableTempSuffix;
     protected final CheckBox chkForceFilenameMeta;
-
-
     // --- 运行时参数 ---
     protected String pFormat;
     protected String pMode;
@@ -332,14 +331,15 @@ public abstract class AbstractFfmpegStrategy extends AppStrategy {
         return "";
     }
 
-    protected void convertAudioFile(File source, File target, Map<String, String> params) throws IOException {
+    protected void convertAudioFile(File source, File target, Map<String, String> params) throws Exception {
         String ffmpegPath = params.getOrDefault("ffmpegPath", "ffmpeg");
-        FFmpeg ffmpeg = new FFmpeg(ffmpegPath);
+        if (ffmpeg == null) {
+            ffmpeg = new FFmpeg(ffmpegPath);
+        }
         boolean forceMeta = "true".equals(params.get("forceMeta"));
-
         try {
             runFFmpegJob(ffmpeg, source, target, params, !forceMeta);
-        } catch (IOException e) {
+        } catch (Exception e) {
             if (!forceMeta) {
                 try {
                     if (target.exists()) target.delete();
@@ -353,22 +353,34 @@ public abstract class AbstractFfmpegStrategy extends AppStrategy {
         }
     }
 
-    protected void runFFmpegJob(FFmpeg ffmpeg, File source, File target, Map<String, String> params, boolean mapMetadata) throws IOException {
+    protected void runFFmpegJob(FFmpeg ffmpeg, File source, File target, Map<String, String> params, boolean mapMetadata) throws Exception {
         FFmpegBuilder builder = new FFmpegBuilder()
                 .setInput(source.getAbsolutePath())
-                .overrideOutputFiles(true);
+                .overrideOutputFiles(true)
+                .setVerbosity(FFmpegBuilder.Verbosity.ERROR);
+        // 【关键优化】：将起始时间设在输入上，而不是输出上
+        // 这会让 FFmpeg 使用原生寻址，瞬间跳到指定位置，不读取多余数据
+        if (params.containsKey("start")) {
+            long startMillis = Long.parseLong(params.get("start"));
+            builder.setStartOffset(startMillis, TimeUnit.MILLISECONDS);
+        }
 
         if (params.containsKey("innerThreads")) {
             builder = builder.addExtraArgs("-threads", params.get("innerThreads"));
         }
 
         FFmpegOutputBuilder outputBuilder = builder.addOutput(target.getAbsolutePath())
-                .setFormat(params.getOrDefault("format", "flac"))
-                .setAudioCodec(params.getOrDefault("codec", "flac"));
-        if (params.containsKey("start")) {
-            long startMillis = Long.parseLong(params.get("start"));
-            outputBuilder = outputBuilder.setStartOffset(startMillis, TimeUnit.MILLISECONDS);
+                .setFormat(params.getOrDefault("format", "flac"));
+
+        // 【性能优化】：判断是否可以执行“流拷贝”
+        // 如果输入输出格式一致且不需要重采样，使用 copy 模式内存占用近乎 0，速度提升百倍
+        String codec = params.get("codec");
+        if ("copy".equalsIgnoreCase(codec)) {
+            outputBuilder.setAudioCodec("copy");
+        } else {
+            outputBuilder.setAudioCodec(params.getOrDefault("codec", "flac"));
         }
+
         if (params.containsKey("duration")) {
             long durationMillis = Long.parseLong(params.get("duration"));
             outputBuilder = outputBuilder.setDuration(durationMillis, TimeUnit.MILLISECONDS);
@@ -419,6 +431,8 @@ public abstract class AbstractFfmpegStrategy extends AppStrategy {
             }
         }
         log("▶ 执行ffmpeg命令： " + StringUtils.join(outputBuilder.done().build(), " "));
+//        FFmpegAudioToolkit.init(ffmpeg);
+//        FFmpegAudioToolkit.runJob(outputBuilder.done(), FFmpegAudioToolkit.ExecutionMode.NATIVE);
         new FFmpegExecutor(ffmpeg).createJob(outputBuilder.done()).run();
     }
 

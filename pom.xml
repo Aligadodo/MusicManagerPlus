@@ -154,8 +154,14 @@
         <dependency>
             <groupId>net.bramp.ffmpeg</groupId>
             <artifactId>ffmpeg</artifactId>
-            <version>0.7.0</version>
+            <version>0.8.0</version>
         </dependency>
+
+<!--        <dependency>-->
+<!--            <groupId>org.bytedeco</groupId>-->
+<!--            <artifactId>javacv-platform</artifactId>-->
+<!--            <version>1.5.10</version>-->
+<!--        </dependency>-->
 
         <!-- Apache Commons Compress: 处理各种压缩格式的核心库 -->
         <dependency>

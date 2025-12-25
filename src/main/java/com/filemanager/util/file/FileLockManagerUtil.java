@@ -18,8 +18,6 @@ public class FileLockManagerUtil {
      * @return 如果加锁成功返回 true；如果文件已被锁，返回 false
      */
     public static boolean lock(File file) {
-        if (file == null || !file.exists()) return false;
-
         // add 方法如果元素已存在会返回 false，不存在则添加并返回 true
         return lockedFiles.add(file.getAbsolutePath());
     }
@@ -30,7 +28,6 @@ public class FileLockManagerUtil {
      * @return 如果解锁成功返回 true；如果文件本来就没有锁，返回 false
      */
     public static boolean unlock(File file) {
-        if (file == null) return false;
         return lockedFiles.remove(file.getAbsolutePath());
     }
 

@@ -34,7 +34,7 @@ public class FileEncodingUtil {
         if (match != null) {
             // 返回推断出的编码，例如 "GBK", "UTF-8"
             String charset = match.getName();
-            System.out.println("🤖 自动推断文件编码为: " + charset + " (置信度: " + match.getConfidence() + "%)");
+//            System.out.println("🤖 自动推断文件编码为: " + charset + " (置信度: " + match.getConfidence() + "%)");
             return Charset.forName(charset);
         } else {
             // 如果检测失败，退回到 Java 默认的 UTF-8 (或系统默认)

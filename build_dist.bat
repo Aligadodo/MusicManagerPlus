@@ -86,7 +86,7 @@ echo [6/6] 生成启动脚本...
     echo 正在启动 Echo Music Manager...
     echo.
     echo REM 启动命令
-    echo "jre\bin\java.exe" -jar "bin\EchoMusicManager.jar"
+    echo "jre\bin\java.exe" -Xms1g -Xmx2g -jar "bin\EchoMusicManager.jar"
     echo.
     echo if %%errorlevel%% neq 0 ^(
     echo     echo 程序异常退出，错误码: %%errorlevel%%
