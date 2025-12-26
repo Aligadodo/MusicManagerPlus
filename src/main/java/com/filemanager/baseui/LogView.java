@@ -32,8 +32,8 @@ public class LogView {
         this.controller = controller;
         this.tabLog = new Tab("日志");
         this.logArea = StyleFactory.createTextArea();
-        this.infoLogAppender = new SmartLogAppender(logArea, 50, ".info.log");
-        this.errorLogAppender = new SmartLogAppender(logArea, 50, ".error.log");
+        this.infoLogAppender = new SmartLogAppender(logArea, 500, ".info.log");
+        this.errorLogAppender = new SmartLogAppender(logArea, 500, ".error.log");
         this.buildUI();
         this.tabLog.setContent(viewNode);
         StyleFactory.setBasicStyle(viewNode);

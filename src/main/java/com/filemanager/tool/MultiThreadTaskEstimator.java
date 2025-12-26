@@ -11,6 +11,8 @@ public class MultiThreadTaskEstimator {
     // 总任务数
     private final long totalTasks;
     // 已完成任务数
+    private final AtomicLong startTasks= new AtomicLong(0);
+    // 已完成任务数
     private final AtomicLong completedTasks= new AtomicLong(0);
     // 已失败任务数
     private final AtomicLong failedTasks= new AtomicLong(0);
@@ -58,6 +60,14 @@ public class MultiThreadTaskEstimator {
     /**
      * 每当一个子任务完成时调用
      */
+    public void oneStarted() {
+        if (!isStarted || isFinished) return;
+        startTasks.incrementAndGet();
+    }
+
+    /**
+     * 每当一个子任务完成时调用
+     */
     public void oneCompleted() {
         if (!isStarted || isFinished) return;
 
@@ -69,6 +79,10 @@ public class MultiThreadTaskEstimator {
         if (completionWindow.size() > windowSize) {
             completionWindow.pollFirst();
         }
+    }
+
+    public int getRunningTaskCount() {
+        return startTasks.intValue() - completedTasks.intValue();
     }
 
     /**
@@ -150,4 +164,6 @@ public class MultiThreadTaskEstimator {
                 + " 进度:" + getProgressPercentage()
                 + "% 预计剩余时间：" + this.getFormattedRemainingTime();
     }
+
+
 }

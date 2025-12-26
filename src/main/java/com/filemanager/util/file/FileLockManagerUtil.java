@@ -36,7 +36,7 @@ public class FileLockManagerUtil {
      * @param file 文件路径
      * @return 是否已被锁
      */
-    public static boolean isLocked(File file) {
+    public static synchronized boolean isLocked(File file) {
         return lockedFiles.contains(file.getAbsolutePath());
     }
 

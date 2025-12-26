@@ -483,22 +483,28 @@ public class FileManagerPlusApp extends Application implements IAppController {
                         if (isCancelled()) {
                             break;
                         }
-                        // 检查文件锁
-                        if (FileLockManagerUtil.isLocked(rec.getFileHandle())) {
+                        if (threadTaskEstimator.getRunningTaskCount() > getSpGlobalThreads().getValue()) {
+                            Thread.sleep(1);
                             continue;
                         }
                         if (rec.getStatus() != ExecStatus.PENDING) {
                             continue;
                         }
+                        // 检查文件锁
+                        if (FileLockManagerUtil.isLocked(rec.getFileHandle())) {
+                            continue;
+                        }
                         executorService.submit(() -> {
-                            if (!FileLockManagerUtil.lock(rec.getFileHandle())) {
-                                return;
-                            }
                             synchronized (rec) {
-                                if (rec.getStatus() == ExecStatus.PENDING) {
+                                if (rec.getStatus() == ExecStatus.PENDING &&
+                                        !FileLockManagerUtil.isLocked(rec.getFileHandle())) {
+                                    if (!FileLockManagerUtil.lock(rec.getFileHandle())) {
+                                        return;
+                                    }
                                     // 对原始文件加逻辑锁，避免并发操作同一个文件
                                     rec.setStatus(ExecStatus.RUNNING);
                                     anyChange.set(true);
+                                    threadTaskEstimator.oneStarted();
                                 } else {
                                     return;
                                 }
@@ -666,6 +672,10 @@ public class FileManagerPlusApp extends Application implements IAppController {
         isTaskRunning.set(false);
         this.setRunningState(false);
         previewView.updateRunningProgress(msg);
+        if (TaskStatus.CANCELED == status) {
+            previewView.getMainProgressBar().progressProperty().unbind();
+            previewView.getMainProgressBar().progressProperty().set(0);
+        }
         if (TaskStatus.SUCCESS == status) {
             previewView.getMainProgressBar().progressProperty().unbind();
             previewView.getMainProgressBar().progressProperty().set(1.0);
