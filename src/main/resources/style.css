@@ -1,0 +1,36 @@
+/* Toast 容器基础样式 */
+.toast-root {
+    -fx-background-radius: 25; /* 更圆润的边角 */
+    -fx-padding: 12 25 12 25;  /* 上下 12，左右 25，确保比例美观 */
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.3), 15, 0, 0, 5);
+    /* 强制内部元素居中 */
+    -fx-alignment: center;
+}
+
+/* 文本样式 */
+.toast-text {
+    -fx-text-fill: white;
+    -fx-font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    /* 确保多行文本时每一行也居中 */
+    -fx-text-alignment: center;
+    -fx-alignment: center;
+}
+
+/* 不同状态颜色 - 使用稍微明亮现代的颜色 */
+.toast-info    { -fx-background-color: rgba(52, 73, 94, 0.9); }
+.toast-success { -fx-background-color: rgba(39, 174, 96, 0.9); }
+.toast-error   { -fx-background-color: rgba(192, 57, 43, 0.9); }
+
+/* 优化 Alert 和 Confirm 的对话框样式 */
+.dialog-pane {
+    -fx-background-color: white;
+}
+.dialog-pane .label {
+    -fx-text-fill: #2c3e50;
+    -fx-font-size: 14px;
+}
+.dialog-pane:header .header-panel {
+    -fx-background-color: #f8f9fa;
+}

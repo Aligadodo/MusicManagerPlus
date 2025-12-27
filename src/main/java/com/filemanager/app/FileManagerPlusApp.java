@@ -9,6 +9,8 @@ import com.filemanager.model.ThemeConfig;
 import com.filemanager.strategy.AppStrategy;
 import com.filemanager.strategy.AppStrategyFactory;
 import com.filemanager.tool.MultiThreadTaskEstimator;
+import com.filemanager.tool.RetryableThreadPool;
+import com.filemanager.tool.display.FXDialogUtils;
 import com.filemanager.tool.display.ProgressBarDisplay;
 import com.filemanager.tool.display.StyleFactory;
 import com.filemanager.tool.file.ConfigFileManager;
@@ -59,7 +61,8 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -87,6 +90,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
     // --- UI Controls ---
     private JFXCheckBox autoRun;
     private JFXButton btnGo, btnExecute, btnStop;
+    @Getter
     private Stage primaryStage;
     // --- Infrastructure ---
     private ConfigFileManager configManager;
@@ -101,7 +105,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
     private PreviewView previewView;
     private LogView logView;
     // --- Task & Threading ---
-    private ExecutorService executorService;
+    private RetryableThreadPool executorService;
     private Task<?> currentTask;
     private MultiThreadTaskEstimator threadTaskEstimator;
     // --- UI Containers ---
@@ -165,10 +169,9 @@ public class FileManagerPlusApp extends Application implements IAppController {
 
         // [关键逻辑] 监听线程数变化，实时调整运行中的线程池
         getSpGlobalThreads().valueProperty().addListener((obs, oldVal, newVal) -> {
-            if (isTaskRunning.get() && executorService instanceof ThreadPoolExecutor) {
-                ThreadPoolExecutor tpe = (ThreadPoolExecutor) executorService;
-                tpe.setCorePoolSize(newVal);
-                tpe.setMaximumPoolSize(newVal);
+            if (isTaskRunning.get() && executorService != null) {
+                executorService.setCorePoolSize(newVal);
+                executorService.setMaximumPoolSize(newVal);
                 log("动态调整线程池大小: " + oldVal + " -> " + newVal);
             }
         });
@@ -206,7 +209,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
         HBox header = new HBox(15);
         header.setPadding(new Insets(10, 20, 10, 20));
         header.setAlignment(Pos.CENTER_LEFT);
-        Label logo = new Label("ECHO MANAGER PLUS");
+        Label logo = new Label("MUSIC MANAGER PLUS - By hrcao97@gmail.com");
         logo.setFont(Font.font("Segoe UI", FontWeight.BLACK, 20));
         logo.setTextFill(Color.web(currentTheme.getAccentColor()));
 
@@ -346,16 +349,23 @@ public class FileManagerPlusApp extends Application implements IAppController {
     @Override
     public void runPipelineAnalysis() {
         if (sourceRoots.isEmpty()) {
-            showToast("请添加源目录");
+            FXDialogUtils.showToast(getPrimaryStage(), "请先添加源目录！", FXDialogUtils.ToastType.INFO);
             return;
         }
         if (pipelineStrategies.isEmpty()) {
-            showToast("请添加步骤");
+            FXDialogUtils.showToast(getPrimaryStage(), "请先添加步骤！",
+                    FXDialogUtils.ToastType.INFO);
             return;
         }
         if (isTaskRunning.get()) {
-            showToast("任务执行中，请先停止前面的任务");
+            FXDialogUtils.showToast(getPrimaryStage(), "任务执行中，请先停止前面的任务再执行预览！",
+                    FXDialogUtils.ToastType.INFO);
             return;
+        }
+        if (!autoRun.isSelected()) {
+            if (!FXDialogUtils.showConfirm("确认执行", "预览完毕会立即执行，确认要执行?")) {
+                autoRun.setSelected(false);
+            }
         }
 
         mainTabPane.getSelectionModel().select(previewView.getTab());
@@ -435,6 +445,8 @@ public class FileManagerPlusApp extends Application implements IAppController {
             boolean hasChanges = fullChangeList.stream().anyMatch(ChangeRecord::isChanged);
             btnExecute.setDisable(!hasChanges);
             if (autoRun.isSelected()) {
+                FXDialogUtils.showToast(getPrimaryStage(), "预览完毕自动开始执行！",
+                        FXDialogUtils.ToastType.INFO);
                 runPipelineExecution();
             }
         });
@@ -450,8 +462,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
             return;
         }
         if (!autoRun.isSelected()) {
-            Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "执行 " + count + " 个变更?", ButtonType.YES, ButtonType.NO);
-            if (alert.showAndWait().orElse(ButtonType.NO) != ButtonType.YES) {
+            if (!FXDialogUtils.showConfirm("确认", "执行 " + count + " 个变更?")) {
                 return;
             }
         }
@@ -470,7 +481,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
                 int total = todos.size();
                 AtomicInteger curr = new AtomicInteger(0);
                 int threads = getSpGlobalThreads().getValue();
-                executorService = Executors.newFixedThreadPool(threads);
+                executorService = new RetryableThreadPool(threads, threads, 10, TimeUnit.SECONDS);
                 threadTaskEstimator = new MultiThreadTaskEstimator(total, Math.max(Math.min(20, total / 20), 1));
                 threadTaskEstimator.start();
                 log("▶ ▶ ▶ 任务启动，并发线程: " + threads);
@@ -494,7 +505,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
                         if (FileLockManagerUtil.isLocked(rec.getFileHandle())) {
                             continue;
                         }
-                        executorService.submit(() -> {
+                        executorService.execute(() -> {
                             synchronized (rec) {
                                 if (rec.getStatus() == ExecStatus.PENDING &&
                                         !FileLockManagerUtil.isLocked(rec.getFileHandle())) {

@@ -11,10 +11,10 @@ echo ==========================================
 REM =================配置区域=================
 REM 请根据你的实际情况修改这个路径！！
 REM 必须指向包含 bin 和 lib 文件夹的 jre 目录
-set "SOURCE_JRE=C:\Users\28667\Desktop\projects\pack\jre"
+set "SOURCE_JRE=D:\projects\pack\jre"
 
 REM 设置 FFmpeg 所在目录
-set "SOURCE_FFMPEG=C:\Users\28667\Desktop\projects\pack\ffmpeg-tools"
+set "SOURCE_FFMPEG=D:\projects\pack\ffmpeg-tools"
 REM ==========================================
 
 REM --- 1. 检查源环境 ---

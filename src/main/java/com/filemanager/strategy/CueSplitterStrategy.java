@@ -33,7 +33,10 @@ public class CueSplitterStrategy extends AbstractFfmpegStrategy {
 
     @Override
     public String getDescription() {
-        return "解析 .cue 索引文件，将整轨音频无损切割为单曲。支持预览详细的歌曲清单与时长信息。只需要扫描cue文件。";
+        return "解析 .cue 索引文件，将整轨音频无损切割为单曲。" +
+                "支持预览详细的歌曲清单与时长信息。只需要扫描cue文件。" +
+                "同一个音轨在切分时不会同时执行，避免文件锁出现，会分成多轮任务逐个完成切分。" +
+                "如果音频存储在机械盘，可以使用缓存目录或者镜像目录（挂载到SSD盘下）进行处理加速，提升5-10倍的处理效率。";
     }
 
     @Override

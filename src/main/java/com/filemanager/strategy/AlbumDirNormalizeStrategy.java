@@ -29,7 +29,7 @@ public class AlbumDirNormalizeStrategy extends AppStrategy {
 
     @Override
     public String getName() {
-        return "专辑目录命名标准化";
+        return "专辑目录命名标准化(施工中)";
     }
 
     @Override

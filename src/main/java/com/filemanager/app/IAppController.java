@@ -9,6 +9,7 @@ import com.jfoenix.controls.JFXTextField;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.control.Spinner;
+import javafx.stage.Stage;
 import org.controlsfx.control.CheckComboBox;
 
 import java.io.File;
@@ -33,6 +34,8 @@ public interface IAppController {
     ThemeConfig getCurrentTheme();
 
     // --- 全局控件引用 (供 View 布局使用) ---
+    Stage getPrimaryStage();
+
     JFXComboBox<String> getCbRecursionMode();
 
     Spinner<Integer> getSpRecursionDepth();

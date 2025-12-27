@@ -157,7 +157,9 @@ public class FileUnzipStrategy extends AppStrategy {
 
     @Override
     public String getDescription() {
-        return "支持对压缩文件自动解压，并支持内置算法和7zip程序功能等解压方式，使得功能更稳定和扩展性更强。（请按照默认路径将7zip安装到C盘下，以支持自动识别路径）";
+        return "支持对压缩文件自动解压，并支持内置算法和7zip程序功能等解压方式，使得功能更稳定和扩展性更强。" +
+                "【内置的Java解压引擎兼容性一般，建议自行安装7zip，" +
+                "请按照默认路径将7zip安装到C盘下，以支持自动识别路径】";
     }
 
     @Override

@@ -4,6 +4,7 @@ import com.filemanager.app.IAppController;
 import com.filemanager.model.RuleCondition;
 import com.filemanager.model.RuleConditionGroup;
 import com.filemanager.strategy.AppStrategy;
+import com.filemanager.tool.display.FXDialogUtils;
 import com.filemanager.tool.display.NodeUtils;
 import com.filemanager.tool.display.StyleFactory;
 import com.filemanager.type.ConditionType;
@@ -255,6 +256,10 @@ public class ComposeView {
         JFXButton btnAddStep = StyleFactory.createActionButton("添加步骤", null,
                 () -> {
                     try {
+                        if (cbAdd.getValue() == null) {
+                            FXDialogUtils.showToast(app.getPrimaryStage(), "请先选择要执行的功能", FXDialogUtils.ToastType.INFO);
+                            return;
+                        }
                         AppStrategy strategy = cbAdd.getValue().getClass().getDeclaredConstructor().newInstance();
                         strategy.loadConfig(new Properties());
                         app.addStrategyStep(strategy);

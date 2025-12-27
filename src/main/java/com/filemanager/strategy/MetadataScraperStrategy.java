@@ -114,7 +114,7 @@ public class MetadataScraperStrategy extends AppStrategy {
 
     @Override
     public String getName() {
-        return "音频元数据自动刮削";
+        return "音频元数据自动刮削（未完成）";
     }
 
     @Override

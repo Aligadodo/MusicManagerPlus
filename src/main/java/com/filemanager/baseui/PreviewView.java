@@ -84,7 +84,7 @@ public class PreviewView {
         viewNode.setPadding(new Insets(10));
         // 运行参数
         HBox configBox = StyleFactory.createHBoxPanel(
-                StyleFactory.createChapter("\uD83D\uDD36[运行参数]  "),
+                StyleFactory.createChapter(" \uD83D\uDD36[运行参数]  "),
                 StyleFactory.createParamPairLine("线程数量:", spGlobalThreads));
 
         // 进度显示+信息展示
@@ -95,19 +95,18 @@ public class PreviewView {
         mainProgressBar.setPrefWidth(10000.0);
         HBox.setHgrow(mainProgressBar, Priority.ALWAYS);
         VBox dash = StyleFactory.createVBoxPanel(
-                StyleFactory.createHBoxPanel(StyleFactory.createChapter("\uD83D\uDD36[运行状态]  "), runningLabel),
-                StyleFactory.createHBoxPanel(StyleFactory.createChapter("\uD83D\uDD36[统计信息]  "), statsLabel));
+                StyleFactory.createHBoxPanel(StyleFactory.createChapter(" \uD83D\uDD36[运行状态]  "), runningLabel),
+                StyleFactory.createHBoxPanel(StyleFactory.createChapter(" \uD83D\uDD36[统计信息]  "), statsLabel));
 
         // 表格过滤器
         HBox filterBox = StyleFactory.createHBoxPanel(
-                StyleFactory.createChapter("\uD83D\uDD36[筛选条件]  "), txtSearchFilter,
+                StyleFactory.createChapter(" \uD83D\uDD36[筛选条件]  "), txtSearchFilter,
                 StyleFactory.createSeparatorWithChange(false), cbStatusFilter,
                 StyleFactory.createSeparatorWithChange(false), chkHideUnchanged,
                 StyleFactory.createSeparatorWithChange(false),
                 StyleFactory.createParamPairLine("显示数量限制:", numberDisplay),
                 StyleFactory.createSpacer(),
                 StyleFactory.createRefreshButton(e -> refresh()));
-        filterBox.setPadding(new Insets(0,10,0,10));
 
         // 表格
         previewTable.setShowRoot(false);
