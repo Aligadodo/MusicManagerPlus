@@ -1,6 +1,7 @@
 package com.filemanager.baseui;
 
-import com.filemanager.app.IAppController;
+import com.filemanager.base.IAppController;
+import com.filemanager.base.IAutoReloadAble;
 import com.filemanager.tool.display.StyleFactory;
 import com.filemanager.tool.log.LogInfo;
 import com.filemanager.tool.log.LogType;
@@ -17,10 +18,11 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import lombok.Getter;
 
+import java.util.Properties;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 @Getter
-public class LogView {
+public class LogView implements IAutoReloadAble {
     private final IAppController controller;
     private final Tab tabLog;
     private final ConcurrentLinkedQueue<LogInfo> logQueue = new ConcurrentLinkedQueue<>();
@@ -89,5 +91,15 @@ public class LogView {
 
     public Tab getTab() {
         return tabLog;
+    }
+
+    @Override
+    public void saveConfig(Properties props) {
+
+    }
+
+    @Override
+    public void loadConfig(Properties props) {
+
     }
 }

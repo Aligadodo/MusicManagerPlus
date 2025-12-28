@@ -1,5 +1,6 @@
 package com.filemanager.strategy;
 
+import com.filemanager.base.IAppStrategy;
 import com.filemanager.model.*;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
@@ -7,9 +8,7 @@ import com.filemanager.type.ScanTarget;
 import com.google.common.collect.Lists;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXComboBox;
-import javafx.application.Platform;
 import javafx.collections.FXCollections;
-import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
@@ -26,9 +25,6 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiConsumer;
-import java.util.stream.Collectors;
 
 /**
  * 批量智能解压策略 (v5.1 - SSD 极速优化版)
@@ -37,7 +33,7 @@ import java.util.stream.Collectors;
  * 2. [核心] 增大 Java IO 缓冲区至 64KB，提升吞吐量。
  * 3. 保持了密码箱、智能目录、失败保护等所有特性。
  */
-public class FileUnzipStrategy extends AppStrategy {
+public class FileUnzipStrategy extends IAppStrategy {
 
     // --- UI Components ---
     private final JFXComboBox<String> cbEngine;

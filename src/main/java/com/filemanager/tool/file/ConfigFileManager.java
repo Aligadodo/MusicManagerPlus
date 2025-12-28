@@ -4,7 +4,7 @@ import com.filemanager.app.FileManagerPlusApp;
 import com.filemanager.model.RuleCondition;
 import com.filemanager.model.RuleConditionGroup;
 import com.filemanager.model.ThemeConfig;
-import com.filemanager.strategy.AppStrategy;
+import com.filemanager.base.IAppStrategy;
 import com.filemanager.type.ConditionType;
 import javafx.collections.ObservableList;
 
@@ -29,36 +29,14 @@ public class ConfigFileManager {
 
     public void saveConfig(File file) {
         try (FileOutputStream os = new FileOutputStream(file)) {
-            // 1. 全局筛选配置
-            props.setProperty("g_recMode", String.valueOf(app.getCbRecursionMode().getSelectionModel().getSelectedIndex()));
-            props.setProperty("g_recDepth", String.valueOf(app.getSpRecursionDepth().getValue()));
-            props.setProperty("g_threads", String.valueOf(app.getSpGlobalThreads().getValue()));
-
-            // 2. 源目录
-            ObservableList<File> roots = app.getSourceRoots();
-            if (!roots.isEmpty()) {
-                String paths = roots.stream().map(File::getAbsolutePath).collect(Collectors.joining("||"));
-                props.setProperty("g_sources", paths);
-            } else {
-                props.remove("g_sources");
-            }
-
-            // 3. 外观配置
-            ThemeConfig theme = app.getCurrentTheme();
-            props.setProperty("ui_accent_color", theme.getAccentColor());
-            props.setProperty("ui_text_color", theme.getTextColor());
-            props.setProperty("ui_glass_opacity", String.valueOf(theme.getGlassOpacity()));
-            props.setProperty("ui_dark_bg", String.valueOf(theme.isDarkBackground()));
-            props.setProperty("ui_bg_image", app.getBgImagePath());
-
-            // 4. 流水线配置 (核心)
+            // 1. 保存全局组件配置
+            app.getAutoReloadNodes().forEach(node -> node.saveConfig(props));
+            // 2. 流水线配置 (核心)
             savePipeline();
-
             props.store(os, "FileManager Plus Config");
             app.log("配置已保存至: " + file.getName());
         } catch (Exception e) {
-            app.log("配置保存失败: " + e.getMessage());
-            e.printStackTrace();
+            app.logError("配置保存失败: " + e.getMessage());
         }
     }
 
@@ -67,46 +45,14 @@ public class ConfigFileManager {
         try (FileInputStream is = new FileInputStream(file)) {
             props.clear();
             props.load(is);
-
-            // 1. 恢复全局筛选
-            if (props.containsKey("g_recMode")) {
-                app.getCbRecursionMode().getSelectionModel().select(Integer.parseInt(props.getProperty("g_recMode")));
-            }
-            if (props.containsKey("g_recDepth")) {
-                app.getSpRecursionDepth().getValueFactory().setValue(Integer.parseInt(props.getProperty("g_recDepth")));
-            }
-            if (props.containsKey("g_threads")) {
-                app.getSpGlobalThreads().getValueFactory().setValue(Integer.parseInt(props.getProperty("g_threads")));
-            }
-
-            // 2. 恢复源目录
-            String paths = props.getProperty("g_sources");
-            if (paths != null && !paths.isEmpty()) {
-                app.getSourceRoots().clear();
-                for (String p : paths.split("\\|\\|")) {
-                    File f = new File(p);
-                    if (f.exists()) app.getSourceRoots().add(f);
-                }
-            }
-
-            // 3. 恢复外观
-            ThemeConfig theme = app.getCurrentTheme();
-            if (props.containsKey("ui_accent_color")) theme.setAccentColor(props.getProperty("ui_accent_color"));
-            if (props.containsKey("ui_text_color")) theme.setTextColor(props.getProperty("ui_text_color"));
-            if (props.containsKey("ui_glass_opacity")) theme.setGlassOpacity(Double.parseDouble(props.getProperty("ui_glass_opacity")));
-            if (props.containsKey("ui_dark_bg")) theme.setDarkBackground(Boolean.parseBoolean(props.getProperty("ui_dark_bg")));
-            
-            String bgPath = props.getProperty("ui_bg_image");
-            if (bgPath != null) app.setBgImagePath(bgPath);
-            
-            // 立即应用外观
+            // 1. 恢复全局组件配置
+            app.getAutoReloadNodes().forEach(node -> node.loadConfig(props));
+            // 2. 恢复流水线
+            loadPipeline();
+            // 3.立即应用外观
             app.applyAppearance();
 
-            // 4. 恢复流水线
-            loadPipeline();
-            
-            app.log("配置已加载: " + file.getName());
-            
+            app.log("配置已加载: " + file.getAbsolutePath());
         } catch (Exception e) {
             app.logError("配置加载失败: " + e.getMessage());
         }
@@ -115,13 +61,11 @@ public class ConfigFileManager {
     // --- Internal: Pipeline Serialization ---
 
     private void savePipeline() {
-        ObservableList<AppStrategy> strategies = app.getPipelineStrategies();
+        ObservableList<IAppStrategy> strategies = app.getPipelineStrategies();
         props.setProperty("pipeline.size", String.valueOf(strategies.size()));
-        
         for (int i = 0; i < strategies.size(); i++) {
-            AppStrategy s = strategies.get(i);
+            IAppStrategy s = strategies.get(i);
             String prefix = "pipeline." + i + ".";
-            
             // 保存类名以便反射
             props.setProperty(prefix + "class", s.getClass().getName());
             
@@ -166,7 +110,7 @@ public class ConfigFileManager {
             try {
                 // 反射创建实例
                 Class<?> clazz = Class.forName(className);
-                AppStrategy strategy = (AppStrategy) clazz.getDeclaredConstructor().newInstance();
+                IAppStrategy strategy = (IAppStrategy) clazz.getDeclaredConstructor().newInstance();
                 strategy.setContext(app);
 
                 // 恢复策略参数
@@ -199,10 +143,9 @@ public class ConfigFileManager {
                 app.getPipelineStrategies().add(strategy);
 
             } catch (Exception e) {
-                app.log("策略恢复失败 [" + i + "]: " + e.getMessage());
+                app.logError("策略恢复失败 [" + i + "]: " + e.getMessage());
             }
         }
-        
         // 通知主程序刷新列表选中状态
         app.refreshPipelineSelection();
     }

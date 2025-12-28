@@ -1,7 +1,8 @@
 package com.filemanager.baseui;
 
 
-import com.filemanager.app.IAppController;
+import com.filemanager.base.IAppController;
+import com.filemanager.base.IAutoReloadAble;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.tool.MultiThreadTaskEstimator;
 import com.filemanager.tool.display.DetailWindowHelper;
@@ -28,10 +29,11 @@ import lombok.Getter;
 
 import java.io.File;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Getter
-public class PreviewView {
+public class PreviewView implements IAutoReloadAble {
     private final IAppController app;
     private final Tab tabPreview;
     private VBox viewNode;
@@ -75,7 +77,7 @@ public class PreviewView {
         spGlobalThreads.setEditable(true);
 
         // 设置预览数量 默认200
-        numberDisplay = new JFXComboBox<>(FXCollections.observableArrayList(50, 100, 200, 500));
+        numberDisplay = new JFXComboBox<>(FXCollections.observableArrayList(50, 100, 200, 500, 1000, 2000, 5000));
         numberDisplay.getSelectionModel().selectFirst();
     }
 
@@ -285,5 +287,17 @@ public class PreviewView {
 
     public Tab getTab() {
         return tabPreview;
+    }
+
+    @Override
+    public void saveConfig(Properties props) {
+        props.setProperty("global_threads", String.valueOf(spGlobalThreads.getValue()));
+    }
+
+    @Override
+    public void loadConfig(Properties props) {
+        if (props.containsKey("global_threads")) {
+            spGlobalThreads.getValueFactory().setValue(Integer.parseInt(props.getProperty("global_threads")));
+        }
     }
 }

@@ -1,6 +1,5 @@
-package com.filemanager.strategy;
+package com.filemanager.base;
 
-import com.filemanager.app.IAppController;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.RuleCondition;
 import com.filemanager.model.RuleConditionGroup;
@@ -16,7 +15,7 @@ import java.util.stream.Collectors;
  * @author 28667
  */
 @Getter
-public abstract class AppStrategy {
+public abstract class IAppStrategy implements IAutoReloadAble{
     protected IAppController app;
     // 通用条件配置接口 (UI调用)
     // 通用前置条件 (所有策略都支持)
@@ -72,12 +71,6 @@ public abstract class AppStrategy {
 
     // 核心执行逻辑
     public abstract void execute(ChangeRecord rec) throws Exception;
-
-    // 配置存取
-    public abstract void saveConfig(Properties props);
-
-    public abstract void loadConfig(Properties props);
-
 
     // [修改] 校验逻辑：组间为 OR，只要有一个组满足即可
     protected boolean checkConditions(ChangeRecord rec) {

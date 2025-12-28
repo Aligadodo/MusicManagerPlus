@@ -1,5 +1,6 @@
 package com.filemanager.strategy;
 
+import com.filemanager.base.IAppStrategy;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.tool.display.StyleFactory;
 import com.filemanager.type.ExecStatus;
@@ -24,7 +25,7 @@ import java.util.*;
  *
  * @author 28667
  */
-public class FileMigrateStrategy extends AppStrategy {
+public class FileMigrateStrategy extends IAppStrategy {
     private final TextField txtDestDir;
     private final TextField txtPathPattern;
     private final CheckBox chkCleanEmpty;

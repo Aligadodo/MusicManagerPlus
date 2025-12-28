@@ -1,9 +1,10 @@
 package com.filemanager.baseui;
 
-import com.filemanager.app.IAppController;
+import com.filemanager.base.IAppController;
+import com.filemanager.base.IAppStrategy;
+import com.filemanager.base.IAutoReloadAble;
 import com.filemanager.model.RuleCondition;
 import com.filemanager.model.RuleConditionGroup;
-import com.filemanager.strategy.AppStrategy;
 import com.filemanager.tool.display.FXDialogUtils;
 import com.filemanager.tool.display.NodeUtils;
 import com.filemanager.tool.display.StyleFactory;
@@ -28,11 +29,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
-public class ComposeView {
+public class ComposeView implements IAutoReloadAble {
     private final IAppController app;
     private VBox viewNode;
     private VBox configContainer;
-    private ListView<AppStrategy> pipelineListView;
+    private ListView<IAppStrategy> pipelineListView;
     private ListView<File> sourceListView;
 
     public ComposeView(IAppController app) {
@@ -58,9 +59,12 @@ public class ComposeView {
         grid.add(StyleFactory.createHBoxPanel(StyleFactory.createSectionHeader("step1-选择目录",
                 "通过弹窗或者拖拽至空白处来添加需要处理的文件或文件夹。")), 0, 0);
         grid.add(StyleFactory.createHBoxPanel(StyleFactory.createSectionHeader("step2-流水线配置",
-                "添加必要的处理流程，可同时应用不同的操作。（同一文件只会被成功修改一次）。")), 1, 0);
+                "添加必要的处理流程，可同时应用不同的操作。" +
+                        "点击任意项目，可打开详细的配置界面。" +
+                        "（同一文件只会被成功修改一次）。")), 1, 0);
         grid.add(StyleFactory.createHBoxPanel(StyleFactory.createSectionHeader("step3-参数配置",
-                "选中步骤并编辑步骤下的参数，支持配置步骤的前置条件，以在特定条件下执行。")), 2, 0);
+                "支持选中步骤并编辑步骤下的参数。" +
+                        "支持配置步骤的前置条件，以在满足特定条件下才执行特定操作，用于更精细化的操作控制。")), 2, 0);
         grid.add(createLeftPanel(), 0, 1);
         grid.add(createMidPanel(), 1, 1);
         grid.add(createRightPanel(), 2, 1);
@@ -171,9 +175,9 @@ public class ComposeView {
         pipelineListView.setStyle("-fx-background-color: rgba(255,255,255,0.5); -fx-background-radius: 5;");
         VBox.setVgrow(pipelineListView, Priority.ALWAYS);
 
-        pipelineListView.setCellFactory(param -> new ListCell<AppStrategy>() {
+        pipelineListView.setCellFactory(param -> new ListCell<IAppStrategy>() {
             @Override
-            protected void updateItem(AppStrategy item, boolean empty) {
+            protected void updateItem(IAppStrategy item, boolean empty) {
                 super.updateItem(item, empty);
                 if (empty || item == null) {
                     setText(null);
@@ -231,24 +235,24 @@ public class ComposeView {
 
         // [新增] 鼠标点击强制刷新，解决只有一项时点击不显示的问题
         pipelineListView.setOnMouseClicked(e -> {
-            AppStrategy s = pipelineListView.getSelectionModel().getSelectedItem();
+            IAppStrategy s = pipelineListView.getSelectionModel().getSelectedItem();
             if (s != null) refreshConfig(s);
         });
         pipelineListView.getSelectionModel().selectedItemProperty().addListener((o, old, val) -> refreshConfig(val));
 
 
         HBox pipeActions = new HBox(5);
-        JFXComboBox<AppStrategy> cbAdd = new JFXComboBox<>(FXCollections.observableArrayList(app.getStrategyPrototypes()));
+        JFXComboBox<IAppStrategy> cbAdd = new JFXComboBox<>(FXCollections.observableArrayList(app.getStrategyPrototypes()));
         cbAdd.setPromptText("选择功能...");
         cbAdd.setPrefWidth(150);
-        cbAdd.setConverter(new StringConverter<AppStrategy>() {
+        cbAdd.setConverter(new StringConverter<IAppStrategy>() {
             @Override
-            public String toString(AppStrategy o) {
+            public String toString(IAppStrategy o) {
                 return o == null ? "" : o.getName();
             }
 
             @Override
-            public AppStrategy fromString(String s) {
+            public IAppStrategy fromString(String s) {
                 return null;
             }
         });
@@ -260,7 +264,7 @@ public class ComposeView {
                             FXDialogUtils.showToast(app.getPrimaryStage(), "请先选择要执行的功能", FXDialogUtils.ToastType.INFO);
                             return;
                         }
-                        AppStrategy strategy = cbAdd.getValue().getClass().getDeclaredConstructor().newInstance();
+                        IAppStrategy strategy = cbAdd.getValue().getClass().getDeclaredConstructor().newInstance();
                         strategy.loadConfig(new Properties());
                         app.addStrategyStep(strategy);
                     } catch (Exception e) {
@@ -310,7 +314,7 @@ public class ComposeView {
         }
     }
 
-    public void refreshConfig(AppStrategy s) {
+    public void refreshConfig(IAppStrategy s) {
         configContainer.getChildren().clear();
         if (s == null) return;
 
@@ -327,7 +331,7 @@ public class ComposeView {
         StyleFactory.forceDarkText(configContainer);
     }
 
-    private Node createConditionsUI(AppStrategy strategy) {
+    private Node createConditionsUI(IAppStrategy strategy) {
         VBox rootBox = new VBox(10);
 
         // 容器：存放所有条件组
@@ -375,7 +379,7 @@ public class ComposeView {
     }
 
     // [新增] 单个条件组的 UI
-    private Node createSingleGroupUI(RuleConditionGroup group, int index, AppStrategy strategy, Runnable onDeleteGroup) {
+    private Node createSingleGroupUI(RuleConditionGroup group, int index, IAppStrategy strategy, Runnable onDeleteGroup) {
         VBox groupBox = new VBox(5);
         groupBox.setStyle("-fx-border-color: #ddd; -fx-border-radius: 4; -fx-background-color: rgba(255,255,255,0.4); -fx-padding: 8;");
 
@@ -463,5 +467,15 @@ public class ComposeView {
             pipelineListView.getSelectionModel().selectFirst();
             refreshConfig(app.getPipelineStrategies().get(0));
         }
+    }
+
+    @Override
+    public void saveConfig(Properties props) {
+
+    }
+
+    @Override
+    public void loadConfig(Properties props) {
+
     }
 }

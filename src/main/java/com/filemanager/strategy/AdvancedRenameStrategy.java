@@ -1,6 +1,7 @@
 package com.filemanager.strategy;
 
 
+import com.filemanager.base.IAppStrategy;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.RuleCondition;
 import com.filemanager.tool.display.NodeUtils;
@@ -31,7 +32,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.stream.Collectors;
 
-public class AdvancedRenameStrategy extends AppStrategy {
+public class AdvancedRenameStrategy extends IAppStrategy {
 
     // UI Controls
     private final ListView<RenameRule> lvRules;

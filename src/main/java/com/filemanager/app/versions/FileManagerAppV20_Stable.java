@@ -1,11 +1,11 @@
 //package com.filemanager.app.versions;
 //
-//import com.filemanager.app.IAppController;
+//import com.filemanager.base.IAppController;
 //import com.filemanager.app.SortedProperties;
 //import com.filemanager.model.ChangeRecord;
 //import com.filemanager.model.RuleCondition;
 //import com.filemanager.model.RuleConditionGroup;
-//import com.filemanager.strategy.AppStrategy;
+//import com.filemanager.base.AppStrategy;
 //import com.filemanager.strategy.AppStrategyFactory;
 //import com.filemanager.type.ConditionType;
 //import com.filemanager.type.ExecStatus;

@@ -1,5 +1,6 @@
 package com.filemanager.strategy;
 
+import com.filemanager.base.IAppStrategy;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
@@ -35,7 +36,7 @@ import java.util.stream.Collectors;
  * 支持：文件去重、文件夹去重、空目录清理
  * 删除方式：直接删除、伪删除（归档到垃圾箱）
  */
-public class FileCleanupStrategy extends AppStrategy {
+public class FileCleanupStrategy extends IAppStrategy {
     // 常见媒体类型定义，用于同类比较
     private static final Set<String> EXT_AUDIO = new HashSet<>(Arrays.asList("mp3", "flac", "wav", "aac", "m4a", "ogg", "wma", "ape", "alac", "aiff", "dsf", "dff"));
     private static final Set<String> EXT_VIDEO = new HashSet<>(Arrays.asList("mp4", "mkv", "avi", "mov", "wmv", "flv", "m4v", "mpg"));

@@ -1,5 +1,6 @@
 package com.filemanager.strategy;
 
+import com.filemanager.base.IAppStrategy;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.FileStatisticInfo;
 import com.filemanager.tool.display.StyleFactory;
@@ -23,7 +24,7 @@ import java.util.stream.Collectors;
 /**
  * demo
  */
-public class CueFileRenameStrategy extends AppStrategy {
+public class CueFileRenameStrategy extends IAppStrategy {
     private final JFXComboBox<String> mode;
     private final TextField fileName;
     private String pMode;

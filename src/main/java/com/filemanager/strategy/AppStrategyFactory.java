@@ -1,5 +1,6 @@
 package com.filemanager.strategy;
 
+import com.filemanager.base.IAppStrategy;
 import com.filemanager.type.OperationType;
 
 import java.util.ArrayList;
@@ -7,8 +8,8 @@ import java.util.List;
 
 public class AppStrategyFactory {
 
-    public static List<AppStrategy> getAppStrategies() {
-        List<AppStrategy> strategyPrototypes = new ArrayList<AppStrategy>();
+    public static List<IAppStrategy> getAppStrategies() {
+        List<IAppStrategy> strategyPrototypes = new ArrayList<IAppStrategy>();
         strategyPrototypes.add(new AdvancedRenameStrategy());
         strategyPrototypes.add(new AudioConverterStrategy());
         strategyPrototypes.add(new FileMigrateStrategy());
@@ -22,9 +23,9 @@ public class AppStrategyFactory {
         return strategyPrototypes;
     }
 
-    public static AppStrategy findStrategyForOp(OperationType op, List<AppStrategy> pipelineStrategies) {
+    public static IAppStrategy findStrategyForOp(OperationType op, List<IAppStrategy> pipelineStrategies) {
         for (int i = pipelineStrategies.size() - 1; i >= 0; i--) {
-            AppStrategy s = pipelineStrategies.get(i);
+            IAppStrategy s = pipelineStrategies.get(i);
             // 简单匹配，实际应更严谨
             if (op == OperationType.RENAME && s instanceof AdvancedRenameStrategy) return s;
             if (op == OperationType.ALBUM_RENAME && s instanceof AlbumDirNormalizeStrategy) return s;

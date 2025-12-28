@@ -1,12 +1,14 @@
 package com.filemanager.app;
 
+import com.filemanager.base.IAppStrategy;
+import com.filemanager.base.IAppController;
+import com.filemanager.base.IAutoReloadAble;
 import com.filemanager.baseui.ComposeView;
 import com.filemanager.baseui.GlobalSettingsView;
 import com.filemanager.baseui.LogView;
 import com.filemanager.baseui.PreviewView;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.ThemeConfig;
-import com.filemanager.strategy.AppStrategy;
 import com.filemanager.strategy.AppStrategyFactory;
 import com.filemanager.tool.MultiThreadTaskEstimator;
 import com.filemanager.tool.RetryableThreadPool;
@@ -21,7 +23,11 @@ import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.TaskStatus;
 import com.filemanager.util.file.FileLockManagerUtil;
-import com.jfoenix.controls.*;
+import com.google.common.collect.Lists;
+import com.jfoenix.controls.JFXButton;
+import com.jfoenix.controls.JFXCheckBox;
+import com.jfoenix.controls.JFXComboBox;
+import com.jfoenix.controls.JFXTabPane;
 import javafx.animation.FadeTransition;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -52,12 +58,13 @@ import javafx.util.Duration;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.controlsfx.control.CheckComboBox;
 
 import java.awt.*;
 import java.io.File;
 import java.io.FileInputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -79,14 +86,15 @@ public class FileManagerPlusApp extends Application implements IAppController {
 
     // --- Core Data ---
     private final ObservableList<File> sourceRoots = FXCollections.observableArrayList();
-    private final ObservableList<AppStrategy> pipelineStrategies = FXCollections.observableArrayList();
+    private final ObservableList<IAppStrategy> pipelineStrategies = FXCollections.observableArrayList();
     private final File lastConfigFile = new File(System.getProperty("user.home"), ".fmplus_config.properties");
     private final ThemeConfig currentTheme = new ThemeConfig();
     private final AtomicBoolean isTaskRunning = new AtomicBoolean(false);
     private final AtomicLong lastRefresh = new AtomicLong(System.currentTimeMillis());
     @Getter
     private long taskStartTimStamp = System.currentTimeMillis();
-    private List<AppStrategy> strategyPrototypes;
+    private List<IAppStrategy> strategyPrototypes;
+
     // --- UI Controls ---
     private JFXCheckBox autoRun;
     private JFXButton btnGo, btnExecute, btnStop;
@@ -95,15 +103,13 @@ public class FileManagerPlusApp extends Application implements IAppController {
     // --- Infrastructure ---
     private ConfigFileManager configManager;
     @Getter
-    @Setter
-    private String bgImagePath = "";
-    @Getter
     private List<ChangeRecord> fullChangeList = new ArrayList<>();
     // --- Modular Views (UI Modules) ---
     private GlobalSettingsView globalSettingsView;
     private ComposeView composeView;
     private PreviewView previewView;
     private LogView logView;
+    private List<IAutoReloadAble> autoReloadNodes;
     // --- Task & Threading ---
     private RetryableThreadPool executorService;
     private Task<?> currentTask;
@@ -156,6 +162,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
         primaryStage.setScene(scene);
 
         // 5. 加载配置 & 应用外观
+        this.autoReloadNodes = Lists.newArrayList(globalSettingsView, logView, previewView, composeView, currentTheme);
         configManager.loadConfig(lastConfigFile);
         applyAppearance();
 
@@ -187,20 +194,20 @@ public class FileManagerPlusApp extends Application implements IAppController {
         // Top Menu
         MenuBar menuBar = new MenuBar();
         menuBar.setStyle("-fx-background-color: transparent;");
-        Menu fileMenu = new Menu("文件");
+        Menu fileMenu = new Menu("配置管理");
         MenuItem loadItem = new MenuItem("加载配置...");
         loadItem.setOnAction(e -> loadConfigAction());
         MenuItem saveItem = new MenuItem("保存配置...");
         saveItem.setOnAction(e -> saveConfigAction());
         fileMenu.getItems().addAll(loadItem, saveItem);
-        Menu viewMenu = new Menu("外观");
+        Menu viewMenu = new Menu("外观设置");
         MenuItem themeItem = new MenuItem("界面设置...");
         themeItem.setOnAction(e -> showAppearanceDialog());
         viewMenu.getItems().add(themeItem);
         menuBar.getMenus().addAll(fileMenu, viewMenu);
 
         autoRun = new JFXCheckBox("预览成功立即运行");
-        autoRun.setSelected(true);
+        autoRun.setSelected(false);
         btnGo = StyleFactory.createActionButton("预览", null, this::runPipelineAnalysis);
         btnExecute = StyleFactory.createActionButton("执行", "#27ae60", this::runPipelineExecution);
         btnStop = StyleFactory.createActionButton("停止", "#e74c3c", this::forceStop);
@@ -289,12 +296,12 @@ public class FileManagerPlusApp extends Application implements IAppController {
     }
 
     @Override
-    public ObservableList<AppStrategy> getPipelineStrategies() {
+    public ObservableList<IAppStrategy> getPipelineStrategies() {
         return pipelineStrategies;
     }
 
     @Override
-    public List<AppStrategy> getStrategyPrototypes() {
+    public List<IAppStrategy> getStrategyPrototypes() {
         return strategyPrototypes;
     }
 
@@ -314,30 +321,10 @@ public class FileManagerPlusApp extends Application implements IAppController {
         return globalSettingsView.getSpRecursionDepth();
     }
 
-    @Override
-    public CheckComboBox<String> getCcbFileTypes() {
-        return globalSettingsView.getCcbFileTypes();
-    }
 
     @Override
     public Spinner<Integer> getSpGlobalThreads() {
         return previewView.getSpGlobalThreads();
-    }
-
-    // 委托给 PreviewView
-    @Override
-    public JFXTextField getTxtSearchFilter() {
-        return previewView.getTxtSearchFilter();
-    }
-
-    @Override
-    public JFXComboBox<String> getCbStatusFilter() {
-        return previewView.getCbStatusFilter();
-    }
-
-    @Override
-    public JFXCheckBox getChkHideUnchanged() {
-        return previewView.getChkHideUnchanged();
     }
 
     public void refreshPipelineSelection() {
@@ -362,7 +349,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
                     FXDialogUtils.ToastType.INFO);
             return;
         }
-        if (!autoRun.isSelected()) {
+        if (autoRun.isSelected()) {
             if (!FXDialogUtils.showConfirm("确认执行", "预览完毕会立即执行，确认要执行?")) {
                 autoRun.setSelected(false);
             }
@@ -376,12 +363,11 @@ public class FileManagerPlusApp extends Application implements IAppController {
         previewView.getPreviewTable().setRoot(null);
 
         // 捕获所有策略参数
-        for (AppStrategy s : pipelineStrategies) s.captureParams();
+        for (IAppStrategy s : pipelineStrategies) s.captureParams();
 
         // 从 GlobalSettingsView 获取参数
         int maxDepth = "当前目录".equals(getCbRecursionMode().getValue()) ? 1 :
                 ("全部文件".equals(getCbRecursionMode().getValue()) ? Integer.MAX_VALUE : getSpRecursionDepth().getValue());
-        List<String> exts = new ArrayList<>(getCcbFileTypes().getCheckModel().getCheckedItems());
 
         Task<List<ChangeRecord>> task = new Task<List<ChangeRecord>>() {
             @Override
@@ -390,7 +376,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
                 List<File> initialFiles = new ArrayList<>();
                 for (File r : sourceRoots) {
                     if (isCancelled()) break;
-                    initialFiles.addAll(scanFilesRobust(r, maxDepth, exts, msg -> setRunningUI("▶ ▶ ▶ " + msg)));
+                    initialFiles.addAll(scanFilesRobust(r, maxDepth, msg -> setRunningUI("▶ ▶ ▶ " + msg)));
                 }
                 if (isCancelled()) return null;
                 setRunningUI("▶ ▶ ▶ 扫描完成，共 " + initialFiles.size() + " 个文件。");
@@ -412,7 +398,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
                             return;
                         }
                         for (int i = 0; i < pipelineStrategies.size(); i++) {
-                            AppStrategy strategy = pipelineStrategies.get(i);
+                            IAppStrategy strategy = pipelineStrategies.get(i);
                             List<ChangeRecord> newRecordAfter = strategy.analyzeWithPreCheck(rec, currentRecords, sourceRoots);
                             newRecords.addAll(newRecordAfter);
                         }
@@ -522,7 +508,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
                             }
                             try {
                                 // [修改] 策略执行时不再传递线程数，只负责逻辑
-                                AppStrategy s = AppStrategyFactory.findStrategyForOp(rec.getOpType(), pipelineStrategies);
+                                IAppStrategy s = AppStrategyFactory.findStrategyForOp(rec.getOpType(), pipelineStrategies);
                                 log("▶ 开始处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().getName() + ",目标路径：" + rec.getNewName());
                                 if (s != null) {
                                     s.execute(rec);
@@ -580,7 +566,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
         previewView.updateStats();
     }
 
-    private List<File> scanFilesRobust(File root, int maxDepth, List<String> exts, Consumer<String> msg) {
+    private List<File> scanFilesRobust(File root, int maxDepth, Consumer<String> msg) {
         AtomicInteger countScan = new AtomicInteger(0);
         AtomicInteger countIgnore = new AtomicInteger(0);
         List<File> list = new ArrayList<>();
@@ -592,21 +578,9 @@ public class FileManagerPlusApp extends Application implements IAppController {
                     if (!isTaskRunning.get()) {
                         throw new RuntimeException("已中断");
                     }
-
-                    File f = p.toFile();
-                    if (f.equals(root)) {
-                        countIgnore.incrementAndGet();
-                        return false;
-                    } // 排除根目录本身
-
-                    // [修复] 始终保留文件夹，无论递归深度如何。
-                    // 之前的逻辑错误地排除了递归子目录，导致文件夹重命名/删除策略失效。
-                    // 具体的策略（Strategy）会根据自己的 getTargetType() 再次过滤是否处理文件夹。
-                    if (f.isDirectory()) return true;
-
-                    // 文件则应用扩展名过滤
-                    String n = f.getName().toLowerCase();
-                    for (String e : exts) if (n.endsWith("." + e)) return true;
+                    if (globalSettingsView.isFileIncluded(p.toFile())) {
+                        return true;
+                    }
                     countIgnore.incrementAndGet();
                     return false;
                 } finally {
@@ -756,12 +730,12 @@ public class FileManagerPlusApp extends Application implements IAppController {
     }
 
     @Override
-    public void addStrategyStep(AppStrategy template) {
+    public void addStrategyStep(IAppStrategy template) {
         this.pipelineStrategies.add(template);
     }
 
     @Override
-    public void removeStrategyStep(AppStrategy strategy) {
+    public void removeStrategyStep(IAppStrategy strategy) {
         this.pipelineStrategies.remove(strategy);
     }
 
@@ -776,6 +750,11 @@ public class FileManagerPlusApp extends Application implements IAppController {
     @Override
     public void openParentDirectory(File f) {
         if (f != null) openFileInSystem(f.isDirectory() ? f : f.getParentFile());
+    }
+
+    @Override
+    public List<IAutoReloadAble> getAutoReloadNodes() {
+        return autoReloadNodes;
     }
 
     @Override
@@ -832,14 +811,14 @@ public class FileManagerPlusApp extends Application implements IAppController {
         Slider sl = new Slider(0.1, 1.0, currentTheme.getGlassOpacity());
         CheckBox chk = new CheckBox("Dark Mode");
         chk.setSelected(currentTheme.isDarkBackground());
-        TextField tp = new TextField(bgImagePath);
+        TextField tp = new TextField(currentTheme.getBgImagePath());
         JFXButton bp = new JFXButton("背景...");
         bp.setOnAction(e -> {
             FileChooser fc = new FileChooser();
             File f = fc.showOpenDialog(null);
             if (f != null) {
                 tp.setText(f.getAbsolutePath());
-                bgImagePath = f.getAbsolutePath();
+                currentTheme.setBgImagePath(f.getAbsolutePath());
                 applyAppearance();
             }
         });
@@ -864,16 +843,14 @@ public class FileManagerPlusApp extends Application implements IAppController {
 
     public void applyAppearance() {
         backgroundOverlay.setStyle("-fx-background-color: rgba(" + (currentTheme.isDarkBackground() ? "0,0,0" : "255,255,255") + ", " + (1 - currentTheme.getGlassOpacity()) + ");");
-        if (!bgImagePath.isEmpty()) {
+        if (!currentTheme.getBgImagePath().isEmpty()) {
             try {
-                backgroundImageView.setImage(new Image(new FileInputStream(bgImagePath)));
+                backgroundImageView.setImage(new Image(Files.newInputStream(Paths.get(currentTheme.getBgImagePath()))));
             } catch (Exception e) {
+                logError("背景图加载失败："+ExceptionUtils.getStackTrace(e));
             }
         }
         if (composeView != null) composeView.refreshList();
     }
 
-    private void showToast(String msg) {
-        new Alert(Alert.AlertType.INFORMATION, msg).show();
-    }
 }

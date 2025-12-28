@@ -1,16 +1,12 @@
-package com.filemanager.app;
+package com.filemanager.base;
 
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.ThemeConfig;
-import com.filemanager.strategy.AppStrategy;
-import com.jfoenix.controls.JFXCheckBox;
 import com.jfoenix.controls.JFXComboBox;
-import com.jfoenix.controls.JFXTextField;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.control.Spinner;
 import javafx.stage.Stage;
-import org.controlsfx.control.CheckComboBox;
 
 import java.io.File;
 import java.util.List;
@@ -27,9 +23,9 @@ public interface IAppController {
     // --- 数据获取 ---
     ObservableList<File> getSourceRoots();
 
-    ObservableList<AppStrategy> getPipelineStrategies();
+    ObservableList<IAppStrategy> getPipelineStrategies();
 
-    List<AppStrategy> getStrategyPrototypes();
+    List<IAppStrategy> getStrategyPrototypes();
 
     ThemeConfig getCurrentTheme();
 
@@ -40,14 +36,6 @@ public interface IAppController {
 
     Spinner<Integer> getSpRecursionDepth();
 
-    CheckComboBox<String> getCcbFileTypes();
-
-    JFXTextField getTxtSearchFilter();
-
-    JFXComboBox<String> getCbStatusFilter();
-
-    JFXCheckBox getChkHideUnchanged();
-
     Spinner<Integer> getSpGlobalThreads();
 
     // --- 业务操作 ---
@@ -57,9 +45,9 @@ public interface IAppController {
 
     void clearSourceDirs();
 
-    void addStrategyStep(AppStrategy template);
+    void addStrategyStep(IAppStrategy template);
 
-    void removeStrategyStep(AppStrategy strategy);
+    void removeStrategyStep(IAppStrategy strategy);
 
     void runPipelineAnalysis();
 
@@ -76,15 +64,13 @@ public interface IAppController {
     void openParentDirectory(File f);
 
     // --- 界面交互 ---
+    List<IAutoReloadAble> getAutoReloadNodes();
+
     void showAppearanceDialog();
 
     void saveConfigAction();
 
     void loadConfigAction();
-
-    String getBgImagePath();
-
-    void setBgImagePath(String bgPath);
 
     void log(String s);
 

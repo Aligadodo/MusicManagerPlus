@@ -1,5 +1,6 @@
 package com.filemanager.strategy;
 
+import com.filemanager.base.IAppStrategy;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.tool.display.StyleFactory;
 import com.filemanager.tool.file.PathUtils;
@@ -28,7 +29,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-public abstract class AbstractFfmpegStrategy extends AppStrategy {
+public abstract class AbstractFfmpegStrategy extends IAppStrategy {
     private static FFmpeg ffmpeg = null;
     // --- UI 组件 ---
     protected final JFXComboBox<String> cbTargetFormat;

@@ -1,5 +1,6 @@
 package com.filemanager.strategy;
 
+import com.filemanager.base.IAppStrategy;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.tool.file.FileTypeUtil;
 import com.filemanager.tool.display.StyleFactory;
@@ -18,7 +19,7 @@ import java.util.stream.Collectors;
 /**
  * demo
  */
-public class AlbumDirNormalizeStrategy extends AppStrategy {
+public class AlbumDirNormalizeStrategy extends IAppStrategy {
     private final TextField txtTemplate;
     private String pTemplate;
 

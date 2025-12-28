@@ -1,5 +1,6 @@
 package com.filemanager.strategy;
 
+import com.filemanager.base.IAppStrategy;
 import com.filemanager.tool.display.StyleFactory;
 import com.filemanager.model.*;
 import com.filemanager.type.ExecStatus;
@@ -7,7 +8,6 @@ import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
 import com.filemanager.util.MetadataHelper;
 import com.jfoenix.controls.*;
-import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
@@ -29,11 +29,9 @@ import java.nio.file.Files;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiConsumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * 自动刮削器策略 (v3.0 - 专辑增强版)
@@ -42,7 +40,7 @@ import java.util.stream.Stream;
  * 2. 歌词下载
  * 3. 专辑层级处理：下载封面文件(cover.jpg)、生成专辑简介(Info.txt)、生成播放清单
  */
-public class MetadataScraperStrategy extends AppStrategy {
+public class MetadataScraperStrategy extends IAppStrategy {
 
     // --- UI Components ---
     private final JFXComboBox<String> cbSource;
