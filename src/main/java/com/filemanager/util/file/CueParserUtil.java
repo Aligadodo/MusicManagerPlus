@@ -1,7 +1,6 @@
 package com.filemanager.util.file;
 
 import com.filemanager.model.CueSheet;
-import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -15,7 +14,7 @@ public class CueParserUtil {
     private static final Pattern PATTERN = Pattern.compile("([A-Z]+)\\s+(.*)");
 
 
-    public static CueSheet parse(Path path) throws Exception{
+    public static CueSheet parse(Path path) throws Exception {
         CueSheet cue = new CueSheet();
         CueSheet.CueTrack currentCueTrack = null;
 
@@ -56,6 +55,12 @@ public class CueParserUtil {
                     cue.tracks.add(currentCueTrack);
                     break;
                 case "INDEX":
+                    // Index 00 是上一音轨结束点
+                    if (value.startsWith("00")) {
+                        String timeStr = value.split("\\s+")[1];
+                        currentCueTrack.rawLastEndTime = timeStr;
+                        currentCueTrack.lastEndTimeMs = cueTimeToMs(timeStr);
+                    }
                     // Index 01 是音轨起始点
                     if (value.startsWith("01")) {
                         String timeStr = value.split("\\s+")[1];
@@ -92,7 +97,11 @@ public class CueParserUtil {
                 duration = t.getSoundEndTimeMs();
             } else if (i < cueTracks.size() - 1) {
                 CueSheet.CueTrack next = cueTracks.get(i + 1);
-                duration = next.getSoundStartTimeMs() - startTime;
+                if (next.getLastEndTimeMs() > 0) {
+                    duration = next.getLastEndTimeMs() - startTime;
+                } else {
+                    duration = next.getSoundStartTimeMs() - startTime;
+                }
             }
             t.setDuration(duration);
 

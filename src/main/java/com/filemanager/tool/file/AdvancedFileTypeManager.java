@@ -96,10 +96,10 @@ public class AdvancedFileTypeManager {
 
             // 将具体后缀添加为叶子节点
             for (String ext : exts) {
-                if (ext.equals("*")) {
+                if ("[FILE]".equals(ext)) {
                     // 文件夹特殊处理，不做子节点，直接由 categoryItem 控制逻辑
                     categoryItem.setValue("除文件夹");
-                }else if (ext.equals("[DIR]")) {
+                }else if ("[DIR]".equals(ext)) {
                     // 文件夹特殊处理，不做子节点，直接由 categoryItem 控制逻辑
                     categoryItem.setValue("文件夹");
                 } else {

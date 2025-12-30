@@ -6,6 +6,7 @@ import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.RuleCondition;
 import com.filemanager.tool.display.NodeUtils;
 import com.filemanager.tool.display.StyleFactory;
+import com.filemanager.tool.file.FileTypeUtil;
 import com.filemanager.type.ConditionType;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
@@ -19,6 +20,7 @@ import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -342,6 +344,22 @@ public class AdvancedRenameStrategy extends IAppStrategy {
                     txtFind.setPromptText("要移除的词 (空格分隔)");
                     txtReplace.setDisable(true);
                     break;
+                case CUT_PREFIX:
+                    txtFind.setPromptText("移除前N个字符(不含文件类型)");
+                    txtReplace.setDisable(true);
+                    break;
+                case CUT_SUFFIX:
+                    txtFind.setPromptText("移除后N个字符(不含文件类型)");
+                    txtReplace.setDisable(true);
+                    break;
+                case KEEP_PREFIX:
+                    txtFind.setPromptText("仅保留前N个字符(不含文件类型)");
+                    txtReplace.setDisable(true);
+                    break;
+                case KEEP_SUFFIX:
+                    txtFind.setPromptText("仅保留后N个字符(不含文件类型)");
+                    txtReplace.setDisable(true);
+                    break;
                 default:
                     txtFind.setDisable(true);
                     txtReplace.setDisable(true);
@@ -376,8 +394,8 @@ public class AdvancedRenameStrategy extends IAppStrategy {
 
     enum ActionType {
         REPLACE_TEXT("文本替换"), REPLACE_REGEX("正则替换"), PREPEND("前缀添加"), APPEND("后缀添加"),
-        TO_LOWER("转小写"), TO_UPPER("转大写"), TRIM("去空格"), ADD_LETTER_PREFIX("首字母前缀"),
-        CLEAN_NOISE("智能清理"), BATCH_REMOVE("批量移除");
+        TO_LOWER("转小写"), TO_UPPER("转大写"), TRIM("去前后空格"), ADD_LETTER_PREFIX("首字母前缀"),
+        CLEAN_NOISE("智能清理"), BATCH_REMOVE("批量移除"), CUT_PREFIX("截取前N位"), CUT_SUFFIX("截取后N位"), KEEP_PREFIX("保留前N位"), KEEP_SUFFIX("保留后N位");
         private final String d;
 
         ActionType(String d) {
@@ -435,7 +453,7 @@ public class AdvancedRenameStrategy extends IAppStrategy {
                         r = v + s;
                         break;
                     case APPEND:
-                        int d = s.lastIndexOf('.');
+                        int d = s.indexOf('.');
                         if (d > 0) r = s.substring(0, d) + v + s.substring(d);
                         else r = s + v;
                         break;
@@ -473,6 +491,59 @@ public class AdvancedRenameStrategy extends IAppStrategy {
                             }
                         }
                         break;
+                    case CUT_PREFIX: {
+                        int len = 0;
+                        if (findStr != null && !findStr.isEmpty() && StringUtils.isNumeric(findStr)) {
+                            len = Integer.parseInt(findStr);
+                        }
+                        String fileName = FileTypeUtil.getFileNameNoneTypeStr(r);
+                        String typeName = FileTypeUtil.getFullTypeStr(r);
+                        if (len > 0 && fileName.length() > len) {
+                            fileName = fileName.substring(len);
+                            r = fileName + typeName;
+                        }
+                        break;
+                    }
+                    case CUT_SUFFIX: {
+                        int len = 0;
+                        if (findStr != null && !findStr.isEmpty() && StringUtils.isNumeric(findStr)) {
+                            len = Integer.parseInt(findStr);
+                        }
+                        String fileName = FileTypeUtil.getFileNameNoneTypeStr(r);
+                        String typeName = FileTypeUtil.getFullTypeStr(r);
+                        if (len > 0 && fileName.length() > len) {
+                            fileName = fileName.substring(0, fileName.length() - len);
+                            r = fileName + typeName;
+                        }
+                        break;
+                    }
+                    case KEEP_PREFIX: {
+                        int len = 0;
+                        if (findStr != null && !findStr.isEmpty() && StringUtils.isNumeric(findStr)) {
+                            len = Integer.parseInt(findStr);
+                        }
+                        String fileName = FileTypeUtil.getFileNameNoneTypeStr(r);
+                        String typeName = FileTypeUtil.getFullTypeStr(r);
+                        if (len > 0 && fileName.length() > len) {
+                            fileName = fileName.substring(0, len);
+                            r = fileName + typeName;
+                        }
+                        break;
+                    }
+                    case KEEP_SUFFIX: {
+                        int len = 0;
+                        if (findStr != null && !findStr.isEmpty() && StringUtils.isNumeric(findStr)) {
+                            len = Integer.parseInt(findStr);
+                        }
+                        String fileName = FileTypeUtil.getFileNameNoneTypeStr(r);
+                        String typeName = FileTypeUtil.getFullTypeStr(r);
+                        if (len > 0 && fileName.length() > len) {
+                            fileName = fileName.substring(fileName.length() - len);
+                            r = fileName + typeName;
+                        }
+                        break;
+                    }
+
                 }
             } catch (Exception e) {
 

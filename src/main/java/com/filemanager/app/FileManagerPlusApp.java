@@ -216,7 +216,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
         HBox header = new HBox(15);
         header.setPadding(new Insets(10, 20, 10, 20));
         header.setAlignment(Pos.CENTER_LEFT);
-        Label logo = new Label("MUSIC MANAGER PLUS - By hrcao97@gmail.com");
+        Label logo = new Label("MUSIC MANAGER PLUS - By chrse1997@163.com");
         logo.setFont(Font.font("Segoe UI", FontWeight.BLACK, 20));
         logo.setTextFill(Color.web(currentTheme.getAccentColor()));
 

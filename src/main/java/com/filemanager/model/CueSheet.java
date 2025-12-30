@@ -49,9 +49,11 @@ public class CueSheet {
         public String title; // 歌曲名，可能有乱码，需要注意
         public String fileName; // 每个歌曲都可能是独立的文件
         public String performer; // 每首歌都可能有独立的演奏者
+        public long lastEndTimeMs; // 文件起始时间，转换后的毫秒数，默认为0
         public long soundStartTimeMs; // 文件起始时间，转换后的毫秒数，默认为0
         public long soundEndTimeMs; // 文件结束时间，转换后的毫秒数，默认为0
         public long duration; // 文件结束时间，转换后的毫秒数，默认为0
+        public String rawLastEndTime; // 上个文件结束时间（原始值）
         public String rawStartTime; // 文件起始时间（原始值）
         public String rawEndTime; // 文件结束时间（原始值）
         public String displayInfo;

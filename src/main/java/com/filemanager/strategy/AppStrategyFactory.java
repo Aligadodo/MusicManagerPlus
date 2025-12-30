@@ -20,6 +20,7 @@ public class AppStrategyFactory {
         strategyPrototypes.add(new FileCleanupStrategy());
         strategyPrototypes.add(new FileUnzipStrategy());
         strategyPrototypes.add(new CueFileRenameStrategy());
+        strategyPrototypes.add(new FileTypeFixStrategy());
         return strategyPrototypes;
     }
 

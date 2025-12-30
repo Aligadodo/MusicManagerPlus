@@ -92,7 +92,7 @@ echo [6/6] 生成启动脚本...
     echo     echo 程序异常退出，错误码: %%errorlevel%%
     echo     pause
     echo ^)
-) > "dist\EchoMusicManager.bat"
+) > "dist\点此启动软件.bat"
 
 echo.
 echo ==========================================
