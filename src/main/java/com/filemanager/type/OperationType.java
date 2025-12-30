@@ -10,7 +10,8 @@ public enum OperationType {
     SCRAPER("刮削", "从互联网获取并更新文件的元数据信息"),
     SPLIT("分割", "将整轨文件（如APE/FLAC）按CUE索引切分为单曲"),
     DELETE("删除", "将文件从磁盘中永久删除"),
-    UNZIP("解压", "对压缩包文件进行解解压操作");
+    UNZIP("解压", "对压缩包文件进行解解压操作"),
+    FIX_TYPE("修复类型", "修复文件的真正类型");
 
     public final String name;
     public final String desc;

@@ -37,6 +37,7 @@ public class AppStrategyFactory {
             if (op == OperationType.SPLIT && s instanceof CueSplitterStrategy) return s;
             if (op == OperationType.DELETE && s instanceof FileCleanupStrategy) return s;
             if (op == OperationType.CUE_RENAME && s instanceof CueFileRenameStrategy) return s;
+            if (op == OperationType.FIX_TYPE && s instanceof FileTypeFixStrategy) return s;
         }
         return null;
     }
