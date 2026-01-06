@@ -36,6 +36,13 @@ public class PathUtils {
         return result.toString();
     }
 
+    public static String fixFolderName(String name) {
+        if (name == null) return null;
+        // 1. 去除首尾空格
+        // 2. 移除 Windows 不允许的末尾点号
+        return name.trim().replaceAll("[\\.\\s]+$", "");
+    }
+
     public static void main(String[] args) {
         String oldPath = "D:\\catch\\data";
         String newRoot = "C:\\mock";

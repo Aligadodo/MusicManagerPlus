@@ -33,7 +33,8 @@ public class AdvancedFileTypeManager {
     static {
         PRESET_RULES.put("除文件夹", Collections.singletonList("[FILE]"));
         PRESET_RULES.put("文件夹", Collections.singletonList("[DIR]"));
-        PRESET_RULES.put("音频", Arrays.asList("mp3", "wav", "flac", "ape", "aac", "ogg", "m4a", "wma", "dts", "dff", "dfd"));
+        PRESET_RULES.put("音频", Arrays.asList("dsf", "dff", "dts", "ape", "wav", "flac",
+                "m4a", "dfd", "tak", "tta", "wv", "mp3", "aac", "ogg", "wma"));
         PRESET_RULES.put("音频其他", Arrays.asList("cue", "lrc"));
         PRESET_RULES.put("图片", Arrays.asList("jpg", "jpeg", "png", "gif", "bmp", "webp", "svg", "ico", "tif", "tiff"));
         PRESET_RULES.put("视频", Arrays.asList("mp4", "mkv", "avi", "mov", "wmv", "flv", "webm", "ts"));

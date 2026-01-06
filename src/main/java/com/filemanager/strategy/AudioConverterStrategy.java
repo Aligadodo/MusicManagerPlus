@@ -1,6 +1,7 @@
 package com.filemanager.strategy;
 
 import com.filemanager.model.ChangeRecord;
+import com.filemanager.tool.file.FileTypeUtil;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
@@ -70,16 +71,13 @@ public class AudioConverterStrategy extends AbstractFfmpegStrategy {
 
     @Override
     public List<ChangeRecord> analyze(ChangeRecord rec, List<ChangeRecord> inputRecords, List<File> rootDirs) {
-        Set<String> sourceExts = new HashSet<>(Arrays.asList("dsf", "dff", "dts", "ape", "wav", "flac",
-                "m4a", "iso", "dfd", "tak", "tta", "wv", "mp3", "aac", "ogg", "wma"));
         File virtualInput = new File(rec.getNewPath());
         String name = virtualInput.getName().toLowerCase();
         int dotIndex = name.lastIndexOf(".");
         if (dotIndex == -1) {
             return Collections.emptyList();
         }
-        String fileExt = name.substring(dotIndex + 1);
-        if (!sourceExts.contains(fileExt)) {
+        if (!FileTypeUtil.isMusicFile(rec.getFileHandle())) {
             return Collections.emptyList();
         }
         Map<String, String> param = getParams(virtualInput.getParentFile(), name);

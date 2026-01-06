@@ -2,6 +2,7 @@ package com.filemanager.strategy;
 
 import com.filemanager.base.IAppStrategy;
 import com.filemanager.model.*;
+import com.filemanager.tool.file.PathUtils;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
@@ -290,7 +291,7 @@ public class FileUnzipStrategy extends IAppStrategy {
         String ext = name.substring(dot + 1);
 
         if (!archiveExts.contains(ext)) return Collections.emptyList();
-
+        String formatPathName = PathUtils.fixFolderName(getBaseName(file.getName()));
         // 1. 计算目标路径
         File baseDestDir;
         if (pMode.startsWith("当前目录")) {
@@ -298,11 +299,11 @@ public class FileUnzipStrategy extends IAppStrategy {
         } else if (pMode.startsWith("指定目录")) {
             baseDestDir = new File(pCustomPath);
         } else {
-            baseDestDir = new File(file.getParentFile(), "Extracted_" + file.getName());
+            baseDestDir = new File(file.getParentFile(), "Extracted_" + formatPathName);
         }
 
         // 预览路径（如果是智能模式，实际路径在执行时才确定，这里显示基础路径）
-        File previewDest = pSmart ? new File(baseDestDir, getBaseName(file.getName())) : baseDestDir;
+        File previewDest = pSmart ? new File(baseDestDir, formatPathName) : baseDestDir;
 
         String displayName = (pEngine.contains("外部") ? "[外部] " : "[内置] ") +
                 (pSmart ? "智能解压 -> " : "解压 -> ") + previewDest.getName();
@@ -317,9 +318,13 @@ public class FileUnzipStrategy extends IAppStrategy {
         params.put("deleteSuccess", String.valueOf(pDeleteSuccess));
         params.put("deleteFail", String.valueOf(pDeleteFail));
 
-        return Lists.newArrayList(new ChangeRecord(rec.getOriginalName(), displayName, file, true,
-                previewDest.getAbsolutePath(), OperationType.UNZIP, params, ExecStatus.PENDING));
-
+        rec.setNewName(displayName);
+        rec.setChanged(true);
+        rec.setStatus(ExecStatus.PENDING);
+        rec.setOpType(OperationType.UNZIP);
+        rec.setNewPath(previewDest.getAbsolutePath());
+        rec.setExtraParams(params);
+        return Collections.emptyList();
     }
 
     @Override

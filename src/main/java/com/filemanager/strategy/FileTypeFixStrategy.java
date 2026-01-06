@@ -27,13 +27,12 @@ public class FileTypeFixStrategy extends IAppStrategy {
     private boolean pForce;
 
     public FileTypeFixStrategy() {
-        isForce = new CheckBox("忽略文件信息（准确率更高但会变慢）");
-        isForce.setSelected(true);
+        isForce = new CheckBox("通过读取文件来识别文件类型（准确率更高但会变慢）");
     }
 
     @Override
     public String getName() {
-        return "文件类型修复工具";
+        return "音频文件类型修复工具";
     }
 
     @Override
@@ -48,7 +47,7 @@ public class FileTypeFixStrategy extends IAppStrategy {
 
     @Override
     public String getDescription() {
-        return "一些网上下载的音频文件类型和实际类型不符，因此通过该工具智能进行修复。" +
+        return "一些网上下载的音频文件类型和实际类型不符，可以通过该工具智能进行修复。" +
                 "底层使用的Apache Tika是目前 Java 生态中最成熟、准确度最高的文件类型检测方案，它基于文件内容的“魔数”（Magic Bytes）来判断类型，完全不依赖文件名。 ";
     }
 
