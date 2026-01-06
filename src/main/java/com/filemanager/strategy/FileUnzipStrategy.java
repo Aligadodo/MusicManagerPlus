@@ -351,7 +351,7 @@ public class FileUnzipStrategy extends IAppStrategy {
         // 1. 确定解压根目录 (Wrapper)
         File extractRoot;
         if (smart) {
-            String wrapperName = getBaseName(archiveFile.getName());
+            String wrapperName = PathUtils.fixFolderName(getBaseName(archiveFile.getName()));
             extractRoot = new File(baseDestDir, wrapperName);
             if (!extractRoot.exists()) extractRoot.mkdirs();
         } else {
