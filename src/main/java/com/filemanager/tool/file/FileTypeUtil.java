@@ -48,7 +48,7 @@ public class FileTypeUtil {
         String ext = "";
         int dot = filename.indexOf('.');
         if (dot > 0) {
-            if (dot < 4 && filename.length() > 9 && getLastTypeStr(filename).length() < 6 && getLastTypeStr(filename).length() > 3) {
+            if (dot < 4  && getLastTypeStr(filename).length() < 6 && getLastTypeStr(filename).length() > 2) {
                 return getLastTypeStr(filename);
             }
             ext = filename.substring(dot);
@@ -65,7 +65,7 @@ public class FileTypeUtil {
     public static String getFileNameNoneTypeStr(String filename) {
         int dot = filename.indexOf('.');
         if (dot > 0) {
-            if (dot < 4 && filename.length() > 9 && getLastTypeStr(filename).length() < 6 && getLastTypeStr(filename).length() > 3) {
+          if (dot < 4  && getLastTypeStr(filename).length() < 6 && getLastTypeStr(filename).length() > 2) {
                 return filename.substring(0, filename.lastIndexOf('.'));
             }
             return filename.substring(0, dot);
