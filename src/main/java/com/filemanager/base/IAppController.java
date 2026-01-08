@@ -36,7 +36,9 @@ public interface IAppController {
 
     Spinner<Integer> getSpRecursionDepth();
 
-    Spinner<Integer> getSpGlobalThreads();
+    Spinner<Integer> getSpPreviewThreads();
+
+    Spinner<Integer> getSpExecutionThreads();
 
     // --- 业务操作 ---
     void addDirectoryAction();

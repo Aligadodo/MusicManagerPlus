@@ -94,6 +94,17 @@ public class FileManagerPlusApp extends Application implements IAppController {
     @Getter
     private long taskStartTimStamp = System.currentTimeMillis();
     private List<IAppStrategy> strategyPrototypes;
+    // 存储根路径线程配置：存储每个根路径对应的最大线程数
+    private final java.util.Map<String, Integer> rootPathThreadConfig = new java.util.concurrent.ConcurrentHashMap<>();
+    
+    // 存储每个根路径对应的线程池（仅在任务执行期间有效）
+    private java.util.Map<String, RetryableThreadPool> executorMap = null;
+    
+    // 存储每个根路径对应的任务估算器（仅在任务执行期间有效）
+    private java.util.Map<String, MultiThreadTaskEstimator> rootPathEstimators = null;
+    
+    // 线程池模式：共享或根路径独立
+    private String threadPoolMode = "根路径独立线程池"; // 默认使用根路径独立线程池
 
     // --- UI Controls ---
     private JFXCheckBox autoRun;
@@ -141,6 +152,13 @@ public class FileManagerPlusApp extends Application implements IAppController {
         this.logView = new LogView(this);
         this.previewView = new PreviewView(this);
         this.composeView = new ComposeView(this);
+        
+        // 监听源目录列表变化，自动更新根路径线程配置UI
+        sourceRoots.addListener((javafx.collections.ListChangeListener.Change<? extends File> change) -> {
+            Platform.runLater(() -> {
+                previewView.updateRootPathThreadConfigUI();
+            });
+        });
 
         // 3. 构建主布局
         rootContainer = new StackPane();
@@ -174,8 +192,8 @@ public class FileManagerPlusApp extends Application implements IAppController {
             System.exit(0);
         });
 
-        // [关键逻辑] 监听线程数变化，实时调整运行中的线程池
-        getSpGlobalThreads().valueProperty().addListener((obs, oldVal, newVal) -> {
+        // [关键逻辑] 监听执行线程数变化，实时调整运行中的线程池
+        getSpExecutionThreads().valueProperty().addListener((obs, oldVal, newVal) -> {
             if (isTaskRunning.get() && executorService != null) {
                 executorService.setCorePoolSize(newVal);
                 executorService.setMaximumPoolSize(newVal);
@@ -323,8 +341,13 @@ public class FileManagerPlusApp extends Application implements IAppController {
 
 
     @Override
-    public Spinner<Integer> getSpGlobalThreads() {
-        return previewView.getSpGlobalThreads();
+    public Spinner<Integer> getSpPreviewThreads() {
+        return previewView.getSpPreviewThreads();
+    }
+
+    @Override
+    public Spinner<Integer> getSpExecutionThreads() {
+        return previewView.getSpExecutionThreads();
     }
 
     public void refreshPipelineSelection() {
@@ -466,21 +489,30 @@ public class FileManagerPlusApp extends Application implements IAppController {
                         .collect(Collectors.toList());
                 int total = todos.size();
                 AtomicInteger curr = new AtomicInteger(0);
-                int threads = getSpGlobalThreads().getValue();
-                executorService = new RetryableThreadPool(threads, threads, 10, TimeUnit.SECONDS);
+                int threads = getSpExecutionThreads().getValue();
+                
+                // 线程池和估算器管理
+                final java.util.Map<String, RetryableThreadPool> localExecutorMap = new java.util.concurrent.ConcurrentHashMap<>();
+                final java.util.Map<String, MultiThreadTaskEstimator> localEstimatorMap = new java.util.concurrent.ConcurrentHashMap<>();
+                executorMap = localExecutorMap;
+                rootPathEstimators = localEstimatorMap;
+                
+                // 创建全局估算器
                 threadTaskEstimator = new MultiThreadTaskEstimator(total, Math.max(Math.min(20, total / 20), 1));
                 threadTaskEstimator.start();
                 log("▶ ▶ ▶ 任务启动，并发线程: " + threads);
+                log("▶ ▶ ▶ 当前线程池模式: " + threadPoolMode);
                 log("▶ ▶ ▶ 注意：部分任务依赖同一个原始文件，会因为加锁导致串行执行，任务会一直轮询！");
                 log("▶ ▶ ▶ 第[" + 1 + "]轮任务扫描，总待执行任务数：" + todos.size());
                 AtomicInteger round = new AtomicInteger(1);
+                
                 while (!todos.isEmpty() && !isCancelled() && todos.stream().anyMatch(rec -> rec.getStatus() == ExecStatus.PENDING)) {
                     AtomicBoolean anyChange = new AtomicBoolean(false);
                     for (ChangeRecord rec : todos) {
                         if (isCancelled()) {
                             break;
                         }
-                        if (threadTaskEstimator.getRunningTaskCount() > getSpGlobalThreads().getValue()) {
+                        if (threadTaskEstimator.getRunningTaskCount() > getSpExecutionThreads().getValue()) {
                             Thread.sleep(1);
                             continue;
                         }
@@ -491,7 +523,43 @@ public class FileManagerPlusApp extends Application implements IAppController {
                         if (FileLockManagerUtil.isLocked(rec.getFileHandle())) {
                             continue;
                         }
-                        executorService.execute(() -> {
+                        
+                        // 获取来源文件的绝对路径
+                        File sourceFile = rec.getFileHandle();
+                        String sourcePath = sourceFile.getAbsolutePath();
+                        if (!sourceFile.isDirectory()) {
+                            sourcePath = sourceFile.getParent();
+                        }
+                        
+                        // 找到该文件所在的根路径
+                        String rootPath = findRootPathForFile(sourcePath);
+                        
+                        // 获取或创建该来源的线程池，使用根路径作为键
+                        RetryableThreadPool sourceExecutor = localExecutorMap.computeIfAbsent(rootPath, k -> {
+                            // 根据根路径获取线程数配置
+                            int rootThreads = getRootPathMaxThreads(k);
+                            log("▶ ▶ ▶ 为根路径创建线程池: " + k + "，线程数: " + rootThreads);
+                            return new RetryableThreadPool(1, rootThreads, 10, TimeUnit.SECONDS);
+                        });
+                        
+                        // 获取或创建该根路径的任务估算器
+                        localEstimatorMap.computeIfAbsent(rootPath, k -> {
+                            // 计算该根路径下的待执行任务数
+                            long rootTaskCount = todos.stream()
+                                    .filter(record -> {
+                                        File file = record.getFileHandle();
+                                        String filePath = file.isDirectory() ? file.getAbsolutePath() : file.getParent();
+                                        return findRootPathForFile(filePath).equals(k);
+                                    })
+                                    .count();
+                            MultiThreadTaskEstimator estimator = new MultiThreadTaskEstimator(rootTaskCount, Math.max(Math.min(20, (int)rootTaskCount / 20), 1));
+                            estimator.start();
+                            log("▶ ▶ ▶ 为根路径创建任务估算器: " + k + "，总任务数: " + rootTaskCount);
+                            return estimator;
+                        });
+                        
+                        final String finalRootPath = rootPath;
+                        sourceExecutor.execute(() -> {
                             synchronized (rec) {
                                 if (rec.getStatus() == ExecStatus.PENDING &&
                                         !FileLockManagerUtil.isLocked(rec.getFileHandle())) {
@@ -502,6 +570,11 @@ public class FileManagerPlusApp extends Application implements IAppController {
                                     rec.setStatus(ExecStatus.RUNNING);
                                     anyChange.set(true);
                                     threadTaskEstimator.oneStarted();
+                                    // 更新根路径估算器
+                                    MultiThreadTaskEstimator rootEstimator = localEstimatorMap.get(finalRootPath);
+                                    if (rootEstimator != null) {
+                                        rootEstimator.oneStarted();
+                                    }
                                 } else {
                                     return;
                                 }
@@ -524,6 +597,11 @@ public class FileManagerPlusApp extends Application implements IAppController {
                                 logError("❌ 失败详细原因:" + ExceptionUtils.getStackTrace(e));
                             } finally {
                                 threadTaskEstimator.oneCompleted();
+                                // 更新根路径估算器
+                                MultiThreadTaskEstimator rootEstimator = localEstimatorMap.get(finalRootPath);
+                                if (rootEstimator != null) {
+                                    rootEstimator.oneCompleted();
+                                }
                                 // 文件解锁
                                 FileLockManagerUtil.unlock(rec.getFileHandle());
                                 int c = curr.incrementAndGet();
@@ -537,15 +615,32 @@ public class FileManagerPlusApp extends Application implements IAppController {
                         });
                     }
                     // 适当Sleep，避免反复刷数据
+                    // 定期更新根路径进度UI
+                    if (System.currentTimeMillis() - lastRefresh.get() > 1000) {
+                        lastRefresh.set(System.currentTimeMillis());
+                        previewView.updateRootPathProgress();
+                    }
                     Thread.sleep(100);
-                }
-                executorService.shutdown();
-                while (!executorService.awaitTermination(500, TimeUnit.MILLISECONDS)) {
-                    if (isCancelled()) {
-                        executorService.shutdownNow();
-                        break;
+            }
+            
+            // 关闭所有线程池
+            for (RetryableThreadPool executor : localExecutorMap.values()) {
+                executor.shutdown();
+            }
+                
+                // 等待所有线程池终止
+                for (RetryableThreadPool executor : localExecutorMap.values()) {
+                    while (!executor.awaitTermination(500, TimeUnit.MILLISECONDS)) {
+                        if (isCancelled()) {
+                            executor.shutdownNow();
+                            break;
+                        }
                     }
                 }
+                
+                // 任务结束后清空线程池映射
+                executorMap = null;
+                
                 return null;
             }
         };
@@ -565,13 +660,96 @@ public class FileManagerPlusApp extends Application implements IAppController {
     private void updateStats() {
         previewView.updateStats();
     }
+    
+    /**
+     * 获取指定根路径的最大线程数
+     * @param rootPath 根路径
+     * @return 线程数，如果没有配置则使用默认的执行线程数
+     */
+    private int getRootPathMaxThreads(String rootPath) {
+        return rootPathThreadConfig.getOrDefault(rootPath, getSpExecutionThreads().getValue());
+    }
+    
+    /**
+     * 设置指定根路径的最大线程数
+     * @param rootPath 根路径
+     * @param maxThreads 最大线程数
+     */
+    public void setRootPathMaxThreads(String rootPath, int maxThreads) {
+        rootPathThreadConfig.put(rootPath, maxThreads);
+        
+        // 如果线程池已经创建，动态调整其大小
+        if (executorMap != null && executorMap.containsKey(rootPath)) {
+            RetryableThreadPool executor = executorMap.get(rootPath);
+            executor.setCorePoolSize(maxThreads);
+            executor.setMaximumPoolSize(maxThreads);
+            log("▶ ▶ ▶ 根路径线程池大小已调整: " + rootPath + "，新线程数: " + maxThreads);
+        }
+    }
+    
+    /**
+     * 获取线程池模式
+     * @return 线程池模式
+     */
+    public String getThreadPoolMode() {
+        return threadPoolMode;
+    }
+    
+    /**
+     * 设置线程池模式
+     * @param threadPoolMode 线程池模式
+     */
+    public void setThreadPoolMode(String threadPoolMode) {
+        this.threadPoolMode = threadPoolMode;
+    }
+    
+    /**
+     * 获取指定根路径的任务估算器
+     * @param rootPath 根路径
+     * @return MultiThreadTaskEstimator实例
+     */
+    public MultiThreadTaskEstimator getRootPathEstimator(String rootPath) {
+        if (rootPathEstimators == null) {
+            return null;
+        }
+        return rootPathEstimators.get(rootPath);
+    }
+    
+    /**
+     * 获取所有根路径线程数配置
+     * @return 根路径线程数配置
+     */
+    public java.util.Map<String, Integer> getRootPathThreadConfig() {
+        return rootPathThreadConfig;
+    }
+    
+    /**
+     * 找到给定文件路径对应的根路径
+     * @param filePath 文件路径
+     * @return 对应的根路径，如果没有找到则返回文件路径本身
+     */
+    private String findRootPathForFile(String filePath) {
+        try {
+            Path fileP = Paths.get(filePath).toAbsolutePath().normalize();
+            for (File root : sourceRoots) {
+                Path rootP = root.toPath().toAbsolutePath().normalize();
+                if (fileP.startsWith(rootP)) {
+                    return rootP.toString();
+                }
+            }
+        } catch (Exception e) {
+            logError("查找根路径失败: " + e.getMessage());
+        }
+        // 如果没有找到对应的根路径，返回文件路径本身
+        return filePath;
+    }
 
     private List<File> scanFilesRobust(File root, int maxDepth, Consumer<String> msg) {
         AtomicInteger countScan = new AtomicInteger(0);
         AtomicInteger countIgnore = new AtomicInteger(0);
         List<File> list = new ArrayList<>();
         if (!root.exists()) return list;
-        int threads = getSpGlobalThreads().getValue();
+        int threads = getSpPreviewThreads().getValue();
         try (Stream<Path> s = ParallelStreamWalker.walk(root.toPath(), maxDepth, threads)) {
             list = s.filter(p -> {
                 try {

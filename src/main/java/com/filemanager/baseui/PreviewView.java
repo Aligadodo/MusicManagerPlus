@@ -1,6 +1,7 @@
 package com.filemanager.baseui;
 
 
+import com.filemanager.app.FileManagerPlusApp;
 import com.filemanager.base.IAppController;
 import com.filemanager.base.IAutoReloadAble;
 import com.filemanager.model.ChangeRecord;
@@ -44,8 +45,15 @@ public class PreviewView implements IAutoReloadAble {
     private JFXTextField txtSearchFilter;
     private JFXComboBox<String> cbStatusFilter;
     private JFXCheckBox chkHideUnchanged;
-    private Spinner<Integer> spGlobalThreads;
+    private Spinner<Integer> spPreviewThreads;
+    private Spinner<Integer> spExecutionThreads;
     private JFXComboBox<Integer> numberDisplay;
+    private JFXComboBox<String> cbThreadPoolMode; // 线程池模式选择：共享或根路径独立
+    // 根路径线程数配置UI
+    private VBox rootPathThreadConfigBox;
+    private final java.util.Map<String, Spinner<Integer>> rootPathSpinners = new java.util.HashMap<>();
+    private final java.util.Map<String, ProgressBar> rootPathProgressBars = new java.util.HashMap<>();
+    private final java.util.Map<String, Label> rootPathProgressLabels = new java.util.HashMap<>();
 
     public PreviewView(IAppController app) {
         this.app = app;
@@ -73,12 +81,146 @@ public class PreviewView implements IAutoReloadAble {
 
         previewTable = new TreeTableView<>();
 
-        spGlobalThreads = new Spinner<>(1, 32, 10);
-        spGlobalThreads.setEditable(true);
+        spPreviewThreads = new Spinner<>(1, 32, 10);
+        spPreviewThreads.setEditable(true);
+        spPreviewThreads.setTooltip(new Tooltip("预览线程数：用于文件扫描和分析"));
+        
+        spExecutionThreads = new Spinner<>(1, 32, 10);
+        spExecutionThreads.setEditable(true);
+        spExecutionThreads.setTooltip(new Tooltip("执行线程数：用于管道任务执行"));
 
         // 设置预览数量 默认200
         numberDisplay = new JFXComboBox<>(FXCollections.observableArrayList(50, 100, 200, 500, 1000, 2000, 5000));
         numberDisplay.getSelectionModel().selectFirst();
+        
+        // 线程池模式选择
+        cbThreadPoolMode = new JFXComboBox<>(FXCollections.observableArrayList("共享线程池", "根路径独立线程池"));
+        cbThreadPoolMode.getSelectionModel().select(1); // 默认使用根路径独立线程池
+        cbThreadPoolMode.setTooltip(new Tooltip("选择线程池模式：共享或根路径独立"));
+        cbThreadPoolMode.valueProperty().addListener((o, oldVal, newVal) -> {
+            // 线程池模式切换时，更新根路径配置区域的可见性
+            boolean isRootPathMode = "根路径独立线程池".equals(newVal);
+            rootPathThreadConfigBox.setDisable(!isRootPathMode);
+            if (!isRootPathMode) {
+                // 如果切换到共享模式，清空所有根路径线程配置
+                ((FileManagerPlusApp) app).getRootPathThreadConfig().clear();
+            }
+            updateRootPathThreadConfigUI();
+        });
+        
+        // 初始化根路径线程数配置UI
+        rootPathThreadConfigBox = new VBox(10);
+        rootPathThreadConfigBox.setPadding(new Insets(5));
+        rootPathThreadConfigBox.setAlignment(Pos.CENTER_LEFT);
+    }
+    
+    /**
+     * 更新根路径线程数配置UI
+     */
+    public void updateRootPathThreadConfigUI() {
+        rootPathThreadConfigBox.getChildren().clear();
+        rootPathSpinners.clear();
+        rootPathProgressBars.clear();
+        rootPathProgressLabels.clear();
+        
+        boolean isRootPathMode = "根路径独立线程池".equals(cbThreadPoolMode.getValue());
+        
+        if (!isRootPathMode) {
+            Label modeLabel = new Label("当前使用共享线程池模式，所有根路径共用执行线程数设置");
+            modeLabel.setStyle("-fx-text-fill: #666; -fx-font-style: italic;");
+            rootPathThreadConfigBox.getChildren().add(modeLabel);
+            return;
+        }
+        
+        if (app.getSourceRoots().isEmpty()) {
+            Label emptyLabel = new Label("无来源根路径");
+            emptyLabel.setStyle("-fx-text-fill: #999;");
+            rootPathThreadConfigBox.getChildren().add(emptyLabel);
+            return;
+        }
+        
+        // 为每个根路径创建折叠面板
+        for (File root : app.getSourceRoots()) {
+            String rootPath = root.getAbsolutePath();
+            
+            // 从应用中获取已保存的根路径线程配置
+            int savedThreads = ((FileManagerPlusApp) app).getRootPathThreadConfig().getOrDefault(rootPath, app.getSpExecutionThreads().getValue());
+            Spinner<Integer> spinner = new Spinner<>(1, 32, savedThreads);
+            spinner.setEditable(true);
+            spinner.setPrefWidth(80);
+            spinner.setTooltip(new Tooltip("根路径: " + rootPath));
+            
+            // 监听spinner值变化，更新配置
+            spinner.valueProperty().addListener((obs, oldVal, newVal) -> {
+                ((FileManagerPlusApp) app).setRootPathMaxThreads(rootPath, newVal);
+            });
+            
+            rootPathSpinners.put(rootPath, spinner);
+            
+            // 计算该根路径下的文件数量
+            long fileCount = app.getFullChangeList().stream()
+                    .filter(record -> record.getOriginalName().startsWith(rootPath))
+                    .count();
+            
+            // 计算该根路径下待执行的文件数量
+            long pendingCount = app.getFullChangeList().stream()
+                    .filter(record -> record.getOriginalName().startsWith(rootPath) && record.isChanged() && record.getStatus() == ExecStatus.PENDING)
+                    .count();
+            
+            // 创建折叠面板内容
+            VBox content = new VBox(10);
+            content.setPadding(new Insets(10));
+            content.setStyle("-fx-background-color: #f5f5f5; -fx-border-color: #e0e0e0; -fx-border-radius: 5; -fx-background-radius: 5;");
+            
+            // 添加路径信息
+            Label pathLabel = new Label("完整路径: " + rootPath);
+            pathLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #666;");
+            
+            // 添加文件数量信息
+            Label fileCountLabel = new Label("总文件数: " + fileCount + "，待执行: " + pendingCount);
+            fileCountLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #666;");
+            
+            // 添加线程数配置
+            HBox threadConfigBox = new HBox(10);
+            threadConfigBox.setAlignment(Pos.CENTER_LEFT);
+            threadConfigBox.getChildren().addAll(
+                    new Label("执行线程数: "),
+                    spinner
+            );
+            
+            // 添加执行进度条
+            ProgressBar progressBar = new ProgressBar(0);
+            progressBar.setPrefWidth(200);
+            progressBar.setStyle("-fx-accent: #27ae60;");
+            
+            Label progressLabel = new Label("执行进度: 0% (0/" + pendingCount + ")");
+            progressLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #666;");
+            
+            HBox progressBox = new HBox(10);
+            progressBox.setAlignment(Pos.CENTER_LEFT);
+            progressBox.getChildren().addAll(progressBar, progressLabel);
+            
+            // 添加到内容面板
+            content.getChildren().addAll(
+                    pathLabel,
+                    fileCountLabel,
+                    threadConfigBox,
+                    progressBox
+            );
+            
+            // 创建折叠面板
+            TitledPane titledPane = new TitledPane();
+            titledPane.setText(root.getName() + " (" + fileCount + "个文件)");
+            titledPane.setContent(content);
+            titledPane.setExpanded(false);
+            titledPane.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
+            
+            rootPathThreadConfigBox.getChildren().add(titledPane);
+            
+            // 保存进度条和进度标签的引用，以便后续更新
+            rootPathProgressBars.put(rootPath, progressBar);
+            rootPathProgressLabels.put(rootPath, progressLabel);
+        }
     }
 
     private void buildUI() {
@@ -86,8 +228,18 @@ public class PreviewView implements IAutoReloadAble {
         viewNode.setPadding(new Insets(10));
         // 运行参数
         HBox configBox = StyleFactory.createHBoxPanel(
-                StyleFactory.createChapter(" \uD83D\uDD36[运行参数]  "),
-                StyleFactory.createParamPairLine("线程数量:", spGlobalThreads));
+                StyleFactory.createChapter(" ��[运行参数]  "),
+                StyleFactory.createParamPairLine("预览线程数:", spPreviewThreads),
+                StyleFactory.createSeparatorWithChange(false),
+                StyleFactory.createParamPairLine("执行线程数:", spExecutionThreads),
+                StyleFactory.createSeparatorWithChange(false),
+                StyleFactory.createParamPairLine("线程池模式:", cbThreadPoolMode));
+        
+        // 根路径线程数配置
+        updateRootPathThreadConfigUI();
+        HBox rootPathConfigBox = StyleFactory.createHBoxPanel(
+                StyleFactory.createChapter(" ��[根路径线程配置]  "),
+                rootPathThreadConfigBox);
 
         // 进度显示+信息展示
         HBox progressBox = StyleFactory.createHBoxPanel(mainProgressBar);
@@ -117,7 +269,7 @@ public class PreviewView implements IAutoReloadAble {
         VBox.setVgrow(previewTable, Priority.ALWAYS);
         setupPreviewColumns();
         setupPreviewRows();
-        viewNode.getChildren().addAll(progressBox, configBox, dash, filterBox, previewTable);
+        viewNode.getChildren().addAll(progressBox, configBox, rootPathConfigBox, dash, filterBox, previewTable);
     }
 
     public void updateRunningProgress(String msg) {
@@ -133,6 +285,28 @@ public class PreviewView implements IAutoReloadAble {
 
     public void updateStatsDisplay(long t, long c, long s, long f, String tm) {
         Platform.runLater(() -> statsLabel.setText(String.format("文件总数:%d 需要变更:%d 操作成功:%d 操作失败:%d 过程耗时:%s", t, c, s, f, tm)));
+    }
+    
+    /**
+     * 更新所有根路径的执行进度
+     */
+    public void updateRootPathProgress() {
+        Platform.runLater(() -> {
+            FileManagerPlusApp app = (FileManagerPlusApp) getApp();
+            // 遍历所有根路径，更新进度
+            for (String rootPath : rootPathProgressBars.keySet()) {
+                MultiThreadTaskEstimator estimator = app.getRootPathEstimator(rootPath);
+                ProgressBar progressBar = rootPathProgressBars.get(rootPath);
+                Label progressLabel = rootPathProgressLabels.get(rootPath);
+                
+                if (estimator != null) {
+                    double progress = estimator.getProgress();
+                    String displayInfo = estimator.getDisplayInfo();
+                    progressBar.setProgress(progress);
+                    progressLabel.setText(displayInfo);
+                }
+            }
+        });
     }
 
     private void setupPreviewColumns() {
@@ -289,15 +463,58 @@ public class PreviewView implements IAutoReloadAble {
         return tabPreview;
     }
 
+    public Spinner<Integer> getSpPreviewThreads() {
+        return spPreviewThreads;
+    }
+
+    public Spinner<Integer> getSpExecutionThreads() {
+        return spExecutionThreads;
+    }
+
     @Override
     public void saveConfig(Properties props) {
-        props.setProperty("global_threads", String.valueOf(spGlobalThreads.getValue()));
+        props.setProperty("preview_threads", String.valueOf(spPreviewThreads.getValue()));
+        props.setProperty("execution_threads", String.valueOf(spExecutionThreads.getValue()));
+        props.setProperty("thread_pool_mode", cbThreadPoolMode.getValue());
+        
+        // 保存根路径线程配置
+        for (java.util.Map.Entry<String, Spinner<Integer>> entry : rootPathSpinners.entrySet()) {
+            String key = "root_thread_" + entry.getKey().replaceAll("\\", "_");
+            props.setProperty(key, String.valueOf(entry.getValue().getValue()));
+        }
     }
 
     @Override
     public void loadConfig(Properties props) {
-        if (props.containsKey("global_threads")) {
-            spGlobalThreads.getValueFactory().setValue(Integer.parseInt(props.getProperty("global_threads")));
+        if (props.containsKey("preview_threads")) {
+            spPreviewThreads.getValueFactory().setValue(Integer.parseInt(props.getProperty("preview_threads")));
         }
+        if (props.containsKey("execution_threads")) {
+            spExecutionThreads.getValueFactory().setValue(Integer.parseInt(props.getProperty("execution_threads")));
+        }
+        // 加载线程池模式
+        if (props.containsKey("thread_pool_mode")) {
+            cbThreadPoolMode.setValue(props.getProperty("thread_pool_mode"));
+        }
+        // 兼容旧配置
+        if (props.containsKey("global_threads")) {
+            int globalThreads = Integer.parseInt(props.getProperty("global_threads"));
+            spPreviewThreads.getValueFactory().setValue(globalThreads);
+            spExecutionThreads.getValueFactory().setValue(globalThreads);
+        }
+        
+        // 加载根路径线程配置
+        FileManagerPlusApp fileManagerApp = (FileManagerPlusApp) app;
+        for (File root : app.getSourceRoots()) {
+            String rootPath = root.getAbsolutePath();
+            String key = "root_thread_" + rootPath.replaceAll("\\", "_");
+            if (props.containsKey(key)) {
+                int threads = Integer.parseInt(props.getProperty(key));
+                fileManagerApp.setRootPathMaxThreads(rootPath, threads);
+            }
+        }
+        
+        // 更新UI显示
+        updateRootPathThreadConfigUI();
     }
 }

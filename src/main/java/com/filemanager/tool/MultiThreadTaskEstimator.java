@@ -157,6 +157,23 @@ public class MultiThreadTaskEstimator {
         return String.format("%.2f", (double) completedTasks.get() / totalTasks * 100);
     }
 
+    /**
+     * 获取进度值 (0.0 到 1.0)
+     */
+    public double getProgress() {
+        if (totalTasks == 0) {
+            return 0.0;
+        }
+        return Math.min(1.0, (double) completedTasks.get() / totalTasks);
+    }
+    
+    /**
+     * 获取总任务数
+     */
+    public long getTotalTasks() {
+        return totalTasks;
+    }
+    
     public String getDisplayInfo() {
         return " 总共：" + totalTasks
                 + " 已执行:" + completedTasks.get()
