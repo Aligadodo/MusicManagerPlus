@@ -12,6 +12,7 @@ import com.filemanager.model.ThemeConfig;
 import com.filemanager.strategy.AppStrategyFactory;
 import com.filemanager.tool.MultiThreadTaskEstimator;
 import com.filemanager.tool.RetryableThreadPool;
+import com.filemanager.tool.ThreadPoolManager;
 import com.filemanager.tool.display.FXDialogUtils;
 import com.filemanager.tool.display.ProgressBarDisplay;
 import com.filemanager.tool.display.StyleFactory;
@@ -103,8 +104,11 @@ public class FileManagerPlusApp extends Application implements IAppController {
     // 存储每个根路径对应的任务估算器（仅在任务执行期间有效）
     private java.util.Map<String, MultiThreadTaskEstimator> rootPathEstimators = null;
     
+    // 线程池管理器
+    private ThreadPoolManager threadPoolManager;
+    
     // 线程池模式：共享或根路径独立
-    private String threadPoolMode = "根路径独立线程池"; // 默认使用根路径独立线程池
+    private String threadPoolMode = ThreadPoolManager.MODE_GLOBAL; // 默认使用全局统一配置
 
     // --- UI Controls ---
     private JFXCheckBox autoRun;
@@ -145,6 +149,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
         StyleFactory.initStyleFactory(currentTheme);
         this.configManager = new ConfigFileManager(this);
         this.strategyPrototypes = AppStrategyFactory.getAppStrategies();
+        this.threadPoolManager = new ThreadPoolManager();
 
         // 2. 视图模块初始化 (替代原 initGlobalControls)
         // 实例化各个 View，它们会在内部创建自己的 UI 控件
@@ -194,11 +199,18 @@ public class FileManagerPlusApp extends Application implements IAppController {
 
         // [关键逻辑] 监听执行线程数变化，实时调整运行中的线程池
         getSpExecutionThreads().valueProperty().addListener((obs, oldVal, newVal) -> {
+            threadPoolManager.setGlobalExecutionThreads(newVal);
             if (isTaskRunning.get() && executorService != null) {
                 executorService.setCorePoolSize(newVal);
                 executorService.setMaximumPoolSize(newVal);
-                log("动态调整线程池大小: " + oldVal + " -> " + newVal);
+                log("动态调整全局执行线程池大小: " + oldVal + " -> " + newVal);
             }
+        });
+    
+        // [关键逻辑] 监听预览线程数变化，实时调整运行中的线程池
+        getSpPreviewThreads().valueProperty().addListener((obs, oldVal, newVal) -> {
+            threadPoolManager.setGlobalPreviewThreads(newVal);
+            log("动态调整全局预览线程池大小: " + oldVal + " -> " + newVal);
         });
 
         primaryStage.show();
@@ -404,7 +416,47 @@ public class FileManagerPlusApp extends Application implements IAppController {
                 if (isCancelled()) return null;
                 setRunningUI("▶ ▶ ▶ 扫描完成，共 " + initialFiles.size() + " 个文件。");
 
-                List<ChangeRecord> currentRecords = initialFiles.stream()
+                // 应用预览数量限制
+                PreviewView previewView = (PreviewView) getPreviewView();
+                List<File> limitedFiles = initialFiles;
+                
+                // 检查全局预览数量限制
+                if (!previewView.isUnlimitedPreview()) {
+                    int limit = previewView.getGlobalPreviewLimit();
+                    if (initialFiles.size() > limit) {
+                        limitedFiles = initialFiles.stream().limit(limit).collect(Collectors.toList());
+                        log("▶ ▶ ▶ 已应用全局预览数量限制，仅处理 " + limit + " 个文件");
+                    }
+                }
+                
+                // 检查根路径预览数量限制
+                List<File> finalLimitedFiles = new ArrayList<>();
+                java.util.Map<String, Integer> processedCountByRoot = new java.util.concurrent.ConcurrentHashMap<>();
+                
+                for (File file : limitedFiles) {
+                    String filePath = file.isDirectory() ? file.getAbsolutePath() : file.getParent();
+                    String rootPath = findRootPathForFile(filePath);
+                    
+                    // 检查根路径预览数量限制
+                    if (!previewView.isRootPathUnlimitedPreview(rootPath)) {
+                        int rootLimit = previewView.getRootPathPreviewLimit(rootPath);
+                        int processed = processedCountByRoot.computeIfAbsent(rootPath, k -> 0);
+                        
+                        if (processed >= rootLimit) {
+                            continue; // 达到根路径预览数量限制，跳过该文件
+                        }
+                        
+                        processedCountByRoot.put(rootPath, processed + 1);
+                    }
+                    
+                    finalLimitedFiles.add(file);
+                }
+                
+                if (finalLimitedFiles.size() < limitedFiles.size()) {
+                    log("▶ ▶ ▶ 已应用根路径预览数量限制，共处理 " + finalLimitedFiles.size() + " 个文件");
+                }
+                
+                List<ChangeRecord> currentRecords = finalLimitedFiles.stream()
                         .map(f -> new ChangeRecord(f.getName(), f.getName(), f, false, f.getAbsolutePath(), OperationType.NONE))
                         .collect(Collectors.toList());
 
@@ -492,10 +544,15 @@ public class FileManagerPlusApp extends Application implements IAppController {
                 int threads = getSpExecutionThreads().getValue();
                 
                 // 线程池和估算器管理
-                final java.util.Map<String, RetryableThreadPool> localExecutorMap = new java.util.concurrent.ConcurrentHashMap<>();
                 final java.util.Map<String, MultiThreadTaskEstimator> localEstimatorMap = new java.util.concurrent.ConcurrentHashMap<>();
-                executorMap = localExecutorMap;
                 rootPathEstimators = localEstimatorMap;
+                
+                // 设置线程池模式
+                threadPoolManager.setThreadPoolMode(threadPoolMode);
+                
+                // 任务数量限制计数器
+                final java.util.Map<String, AtomicInteger> executedCountByRootPath = new java.util.concurrent.ConcurrentHashMap<>();
+                final AtomicInteger globalExecutedCount = new AtomicInteger(0);
                 
                 // 创建全局估算器
                 threadTaskEstimator = new MultiThreadTaskEstimator(total, Math.max(Math.min(20, total / 20), 1));
@@ -534,13 +591,32 @@ public class FileManagerPlusApp extends Application implements IAppController {
                         // 找到该文件所在的根路径
                         String rootPath = findRootPathForFile(sourcePath);
                         
-                        // 获取或创建该来源的线程池，使用根路径作为键
-                        RetryableThreadPool sourceExecutor = localExecutorMap.computeIfAbsent(rootPath, k -> {
-                            // 根据根路径获取线程数配置
-                            int rootThreads = getRootPathMaxThreads(k);
-                            log("▶ ▶ ▶ 为根路径创建线程池: " + k + "，线程数: " + rootThreads);
-                            return new RetryableThreadPool(1, rootThreads, 10, TimeUnit.SECONDS);
-                        });
+                        // 检查任务数量限制
+                        PreviewView previewView = (PreviewView) getPreviewView();
+                        boolean exceedLimit = false;
+                        
+                        // 检查全局执行数量限制
+                        if (!previewView.isUnlimitedExecution()) {
+                            if (globalExecutedCount.get() >= previewView.getGlobalExecutionLimit()) {
+                                exceedLimit = true;
+                            }
+                        }
+                        
+                        // 检查根路径执行数量限制
+                        if (!exceedLimit && !previewView.isRootPathUnlimitedExecution(rootPath)) {
+                            AtomicInteger rootExecutedCount = executedCountByRootPath.computeIfAbsent(rootPath, k -> new AtomicInteger(0));
+                            if (rootExecutedCount.get() >= previewView.getRootPathExecutionLimit(rootPath)) {
+                                exceedLimit = true;
+                            }
+                        }
+                        
+                        if (exceedLimit) {
+                            // 达到执行数量限制，跳过该任务
+                            continue;
+                        }
+                        
+                        // 获取执行线程池
+                        RetryableThreadPool sourceExecutor = threadPoolManager.getExecutionThreadPool(rootPath);
                         
                         // 获取或创建该根路径的任务估算器
                         localEstimatorMap.computeIfAbsent(rootPath, k -> {
@@ -575,6 +651,9 @@ public class FileManagerPlusApp extends Application implements IAppController {
                                     if (rootEstimator != null) {
                                         rootEstimator.oneStarted();
                                     }
+                                    // 增加任务数量限制计数器
+                                    globalExecutedCount.incrementAndGet();
+                                    executedCountByRootPath.computeIfAbsent(finalRootPath, k -> new AtomicInteger(0)).incrementAndGet();
                                 } else {
                                     return;
                                 }
@@ -624,22 +703,10 @@ public class FileManagerPlusApp extends Application implements IAppController {
             }
             
             // 关闭所有线程池
-            for (RetryableThreadPool executor : localExecutorMap.values()) {
-                executor.shutdown();
-            }
+            threadPoolManager.shutdownAll();
                 
                 // 等待所有线程池终止
-                for (RetryableThreadPool executor : localExecutorMap.values()) {
-                    while (!executor.awaitTermination(500, TimeUnit.MILLISECONDS)) {
-                        if (isCancelled()) {
-                            executor.shutdownNow();
-                            break;
-                        }
-                    }
-                }
-                
-                // 任务结束后清空线程池映射
-                executorMap = null;
+                threadPoolManager.awaitTermination();
                 
                 return null;
             }
@@ -656,6 +723,10 @@ public class FileManagerPlusApp extends Application implements IAppController {
     public void refreshPreviewTableFilter() {
         previewView.refresh();
     }
+    
+    public PreviewView getPreviewView() {
+        return previewView;
+    }
 
     private void updateStats() {
         previewView.updateStats();
@@ -671,20 +742,23 @@ public class FileManagerPlusApp extends Application implements IAppController {
     }
     
     /**
-     * 设置指定根路径的最大线程数
+     * 设置指定根路径的预览线程数
      * @param rootPath 根路径
      * @param maxThreads 最大线程数
      */
-    public void setRootPathMaxThreads(String rootPath, int maxThreads) {
-        rootPathThreadConfig.put(rootPath, maxThreads);
-        
-        // 如果线程池已经创建，动态调整其大小
-        if (executorMap != null && executorMap.containsKey(rootPath)) {
-            RetryableThreadPool executor = executorMap.get(rootPath);
-            executor.setCorePoolSize(maxThreads);
-            executor.setMaximumPoolSize(maxThreads);
-            log("▶ ▶ ▶ 根路径线程池大小已调整: " + rootPath + "，新线程数: " + maxThreads);
-        }
+    public void setRootPathPreviewThreads(String rootPath, int maxThreads) {
+        threadPoolManager.setRootPathPreviewThreads(rootPath, maxThreads);
+        log("▶ ▶ ▶ 根路径预览线程数已调整: " + rootPath + "，新线程数: " + maxThreads);
+    }
+    
+    /**
+     * 设置指定根路径的执行线程数
+     * @param rootPath 根路径
+     * @param maxThreads 最大线程数
+     */
+    public void setRootPathExecutionThreads(String rootPath, int maxThreads) {
+        threadPoolManager.setRootPathExecutionThreads(rootPath, maxThreads);
+        log("▶ ▶ ▶ 根路径执行线程数已调整: " + rootPath + "，新线程数: " + maxThreads);
     }
     
     /**
@@ -698,9 +772,17 @@ public class FileManagerPlusApp extends Application implements IAppController {
     /**
      * 设置线程池模式
      * @param threadPoolMode 线程池模式
+     * @return 是否成功设置模式
      */
-    public void setThreadPoolMode(String threadPoolMode) {
+    public boolean setThreadPoolMode(String threadPoolMode) {
+        if (isTaskRunning.get()) {
+            logError("❌ 任务正在运行，不允许切换线程池模式！");
+            FXDialogUtils.showAlert("错误", "任务正在运行，不允许切换线程池模式！", Alert.AlertType.ERROR);
+            return false;
+        }
         this.threadPoolMode = threadPoolMode;
+        log("▶ ▶ ▶ 线程池模式已切换: " + threadPoolMode);
+        return true;
     }
     
     /**
