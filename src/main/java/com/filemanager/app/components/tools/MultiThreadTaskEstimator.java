@@ -1,4 +1,4 @@
-package com.filemanager.tool;
+package com.filemanager.app.components.tools;
 
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.TimeUnit;

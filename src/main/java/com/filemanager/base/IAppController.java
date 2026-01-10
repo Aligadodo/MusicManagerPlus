@@ -1,9 +1,11 @@
 package com.filemanager.base;
 
-import com.filemanager.baseui.PreviewView;
+import com.filemanager.app.baseui.PreviewView;
+import com.filemanager.app.components.tools.MultiThreadTaskEstimator;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.ThemeConfig;
 import com.filemanager.type.TaskStatus;
+import com.jfoenix.controls.JFXCheckBox;
 import com.jfoenix.controls.JFXComboBox;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
@@ -13,6 +15,8 @@ import javafx.stage.Stage;
 
 import java.io.File;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 /**
@@ -44,6 +48,8 @@ public interface IAppController {
 
     Spinner<Integer> getSpExecutionThreads();
 
+    JFXCheckBox getAutoRun();
+
     // --- 业务操作 ---
     void addDirectoryAction();
 
@@ -70,6 +76,8 @@ public interface IAppController {
     void openParentDirectory(File f);
 
     // --- 界面交互 ---
+    AtomicBoolean getTaskRunningStatus();
+
     List<IAutoReloadAble> getAutoReloadNodes();
 
     void showAppearanceDialog();
@@ -93,13 +101,11 @@ public interface IAppController {
     
     void setFullChangeList(List<ChangeRecord> changeList);
     
-    void enableExecuteButton(boolean enabled);
+    void changeExecuteButton(boolean enabled);
     
-    void disableGoButton(boolean disabled);
+    void changePreviewButton(boolean enabled);
     
-    void disableExecuteButton(boolean disabled);
-    
-    void enableStopButton(boolean enabled);
+    void changeStopButton(boolean enabled);
     
     void updateProgressStatus(TaskStatus status);
     
@@ -111,5 +117,11 @@ public interface IAppController {
     
     void refreshComposeView();
     
-    List<File> scanFilesRobust(File root, int maxDepth, Consumer<String> msg);
+    List<File> scanFilesRobust(File root, int minDepth, int maxDepth, Consumer<String> msg);
+
+    boolean setThreadPoolMode(String newVal);
+
+    Map<String, Integer> getRootPathThreadConfig();
+
+    MultiThreadTaskEstimator getRootPathEstimator(String rootPath);
 }

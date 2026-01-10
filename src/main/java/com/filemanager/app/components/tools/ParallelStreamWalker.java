@@ -1,14 +1,13 @@
-package com.filemanager.tool.file;
+package com.filemanager.app.components.tools;
 
 import lombok.var;
-import org.apache.commons.lang3.exception.ExceptionUtils;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Spliterator;
 import java.util.Spliterators;
@@ -16,9 +15,13 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RecursiveAction;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+/**
+ * @author 28667
+ */
 public class ParallelStreamWalker {
 
     // 结束标记（毒丸）：使用一个特殊的、不可能存在的Path对象作为标记
@@ -33,7 +36,7 @@ public class ParallelStreamWalker {
      * @param parallelism 并发线程数
      * @return Stream<File> (流的顺序是随机的)
      */
-    public static Stream<Path> walk(Path root, int maxDepth, int parallelism) {
+    public static Stream<Path> walk(Path root, int minDepth, int maxDepth, int parallelism, AtomicBoolean isTaskRunning) {
         // 1. 创建阻塞队列作为缓冲区，只存储Path类型
         BlockingQueue<Path> queue = new LinkedBlockingQueue<>(1024);
 
@@ -44,7 +47,7 @@ public class ParallelStreamWalker {
         pool.submit(() -> {
             try {
                 // 执行递归扫描
-                pool.invoke(new FileWalkAction(root, maxDepth, queue));
+                pool.invoke(new FileWalkAction(root, 0, minDepth, maxDepth, queue, isTaskRunning));
             } finally {
                 // 扫描结束（无论成功失败），放入结束标记
                 offerMarker(queue);
@@ -110,58 +113,43 @@ public class ParallelStreamWalker {
         }
     }
 
-    // --- 测试代码 ---
-    public static void main(String[] args) {
-        Path root = Paths.get("C:\\Windows\\System32"); // 替换为你的测试目录
-
-        System.out.println("开始流式扫描...");
-        long start = System.currentTimeMillis();
-
-        // try-with-resources 确保 Stream 被正确关闭，从而触发线程池关闭
-        try (Stream<Path> stream = ParallelStreamWalker.walk(root, 5, 8)) {
-            stream
-                    .map(Path::toFile)
-                    // 过滤出文件，并筛选出以 .dll 结尾的文件名
-                    .filter(File::isFile)
-                    .filter(f -> f.getName().endsWith(".dll"))
-                    .limit(100) // 限制数量，这会提前终止后台扫描！
-                    .forEach(f -> System.out.println(f.getName()));
-        }
-
-        long end = System.currentTimeMillis();
-        System.out.println("扫描和处理耗时: " + (end - start) + "ms");
-    }
-
     // 递归任务类
     private static class FileWalkAction extends RecursiveAction {
         private final Path dir;
+        private final int currentDepth;
+        private final int minDepth;
         private final int depthRemaining;
         private final BlockingQueue<Path> queue;
+        private final AtomicBoolean isTaskRunning;
 
-        public FileWalkAction(Path dir, int depthRemaining, BlockingQueue<Path> queue) {
+        public FileWalkAction(Path dir, int currentDepth, int minDepth, int depthRemaining, BlockingQueue<Path> queue, AtomicBoolean isTaskRunning) {
             this.dir = dir;
+            this.currentDepth = currentDepth;
+            this.minDepth = minDepth;
             this.depthRemaining = depthRemaining;
             this.queue = queue;
+            this.isTaskRunning = isTaskRunning;
         }
 
         @Override
         protected void compute() {
             try {
-                // 尝试将当前目录放入队列
-                queue.put(dir);
+                if (this.currentDepth >= minDepth) {
+                    // 尝试将当前目录放入队列
+                    queue.put(dir);
+                }
             } catch (InterruptedException e) {
                 return; // 如果被打断（stream关闭），直接退出
             }
 
-            if (depthRemaining <= 0) return;
+            if (depthRemaining <= 0 || !isTaskRunning.get()) return;
 
-            var subTasks = new java.util.ArrayList<FileWalkAction>();
-
+            var subTasks = new ArrayList<FileWalkAction>();
             try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir)) {
                 for (Path entry : stream) {
                     if (Files.isDirectory(entry)) {
-                        subTasks.add(new FileWalkAction(entry, depthRemaining - 1, queue));
-                    } else {
+                        subTasks.add(new FileWalkAction(entry, currentDepth + 1, minDepth, depthRemaining - 1, queue, isTaskRunning));
+                    } else if (this.currentDepth >= minDepth) {
                         // 是文件，直接放入队列
                         try {
                             queue.put(entry);

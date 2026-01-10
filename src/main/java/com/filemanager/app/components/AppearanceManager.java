@@ -1,11 +1,10 @@
-package com.filemanager.app;
+package com.filemanager.app.components;
 
 import com.filemanager.base.IAppController;
 import com.filemanager.model.ThemeConfig;
-import com.filemanager.tool.display.FXDialogUtils;
 import com.filemanager.tool.display.StyleFactory;
 import com.jfoenix.controls.JFXButton;
-import javafx.scene.Node;
+import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -13,20 +12,21 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
+import javafx.stage.FileChooser;
 
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
 public class AppearanceManager {
-    private final IAppController appController;
+    private final IAppController app;
     private final ThemeConfig currentTheme;
     private final ImageView backgroundImageView;
     private final Region backgroundOverlay;
     
-    public AppearanceManager(IAppController appController, ThemeConfig currentTheme,
+    public AppearanceManager(IAppController app, ThemeConfig currentTheme,
                            ImageView backgroundImageView, Region backgroundOverlay) {
-        this.appController = appController;
+        this.app = app;
         this.currentTheme = currentTheme;
         this.backgroundImageView = backgroundImageView;
         this.backgroundOverlay = backgroundOverlay;
@@ -85,9 +85,9 @@ public class AppearanceManager {
             try {
                 backgroundImageView.setImage(new Image(Files.newInputStream(Paths.get(currentTheme.getBgImagePath()))));
             } catch (Exception e) {
-                appController.logError("背景图加载失败：" + e.getMessage());
+                app.logError("背景图加载失败：" + e.getMessage());
             }
         }
-        appController.refreshComposeView();
+        app.refreshComposeView();
     }
 }

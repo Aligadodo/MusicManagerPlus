@@ -1,10 +1,8 @@
-package com.filemanager.tool.file;
+package com.filemanager.app.components.tools;
 
 import com.filemanager.tool.display.StyleFactory;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.CheckBoxTreeCell;
@@ -13,8 +11,6 @@ import javafx.scene.layout.VBox;
 
 import java.io.File;
 import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * 高级文件类型管理器

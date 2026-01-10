@@ -1,4 +1,4 @@
-package com.filemanager.baseui;
+package com.filemanager.app.baseui;
 
 import com.filemanager.base.IAppController;
 import com.filemanager.base.IAppStrategy;

@@ -1,18 +1,17 @@
-package com.filemanager.tool.file;
+package com.filemanager.app.components.tools;
 
 import com.filemanager.app.FileManagerPlusApp;
 import com.filemanager.model.RuleCondition;
 import com.filemanager.model.RuleConditionGroup;
-import com.filemanager.model.ThemeConfig;
 import com.filemanager.base.IAppStrategy;
 import com.filemanager.type.ConditionType;
 import javafx.collections.ObservableList;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.util.Properties;
-import java.util.stream.Collectors;
 
 /**
  * 配置管理器
@@ -54,7 +53,7 @@ public class ConfigFileManager {
 
             app.log("配置已加载: " + file.getAbsolutePath());
         } catch (Exception e) {
-            app.logError("配置加载失败: " + e.getMessage());
+            app.logError("配置加载失败: " + ExceptionUtils.getStackTrace(e));
         }
     }
 

@@ -1,9 +1,9 @@
-package com.filemanager.baseui;
+package com.filemanager.app.baseui;
 
 import com.filemanager.base.IAppController;
 import com.filemanager.base.IAutoReloadAble;
 import com.filemanager.tool.display.StyleFactory;
-import com.filemanager.tool.file.AdvancedFileTypeManager;
+import com.filemanager.app.components.tools.AdvancedFileTypeManager;
 import com.jfoenix.controls.JFXComboBox;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;

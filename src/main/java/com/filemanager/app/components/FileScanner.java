@@ -1,7 +1,8 @@
-package com.filemanager.app;
+package com.filemanager.app.components;
 
+import com.filemanager.app.components.tools.ParallelStreamWalker;
 import com.filemanager.base.IAppController;
-import com.filemanager.baseui.GlobalSettingsView;
+import com.filemanager.app.baseui.GlobalSettingsView;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.io.File;
@@ -12,31 +13,29 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.Collections;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class FileScanner {
     private final GlobalSettingsView globalSettingsView;
-    private final IAppController appController;
+    private final IAppController app;
     private final AtomicBoolean isTaskRunning;
     
-    public FileScanner(IAppController appController, GlobalSettingsView globalSettingsView, AtomicBoolean isTaskRunning) {
-        this.appController = appController;
+    public FileScanner(IAppController app, GlobalSettingsView globalSettingsView) {
+        this.app = app;
         this.globalSettingsView = globalSettingsView;
-        this.isTaskRunning = isTaskRunning;
+        this.isTaskRunning = app.getTaskRunningStatus();
     }
     
-    public List<File> scanFilesRobust(File root, int maxDepth, Consumer<String> msg) {
+    public List<File> scanFilesRobust(File root, int minDepth, int maxDepth, Consumer<String> msg) {
         AtomicInteger countScan = new AtomicInteger(0);
         AtomicInteger countIgnore = new AtomicInteger(0);
         List<File> list = new ArrayList<>();
         if (!root.exists()) return list;
-        int threads = appController.getSpPreviewThreads().getValue();
-        try (Stream<Path> s = StreamFileWalker.walk(root.toPath(), maxDepth)) {
+        int threads = app.getSpPreviewThreads().getValue();
+        try (Stream<Path> s = ParallelStreamWalker.walk(root.toPath(), minDepth, maxDepth, threads, isTaskRunning)) {
             list = s.filter(p -> {
                 try {
-                    if (!isTaskRunning.get()) {
-                        throw new RuntimeException("已中断");
-                    }
                     if (globalSettingsView.isFileIncluded(p.toFile())) {
                         return true;
                     }
@@ -50,27 +49,27 @@ public class FileScanner {
                                 + "，已忽略" + countIgnore.get() + "个文件"
                                 + "，已收纳" + (countScan.get() - countIgnore.get()) + "个文件";
                         msg.accept(msgStr);
-                        appController.log(msgStr);
+                        app.log(msgStr);
                     }
                 }
             }).filter(path -> {
                 try {
                     path.toFile();
                 } catch (Exception e) {
-                    appController.logError(path + " 文件扫描异常: " + e.getMessage());
+                    app.logError(path + " 文件扫描异常: " + e.getMessage());
                     return false;
                 }
                 return true;
             }).map(Path::toFile).collect(Collectors.toList());
         } catch (Exception e) {
-            appController.logError("扫描文件失败：" + ExceptionUtils.getStackTrace(e));
+            app.logError("扫描文件失败：" + ExceptionUtils.getStackTrace(e));
         }
         String msgStr = "目录下(总共)：" + root.getAbsolutePath()
                 + "，已扫描" + countScan.get() + "个文件"
                 + "，已忽略" + countIgnore.get() + "个文件"
                 + "，已收纳" + (countScan.get() - countIgnore.get()) + "个文件";
         msg.accept(msgStr);
-        appController.log(msgStr);
+        app.log(msgStr);
         // 反转列表，便于由下而上处理文件，保证处理成功
         Collections.reverse(list);
         return list;

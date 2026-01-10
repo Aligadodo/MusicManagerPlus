@@ -12,7 +12,7 @@
 //import com.filemanager.type.OperationType;
 //import com.filemanager.util.file.FileLockManagerUtil;
 //import com.filemanager.util.file.FileSizeFormatUtil;
-//import com.filemanager.tool.file.ParallelStreamWalker;
+//import com.filemanager.app.components.tools.ParallelStreamWalker;
 //import com.jfoenix.controls.JFXButton;
 //import com.jfoenix.controls.JFXCheckBox;
 //import com.jfoenix.controls.JFXComboBox;

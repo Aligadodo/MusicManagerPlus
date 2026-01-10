@@ -1,29 +1,27 @@
 package com.filemanager.app;
 
-import com.filemanager.base.IAppStrategy;
+import com.filemanager.app.baseui.ComposeView;
+import com.filemanager.app.baseui.GlobalSettingsView;
+import com.filemanager.app.baseui.LogView;
+import com.filemanager.app.baseui.PreviewView;
+import com.filemanager.app.components.AppearanceManager;
+import com.filemanager.app.components.FileScanner;
+import com.filemanager.app.components.PipelineManager;
+import com.filemanager.app.components.tools.ConfigFileManager;
+import com.filemanager.app.components.tools.MultiThreadTaskEstimator;
 import com.filemanager.base.IAppController;
+import com.filemanager.base.IAppStrategy;
 import com.filemanager.base.IAutoReloadAble;
-import com.filemanager.baseui.ComposeView;
-import com.filemanager.baseui.GlobalSettingsView;
-import com.filemanager.baseui.LogView;
-import com.filemanager.baseui.PreviewView;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.ThemeConfig;
 import com.filemanager.strategy.AppStrategyFactory;
-import com.filemanager.tool.MultiThreadTaskEstimator;
 import com.filemanager.tool.RetryableThreadPool;
 import com.filemanager.tool.ThreadPoolManager;
-import com.filemanager.tool.display.FXDialogUtils;
 import com.filemanager.tool.display.ProgressBarDisplay;
 import com.filemanager.tool.display.StyleFactory;
-import com.filemanager.tool.file.ConfigFileManager;
-import com.filemanager.tool.file.ParallelStreamWalker;
 import com.filemanager.tool.log.LogInfo;
 import com.filemanager.tool.log.LogType;
-import com.filemanager.type.ExecStatus;
-import com.filemanager.type.OperationType;
 import com.filemanager.type.TaskStatus;
-import com.filemanager.util.file.FileLockManagerUtil;
 import com.google.common.collect.Lists;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXCheckBox;
@@ -39,18 +37,12 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
-import javafx.scene.control.TextField;
 import javafx.scene.control.*;
-import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import com.filemanager.app.PipelineManager;
-import com.filemanager.app.FileScanner;
-import com.filemanager.app.AppearanceManager;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
@@ -60,26 +52,18 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import lombok.Getter;
-import lombok.Setter;
-import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.awt.*;
 import java.io.File;
-import java.io.FileInputStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.TimeUnit;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * FileManager Plus v21.0 (Modularized)
@@ -93,27 +77,33 @@ public class FileManagerPlusApp extends Application implements IAppController {
     private final ObservableList<IAppStrategy> pipelineStrategies = FXCollections.observableArrayList();
     private final File lastConfigFile = new File(System.getProperty("user.home"), ".fmplus_config.properties");
     private final ThemeConfig currentTheme = new ThemeConfig();
-    private final AtomicBoolean isTaskRunning = new AtomicBoolean(false);
-    private final AtomicLong lastRefresh = new AtomicLong(System.currentTimeMillis());
     @Getter
-    private long taskStartTimStamp = System.currentTimeMillis();
-    private List<IAppStrategy> strategyPrototypes;
+    private final AtomicBoolean taskRunningStatus = new AtomicBoolean(false);
+    /**
+     * -- GETTER --
+     * 获取所有根路径线程数配置
+     *
+     * @return 根路径线程数配置
+     */
     // 存储根路径线程配置：存储每个根路径对应的最大线程数
-    private final java.util.Map<String, Integer> rootPathThreadConfig = new java.util.concurrent.ConcurrentHashMap<>();
-    
+    @Getter
+    private final Map<String, Integer> rootPathThreadConfig = new ConcurrentHashMap<>();
+
     // 存储每个根路径对应的线程池（仅在任务执行期间有效）
-    private java.util.Map<String, RetryableThreadPool> executorMap = null;
-    
+    private final Map<String, RetryableThreadPool> executorMap = new HashMap<>();
+
     // 存储每个根路径对应的任务估算器（仅在任务执行期间有效）
-    private java.util.Map<String, MultiThreadTaskEstimator> rootPathEstimators = null;
-    
+    private final Map<String, MultiThreadTaskEstimator> rootPathEstimators = new HashMap<>();
+
+    @Getter
+    private final long taskStartTimStamp = System.currentTimeMillis();
+
+    private List<IAppStrategy> strategyPrototypes;
     // 线程池管理器
     private ThreadPoolManager threadPoolManager;
-    
-    // 线程池模式：共享或根路径独立
-    private String threadPoolMode = ThreadPoolManager.MODE_GLOBAL; // 默认使用全局统一配置
 
     // --- UI Controls ---
+    @Getter
     private JFXCheckBox autoRun;
     private JFXButton btnGo, btnExecute, btnStop;
     @Getter
@@ -145,7 +135,14 @@ public class FileManagerPlusApp extends Application implements IAppController {
 
     @Override
     public void start(Stage primaryStage) {
+        // 3. 构建主布局
         this.primaryStage = primaryStage;
+        rootContainer = new StackPane();
+        backgroundImageView = new ImageView();
+        backgroundImageView.setPreserveRatio(false);
+        backgroundImageView.fitWidthProperty().bind(rootContainer.widthProperty());
+        backgroundImageView.fitHeightProperty().bind(rootContainer.heightProperty());
+        backgroundOverlay = new Region();
         primaryStage.setTitle("Echo Music Manager - Plus Edition");
 
         // 1. 基础服务初始化
@@ -160,27 +157,16 @@ public class FileManagerPlusApp extends Application implements IAppController {
         this.logView = new LogView(this);
         this.previewView = new PreviewView(this);
         this.composeView = new ComposeView(this);
-        
+
         // 3. 业务模块初始化
         this.pipelineManager = new PipelineManager(this, threadPoolManager);
-        this.fileScanner = new FileScanner(this, globalSettingsView, isTaskRunning);
+        this.fileScanner = new FileScanner(this, globalSettingsView);
         this.appearanceManager = new AppearanceManager(this, currentTheme, backgroundImageView, backgroundOverlay);
-        
+
         // 监听源目录列表变化，自动更新根路径线程配置UI
         sourceRoots.addListener((javafx.collections.ListChangeListener.Change<? extends File> change) -> {
-            Platform.runLater(() -> {
-                previewView.updateRootPathThreadConfigUI();
-            });
+            Platform.runLater(() -> previewView.updateRootPathThreadConfigUI());
         });
-
-        // 3. 构建主布局
-        rootContainer = new StackPane();
-        backgroundImageView = new ImageView();
-        backgroundImageView.setPreserveRatio(false);
-        backgroundImageView.fitWidthProperty().bind(rootContainer.widthProperty());
-        backgroundImageView.fitHeightProperty().bind(rootContainer.heightProperty());
-        backgroundOverlay = new Region();
-
         BorderPane mainContent = createMainLayout();
         rootContainer.getChildren().addAll(backgroundImageView, backgroundOverlay, mainContent);
 
@@ -208,13 +194,9 @@ public class FileManagerPlusApp extends Application implements IAppController {
         // [关键逻辑] 监听执行线程数变化，实时调整运行中的线程池
         getSpExecutionThreads().valueProperty().addListener((obs, oldVal, newVal) -> {
             threadPoolManager.setGlobalExecutionThreads(newVal);
-            if (isTaskRunning.get() && executorService != null) {
-                executorService.setCorePoolSize(newVal);
-                executorService.setMaximumPoolSize(newVal);
-                log("动态调整全局执行线程池大小: " + oldVal + " -> " + newVal);
-            }
+            log("动态调整全局运行线程池大小: " + oldVal + " -> " + newVal);
         });
-    
+
         // [关键逻辑] 监听预览线程数变化，实时调整运行中的线程池
         getSpPreviewThreads().valueProperty().addListener((obs, oldVal, newVal) -> {
             threadPoolManager.setGlobalPreviewThreads(newVal);
@@ -386,135 +368,38 @@ public class FileManagerPlusApp extends Application implements IAppController {
         pipelineManager.runPipelineExecution();
     }
 
-    /**
-     * 统计待执行任务数量
-     */
-    private long countPendingTasks() {
-        return fullChangeList.stream()
-                .filter(record -> record.isChanged()
-                        && record.getStatus() == ExecStatus.PENDING)
-                .count();
-    }
-    
-    /**
-     * 确认执行任务
-     */
-    private boolean confirmExecution(long count) {
-        return FXDialogUtils.showConfirm("确认", "执行 " + count + " 个变更?");
-    }
-    
-    /**
-     * 准备执行UI
-     */
-    private void prepareExecutionUI() {
-        btnGo.setDisable(true);
-        btnExecute.setDisable(true);
-    }
-    
     // --- Shared Methods & Utils ---
 
     @Override
     public void refreshPreviewTableFilter() {
         previewView.refresh();
     }
-    
-    public PreviewView getPreviewView() {
-        return previewView;
-    }
 
-    private void updateStats() {
+    @Override
+    public void updateStats() {
         previewView.updateStats();
     }
-    
-    /**
-     * 获取指定根路径的最大线程数
-     * @param rootPath 根路径
-     * @return 线程数，如果没有配置则使用默认的执行线程数
-     */
-    private int getRootPathMaxThreads(String rootPath) {
-        return rootPathThreadConfig.getOrDefault(rootPath, getSpExecutionThreads().getValue());
-    }
-    
+
     /**
      * 设置指定根路径的预览线程数
-     * @param rootPath 根路径
+     *
+     * @param rootPath   根路径
      * @param maxThreads 最大线程数
      */
     public void setRootPathPreviewThreads(String rootPath, int maxThreads) {
         threadPoolManager.setRootPathPreviewThreads(rootPath, maxThreads);
         log("▶ ▶ ▶ 根路径预览线程数已调整: " + rootPath + "，新线程数: " + maxThreads);
     }
-    
+
     /**
      * 设置指定根路径的执行线程数
-     * @param rootPath 根路径
+     *
+     * @param rootPath   根路径
      * @param maxThreads 最大线程数
      */
     public void setRootPathExecutionThreads(String rootPath, int maxThreads) {
         threadPoolManager.setRootPathExecutionThreads(rootPath, maxThreads);
         log("▶ ▶ ▶ 根路径执行线程数已调整: " + rootPath + "，新线程数: " + maxThreads);
-    }
-    
-    /**
-     * 获取线程池模式
-     * @return 线程池模式
-     */
-    public String getThreadPoolMode() {
-        return threadPoolMode;
-    }
-    
-    /**
-     * 设置线程池模式
-     * @param threadPoolMode 线程池模式
-     * @return 是否成功设置模式
-     */
-    public boolean setThreadPoolMode(String threadPoolMode) {
-        if (isTaskRunning.get()) {
-            logError("❌ 任务正在运行，不允许切换线程池模式！");
-            FXDialogUtils.showAlert("错误", "任务正在运行，不允许切换线程池模式！", Alert.AlertType.ERROR);
-            return false;
-        }
-        this.threadPoolMode = threadPoolMode;
-        log("▶ ▶ ▶ 线程池模式已切换: " + threadPoolMode);
-        return true;
-    }
-    
-    /**
-     * 获取指定根路径的任务估算器
-     * @param rootPath 根路径
-     * @return MultiThreadTaskEstimator实例
-     */
-    public MultiThreadTaskEstimator getRootPathEstimator(String rootPath) {
-        if (rootPathEstimators == null) {
-            return null;
-        }
-        return rootPathEstimators.get(rootPath);
-    }
-    
-    /**
-     * 获取所有根路径线程数配置
-     * @return 根路径线程数配置
-     */
-    public java.util.Map<String, Integer> getRootPathThreadConfig() {
-        return rootPathThreadConfig;
-    }
-    
-    // --- Task UI State ---
-
-    private void setStartTaskUI(String msg, Task task) {
-        btnStop.setDisable(false);
-        isTaskRunning.set(true);
-        lastRefresh.set(System.currentTimeMillis());
-        // 设置进度条为绿色
-        ProgressBarDisplay.updateProgressStatus(previewView.getMainProgressBar(), TaskStatus.RUNNING);
-        previewView.getMainProgressBar().progressProperty().unbind();
-        previewView.getMainProgressBar().progressProperty().set(0);
-        if (task != null) {
-            previewView.getMainProgressBar().progressProperty().bind(task.progressProperty());
-        }
-        previewView.updateRunningProgress(msg);
-        refreshPreviewTableFilter();
-        updateStats();
     }
 
     @Override
@@ -522,7 +407,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
         previewView.updateRunningProgress(msg);
         updateStats();
     }
-    
+
     @Override
     public String findRootPathForFile(String filePath) {
         try {
@@ -539,42 +424,37 @@ public class FileManagerPlusApp extends Application implements IAppController {
         // 如果没有找到对应的根路径，返回文件路径本身
         return filePath;
     }
-    
+
     @Override
     public PreviewView getPreviewView() {
         return previewView;
     }
-    
+
     @Override
     public void setFullChangeList(List<ChangeRecord> changeList) {
         this.fullChangeList = changeList;
     }
-    
+
     @Override
-    public void enableExecuteButton(boolean enabled) {
+    public void changeExecuteButton(boolean enabled) {
         btnExecute.setDisable(!enabled);
     }
-    
+
     @Override
-    public void disableGoButton(boolean disabled) {
-        btnGo.setDisable(disabled);
+    public void changePreviewButton(boolean enabled) {
+        btnGo.setDisable(!enabled);
     }
-    
+
     @Override
-    public void disableExecuteButton(boolean disabled) {
-        btnExecute.setDisable(disabled);
-    }
-    
-    @Override
-    public void enableStopButton(boolean enabled) {
+    public void changeStopButton(boolean enabled) {
         btnStop.setDisable(!enabled);
     }
-    
+
     @Override
     public void updateProgressStatus(TaskStatus status) {
         ProgressBarDisplay.updateProgressStatus(previewView.getMainProgressBar(), status);
     }
-    
+
     @Override
     public void bindProgress(Task<?> task) {
         previewView.getMainProgressBar().progressProperty().unbind();
@@ -582,73 +462,32 @@ public class FileManagerPlusApp extends Application implements IAppController {
             previewView.getMainProgressBar().progressProperty().bind(task.progressProperty());
         }
     }
-    
+
     @Override
     public void updateRunningProgress(String msg) {
         previewView.updateRunningProgress(msg);
     }
-    
+
     @Override
     public void refreshComposeView() {
         if (composeView != null) {
-            composeView.refreshView();
+            composeView.refreshList();
         }
     }
-    
+
     @Override
-    public List<File> scanFilesRobust(File root, int maxDepth, Consumer<String> msg) {
-        return fileScanner.scanFilesRobust(root, maxDepth, msg);
+    public List<File> scanFilesRobust(File root, int minDepth, int maxDepth, Consumer<String> msg) {
+        return fileScanner.scanFilesRobust(root, minDepth, maxDepth, msg);
     }
 
-    /**
-     * 状态,建议颜色,Hex 代码,视觉感受
-     * 执行中 (Running),天蓝色,#BDE0FE,清爽、宁静，表示正在进行
-     * 成功 (Success),薄荷绿,#B9FBC0,健康、完成，给予正面反馈
-     * 失败 (Failure),珊瑚粉,#FFADAD,柔和的警告，不刺眼但明确
-     * 取消 (Canceled),奶油黄/淡灰,#FDFFB6,中性色，表示任务已停止
-     *
-     * @param msg
-     * @param status
-     */
-    private void setFinishTaskUI(String msg, TaskStatus status) {
-        btnGo.setDisable(false);
-        btnExecute.setDisable(false);
-        btnStop.setDisable(true);
-        isTaskRunning.set(false);
-        this.setRunningState(false);
-        previewView.updateRunningProgress(msg);
-        if (TaskStatus.CANCELED == status) {
-            previewView.getMainProgressBar().progressProperty().unbind();
-            previewView.getMainProgressBar().progressProperty().set(0);
-        }
-        if (TaskStatus.SUCCESS == status) {
-            previewView.getMainProgressBar().progressProperty().unbind();
-            previewView.getMainProgressBar().progressProperty().set(1.0);
-        }
-        // 设置进度条为颜色
-        ProgressBarDisplay.updateProgressStatus(previewView.getMainProgressBar(), status);
-        refreshPreviewTableFilter();
-        updateStats();
-        currentTask = null;
+    @Override
+    public boolean setThreadPoolMode(String newVal) {
+        return false;
     }
 
-    // UI Update Methods
-    public void setRunningState(boolean running) {
-        btnExecute.setDisable(running);
-        btnStop.setDisable(!running);
-    }
-
-    private void handleTaskLifecycle(Task<?> t) {
-        currentTask = t;
-        previewView.bindProgress(t);
-        t.setOnFailed(e -> {
-            btnExecute.setDisable(false);
-            setFinishTaskUI("❌ ❌ ❌ 出错 ❌ ❌ ❌", TaskStatus.FAILURE);
-            logError("❌ 失败: " + ExceptionUtils.getStackTrace(e.getSource().getException()));
-        });
-        t.setOnCancelled(e -> {
-            setFinishTaskUI("🛑 🛑 🛑 已取消 🛑 🛑 🛑", TaskStatus.CANCELED);
-        });
+    @Override
+    public MultiThreadTaskEstimator getRootPathEstimator(String rootPath) {
+        return pipelineManager.getRootPathEstimator(rootPath);
     }
 
     @Override
@@ -756,5 +595,4 @@ public class FileManagerPlusApp extends Application implements IAppController {
     public void applyAppearance() {
         appearanceManager.applyAppearance();
     }
-
 }
