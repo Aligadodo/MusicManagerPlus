@@ -1,15 +1,19 @@
 package com.filemanager.base;
 
+import com.filemanager.baseui.PreviewView;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.ThemeConfig;
+import com.filemanager.type.TaskStatus;
 import com.jfoenix.controls.JFXComboBox;
 import javafx.collections.ObservableList;
+import javafx.concurrent.Task;
 import javafx.scene.Node;
 import javafx.scene.control.Spinner;
 import javafx.stage.Stage;
 
 import java.io.File;
 import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * 应用程序控制器接口
@@ -79,4 +83,33 @@ public interface IAppController {
     void logError(String s);
 
     Node getGlobalSettingsView();
+    
+    // --- 新增方法 ---
+    void setRunningUI(String msg);
+    
+    String findRootPathForFile(String filePath);
+    
+    PreviewView getPreviewView();
+    
+    void setFullChangeList(List<ChangeRecord> changeList);
+    
+    void enableExecuteButton(boolean enabled);
+    
+    void disableGoButton(boolean disabled);
+    
+    void disableExecuteButton(boolean disabled);
+    
+    void enableStopButton(boolean enabled);
+    
+    void updateProgressStatus(TaskStatus status);
+    
+    void bindProgress(Task<?> task);
+    
+    void updateRunningProgress(String msg);
+    
+    void updateStats();
+    
+    void refreshComposeView();
+    
+    List<File> scanFilesRobust(File root, int maxDepth, Consumer<String> msg);
 }

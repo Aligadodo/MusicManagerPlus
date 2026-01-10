@@ -48,6 +48,9 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import com.filemanager.app.PipelineManager;
+import com.filemanager.app.FileScanner;
+import com.filemanager.app.AppearanceManager;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
@@ -125,10 +128,10 @@ public class FileManagerPlusApp extends Application implements IAppController {
     private PreviewView previewView;
     private LogView logView;
     private List<IAutoReloadAble> autoReloadNodes;
-    // --- Task & Threading ---
-    private RetryableThreadPool executorService;
-    private Task<?> currentTask;
-    private MultiThreadTaskEstimator threadTaskEstimator;
+    // --- Business Modules ---
+    private PipelineManager pipelineManager;
+    private FileScanner fileScanner;
+    private AppearanceManager appearanceManager;
     // --- UI Containers ---
     private StackPane rootContainer;
     private ImageView backgroundImageView;
@@ -157,6 +160,11 @@ public class FileManagerPlusApp extends Application implements IAppController {
         this.logView = new LogView(this);
         this.previewView = new PreviewView(this);
         this.composeView = new ComposeView(this);
+        
+        // 3. 业务模块初始化
+        this.pipelineManager = new PipelineManager(this, threadPoolManager);
+        this.fileScanner = new FileScanner(this, globalSettingsView, isTaskRunning);
+        this.appearanceManager = new AppearanceManager(this, currentTheme, backgroundImageView, backgroundOverlay);
         
         // 监听源目录列表变化，自动更新根路径线程配置UI
         sourceRoots.addListener((javafx.collections.ListChangeListener.Change<? extends File> change) -> {
@@ -370,349 +378,12 @@ public class FileManagerPlusApp extends Application implements IAppController {
 
     @Override
     public void runPipelineAnalysis() {
-        if (sourceRoots.isEmpty()) {
-            FXDialogUtils.showToast(getPrimaryStage(), "请先添加源目录！", FXDialogUtils.ToastType.INFO);
-            return;
-        }
-        if (pipelineStrategies.isEmpty()) {
-            FXDialogUtils.showToast(getPrimaryStage(), "请先添加步骤！",
-                    FXDialogUtils.ToastType.INFO);
-            return;
-        }
-        if (isTaskRunning.get()) {
-            FXDialogUtils.showToast(getPrimaryStage(), "任务执行中，请先停止前面的任务再执行预览！",
-                    FXDialogUtils.ToastType.INFO);
-            return;
-        }
-        if (autoRun.isSelected()) {
-            if (!FXDialogUtils.showConfirm("确认执行", "预览完毕会立即执行，确认要执行?")) {
-                autoRun.setSelected(false);
-            }
-        }
-
-        mainTabPane.getSelectionModel().select(previewView.getTab());
-        switchView(previewView.getViewNode());
-        fullChangeList.clear();
-        taskStartTimStamp = System.currentTimeMillis();
-        setStartTaskUI("▶ ▶ ▶ 正在扫描...", null);
-        previewView.getPreviewTable().setRoot(null);
-
-        // 捕获所有策略参数
-        for (IAppStrategy s : pipelineStrategies) s.captureParams();
-
-        // 从 GlobalSettingsView 获取参数
-        int maxDepth = "当前目录".equals(getCbRecursionMode().getValue()) ? 1 :
-                ("全部文件".equals(getCbRecursionMode().getValue()) ? Integer.MAX_VALUE : getSpRecursionDepth().getValue());
-
-        Task<List<ChangeRecord>> task = new Task<List<ChangeRecord>>() {
-            @Override
-            protected List<ChangeRecord> call() throws Exception {
-                updateMessage("▶ ▶ ▶ 扫描源文件...");
-                List<File> initialFiles = new ArrayList<>();
-                for (File r : sourceRoots) {
-                    if (isCancelled()) break;
-                    initialFiles.addAll(scanFilesRobust(r, maxDepth, msg -> setRunningUI("▶ ▶ ▶ " + msg)));
-                }
-                if (isCancelled()) return null;
-                setRunningUI("▶ ▶ ▶ 扫描完成，共 " + initialFiles.size() + " 个文件。");
-
-                // 应用预览数量限制
-                PreviewView previewView = (PreviewView) getPreviewView();
-                List<File> limitedFiles = initialFiles;
-                
-                // 检查全局预览数量限制
-                if (!previewView.isUnlimitedPreview()) {
-                    int limit = previewView.getGlobalPreviewLimit();
-                    if (initialFiles.size() > limit) {
-                        limitedFiles = initialFiles.stream().limit(limit).collect(Collectors.toList());
-                        log("▶ ▶ ▶ 已应用全局预览数量限制，仅处理 " + limit + " 个文件");
-                    }
-                }
-                
-                // 检查根路径预览数量限制
-                List<File> finalLimitedFiles = new ArrayList<>();
-                java.util.Map<String, Integer> processedCountByRoot = new java.util.concurrent.ConcurrentHashMap<>();
-                
-                for (File file : limitedFiles) {
-                    String filePath = file.isDirectory() ? file.getAbsolutePath() : file.getParent();
-                    String rootPath = findRootPathForFile(filePath);
-                    
-                    // 检查根路径预览数量限制
-                    if (!previewView.isRootPathUnlimitedPreview(rootPath)) {
-                        int rootLimit = previewView.getRootPathPreviewLimit(rootPath);
-                        int processed = processedCountByRoot.computeIfAbsent(rootPath, k -> 0);
-                        
-                        if (processed >= rootLimit) {
-                            continue; // 达到根路径预览数量限制，跳过该文件
-                        }
-                        
-                        processedCountByRoot.put(rootPath, processed + 1);
-                    }
-                    
-                    finalLimitedFiles.add(file);
-                }
-                
-                if (finalLimitedFiles.size() < limitedFiles.size()) {
-                    log("▶ ▶ ▶ 已应用根路径预览数量限制，共处理 " + finalLimitedFiles.size() + " 个文件");
-                }
-                
-                List<ChangeRecord> currentRecords = finalLimitedFiles.stream()
-                        .map(f -> new ChangeRecord(f.getName(), f.getName(), f, false, f.getAbsolutePath(), OperationType.NONE))
-                        .collect(Collectors.toList());
-
-                int total = currentRecords.size();
-                AtomicInteger processed = new AtomicInteger(0);
-                threadTaskEstimator = new MultiThreadTaskEstimator(total, Math.max(Math.min(50, total / 20), 1));
-                threadTaskEstimator.start();
-                ConcurrentLinkedDeque<ChangeRecord> newRecords = new ConcurrentLinkedDeque<>();
-                currentRecords.parallelStream().forEach(rec -> {
-                    try {
-                        int curr = processed.incrementAndGet();
-                        Platform.runLater(() -> updateProgress(curr, total));
-                        if (isCancelled()) {
-                            return;
-                        }
-                        for (int i = 0; i < pipelineStrategies.size(); i++) {
-                            IAppStrategy strategy = pipelineStrategies.get(i);
-                            List<ChangeRecord> newRecordAfter = strategy.analyzeWithPreCheck(rec, currentRecords, sourceRoots);
-                            newRecords.addAll(newRecordAfter);
-                        }
-                    } catch (Exception e) {
-                        rec.setStatus(ExecStatus.ANALYZE_FAILED);
-                        rec.setFailReason(ExceptionUtils.getStackTrace(e));
-                        logError("❌ 分析失败: " + rec.getFileHandle().getAbsolutePath() + ",原因" + e.getMessage());
-                        logError("❌ 失败详细原因:" + ExceptionUtils.getStackTrace(e));
-                    } finally {
-                        threadTaskEstimator.oneCompleted();
-                        if (System.currentTimeMillis() - lastRefresh.get() > 1000) {
-                            setRunningUI("▶ ▶ ▶ 预览任务进度: " + threadTaskEstimator.getDisplayInfo());
-                            lastRefresh.set(System.currentTimeMillis());
-                        }
-                    }
-                });
-                if (!newRecords.isEmpty()) {
-                    List<ChangeRecord> union = new ArrayList<>(newRecords);
-                    union.addAll(currentRecords);
-                    return union;
-                }
-                return currentRecords;
-            }
-        };
-        setStartTaskUI("▶ ▶ ▶ 预览中...", task);
-
-        task.setOnSucceeded(e -> {
-            fullChangeList = task.getValue();
-            setFinishTaskUI("➡ ➡ ➡ 预览完成 ⬅ ⬅ ⬅", TaskStatus.SUCCESS);
-            boolean hasChanges = fullChangeList.stream().anyMatch(ChangeRecord::isChanged);
-            btnExecute.setDisable(!hasChanges);
-            if (autoRun.isSelected()) {
-                FXDialogUtils.showToast(getPrimaryStage(), "预览完毕自动开始执行！",
-                        FXDialogUtils.ToastType.INFO);
-                runPipelineExecution();
-            }
-        });
-        handleTaskLifecycle(task);
-        new Thread(task).start();
+        pipelineManager.runPipelineAnalysis();
     }
 
     @Override
     public void runPipelineExecution() {
-        long count = countPendingTasks();
-        if (count == 0) {
-            return;
-        }
-        if (!autoRun.isSelected()) {
-            if (!confirmExecution(count)) {
-                return;
-            }
-        }
-        prepareExecutionUI();
-        taskStartTimStamp = System.currentTimeMillis();
-
-        Task<Void> task = new Task<Void>() {
-            @Override
-            protected Void call() throws Exception {
-                List<ChangeRecord> todos = fullChangeList.stream()
-                        .filter(record -> record.isChanged()
-                                && record.getOpType() != OperationType.NONE
-                                && record.getStatus() == ExecStatus.PENDING)
-                        .collect(Collectors.toList());
-                int total = todos.size();
-                AtomicInteger curr = new AtomicInteger(0);
-                int threads = getSpExecutionThreads().getValue();
-                
-                // 线程池和估算器管理
-                final java.util.Map<String, MultiThreadTaskEstimator> localEstimatorMap = new java.util.concurrent.ConcurrentHashMap<>();
-                rootPathEstimators = localEstimatorMap;
-                
-                // 设置线程池模式
-                threadPoolManager.setThreadPoolMode(threadPoolMode);
-                
-                // 任务数量限制计数器
-                final java.util.Map<String, AtomicInteger> executedCountByRootPath = new java.util.concurrent.ConcurrentHashMap<>();
-                final AtomicInteger globalExecutedCount = new AtomicInteger(0);
-                
-                // 创建全局估算器
-                threadTaskEstimator = new MultiThreadTaskEstimator(total, Math.max(Math.min(20, total / 20), 1));
-                threadTaskEstimator.start();
-                log("▶ ▶ ▶ 任务启动，并发线程: " + threads);
-                log("▶ ▶ ▶ 当前线程池模式: " + threadPoolMode);
-                log("▶ ▶ ▶ 注意：部分任务依赖同一个原始文件，会因为加锁导致串行执行，任务会一直轮询！");
-                log("▶ ▶ ▶ 第[" + 1 + "]轮任务扫描，总待执行任务数：" + todos.size());
-                AtomicInteger round = new AtomicInteger(1);
-                
-                while (!todos.isEmpty() && !isCancelled() && todos.stream().anyMatch(rec -> rec.getStatus() == ExecStatus.PENDING)) {
-                    AtomicBoolean anyChange = new AtomicBoolean(false);
-                    for (ChangeRecord rec : todos) {
-                        if (isCancelled()) {
-                            break;
-                        }
-                        if (threadTaskEstimator.getRunningTaskCount() > getSpExecutionThreads().getValue()) {
-                            Thread.sleep(1);
-                            continue;
-                        }
-                        if (rec.getStatus() != ExecStatus.PENDING) {
-                            continue;
-                        }
-                        // 检查文件锁
-                        if (FileLockManagerUtil.isLocked(rec.getFileHandle())) {
-                            continue;
-                        }
-                        
-                        // 获取来源文件的绝对路径
-                        File sourceFile = rec.getFileHandle();
-                        String sourcePath = sourceFile.getAbsolutePath();
-                        if (!sourceFile.isDirectory()) {
-                            sourcePath = sourceFile.getParent();
-                        }
-                        
-                        // 找到该文件所在的根路径
-                        String rootPath = findRootPathForFile(sourcePath);
-                        
-                        // 检查任务数量限制
-                        PreviewView previewView = (PreviewView) getPreviewView();
-                        boolean exceedLimit = false;
-                        
-                        // 检查全局执行数量限制
-                        if (!previewView.isUnlimitedExecution()) {
-                            if (globalExecutedCount.get() >= previewView.getGlobalExecutionLimit()) {
-                                exceedLimit = true;
-                            }
-                        }
-                        
-                        // 检查根路径执行数量限制
-                        if (!exceedLimit && !previewView.isRootPathUnlimitedExecution(rootPath)) {
-                            AtomicInteger rootExecutedCount = executedCountByRootPath.computeIfAbsent(rootPath, k -> new AtomicInteger(0));
-                            if (rootExecutedCount.get() >= previewView.getRootPathExecutionLimit(rootPath)) {
-                                exceedLimit = true;
-                            }
-                        }
-                        
-                        if (exceedLimit) {
-                            // 达到执行数量限制，跳过该任务
-                            continue;
-                        }
-                        
-                        // 获取执行线程池
-                        RetryableThreadPool sourceExecutor = threadPoolManager.getExecutionThreadPool(rootPath);
-                        
-                        // 获取或创建该根路径的任务估算器
-                        localEstimatorMap.computeIfAbsent(rootPath, k -> {
-                            // 计算该根路径下的待执行任务数
-                            long rootTaskCount = todos.stream()
-                                    .filter(record -> {
-                                        File file = record.getFileHandle();
-                                        String filePath = file.isDirectory() ? file.getAbsolutePath() : file.getParent();
-                                        return findRootPathForFile(filePath).equals(k);
-                                    })
-                                    .count();
-                            MultiThreadTaskEstimator estimator = new MultiThreadTaskEstimator(rootTaskCount, Math.max(Math.min(20, (int)rootTaskCount / 20), 1));
-                            estimator.start();
-                            log("▶ ▶ ▶ 为根路径创建任务估算器: " + k + "，总任务数: " + rootTaskCount);
-                            return estimator;
-                        });
-                        
-                        final String finalRootPath = rootPath;
-                        sourceExecutor.execute(() -> {
-                            synchronized (rec) {
-                                if (rec.getStatus() == ExecStatus.PENDING &&
-                                        !FileLockManagerUtil.isLocked(rec.getFileHandle())) {
-                                    if (!FileLockManagerUtil.lock(rec.getFileHandle())) {
-                                        return;
-                                    }
-                                    // 对原始文件加逻辑锁，避免并发操作同一个文件
-                                    rec.setStatus(ExecStatus.RUNNING);
-                                    anyChange.set(true);
-                                    threadTaskEstimator.oneStarted();
-                                    // 更新根路径估算器
-                                    MultiThreadTaskEstimator rootEstimator = localEstimatorMap.get(finalRootPath);
-                                    if (rootEstimator != null) {
-                                        rootEstimator.oneStarted();
-                                    }
-                                    // 增加任务数量限制计数器
-                                    globalExecutedCount.incrementAndGet();
-                                    executedCountByRootPath.computeIfAbsent(finalRootPath, k -> new AtomicInteger(0)).incrementAndGet();
-                                } else {
-                                    return;
-                                }
-                            }
-                            try {
-                                // [修改] 策略执行时不再传递线程数，只负责逻辑
-                                IAppStrategy s = AppStrategyFactory.findStrategyForOp(rec.getOpType(), pipelineStrategies);
-                                log("▶ 开始处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().getName() + ",目标路径：" + rec.getNewName());
-                                if (s != null) {
-                                    s.execute(rec);
-                                    rec.setStatus(ExecStatus.SUCCESS);
-                                    log("✅️ 成功处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().getName() + ",目标路径：" + rec.getNewName());
-                                } else {
-                                    rec.setStatus(ExecStatus.SKIPPED);
-                                }
-                            } catch (Exception e) {
-                                rec.setStatus(ExecStatus.FAILED);
-                                rec.setFailReason(ExceptionUtils.getStackTrace(e));
-                                logError("❌ 失败处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().getName() + ",目标路径：" + rec.getNewName() + ",原因" + e.getMessage());
-                                logError("❌ 失败详细原因:" + ExceptionUtils.getStackTrace(e));
-                            } finally {
-                                threadTaskEstimator.oneCompleted();
-                                // 更新根路径估算器
-                                MultiThreadTaskEstimator rootEstimator = localEstimatorMap.get(finalRootPath);
-                                if (rootEstimator != null) {
-                                    rootEstimator.oneCompleted();
-                                }
-                                // 文件解锁
-                                FileLockManagerUtil.unlock(rec.getFileHandle());
-                                int c = curr.incrementAndGet();
-                                Platform.runLater(() -> updateProgress(c, total));
-                                if (System.currentTimeMillis() - lastRefresh.get() > 1000) {
-                                    lastRefresh.set(System.currentTimeMillis());
-                                    setRunningUI("▶ ▶ ▶ 执行任务进度: " + threadTaskEstimator.getDisplayInfo());
-                                    refreshPreviewTableFilter();
-                                }
-                            }
-                        });
-                    }
-                    // 适当Sleep，避免反复刷数据
-                    // 定期更新根路径进度UI
-                    if (System.currentTimeMillis() - lastRefresh.get() > 1000) {
-                        lastRefresh.set(System.currentTimeMillis());
-                        previewView.updateRootPathProgress();
-                    }
-                    Thread.sleep(100);
-            }
-            
-            // 关闭所有线程池
-            threadPoolManager.shutdownAll();
-                
-                // 等待所有线程池终止
-                threadPoolManager.awaitTermination();
-                
-                return null;
-            }
-        };
-        setStartTaskUI("▶ ▶ ▶ 执行中...", task);
-        task.setOnSucceeded(e -> setFinishTaskUI("➡ ➡ ➡ 执行成功 ⬅ ⬅ ⬅", TaskStatus.SUCCESS));
-        handleTaskLifecycle(task);
-        new Thread(task).start();
+        pipelineManager.runPipelineExecution();
     }
 
     /**
@@ -738,232 +409,6 @@ public class FileManagerPlusApp extends Application implements IAppController {
     private void prepareExecutionUI() {
         btnGo.setDisable(true);
         btnExecute.setDisable(true);
-    }
-    
-    /**
-     * 创建执行任务
-     */
-    private Task<Void> createExecutionTask() {
-        return new Task<Void>() {
-            @Override
-            protected Void call() throws Exception {
-                List<ChangeRecord> todos = fullChangeList.stream()
-                        .filter(record -> record.isChanged()
-                                && record.getOpType() != OperationType.NONE
-                                && record.getStatus() == ExecStatus.PENDING)
-                        .collect(Collectors.toList());
-                int total = todos.size();
-                AtomicInteger curr = new AtomicInteger(0);
-                int threads = getSpExecutionThreads().getValue();
-                
-                // 线程池和估算器管理
-                final java.util.Map<String, MultiThreadTaskEstimator> localEstimatorMap = new java.util.concurrent.ConcurrentHashMap<>();
-                rootPathEstimators = localEstimatorMap;
-                
-                // 设置线程池模式
-                threadPoolManager.setThreadPoolMode(threadPoolMode);
-                
-                // 任务数量限制计数器
-                final java.util.Map<String, AtomicInteger> executedCountByRootPath = new java.util.concurrent.ConcurrentHashMap<>();
-                final AtomicInteger globalExecutedCount = new AtomicInteger(0);
-                
-                // 创建全局估算器
-                threadTaskEstimator = new MultiThreadTaskEstimator(total, Math.max(Math.min(20, total / 20), 1));
-                threadTaskEstimator.start();
-                log("▶ ▶ ▶ 任务启动，并发线程: " + threads);
-                log("▶ ▶ ▶ 当前线程池模式: " + threadPoolMode);
-                log("▶ ▶ ▶ 注意：部分任务依赖同一个原始文件，会因为加锁导致串行执行，任务会一直轮询！");
-                log("▶ ▶ ▶ 第[" + 1 + "]轮任务扫描，总待执行任务数：" + todos.size());
-                AtomicInteger round = new AtomicInteger(1);
-                
-                while (!todos.isEmpty() && !isCancelled() && todos.stream().anyMatch(rec -> rec.getStatus() == ExecStatus.PENDING)) {
-                    AtomicBoolean anyChange = new AtomicBoolean(false);
-                    for (ChangeRecord rec : todos) {
-                        if (isCancelled()) {
-                            break;
-                        }
-                        if (threadTaskEstimator.getRunningTaskCount() > getSpExecutionThreads().getValue()) {
-                            Thread.sleep(1);
-                            continue;
-                        }
-                        if (rec.getStatus() != ExecStatus.PENDING) {
-                            continue;
-                        }
-                        // 检查文件锁
-                        if (FileLockManagerUtil.isLocked(rec.getFileHandle())) {
-                            continue;
-                        }
-                        
-                        // 获取来源文件的绝对路径
-                        File sourceFile = rec.getFileHandle();
-                        String sourcePath = sourceFile.getAbsolutePath();
-                        if (!sourceFile.isDirectory()) {
-                            sourcePath = sourceFile.getParent();
-                        }
-                        
-                        // 找到该文件所在的根路径
-                        String rootPath = findRootPathForFile(sourcePath);
-                        
-                        // 检查任务数量限制
-                        boolean exceedLimit = checkExecutionLimits(rootPath, globalExecutedCount, executedCountByRootPath);
-                        if (exceedLimit) {
-                            continue;
-                        }
-                        
-                        // 获取执行线程池
-                        RetryableThreadPool sourceExecutor = threadPoolManager.getExecutionThreadPool(rootPath);
-                        
-                        // 获取或创建该根路径的任务估算器
-                        createRootPathEstimatorIfNeeded(localEstimatorMap, rootPath, todos);
-                        
-                        final String finalRootPath = rootPath;
-                        sourceExecutor.execute(() -> executeSingleTask(rec, curr, total, localEstimatorMap, anyChange,
-                                finalRootPath, globalExecutedCount, executedCountByRootPath));
-                    }
-                    // 适当Sleep，避免反复刷数据
-                    // 定期更新根路径进度UI
-                    if (System.currentTimeMillis() - lastRefresh.get() > 1000) {
-                        lastRefresh.set(System.currentTimeMillis());
-                        previewView.updateRootPathProgress();
-                    }
-                    Thread.sleep(100);
-                }
-                
-                // 关闭所有线程池
-                threadPoolManager.shutdownAll();
-                    
-                // 等待所有线程池终止
-                threadPoolManager.awaitTermination();
-                
-                return null;
-            }
-        };
-    }
-    
-    /**
-     * 检查执行限制
-     */
-    private boolean checkExecutionLimits(String rootPath, AtomicInteger globalExecutedCount,
-            java.util.Map<String, AtomicInteger> executedCountByRootPath) {
-        PreviewView previewView = (PreviewView) getPreviewView();
-        boolean exceedLimit = false;
-        
-        // 检查全局执行数量限制
-        if (!previewView.isUnlimitedExecution()) {
-            if (globalExecutedCount.get() >= previewView.getGlobalExecutionLimit()) {
-                exceedLimit = true;
-            }
-        }
-        
-        // 检查根路径执行数量限制
-        if (!exceedLimit && !previewView.isRootPathUnlimitedExecution(rootPath)) {
-            AtomicInteger rootExecutedCount = executedCountByRootPath.computeIfAbsent(rootPath, k -> new AtomicInteger(0));
-            if (rootExecutedCount.get() >= previewView.getRootPathExecutionLimit(rootPath)) {
-                exceedLimit = true;
-            }
-        }
-        
-        return exceedLimit;
-    }
-    
-    /**
-     * 创建根路径估算器
-     */
-    private void createRootPathEstimatorIfNeeded(java.util.Map<String, MultiThreadTaskEstimator> localEstimatorMap,
-            String rootPath, List<ChangeRecord> todos) {
-        localEstimatorMap.computeIfAbsent(rootPath, k -> {
-            // 计算该根路径下的待执行任务数
-            long rootTaskCount = todos.stream()
-                    .filter(record -> {
-                        File file = record.getFileHandle();
-                        String filePath = file.isDirectory() ? file.getAbsolutePath() : file.getParent();
-                        return findRootPathForFile(filePath).equals(k);
-                    })
-                    .count();
-            MultiThreadTaskEstimator estimator = new MultiThreadTaskEstimator(rootTaskCount, Math.max(Math.min(20, (int)rootTaskCount / 20), 1));
-            estimator.start();
-            log("▶ ▶ ▶ 为根路径创建任务估算器: " + k + "，总任务数: " + rootTaskCount);
-            return estimator;
-        });
-    }
-    
-    /**
-     * 执行单个任务
-     */
-    private void executeSingleTask(ChangeRecord rec, AtomicInteger curr, int total,
-            java.util.Map<String, MultiThreadTaskEstimator> localEstimatorMap, AtomicBoolean anyChange,
-            String finalRootPath, AtomicInteger globalExecutedCount,
-            java.util.Map<String, AtomicInteger> executedCountByRootPath) {
-        synchronized (rec) {
-            if (rec.getStatus() == ExecStatus.PENDING &&
-                    !FileLockManagerUtil.isLocked(rec.getFileHandle())) {
-                if (!FileLockManagerUtil.lock(rec.getFileHandle())) {
-                    return;
-                }
-                // 对原始文件加逻辑锁，避免并发操作同一个文件
-                rec.setStatus(ExecStatus.RUNNING);
-                anyChange.set(true);
-                threadTaskEstimator.oneStarted();
-                // 更新根路径估算器
-                MultiThreadTaskEstimator rootEstimator = localEstimatorMap.get(finalRootPath);
-                if (rootEstimator != null) {
-                    rootEstimator.oneStarted();
-                }
-                // 增加任务数量限制计数器
-                globalExecutedCount.incrementAndGet();
-                executedCountByRootPath.computeIfAbsent(finalRootPath, k -> new AtomicInteger(0)).incrementAndGet();
-            } else {
-                return;
-            }
-        }
-        try {
-            // 执行策略
-            executeStrategyForTask(rec);
-        } catch (Exception e) {
-            rec.setStatus(ExecStatus.FAILED);
-            rec.setFailReason(ExceptionUtils.getStackTrace(e));
-            logError("❌ 失败处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().getName() + ",目标路径：" + rec.getNewName() + ",原因" + e.getMessage());
-            logError("❌ 失败详细原因:" + ExceptionUtils.getStackTrace(e));
-        } finally {
-            // 完成任务处理
-            completeSingleTask(rec, curr, total, localEstimatorMap, finalRootPath);
-        }
-    }
-    
-    /**
-     * 为任务执行策略
-     */
-    private void executeStrategyForTask(ChangeRecord rec) throws Exception {
-        IAppStrategy s = AppStrategyFactory.findStrategyForOp(rec.getOpType(), pipelineStrategies);
-        log("▶ 开始处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().getName() + ",目标路径：" + rec.getNewName());
-        if (s != null) {
-            s.execute(rec);
-            rec.setStatus(ExecStatus.SUCCESS);
-            log("✅️ 成功处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().getName() + ",目标路径：" + rec.getNewName());
-        } else {
-            rec.setStatus(ExecStatus.SKIPPED);
-        }
-    }
-    
-    /**
-     * 完成单个任务处理
-     */
-    private void completeSingleTask(ChangeRecord rec, AtomicInteger curr, int total,
-            java.util.Map<String, MultiThreadTaskEstimator> localEstimatorMap, String finalRootPath) {
-        threadTaskEstimator.oneCompleted();
-        // 更新根路径估算器
-        MultiThreadTaskEstimator rootEstimator = localEstimatorMap.get(finalRootPath);
-        if (rootEstimator != null) {
-            rootEstimator.oneCompleted();
-        }
-        // 文件解锁
-        FileLockManagerUtil.unlock(rec.getFileHandle());
-        int c = curr.incrementAndGet();
-        if (System.currentTimeMillis() - lastRefresh.get() > 1000) {
-            lastRefresh.set(System.currentTimeMillis());
-            setRunningUI("▶ ▶ ▶ 执行任务进度: " + threadTaskEstimator.getDisplayInfo());
-            refreshPreviewTableFilter();
-        }
     }
     
     // --- Shared Methods & Utils ---
@@ -1054,78 +499,6 @@ public class FileManagerPlusApp extends Application implements IAppController {
         return rootPathThreadConfig;
     }
     
-    /**
-     * 找到给定文件路径对应的根路径
-     * @param filePath 文件路径
-     * @return 对应的根路径，如果没有找到则返回文件路径本身
-     */
-    private String findRootPathForFile(String filePath) {
-        try {
-            Path fileP = Paths.get(filePath).toAbsolutePath().normalize();
-            for (File root : sourceRoots) {
-                Path rootP = root.toPath().toAbsolutePath().normalize();
-                if (fileP.startsWith(rootP)) {
-                    return rootP.toString();
-                }
-            }
-        } catch (Exception e) {
-            logError("查找根路径失败: " + e.getMessage());
-        }
-        // 如果没有找到对应的根路径，返回文件路径本身
-        return filePath;
-    }
-
-    private List<File> scanFilesRobust(File root, int maxDepth, Consumer<String> msg) {
-        AtomicInteger countScan = new AtomicInteger(0);
-        AtomicInteger countIgnore = new AtomicInteger(0);
-        List<File> list = new ArrayList<>();
-        if (!root.exists()) return list;
-        int threads = getSpPreviewThreads().getValue();
-        try (Stream<Path> s = ParallelStreamWalker.walk(root.toPath(), maxDepth, threads)) {
-            list = s.filter(p -> {
-                try {
-                    if (!isTaskRunning.get()) {
-                        throw new RuntimeException("已中断");
-                    }
-                    if (globalSettingsView.isFileIncluded(p.toFile())) {
-                        return true;
-                    }
-                    countIgnore.incrementAndGet();
-                    return false;
-                } finally {
-                    countScan.incrementAndGet();
-                    if (countScan.incrementAndGet() % 1000 == 0) {
-                        String msgStr = "目录下：" + root.getAbsolutePath()
-                                + "，已扫描" + countScan.get() + "个文件"
-                                + "，已忽略" + countIgnore.get() + "个文件"
-                                + "，已收纳" + (countScan.get() - countIgnore.get()) + "个文件";
-                        msg.accept(msgStr);
-                        log(msgStr);
-                    }
-                }
-            }).filter(path -> {
-                try {
-                    path.toFile();
-                } catch (Exception e) {
-                    logError(path + " 文件扫描异常: " + e.getMessage());
-                    return false;
-                }
-                return true;
-            }).map(Path::toFile).collect(Collectors.toList());
-        } catch (Exception e) {
-            logError("扫描文件失败：" + ExceptionUtils.getStackTrace(e));
-        }
-        String msgStr = "目录下(总共)：" + root.getAbsolutePath()
-                + "，已扫描" + countScan.get() + "个文件"
-                + "，已忽略" + countIgnore.get() + "个文件"
-                + "，已收纳" + (countScan.get() - countIgnore.get()) + "个文件";
-        msg.accept(msgStr);
-        log(msgStr);
-        // 反转列表，便于由下而上处理文件，保证处理成功
-        Collections.reverse(list);
-        return list;
-    }
-
     // --- Task UI State ---
 
     private void setStartTaskUI(String msg, Task task) {
@@ -1144,9 +517,87 @@ public class FileManagerPlusApp extends Application implements IAppController {
         updateStats();
     }
 
-    private void setRunningUI(String msg) {
+    @Override
+    public void setRunningUI(String msg) {
         previewView.updateRunningProgress(msg);
         updateStats();
+    }
+    
+    @Override
+    public String findRootPathForFile(String filePath) {
+        try {
+            Path fileP = Paths.get(filePath).toAbsolutePath().normalize();
+            for (File root : sourceRoots) {
+                Path rootP = root.toPath().toAbsolutePath().normalize();
+                if (fileP.startsWith(rootP)) {
+                    return rootP.toString();
+                }
+            }
+        } catch (Exception e) {
+            logError("查找根路径失败: " + e.getMessage());
+        }
+        // 如果没有找到对应的根路径，返回文件路径本身
+        return filePath;
+    }
+    
+    @Override
+    public PreviewView getPreviewView() {
+        return previewView;
+    }
+    
+    @Override
+    public void setFullChangeList(List<ChangeRecord> changeList) {
+        this.fullChangeList = changeList;
+    }
+    
+    @Override
+    public void enableExecuteButton(boolean enabled) {
+        btnExecute.setDisable(!enabled);
+    }
+    
+    @Override
+    public void disableGoButton(boolean disabled) {
+        btnGo.setDisable(disabled);
+    }
+    
+    @Override
+    public void disableExecuteButton(boolean disabled) {
+        btnExecute.setDisable(disabled);
+    }
+    
+    @Override
+    public void enableStopButton(boolean enabled) {
+        btnStop.setDisable(!enabled);
+    }
+    
+    @Override
+    public void updateProgressStatus(TaskStatus status) {
+        ProgressBarDisplay.updateProgressStatus(previewView.getMainProgressBar(), status);
+    }
+    
+    @Override
+    public void bindProgress(Task<?> task) {
+        previewView.getMainProgressBar().progressProperty().unbind();
+        if (task != null) {
+            previewView.getMainProgressBar().progressProperty().bind(task.progressProperty());
+        }
+    }
+    
+    @Override
+    public void updateRunningProgress(String msg) {
+        previewView.updateRunningProgress(msg);
+    }
+    
+    @Override
+    public void refreshComposeView() {
+        if (composeView != null) {
+            composeView.refreshView();
+        }
+    }
+    
+    @Override
+    public List<File> scanFilesRobust(File root, int maxDepth, Consumer<String> msg) {
+        return fileScanner.scanFilesRobust(root, maxDepth, msg);
     }
 
     /**
@@ -1202,17 +653,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
 
     @Override
     public void forceStop() {
-        if (isTaskRunning.get()) {
-            isTaskRunning.set(false);
-            if (currentTask != null) {
-                currentTask.cancel();
-            }
-            if (executorService != null) {
-                executorService.shutdownNow();
-            }
-            log("🛑 强制停止");
-            setFinishTaskUI("🛑 🛑 🛑 已停止 🛑 🛑 🛑", TaskStatus.CANCELED);
-        }
+        pipelineManager.forceStop();
     }
 
     // --- Actions Impl ---
@@ -1309,57 +750,11 @@ public class FileManagerPlusApp extends Application implements IAppController {
 
     @Override
     public void showAppearanceDialog() {
-        Dialog<ButtonType> d = new Dialog<>();
-        d.setTitle("设置");
-        d.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-        GridPane g = new GridPane();
-        g.setHgap(10);
-        g.setVgap(10);
-        g.setPadding(new Insets(20));
-        ColorPicker cp = new ColorPicker(Color.web(currentTheme.getAccentColor()));
-        Slider sl = new Slider(0.1, 1.0, currentTheme.getGlassOpacity());
-        CheckBox chk = new CheckBox("Dark Mode");
-        chk.setSelected(currentTheme.isDarkBackground());
-        TextField tp = new TextField(currentTheme.getBgImagePath());
-        JFXButton bp = new JFXButton("背景...");
-        bp.setOnAction(e -> {
-            FileChooser fc = new FileChooser();
-            File f = fc.showOpenDialog(null);
-            if (f != null) {
-                tp.setText(f.getAbsolutePath());
-                currentTheme.setBgImagePath(f.getAbsolutePath());
-                applyAppearance();
-            }
-        });
-        g.add(StyleFactory.createChapter("Color:"), 0, 0);
-        g.add(cp, 1, 0);
-        g.add(StyleFactory.createChapter("Opacity:"), 0, 1);
-        g.add(sl, 1, 1);
-        g.add(chk, 1, 2);
-        g.add(StyleFactory.createChapter("BG:"), 0, 3);
-        g.add(new HBox(5, tp, bp), 1, 3);
-        d.getDialogPane().setContent(g);
-        d.setResultConverter(b -> b);
-        d.showAndWait().ifPresent(b -> {
-            if (b == ButtonType.OK) {
-                currentTheme.setAccentColor(String.format("#%02X%02X%02X", (int) (cp.getValue().getRed() * 255), (int) (cp.getValue().getGreen() * 255), (int) (cp.getValue().getBlue() * 255)));
-                currentTheme.setGlassOpacity(sl.getValue());
-                currentTheme.setDarkBackground(chk.isSelected());
-                applyAppearance();
-            }
-        });
+        appearanceManager.showAppearanceDialog();
     }
 
     public void applyAppearance() {
-        backgroundOverlay.setStyle("-fx-background-color: rgba(" + (currentTheme.isDarkBackground() ? "0,0,0" : "255,255,255") + ", " + (1 - currentTheme.getGlassOpacity()) + ");");
-        if (!currentTheme.getBgImagePath().isEmpty()) {
-            try {
-                backgroundImageView.setImage(new Image(Files.newInputStream(Paths.get(currentTheme.getBgImagePath()))));
-            } catch (Exception e) {
-                logError("背景图加载失败："+ExceptionUtils.getStackTrace(e));
-            }
-        }
-        if (composeView != null) composeView.refreshList();
+        appearanceManager.applyAppearance();
     }
 
 }
