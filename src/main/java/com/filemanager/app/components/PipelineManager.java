@@ -69,6 +69,7 @@ public class PipelineManager {
         }
         isTaskRunning.set(true);
         fullChangeList.clear();
+        app.switchView(app.getPreviewView().getViewNode());
 
         // 捕获所有策略参数
         for (IAppStrategy s : app.getPipelineStrategies()) {
@@ -236,6 +237,7 @@ public class PipelineManager {
     private void prepareExecutionUI() {
         app.changePreviewButton(true);
         app.changeExecuteButton(false);
+        app.switchView(app.getPreviewView().getViewNode());
     }
 
     private Task<Void> createExecutionTask() {

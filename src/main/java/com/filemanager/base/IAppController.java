@@ -28,6 +28,9 @@ import java.util.function.Consumer;
 public interface IAppController {
     List<ChangeRecord> getFullChangeList();
     long getTaskStartTimStamp();
+
+    void switchView(Node node);
+
     // --- 数据获取 ---
     ObservableList<File> getSourceRoots();
 

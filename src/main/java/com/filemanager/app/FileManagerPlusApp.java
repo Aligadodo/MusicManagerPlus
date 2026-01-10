@@ -295,7 +295,8 @@ public class FileManagerPlusApp extends Application implements IAppController {
         return menu;
     }
 
-    private void switchView(Node node) {
+    @Override
+    public void switchView(Node node) {
         if (!contentArea.getChildren().contains(node)) {
             contentArea.getChildren().clear();
             contentArea.getChildren().add(node);
