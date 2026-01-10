@@ -517,18 +517,16 @@ public class FileManagerPlusApp extends Application implements IAppController {
 
     @Override
     public void runPipelineExecution() {
-        long count = fullChangeList.stream().filter(record -> record.isChanged()
-                && record.getStatus() == ExecStatus.PENDING).count();
+        long count = countPendingTasks();
         if (count == 0) {
             return;
         }
         if (!autoRun.isSelected()) {
-            if (!FXDialogUtils.showConfirm("确认", "执行 " + count + " 个变更?")) {
+            if (!confirmExecution(count)) {
                 return;
             }
         }
-        btnGo.setDisable(true);
-        btnExecute.setDisable(true);
+        prepareExecutionUI();
         taskStartTimStamp = System.currentTimeMillis();
 
         Task<Void> task = new Task<Void>() {
@@ -717,6 +715,257 @@ public class FileManagerPlusApp extends Application implements IAppController {
         new Thread(task).start();
     }
 
+    /**
+     * 统计待执行任务数量
+     */
+    private long countPendingTasks() {
+        return fullChangeList.stream()
+                .filter(record -> record.isChanged()
+                        && record.getStatus() == ExecStatus.PENDING)
+                .count();
+    }
+    
+    /**
+     * 确认执行任务
+     */
+    private boolean confirmExecution(long count) {
+        return FXDialogUtils.showConfirm("确认", "执行 " + count + " 个变更?");
+    }
+    
+    /**
+     * 准备执行UI
+     */
+    private void prepareExecutionUI() {
+        btnGo.setDisable(true);
+        btnExecute.setDisable(true);
+    }
+    
+    /**
+     * 创建执行任务
+     */
+    private Task<Void> createExecutionTask() {
+        return new Task<Void>() {
+            @Override
+            protected Void call() throws Exception {
+                List<ChangeRecord> todos = fullChangeList.stream()
+                        .filter(record -> record.isChanged()
+                                && record.getOpType() != OperationType.NONE
+                                && record.getStatus() == ExecStatus.PENDING)
+                        .collect(Collectors.toList());
+                int total = todos.size();
+                AtomicInteger curr = new AtomicInteger(0);
+                int threads = getSpExecutionThreads().getValue();
+                
+                // 线程池和估算器管理
+                final java.util.Map<String, MultiThreadTaskEstimator> localEstimatorMap = new java.util.concurrent.ConcurrentHashMap<>();
+                rootPathEstimators = localEstimatorMap;
+                
+                // 设置线程池模式
+                threadPoolManager.setThreadPoolMode(threadPoolMode);
+                
+                // 任务数量限制计数器
+                final java.util.Map<String, AtomicInteger> executedCountByRootPath = new java.util.concurrent.ConcurrentHashMap<>();
+                final AtomicInteger globalExecutedCount = new AtomicInteger(0);
+                
+                // 创建全局估算器
+                threadTaskEstimator = new MultiThreadTaskEstimator(total, Math.max(Math.min(20, total / 20), 1));
+                threadTaskEstimator.start();
+                log("▶ ▶ ▶ 任务启动，并发线程: " + threads);
+                log("▶ ▶ ▶ 当前线程池模式: " + threadPoolMode);
+                log("▶ ▶ ▶ 注意：部分任务依赖同一个原始文件，会因为加锁导致串行执行，任务会一直轮询！");
+                log("▶ ▶ ▶ 第[" + 1 + "]轮任务扫描，总待执行任务数：" + todos.size());
+                AtomicInteger round = new AtomicInteger(1);
+                
+                while (!todos.isEmpty() && !isCancelled() && todos.stream().anyMatch(rec -> rec.getStatus() == ExecStatus.PENDING)) {
+                    AtomicBoolean anyChange = new AtomicBoolean(false);
+                    for (ChangeRecord rec : todos) {
+                        if (isCancelled()) {
+                            break;
+                        }
+                        if (threadTaskEstimator.getRunningTaskCount() > getSpExecutionThreads().getValue()) {
+                            Thread.sleep(1);
+                            continue;
+                        }
+                        if (rec.getStatus() != ExecStatus.PENDING) {
+                            continue;
+                        }
+                        // 检查文件锁
+                        if (FileLockManagerUtil.isLocked(rec.getFileHandle())) {
+                            continue;
+                        }
+                        
+                        // 获取来源文件的绝对路径
+                        File sourceFile = rec.getFileHandle();
+                        String sourcePath = sourceFile.getAbsolutePath();
+                        if (!sourceFile.isDirectory()) {
+                            sourcePath = sourceFile.getParent();
+                        }
+                        
+                        // 找到该文件所在的根路径
+                        String rootPath = findRootPathForFile(sourcePath);
+                        
+                        // 检查任务数量限制
+                        boolean exceedLimit = checkExecutionLimits(rootPath, globalExecutedCount, executedCountByRootPath);
+                        if (exceedLimit) {
+                            continue;
+                        }
+                        
+                        // 获取执行线程池
+                        RetryableThreadPool sourceExecutor = threadPoolManager.getExecutionThreadPool(rootPath);
+                        
+                        // 获取或创建该根路径的任务估算器
+                        createRootPathEstimatorIfNeeded(localEstimatorMap, rootPath, todos);
+                        
+                        final String finalRootPath = rootPath;
+                        sourceExecutor.execute(() -> executeSingleTask(rec, curr, total, localEstimatorMap, anyChange,
+                                finalRootPath, globalExecutedCount, executedCountByRootPath));
+                    }
+                    // 适当Sleep，避免反复刷数据
+                    // 定期更新根路径进度UI
+                    if (System.currentTimeMillis() - lastRefresh.get() > 1000) {
+                        lastRefresh.set(System.currentTimeMillis());
+                        previewView.updateRootPathProgress();
+                    }
+                    Thread.sleep(100);
+                }
+                
+                // 关闭所有线程池
+                threadPoolManager.shutdownAll();
+                    
+                // 等待所有线程池终止
+                threadPoolManager.awaitTermination();
+                
+                return null;
+            }
+        };
+    }
+    
+    /**
+     * 检查执行限制
+     */
+    private boolean checkExecutionLimits(String rootPath, AtomicInteger globalExecutedCount,
+            java.util.Map<String, AtomicInteger> executedCountByRootPath) {
+        PreviewView previewView = (PreviewView) getPreviewView();
+        boolean exceedLimit = false;
+        
+        // 检查全局执行数量限制
+        if (!previewView.isUnlimitedExecution()) {
+            if (globalExecutedCount.get() >= previewView.getGlobalExecutionLimit()) {
+                exceedLimit = true;
+            }
+        }
+        
+        // 检查根路径执行数量限制
+        if (!exceedLimit && !previewView.isRootPathUnlimitedExecution(rootPath)) {
+            AtomicInteger rootExecutedCount = executedCountByRootPath.computeIfAbsent(rootPath, k -> new AtomicInteger(0));
+            if (rootExecutedCount.get() >= previewView.getRootPathExecutionLimit(rootPath)) {
+                exceedLimit = true;
+            }
+        }
+        
+        return exceedLimit;
+    }
+    
+    /**
+     * 创建根路径估算器
+     */
+    private void createRootPathEstimatorIfNeeded(java.util.Map<String, MultiThreadTaskEstimator> localEstimatorMap,
+            String rootPath, List<ChangeRecord> todos) {
+        localEstimatorMap.computeIfAbsent(rootPath, k -> {
+            // 计算该根路径下的待执行任务数
+            long rootTaskCount = todos.stream()
+                    .filter(record -> {
+                        File file = record.getFileHandle();
+                        String filePath = file.isDirectory() ? file.getAbsolutePath() : file.getParent();
+                        return findRootPathForFile(filePath).equals(k);
+                    })
+                    .count();
+            MultiThreadTaskEstimator estimator = new MultiThreadTaskEstimator(rootTaskCount, Math.max(Math.min(20, (int)rootTaskCount / 20), 1));
+            estimator.start();
+            log("▶ ▶ ▶ 为根路径创建任务估算器: " + k + "，总任务数: " + rootTaskCount);
+            return estimator;
+        });
+    }
+    
+    /**
+     * 执行单个任务
+     */
+    private void executeSingleTask(ChangeRecord rec, AtomicInteger curr, int total,
+            java.util.Map<String, MultiThreadTaskEstimator> localEstimatorMap, AtomicBoolean anyChange,
+            String finalRootPath, AtomicInteger globalExecutedCount,
+            java.util.Map<String, AtomicInteger> executedCountByRootPath) {
+        synchronized (rec) {
+            if (rec.getStatus() == ExecStatus.PENDING &&
+                    !FileLockManagerUtil.isLocked(rec.getFileHandle())) {
+                if (!FileLockManagerUtil.lock(rec.getFileHandle())) {
+                    return;
+                }
+                // 对原始文件加逻辑锁，避免并发操作同一个文件
+                rec.setStatus(ExecStatus.RUNNING);
+                anyChange.set(true);
+                threadTaskEstimator.oneStarted();
+                // 更新根路径估算器
+                MultiThreadTaskEstimator rootEstimator = localEstimatorMap.get(finalRootPath);
+                if (rootEstimator != null) {
+                    rootEstimator.oneStarted();
+                }
+                // 增加任务数量限制计数器
+                globalExecutedCount.incrementAndGet();
+                executedCountByRootPath.computeIfAbsent(finalRootPath, k -> new AtomicInteger(0)).incrementAndGet();
+            } else {
+                return;
+            }
+        }
+        try {
+            // 执行策略
+            executeStrategyForTask(rec);
+        } catch (Exception e) {
+            rec.setStatus(ExecStatus.FAILED);
+            rec.setFailReason(ExceptionUtils.getStackTrace(e));
+            logError("❌ 失败处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().getName() + ",目标路径：" + rec.getNewName() + ",原因" + e.getMessage());
+            logError("❌ 失败详细原因:" + ExceptionUtils.getStackTrace(e));
+        } finally {
+            // 完成任务处理
+            completeSingleTask(rec, curr, total, localEstimatorMap, finalRootPath);
+        }
+    }
+    
+    /**
+     * 为任务执行策略
+     */
+    private void executeStrategyForTask(ChangeRecord rec) throws Exception {
+        IAppStrategy s = AppStrategyFactory.findStrategyForOp(rec.getOpType(), pipelineStrategies);
+        log("▶ 开始处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().getName() + ",目标路径：" + rec.getNewName());
+        if (s != null) {
+            s.execute(rec);
+            rec.setStatus(ExecStatus.SUCCESS);
+            log("✅️ 成功处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().getName() + ",目标路径：" + rec.getNewName());
+        } else {
+            rec.setStatus(ExecStatus.SKIPPED);
+        }
+    }
+    
+    /**
+     * 完成单个任务处理
+     */
+    private void completeSingleTask(ChangeRecord rec, AtomicInteger curr, int total,
+            java.util.Map<String, MultiThreadTaskEstimator> localEstimatorMap, String finalRootPath) {
+        threadTaskEstimator.oneCompleted();
+        // 更新根路径估算器
+        MultiThreadTaskEstimator rootEstimator = localEstimatorMap.get(finalRootPath);
+        if (rootEstimator != null) {
+            rootEstimator.oneCompleted();
+        }
+        // 文件解锁
+        FileLockManagerUtil.unlock(rec.getFileHandle());
+        int c = curr.incrementAndGet();
+        if (System.currentTimeMillis() - lastRefresh.get() > 1000) {
+            lastRefresh.set(System.currentTimeMillis());
+            setRunningUI("▶ ▶ ▶ 执行任务进度: " + threadTaskEstimator.getDisplayInfo());
+            refreshPreviewTableFilter();
+        }
+    }
+    
     // --- Shared Methods & Utils ---
 
     @Override
