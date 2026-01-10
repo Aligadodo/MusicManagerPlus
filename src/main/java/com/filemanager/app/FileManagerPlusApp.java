@@ -482,7 +482,13 @@ public class FileManagerPlusApp extends Application implements IAppController {
 
     @Override
     public boolean setThreadPoolMode(String newVal) {
-        return false;
+        if (taskRunningStatus.get()) {
+            logError("❌ 任务正在运行，不允许切换线程池模式！");
+            return false;
+        }
+        this.threadPoolManager.setThreadPoolMode(newVal);
+        this.log("▶ ▶ ▶ 线程池模式已切换: " + newVal);
+        return true;
     }
 
     @Override

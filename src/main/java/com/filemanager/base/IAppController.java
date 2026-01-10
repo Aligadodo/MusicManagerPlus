@@ -93,6 +93,7 @@ public interface IAppController {
     Node getGlobalSettingsView();
     
     // --- 新增方法 ---
+    
     void setRunningUI(String msg);
     
     String findRootPathForFile(String filePath);

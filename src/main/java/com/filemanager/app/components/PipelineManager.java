@@ -36,7 +36,7 @@ public class PipelineManager {
     private List<ChangeRecord> fullChangeList;
     private Task<?> currentTask;
     private MultiThreadTaskEstimator threadTaskEstimator;
-    private String threadPoolMode = ThreadPoolManager.MODE_GLOBAL;
+
     private Map<String, MultiThreadTaskEstimator> localEstimatorMap = new HashMap<>();
 
     public PipelineManager(IAppController app, ThreadPoolManager threadPoolManager) {
@@ -84,6 +84,8 @@ public class PipelineManager {
         Task<List<ChangeRecord>> task = new Task<List<ChangeRecord>>() {
             @Override
             protected List<ChangeRecord> call() throws Exception {
+                // 同步根路径线程配置
+                syncRootPathThreadConfig();
                 updateMessage("▶ ▶ ▶ 扫描源文件...");
                 List<File> initialFiles = new ArrayList<>();
                 for (File r : app.getSourceRoots()) {
@@ -240,6 +242,8 @@ public class PipelineManager {
         return new Task<Void>() {
             @Override
             protected Void call() throws Exception {
+                // 同步根路径线程配置
+                syncRootPathThreadConfig();
                 List<ChangeRecord> todos = fullChangeList.stream()
                         .filter(record -> record.isChanged()
                                 && record.getOpType() != OperationType.NONE
@@ -251,8 +255,7 @@ public class PipelineManager {
                 // 线程池和估算器管理
                 localEstimatorMap.clear();
 
-                // 设置线程池模式
-                threadPoolManager.setThreadPoolMode(threadPoolMode);
+                
 
                 // 任务数量限制计数器
                 final java.util.Map<String, AtomicInteger> executedCountByRootPath = new java.util.concurrent.ConcurrentHashMap<>();
@@ -262,7 +265,7 @@ public class PipelineManager {
                 threadTaskEstimator = new MultiThreadTaskEstimator(total, Math.max(Math.min(20, total / 20), 1));
                 threadTaskEstimator.start();
                 app.log("▶ ▶ ▶ 任务启动，并发线程: " + app.getSpExecutionThreads().getValue());
-                app.log("▶ ▶ ▶ 当前线程池模式: " + threadPoolMode);
+                app.log("▶ ▶ ▶ 当前线程池模式: " + threadPoolManager.getThreadPoolMode());
                 app.log("▶ ▶ ▶ 注意：部分任务依赖同一个原始文件，会因为加锁导致串行执行，任务会一直轮询！");
                 app.log("▶ ▶ ▶ 开始任务执行，总待执行任务数：" + todos.size());
 
@@ -497,6 +500,19 @@ public class PipelineManager {
         t.setOnCancelled(e -> {
             setFinishTaskUI("🛑 🛑 🛑 已取消 🛑 🛑 🛑", TaskStatus.CANCELED);
         });
+    }
+
+    /**
+     * 同步根路径线程配置到线程池管理器
+     */
+    private void syncRootPathThreadConfig() {
+        for (File root : app.getSourceRoots()) {
+            String rootPath = root.getAbsolutePath();
+            int previewThreads = app.getRootPathThreadConfig().getOrDefault(rootPath + "_preview", app.getSpPreviewThreads().getValue());
+            int executionThreads = app.getRootPathThreadConfig().getOrDefault(rootPath, app.getSpExecutionThreads().getValue());
+            threadPoolManager.setRootPathPreviewThreads(rootPath, previewThreads);
+            threadPoolManager.setRootPathExecutionThreads(rootPath, executionThreads);
+        }
     }
 
     public void forceStop() {
