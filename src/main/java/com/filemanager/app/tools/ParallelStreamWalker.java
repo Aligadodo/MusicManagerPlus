@@ -16,6 +16,7 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RecursiveAction;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -36,7 +37,7 @@ public class ParallelStreamWalker {
      * @param parallelism 并发线程数
      * @return Stream<File> (流的顺序是随机的)
      */
-    public static Stream<Path> walk(Path root, int minDepth, int maxDepth, int parallelism, AtomicBoolean isTaskRunning) {
+    public static Stream<Path> walk(Path root, int minDepth, int maxDepth, AtomicInteger globalLimitRemaining, AtomicInteger dirLimitRemaining, int parallelism, AtomicBoolean isTaskRunning) {
         // 1. 创建阻塞队列作为缓冲区，只存储Path类型
         BlockingQueue<Path> queue = new LinkedBlockingQueue<>(1024);
 
@@ -47,7 +48,7 @@ public class ParallelStreamWalker {
         pool.submit(() -> {
             try {
                 // 执行递归扫描
-                pool.invoke(new FileWalkAction(root, 0, minDepth, maxDepth, queue, isTaskRunning));
+                pool.invoke(new FileWalkAction(root, 0, minDepth, maxDepth, globalLimitRemaining, dirLimitRemaining, queue, isTaskRunning));
             } finally {
                 // 扫描结束（无论成功失败），放入结束标记
                 offerMarker(queue);
@@ -121,41 +122,36 @@ public class ParallelStreamWalker {
         private final int depthRemaining;
         private final BlockingQueue<Path> queue;
         private final AtomicBoolean isTaskRunning;
+        private final AtomicInteger globalLimitRemaining;
+        private final AtomicInteger dirLimitRemaining;
 
-        public FileWalkAction(Path dir, int currentDepth, int minDepth, int depthRemaining, BlockingQueue<Path> queue, AtomicBoolean isTaskRunning) {
+        public FileWalkAction(Path dir, int currentDepth, int minDepth, int depthRemaining, AtomicInteger globalLimitRemaining, AtomicInteger dirLimitRemaining, BlockingQueue<Path> queue, AtomicBoolean isTaskRunning) {
             this.dir = dir;
             this.currentDepth = currentDepth;
             this.minDepth = minDepth;
             this.depthRemaining = depthRemaining;
             this.queue = queue;
             this.isTaskRunning = isTaskRunning;
+            this.globalLimitRemaining = globalLimitRemaining;
+            this.dirLimitRemaining = dirLimitRemaining;
         }
 
         @Override
         protected void compute() {
-            try {
-                if (this.currentDepth >= minDepth) {
-                    // 尝试将当前目录放入队列
-                    queue.put(dir);
-                }
-            } catch (InterruptedException e) {
-                return; // 如果被打断（stream关闭），直接退出
+            if (this.currentDepth >= minDepth) {
+                // 尝试将当前目录放入队列
+                putAndCheckLimit(dir);
             }
-
-            if (depthRemaining <= 0 || !isTaskRunning.get()) return;
+            if (depthRemaining <= 0 || !isTaskRunning.get() || reachedLimit()) return;
 
             var subTasks = new ArrayList<FileWalkAction>();
             try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir)) {
                 for (Path entry : stream) {
                     if (Files.isDirectory(entry)) {
-                        subTasks.add(new FileWalkAction(entry, currentDepth + 1, minDepth, depthRemaining - 1, queue, isTaskRunning));
+                        subTasks.add(new FileWalkAction(entry, currentDepth + 1, minDepth, depthRemaining - 1, globalLimitRemaining, dirLimitRemaining, queue, isTaskRunning));
                     } else if (this.currentDepth >= minDepth) {
                         // 是文件，直接放入队列
-                        try {
-                            queue.put(entry);
-                        } catch (InterruptedException e) {
-                            return; // 退出
-                        }
+                        putAndCheckLimit(entry);
                     }
                 }
             } catch (IOException e) {
@@ -165,6 +161,29 @@ public class ParallelStreamWalker {
             if (!subTasks.isEmpty()) {
                 invokeAll(subTasks);
             }
+        }
+
+
+        private boolean reachedLimit() {
+            if (globalLimitRemaining.get() <= 0) {
+                return true;
+            }
+            return dirLimitRemaining.get() <= 0;
+        }
+
+        private boolean putAndCheckLimit(Path entry) {
+            if (globalLimitRemaining.decrementAndGet() <= 0) {
+                return false;
+            }
+            if (dirLimitRemaining.decrementAndGet() <= 0) {
+                return false;
+            }
+            try {
+                queue.put(entry);
+            } catch (InterruptedException e) {
+                return true; // 退出
+            }
+            return true;
         }
     }
 }

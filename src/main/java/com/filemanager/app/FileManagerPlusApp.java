@@ -63,6 +63,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 /**
@@ -484,8 +485,8 @@ public class FileManagerPlusApp extends Application implements IAppController {
     }
 
     @Override
-    public List<File> scanFilesRobust(File root, int minDepth, int maxDepth, Consumer<String> msg) {
-        return fileScanner.scanFilesRobust(root, minDepth, maxDepth, msg);
+    public List<File> scanFilesRobust(File root, int minDepth, int maxDepth, AtomicInteger globalLimit, AtomicInteger dirLimit, Consumer<String> msg) {
+        return fileScanner.scanFilesRobust(root, minDepth, maxDepth, globalLimit, dirLimit, msg);
     }
 
     @Override

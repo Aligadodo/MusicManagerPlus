@@ -1,6 +1,7 @@
 package com.filemanager.app.base;
 
 import java.io.File;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 /**
@@ -82,5 +83,5 @@ public interface IBusinessOperations {
      * @param msg 消息消费者
      * @return 文件列表
      */
-    java.util.List<File> scanFilesRobust(File root, int minDepth, int maxDepth, Consumer<String> msg);
+    java.util.List<File> scanFilesRobust(File root, int minDepth, int maxDepth, AtomicInteger globalLimit, AtomicInteger dirLimit, Consumer<String> msg);
 }

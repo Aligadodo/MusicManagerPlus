@@ -57,7 +57,9 @@ public class PreviewView implements IAutoReloadAble {
     private JFXTextField txtSearchFilter;
     private JFXComboBox<String> cbStatusFilter;
     private JFXCheckBox chkHideUnchanged;
+    @Getter
     private Spinner<Integer> spPreviewThreads;
+    @Getter
     private Spinner<Integer> spExecutionThreads;
     private JFXComboBox<Integer> numberDisplay;
     private JFXComboBox<String> cbThreadPoolMode; // 线程池模式选择：共享或根路径独立
@@ -72,7 +74,7 @@ public class PreviewView implements IAutoReloadAble {
     private boolean autoRefreshEnabled = false;
     private JFXCheckBox chkAutoRefresh;
     private ScheduledExecutorService autoRefreshExecutor;
-    
+
     // 配置面板相关
     private TitledPane localParamsPane;
     private VBox configContent;
@@ -89,7 +91,7 @@ public class PreviewView implements IAutoReloadAble {
     private void initControls() {
         txtSearchFilter = new JFXTextField();
         txtSearchFilter.setPromptText("请输入关键词进行搜索...");
-        cbStatusFilter = new JFXComboBox<>(FXCollections.observableArrayList("全部", "执行中", "成功", "失败"));
+        cbStatusFilter = new JFXComboBox<>(FXCollections.observableArrayList("全部", "执行中", "成功", "失败", "跳过", "无需处理"));
         cbStatusFilter.getSelectionModel().select(0);
         chkHideUnchanged = new JFXCheckBox("仅显示变更");
         chkHideUnchanged.setSelected(true);
@@ -133,7 +135,7 @@ public class PreviewView implements IAutoReloadAble {
                 // 线程池模式切换成功，更新根路径配置区域的可见性
                 boolean isRootPathMode = ThreadPoolManager.MODE_ROOT_PATH.equals(newVal);
                 rootPathThreadConfigBox.setDisable(!isRootPathMode);
-                
+
                 // 控制局部参数配置面板的显示
                 if (isRootPathMode) {
                     // 如果是根路径模式，显示局部参数面板
@@ -148,7 +150,7 @@ public class PreviewView implements IAutoReloadAble {
                     // 清空所有根路径线程配置
                     app.getRootPathThreadConfig().clear();
                 }
-                
+
                 updateRootPathThreadConfigUI();
             } else {
                 // 切换失败，恢复原来的选择
@@ -157,15 +159,25 @@ public class PreviewView implements IAutoReloadAble {
         });
 
         // 数量上限配置初始化
-        spGlobalPreviewLimit = new Spinner<>(1, 10000, 1000);
+        spGlobalPreviewLimit = new Spinner<>(1, 10000, 100);
         spGlobalPreviewLimit.setEditable(true);
-        spGlobalPreviewLimit.setPrefWidth(100);
+        spGlobalPreviewLimit.setPrefWidth(80);
         spGlobalPreviewLimit.setTooltip(new Tooltip("全局预览数量上限"));
+        spGlobalPreviewLimit.focusedProperty().addListener((observable, oldValue, newValue) -> {
+            if (!newValue) { // 当失去焦点时
+                spGlobalPreviewLimit.increment(0); // 这是一个小技巧：触发一次位移为0的增量，强制同步文本
+            }
+        });
 
-        spGlobalExecutionLimit = new Spinner<>(1, 10000, 1000);
+        spGlobalExecutionLimit = new Spinner<>(1, 10000, 100);
         spGlobalExecutionLimit.setEditable(true);
-        spGlobalExecutionLimit.setPrefWidth(100);
+        spGlobalExecutionLimit.setPrefWidth(80);
         spGlobalExecutionLimit.setTooltip(new Tooltip("全局执行数量上限"));
+        spGlobalExecutionLimit.focusedProperty().addListener((observable, oldValue, newValue) -> {
+            if (!newValue) { // 当失去焦点时
+                spGlobalExecutionLimit.increment(0); // 这是一个小技巧：触发一次位移为0的增量，强制同步文本
+            }
+        });
 
         chkUnlimitedPreview = new JFXCheckBox("不限制");
         chkUnlimitedPreview.setSelected(true);
@@ -247,6 +259,11 @@ public class PreviewView implements IAutoReloadAble {
             executionSpinner.setEditable(true);
             executionSpinner.setPrefWidth(80);
             executionSpinner.setTooltip(new Tooltip("执行线程数: " + rootPath));
+            executionSpinner.focusedProperty().addListener((observable, oldValue, newValue) -> {
+                if (!newValue) { // 当失去焦点时
+                    executionSpinner.increment(0); // 这是一个小技巧：触发一次位移为0的增量，强制同步文本
+                }
+            });
 
             // 监听执行线程数变化，更新配置
             executionSpinner.valueProperty().addListener((obs, oldVal, newVal) -> {
@@ -258,6 +275,11 @@ public class PreviewView implements IAutoReloadAble {
             previewSpinner.setEditable(true);
             previewSpinner.setPrefWidth(80);
             previewSpinner.setTooltip(new Tooltip("预览线程数: " + rootPath));
+            previewSpinner.focusedProperty().addListener((observable, oldValue, newValue) -> {
+                if (!newValue) { // 当失去焦点时
+                    previewSpinner.increment(0); // 这是一个小技巧：触发一次位移为0的增量，强制同步文本
+                }
+            });
 
             // 监听预览线程数变化，更新配置
             previewSpinner.valueProperty().addListener((obs, oldVal, newVal) -> {
@@ -295,7 +317,7 @@ public class PreviewView implements IAutoReloadAble {
             HBox allParamsRow = new HBox(20);
             allParamsRow.setAlignment(Pos.CENTER_LEFT);
             allParamsRow.setSpacing(15);
-            
+
             // 线程数配置
             HBox threadConfig = new HBox(10);
             threadConfig.getChildren().addAll(
@@ -303,11 +325,11 @@ public class PreviewView implements IAutoReloadAble {
                     previewSpinner,
                     new Label("执行线程: "),
                     executionSpinner);
-            
+
             // 预览数量上限配置
             Spinner<Integer> previewLimitSpinner = new Spinner<>(1, 10000, 1000);
             previewLimitSpinner.setEditable(true);
-            previewLimitSpinner.setPrefWidth(100);
+            previewLimitSpinner.setPrefWidth(80);
             JFXCheckBox unlimitedPreview = new JFXCheckBox("不限制");
             unlimitedPreview.setSelected(true);
             unlimitedPreview.selectedProperty().addListener((obs, oldVal, newVal) -> {
@@ -318,11 +340,11 @@ public class PreviewView implements IAutoReloadAble {
                     new Label("预览数量: "),
                     previewLimitSpinner,
                     unlimitedPreview);
-            
+
             // 执行数量上限配置
             Spinner<Integer> executionLimitSpinner = new Spinner<>(1, 10000, 1000);
             executionLimitSpinner.setEditable(true);
-            executionLimitSpinner.setPrefWidth(100);
+            executionLimitSpinner.setPrefWidth(80);
             JFXCheckBox unlimitedExecution = new JFXCheckBox("不限制");
             unlimitedExecution.setSelected(true);
             unlimitedExecution.selectedProperty().addListener((obs, oldVal, newVal) -> {
@@ -333,7 +355,7 @@ public class PreviewView implements IAutoReloadAble {
                     new Label("执行数量: "),
                     executionLimitSpinner,
                     unlimitedExecution);
-            
+
             // 将所有参数添加到一行
             allParamsRow.getChildren().addAll(threadConfig, previewLimit, executionLimit);
 
@@ -407,7 +429,7 @@ public class PreviewView implements IAutoReloadAble {
         // 全局参数面板 - 排成一行显示
         VBox globalParamsBox = new VBox(10);
         globalParamsBox.setStyle("-fx-background-color: #f9f9f9; -fx-border-radius: 5; -fx-border-color: #e0e0e0; -fx-padding: 10;");
-        
+
         // 线程参数行
         HBox threadParamsRow = new HBox(20);
         threadParamsRow.setAlignment(Pos.CENTER_LEFT);
@@ -415,27 +437,27 @@ public class PreviewView implements IAutoReloadAble {
                 StyleFactory.createParamPairLine("预览线程数:", spPreviewThreads),
                 StyleFactory.createParamPairLine("执行线程数:", spExecutionThreads),
                 StyleFactory.createParamPairLine("线程池模式:", cbThreadPoolMode));
-        
+
         // 数量上限行
         HBox limitParamsRow = new HBox(20);
         limitParamsRow.setAlignment(Pos.CENTER_LEFT);
-        
+
         // 预览数量限制
         HBox previewLimitBox = new HBox(10);
         previewLimitBox.getChildren().addAll(
                 StyleFactory.createParamPairLine("预览数量:", spGlobalPreviewLimit),
                 chkUnlimitedPreview);
-        
+
         // 执行数量限制
         HBox executionLimitBox = new HBox(10);
         executionLimitBox.getChildren().addAll(
                 StyleFactory.createParamPairLine("执行数量:", spGlobalExecutionLimit),
                 chkUnlimitedExecution);
-        
+
         limitParamsRow.getChildren().addAll(previewLimitBox, executionLimitBox);
-        
+
         globalParamsBox.getChildren().addAll(
-                StyleFactory.createChapter(" ��[全局运行参数]  "),
+                StyleFactory.createChapter("[全局运行参数]  "),
                 threadParamsRow,
                 limitParamsRow);
 
@@ -457,7 +479,7 @@ public class PreviewView implements IAutoReloadAble {
         VBox rootPathBox = new VBox(10);
         rootPathBox.setStyle("-fx-background-color: #f9f9f9; -fx-border-radius: 5; -fx-border-color: #e0e0e0; -fx-padding: 10;");
         rootPathBox.getChildren().addAll(
-                StyleFactory.createChapter(" ��[根路径配置]  "),
+                StyleFactory.createChapter("[根路径配置]  "),
                 rootPathThreadConfigBox);
 
         localParamsContent.getChildren().addAll(rootPathBox);
@@ -468,12 +490,12 @@ public class PreviewView implements IAutoReloadAble {
 
         // 运行状态和统计信息
         VBox dash = StyleFactory.createVBoxPanel(
-                StyleFactory.createHBoxPanel(StyleFactory.createChapter(" ��[运行状态]  "), runningLabel),
-                StyleFactory.createHBoxPanel(StyleFactory.createChapter(" ��[统计信息]  "), statsLabel));
+                StyleFactory.createHBoxPanel(StyleFactory.createChapter("[运行状态]  "), runningLabel),
+                StyleFactory.createHBoxPanel(StyleFactory.createChapter("[统计信息]  "), statsLabel));
 
         // 表格过滤器
         HBox filterBox = StyleFactory.createHBoxPanel(
-                StyleFactory.createChapter(" ��[筛选条件]  "), txtSearchFilter,
+                StyleFactory.createChapter("[筛选条件]  "), txtSearchFilter,
                 StyleFactory.createSeparatorWithChange(false), cbStatusFilter,
                 StyleFactory.createSeparatorWithChange(false), chkHideUnchanged,
                 StyleFactory.createSeparatorWithChange(false), chkAutoRefresh,
@@ -488,12 +510,12 @@ public class PreviewView implements IAutoReloadAble {
         previewTable.setStyle("-fx-background-color:rgba(255,255,255,0.4);-fx-base:rgba(255,255,255,0.1);");
         setupPreviewColumns();
         setupPreviewRows();
-        
+
         // 设置根路径线程配置面板的垂直增长优先级
         VBox.setVgrow(rootPathThreadConfigBox, Priority.NEVER);
         // 设置表格的垂直增长优先级为最高
         VBox.setVgrow(previewTable, Priority.ALWAYS);
-        
+
         viewNode.getChildren().addAll(progressBox, configPane, dash, filterBox, previewTable);
     }
 
@@ -680,6 +702,7 @@ public class PreviewView implements IAutoReloadAble {
                     if ("执行中".equals(st)) sm = r.getStatus() == ExecStatus.RUNNING;
                     else if ("成功".equals(st)) sm = r.getStatus() == ExecStatus.SUCCESS;
                     else if ("失败".equals(st)) sm = r.getStatus() == ExecStatus.FAILED;
+                    else if ("跳过".equals(st)) sm = r.getStatus() == ExecStatus.SKIPPED;
                     if (!sm) continue;
                     count.incrementAndGet();
                     root.getChildren().add(new TreeItem<>(r));
@@ -724,54 +747,58 @@ public class PreviewView implements IAutoReloadAble {
         return tabPreview;
     }
 
-    public Spinner<Integer> getSpPreviewThreads() {
-        return spPreviewThreads;
-    }
-
-    public Spinner<Integer> getSpExecutionThreads() {
-        return spExecutionThreads;
-    }
-
     // 获取全局预览数量上限
     public int getGlobalPreviewLimit() {
+        if (chkUnlimitedPreview.isSelected()) {
+            return Integer.MAX_VALUE;
+        }
         return spGlobalPreviewLimit.getValue();
     }
 
     // 获取全局执行数量上限
     public int getGlobalExecutionLimit() {
+        if (chkUnlimitedExecution.isSelected()) {
+            return Integer.MAX_VALUE;
+        }
         return spGlobalExecutionLimit.getValue();
     }
 
     // 是否不限制预览数量
-    public boolean isUnlimitedPreview() {
+    private boolean isUnlimitedPreview() {
         return chkUnlimitedPreview.isSelected();
     }
 
     // 是否不限制执行数量
-    public boolean isUnlimitedExecution() {
+    private boolean isUnlimitedExecution() {
         return chkUnlimitedExecution.isSelected();
     }
 
     // 获取指定根路径的预览数量上限
     public int getRootPathPreviewLimit(String rootPath) {
+        if (isRootPathUnlimitedPreview(rootPath)) {
+            return Integer.MAX_VALUE;
+        }
         Spinner<Integer> spinner = rootPathPreviewLimits.get(rootPath);
         return spinner != null ? spinner.getValue() : getGlobalPreviewLimit();
     }
 
     // 获取指定根路径的执行数量上限
     public int getRootPathExecutionLimit(String rootPath) {
+        if (isRootPathUnlimitedExecution(rootPath)) {
+            return Integer.MAX_VALUE;
+        }
         Spinner<Integer> spinner = rootPathExecutionLimits.get(rootPath);
         return spinner != null ? spinner.getValue() : getGlobalExecutionLimit();
     }
 
     // 指定根路径是否不限制预览数量
-    public boolean isRootPathUnlimitedPreview(String rootPath) {
+    private boolean isRootPathUnlimitedPreview(String rootPath) {
         JFXCheckBox checkBox = rootPathUnlimitedPreview.get(rootPath);
         return checkBox != null ? checkBox.isSelected() : isUnlimitedPreview();
     }
 
     // 指定根路径是否不限制执行数量
-    public boolean isRootPathUnlimitedExecution(String rootPath) {
+    private boolean isRootPathUnlimitedExecution(String rootPath) {
         JFXCheckBox checkBox = rootPathUnlimitedExecution.get(rootPath);
         return checkBox != null ? checkBox.isSelected() : isUnlimitedExecution();
     }
@@ -790,25 +817,25 @@ public class PreviewView implements IAutoReloadAble {
 
         // 保存根路径线程配置
         for (java.util.Map.Entry<String, Spinner<Integer>> entry : rootPathSpinners.entrySet()) {
-            String key = "root_thread_" + entry.getKey().replaceAll("\\", "_");
+            String key = "root_thread_" + entry.getKey().replaceAll("\\\\", "_");
             props.setProperty(key, String.valueOf(entry.getValue().getValue()));
         }
 
         // 保存根路径数量上限配置
         for (java.util.Map.Entry<String, Spinner<Integer>> entry : rootPathPreviewLimits.entrySet()) {
-            String key = "root_preview_limit_" + entry.getKey().replaceAll("\\", "_");
+            String key = "root_preview_limit_" + entry.getKey().replaceAll("\\\\", "_");
             props.setProperty(key, String.valueOf(entry.getValue().getValue()));
         }
         for (java.util.Map.Entry<String, Spinner<Integer>> entry : rootPathExecutionLimits.entrySet()) {
-            String key = "root_execution_limit_" + entry.getKey().replaceAll("\\", "_");
+            String key = "root_execution_limit_" + entry.getKey().replaceAll("\\\\", "_");
             props.setProperty(key, String.valueOf(entry.getValue().getValue()));
         }
         for (java.util.Map.Entry<String, JFXCheckBox> entry : rootPathUnlimitedPreview.entrySet()) {
-            String key = "root_unlimited_preview_" + entry.getKey().replaceAll("\\", "_");
+            String key = "root_unlimited_preview_" + entry.getKey().replaceAll("\\\\", "_");
             props.setProperty(key, String.valueOf(entry.getValue().isSelected()));
         }
         for (java.util.Map.Entry<String, JFXCheckBox> entry : rootPathUnlimitedExecution.entrySet()) {
-            String key = "root_unlimited_execution_" + entry.getKey().replaceAll("\\", "_");
+            String key = "root_unlimited_execution_" + entry.getKey().replaceAll("\\\\", "_");
             props.setProperty(key, String.valueOf(entry.getValue().isSelected()));
         }
     }

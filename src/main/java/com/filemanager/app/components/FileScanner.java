@@ -28,13 +28,13 @@ public class FileScanner {
         this.isTaskRunning = app.getTaskRunningStatus();
     }
     
-    public List<File> scanFilesRobust(File root, int minDepth, int maxDepth, Consumer<String> msg) {
+    public List<File> scanFilesRobust(File root, int minDepth, int maxDepth, AtomicInteger globalLimit, AtomicInteger dirLimit, Consumer<String> msg) {
         AtomicInteger countScan = new AtomicInteger(0);
         AtomicInteger countIgnore = new AtomicInteger(0);
         List<File> list = new ArrayList<>();
         if (!root.exists()) return list;
         int threads = app.getSpPreviewThreads().getValue();
-        try (Stream<Path> s = ParallelStreamWalker.walk(root.toPath(), minDepth, maxDepth, threads, isTaskRunning)) {
+        try (Stream<Path> s = ParallelStreamWalker.walk(root.toPath(), minDepth, maxDepth, globalLimit, dirLimit, threads, isTaskRunning)) {
             list = s.filter(p -> {
                 try {
                     if (globalSettingsView.isFileIncluded(p.toFile())) {

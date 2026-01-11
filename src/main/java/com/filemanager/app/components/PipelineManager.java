@@ -1,11 +1,11 @@
 package com.filemanager.app.components;
 
-import com.filemanager.app.ui.PreviewView;
 import com.filemanager.app.base.IAppController;
 import com.filemanager.app.base.IAppStrategy;
 import com.filemanager.app.tools.MultiThreadTaskEstimator;
 import com.filemanager.app.tools.display.FXDialogUtils;
 import com.filemanager.app.tools.display.ProgressBarDisplay;
+import com.filemanager.app.ui.PreviewView;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.strategy.AppStrategyFactory;
 import com.filemanager.tool.RetryableThreadPool;
@@ -33,11 +33,10 @@ public class PipelineManager {
     private final ThreadPoolManager threadPoolManager;
     private final AtomicLong lastRefresh;
     private final AtomicBoolean isTaskRunning;
+    private final Map<String, MultiThreadTaskEstimator> localEstimatorMap = new HashMap<>();
     private List<ChangeRecord> fullChangeList;
     private Task<?> currentTask;
     private MultiThreadTaskEstimator threadTaskEstimator;
-
-    private Map<String, MultiThreadTaskEstimator> localEstimatorMap = new HashMap<>();
 
     public PipelineManager(IAppController app, ThreadPoolManager threadPoolManager) {
         this.app = app;
@@ -81,7 +80,10 @@ public class PipelineManager {
                 ("全部文件".equals(app.getCbRecursionMode().getValue()) ? 0 : app.getSpRecursionDepth().getValue());
         int maxDepth = "当前目录".equals(app.getCbRecursionMode().getValue()) ? 1 :
                 ("全部文件".equals(app.getCbRecursionMode().getValue()) ? Integer.MAX_VALUE : app.getSpRecursionDepth().getValue());
-
+        // 应用预览数量限制
+        PreviewView previewView = app.getPreviewView();
+        int limit = previewView.getGlobalPreviewLimit();
+        AtomicInteger globalLimitRemaining = new AtomicInteger(limit);
         Task<List<ChangeRecord>> task = new Task<List<ChangeRecord>>() {
             @Override
             protected List<ChangeRecord> call() throws Exception {
@@ -91,52 +93,13 @@ public class PipelineManager {
                 List<File> initialFiles = new ArrayList<>();
                 for (File r : app.getSourceRoots()) {
                     if (isCancelled()) break;
-                    initialFiles.addAll(app.scanFilesRobust(r, minDepth, maxDepth, msg -> app.setRunningUI("▶ ▶ ▶ " + msg)));
+                    int rootLimit = previewView.getRootPathPreviewLimit(r.getAbsolutePath());
+                    AtomicInteger dirLimitRemaining = new AtomicInteger(rootLimit);
+                    initialFiles.addAll(app.scanFilesRobust(r, minDepth, maxDepth, globalLimitRemaining, dirLimitRemaining, msg -> app.setRunningUI("▶ ▶ ▶ " + msg)));
                 }
                 if (isCancelled()) return null;
                 app.setRunningUI("▶ ▶ ▶ 扫描完成，共 " + initialFiles.size() + " 个文件。");
-
-                // 应用预览数量限制
-                PreviewView previewView = app.getPreviewView();
-                List<File> limitedFiles = initialFiles;
-
-                // 检查全局预览数量限制
-                if (!previewView.isUnlimitedPreview()) {
-                    int limit = previewView.getGlobalPreviewLimit();
-                    if (initialFiles.size() > limit) {
-                        limitedFiles = initialFiles.stream().limit(limit).collect(Collectors.toList());
-                        app.log("▶ ▶ ▶ 已应用全局预览数量限制，仅处理 " + limit + " 个文件");
-                    }
-                }
-
-                // 检查根路径预览数量限制
-                List<File> finalLimitedFiles = new ArrayList<>();
-                java.util.Map<String, Integer> processedCountByRoot = new java.util.concurrent.ConcurrentHashMap<>();
-
-                for (File file : limitedFiles) {
-                    String filePath = file.isDirectory() ? file.getAbsolutePath() : file.getParent();
-                    String rootPath = app.findRootPathForFile(filePath);
-
-                    // 检查根路径预览数量限制
-                    if (!previewView.isRootPathUnlimitedPreview(rootPath)) {
-                        int rootLimit = previewView.getRootPathPreviewLimit(rootPath);
-                        int processed = processedCountByRoot.computeIfAbsent(rootPath, k -> 0);
-
-                        if (processed >= rootLimit) {
-                            continue; // 达到根路径预览数量限制，跳过该文件
-                        }
-
-                        processedCountByRoot.put(rootPath, processed + 1);
-                    }
-
-                    finalLimitedFiles.add(file);
-                }
-
-                if (finalLimitedFiles.size() < limitedFiles.size()) {
-                    app.log("▶ ▶ ▶ 已应用根路径预览数量限制，共处理 " + finalLimitedFiles.size() + " 个文件");
-                }
-
-                List<ChangeRecord> currentRecords = finalLimitedFiles.stream()
+                List<ChangeRecord> currentRecords = initialFiles.stream()
                         .map(f -> new ChangeRecord(f.getName(), f.getName(), f, false, f.getAbsolutePath(), OperationType.NONE))
                         .collect(Collectors.toList());
 
@@ -207,7 +170,7 @@ public class PipelineManager {
         if (!confirmExecution(count)) {
             return;
         }
-        
+
         isTaskRunning.set(true);
 
         prepareExecutionUI();
@@ -228,7 +191,7 @@ public class PipelineManager {
     }
 
     private boolean confirmExecution(long count) {
-        if (app.getAutoRun().isSelected()){
+        if (app.getAutoRun().isSelected()) {
             return true;
         }
         return FXDialogUtils.showConfirm("确认", "执行 " + count + " 个变更?");
@@ -301,6 +264,8 @@ public class PipelineManager {
                         // 检查任务数量限制
                         boolean exceedLimit = checkExecutionLimits(rootPath, globalExecutedCount, executedCountByRootPath);
                         if (exceedLimit) {
+                            rec.setFailReason("已超出执行限制，忽略接下来的操作！！！");
+                            rec.setStatus(ExecStatus.SKIPPED);
                             continue;
                         }
 
@@ -342,23 +307,13 @@ public class PipelineManager {
     private boolean checkExecutionLimits(String rootPath, AtomicInteger globalExecutedCount,
                                          java.util.Map<String, AtomicInteger> executedCountByRootPath) {
         PreviewView previewView = app.getPreviewView();
-        boolean exceedLimit = false;
-
+        boolean exceedLimit = globalExecutedCount.get() >= previewView.getGlobalExecutionLimit();
         // 检查全局执行数量限制
-        if (!previewView.isUnlimitedExecution()) {
-            if (globalExecutedCount.get() >= previewView.getGlobalExecutionLimit()) {
-                exceedLimit = true;
-            }
-        }
-
         // 检查根路径执行数量限制
-        if (!exceedLimit && !previewView.isRootPathUnlimitedExecution(rootPath)) {
-            AtomicInteger rootExecutedCount = executedCountByRootPath.computeIfAbsent(rootPath, k -> new AtomicInteger(0));
-            if (rootExecutedCount.get() >= previewView.getRootPathExecutionLimit(rootPath)) {
-                exceedLimit = true;
-            }
+        AtomicInteger rootExecutedCount = executedCountByRootPath.computeIfAbsent(rootPath, k -> new AtomicInteger(0));
+        if (rootExecutedCount.get() >= previewView.getRootPathExecutionLimit(rootPath)) {
+            exceedLimit = true;
         }
-
         return exceedLimit;
     }
 
@@ -414,6 +369,7 @@ public class PipelineManager {
                 rec.setStatus(ExecStatus.SUCCESS);
                 app.log("✅️ 成功处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().getName() + ",目标路径：" + rec.getNewName());
             } else {
+                rec.setFailReason("没找到对应的执行节点，请检查代码实现！！！");
                 rec.setStatus(ExecStatus.SKIPPED);
             }
         } catch (Exception e) {
@@ -491,7 +447,7 @@ public class PipelineManager {
             app.getPreviewView().getMainProgressBar().progressProperty().set(1.0);
         }
         // 设置进度条为颜色
-        ProgressBarDisplay.updateProgressStatus( app.getPreviewView().getMainProgressBar(), status);
+        ProgressBarDisplay.updateProgressStatus(app.getPreviewView().getMainProgressBar(), status);
         currentTask = null;
     }
 
