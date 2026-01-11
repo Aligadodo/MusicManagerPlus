@@ -1,9 +1,10 @@
 package com.filemanager.rule.rename;
 
+import com.filemanager.app.tools.display.NodeUtils;
+import com.filemanager.app.tools.display.StyleFactory;
 import com.filemanager.model.RuleCondition;
 import com.filemanager.strategy.AdvancedRenameStrategy;
-import com.filemanager.tool.display.NodeUtils;
-import com.filemanager.tool.display.StyleFactory;
+
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.layout.HBox;

@@ -1,13 +1,13 @@
 package com.filemanager.strategy;
 
-import com.filemanager.base.IAppStrategy;
+import com.filemanager.app.base.IAppStrategy;
+import com.filemanager.app.tools.display.StyleFactory;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.RuleCondition;
 import com.filemanager.rule.rename.RenameActionType;
 import com.filemanager.rule.rename.RenameMode;
 import com.filemanager.rule.rename.RenameRule;
 import com.filemanager.rule.rename.RenameRuleListCell;
-import com.filemanager.tool.display.StyleFactory;
 import com.filemanager.type.ConditionType;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;

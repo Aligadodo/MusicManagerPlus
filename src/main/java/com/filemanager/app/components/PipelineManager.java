@@ -1,15 +1,15 @@
 package com.filemanager.app.components;
 
-import com.filemanager.app.components.tools.MultiThreadTaskEstimator;
-import com.filemanager.base.IAppController;
-import com.filemanager.base.IAppStrategy;
-import com.filemanager.app.baseui.PreviewView;
+import com.filemanager.app.ui.PreviewView;
+import com.filemanager.app.base.IAppController;
+import com.filemanager.app.base.IAppStrategy;
+import com.filemanager.app.tools.MultiThreadTaskEstimator;
+import com.filemanager.app.tools.display.FXDialogUtils;
+import com.filemanager.app.tools.display.ProgressBarDisplay;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.strategy.AppStrategyFactory;
 import com.filemanager.tool.RetryableThreadPool;
 import com.filemanager.tool.ThreadPoolManager;
-import com.filemanager.tool.display.FXDialogUtils;
-import com.filemanager.tool.display.ProgressBarDisplay;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.TaskStatus;

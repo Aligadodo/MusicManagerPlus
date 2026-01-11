@@ -1,8 +1,8 @@
 package com.filemanager.app.components;
 
-import com.filemanager.base.IAppController;
-import com.filemanager.model.ThemeConfig;
-import com.filemanager.tool.display.StyleFactory;
+import com.filemanager.app.tools.display.StyleFactory;
+import com.filemanager.app.tools.display.ThemeConfig;
+import com.filemanager.app.base.IAppController;
 import com.jfoenix.controls.JFXButton;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;

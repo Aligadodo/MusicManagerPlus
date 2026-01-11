@@ -1,8 +1,9 @@
 package com.filemanager.app.components;
 
-import com.filemanager.app.components.tools.ParallelStreamWalker;
-import com.filemanager.base.IAppController;
-import com.filemanager.app.baseui.GlobalSettingsView;
+import com.filemanager.app.ui.GlobalSettingsView;
+import com.filemanager.app.base.IAppController;
+import com.filemanager.app.tools.ParallelStreamWalker;
+
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.io.File;

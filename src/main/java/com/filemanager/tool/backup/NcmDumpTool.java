@@ -1,7 +1,5 @@
 package com.filemanager.tool.backup;
 
-import com.filemanager.dump.NcmDump;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -10,6 +8,8 @@ import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import com.filemanager.model.dump.NcmDump;
 
 public class NcmDumpTool {
 

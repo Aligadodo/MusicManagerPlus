@@ -1,6 +1,6 @@
 package com.filemanager.strategy;
 
-import com.filemanager.base.IAppStrategy;
+import com.filemanager.app.base.IAppStrategy;
 import com.filemanager.model.*;
 import com.filemanager.tool.file.PathUtils;
 import com.filemanager.type.ExecStatus;

@@ -1,9 +1,9 @@
 package com.filemanager.strategy;
 
-import com.filemanager.base.IAppStrategy;
+import com.filemanager.app.base.IAppStrategy;
+import com.filemanager.app.tools.display.StyleFactory;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.FileStatisticInfo;
-import com.filemanager.tool.display.StyleFactory;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
 import com.filemanager.util.file.FileRegexReplaceUtil;

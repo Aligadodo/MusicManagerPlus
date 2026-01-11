@@ -1,24 +1,24 @@
 package com.filemanager.app;
 
-import com.filemanager.app.baseui.ComposeView;
-import com.filemanager.app.baseui.GlobalSettingsView;
-import com.filemanager.app.baseui.LogView;
-import com.filemanager.app.baseui.PreviewView;
+import com.filemanager.app.base.IAppController;
+import com.filemanager.app.base.IAppStrategy;
+import com.filemanager.app.base.IAutoReloadAble;
 import com.filemanager.app.components.AppearanceManager;
 import com.filemanager.app.components.FileScanner;
 import com.filemanager.app.components.PipelineManager;
-import com.filemanager.app.components.tools.ConfigFileManager;
-import com.filemanager.app.components.tools.MultiThreadTaskEstimator;
-import com.filemanager.base.IAppController;
-import com.filemanager.base.IAppStrategy;
-import com.filemanager.base.IAutoReloadAble;
+import com.filemanager.app.tools.ConfigFileManager;
+import com.filemanager.app.tools.MultiThreadTaskEstimator;
+import com.filemanager.app.tools.display.ProgressBarDisplay;
+import com.filemanager.app.tools.display.StyleFactory;
+import com.filemanager.app.tools.display.ThemeConfig;
+import com.filemanager.app.tools.display.ThemeManager;
+import com.filemanager.app.ui.ComposeView;
+import com.filemanager.app.ui.GlobalSettingsView;
+import com.filemanager.app.ui.LogView;
+import com.filemanager.app.ui.PreviewView;
 import com.filemanager.model.ChangeRecord;
-import com.filemanager.model.ThemeConfig;
 import com.filemanager.strategy.AppStrategyFactory;
-import com.filemanager.tool.RetryableThreadPool;
 import com.filemanager.tool.ThreadPoolManager;
-import com.filemanager.tool.display.ProgressBarDisplay;
-import com.filemanager.tool.display.StyleFactory;
 import com.filemanager.tool.log.LogInfo;
 import com.filemanager.tool.log.LogType;
 import com.filemanager.type.TaskStatus;
@@ -140,6 +140,17 @@ public class FileManagerPlusApp extends Application implements IAppController {
         primaryStage.setTitle("Echo Music Manager - Plus Edition");
 
         // 1. 基础服务初始化
+        // 初始化主题管理器并设置当前主题
+        ThemeManager.getInstance().updateCurrentTheme(theme -> {
+            // 使用当前主题配置覆盖默认设置
+            theme.setBgColor(currentTheme.getBgColor());
+            theme.setAccentColor(currentTheme.getAccentColor());
+            theme.setTextColor(currentTheme.getTextColor());
+            theme.setGlassOpacity(currentTheme.getGlassOpacity());
+            theme.setDarkBackground(currentTheme.isDarkBackground());
+            theme.setCornerRadius(currentTheme.getCornerRadius());
+        });
+        // 初始化样式工厂
         StyleFactory.initStyleFactory(currentTheme);
         this.configManager = new ConfigFileManager(this);
         this.strategyPrototypes = AppStrategyFactory.getAppStrategies();
