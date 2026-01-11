@@ -165,17 +165,17 @@ public class ParallelStreamWalker {
 
 
         private boolean reachedLimit() {
-            if (globalLimitRemaining.get() <= 0) {
+            if (globalLimitRemaining.get() < 0) {
                 return true;
             }
-            return dirLimitRemaining.get() <= 0;
+            return dirLimitRemaining.get() < 0;
         }
 
         private boolean putAndCheckLimit(Path entry) {
-            if (globalLimitRemaining.decrementAndGet() <= 0) {
+            if (globalLimitRemaining.decrementAndGet() < 0) {
                 return false;
             }
-            if (dirLimitRemaining.decrementAndGet() <= 0) {
+            if (dirLimitRemaining.decrementAndGet() < 0) {
                 return false;
             }
             try {
