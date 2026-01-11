@@ -104,7 +104,7 @@ public class PreviewView implements IAutoReloadAble {
         cbStatusFilter.valueProperty().addListener((o, old, v) -> app.refreshPreviewTableFilter());
         chkHideUnchanged.selectedProperty().addListener((o, old, v) -> app.refreshPreviewTableFilter());
 
-        mainProgressBar = new ProgressBar(0);
+        mainProgressBar = StyleFactory.createMainProgressBar(0);
         runningLabel = StyleFactory.createChapter("无执行中任务");
         statsLabel = StyleFactory.createHeader("暂无统计信息");
 
@@ -344,9 +344,7 @@ public class PreviewView implements IAutoReloadAble {
             rootPathUnlimitedExecution.put(rootPath, unlimitedExecution);
 
             // 添加执行进度条
-            ProgressBar progressBar = new ProgressBar(0);
-            progressBar.setPrefWidth(200);
-            progressBar.setStyle("-fx-accent: #27ae60;");
+            ProgressBar progressBar = StyleFactory.createRootPathProgressBar(0);
 
             Label progressLabel = new Label("执行进度: 0% (0/" + pendingCount + ")");
             progressLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #666;");
@@ -385,8 +383,6 @@ public class PreviewView implements IAutoReloadAble {
         HBox progressBox = StyleFactory.createHBoxPanel(mainProgressBar);
         progressBox.setAlignment(Pos.CENTER);
         progressBox.setFillHeight(true);
-        mainProgressBar.setPrefHeight(25);
-        mainProgressBar.setPrefWidth(10000.0);
         HBox.setHgrow(mainProgressBar, Priority.ALWAYS);
 
         // 配置区域：使用折叠面板组织所有配置

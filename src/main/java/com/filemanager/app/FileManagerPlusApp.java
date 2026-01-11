@@ -89,14 +89,8 @@ public class FileManagerPlusApp extends Application implements IAppController {
     @Getter
     private final Map<String, Integer> rootPathThreadConfig = new ConcurrentHashMap<>();
 
-    // 存储每个根路径对应的线程池（仅在任务执行期间有效）
-    private final Map<String, RetryableThreadPool> executorMap = new HashMap<>();
-
-    // 存储每个根路径对应的任务估算器（仅在任务执行期间有效）
-    private final Map<String, MultiThreadTaskEstimator> rootPathEstimators = new HashMap<>();
-
     @Getter
-    private final long taskStartTimStamp = System.currentTimeMillis();
+    private long taskStartTimStamp = System.currentTimeMillis();
 
     private List<IAppStrategy> strategyPrototypes;
     // 线程池管理器
@@ -361,11 +355,13 @@ public class FileManagerPlusApp extends Application implements IAppController {
 
     @Override
     public void runPipelineAnalysis() {
+        taskStartTimStamp = System.currentTimeMillis();
         pipelineManager.runPipelineAnalysis();
     }
 
     @Override
     public void runPipelineExecution() {
+         taskStartTimStamp = System.currentTimeMillis();
         pipelineManager.runPipelineExecution();
     }
 

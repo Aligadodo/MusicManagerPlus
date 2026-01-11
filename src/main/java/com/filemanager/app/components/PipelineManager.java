@@ -257,8 +257,6 @@ public class PipelineManager {
                 // 线程池和估算器管理
                 localEstimatorMap.clear();
 
-                
-
                 // 任务数量限制计数器
                 final java.util.Map<String, AtomicInteger> executedCountByRootPath = new java.util.concurrent.ConcurrentHashMap<>();
                 final AtomicInteger globalExecutedCount = new AtomicInteger(0);

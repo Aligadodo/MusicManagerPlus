@@ -411,4 +411,37 @@ public class StyleFactory {
 //            }
 //        }
     }
+    
+    /**
+     * 创建统一风格的进度条
+     * @param initialValue 初始进度值（0.0-1.0，-1.0表示不确定）
+     * @param prefWidth 首选宽度
+     * @return 配置好的进度条
+     */
+    public static ProgressBar createProgressBar(double initialValue, double prefWidth) {
+        ProgressBar progressBar = new ProgressBar(initialValue);
+        progressBar.setPrefHeight(25);
+        progressBar.setPrefWidth(prefWidth);
+        progressBar.setStyle("-fx-accent: #27ae60;");
+        return progressBar;
+    }
+    
+    /**
+     * 创建主进度条（占满宽度）
+     * @param initialValue 初始进度值
+     * @return 配置好的主进度条
+     */
+    public static ProgressBar createMainProgressBar(double initialValue) {
+        ProgressBar progressBar = createProgressBar(initialValue, 10000.0);
+        return progressBar;
+    }
+    
+    /**
+     * 创建根路径进度条（固定宽度）
+     * @param initialValue 初始进度值
+     * @return 配置好的根路径进度条
+     */
+    public static ProgressBar createRootPathProgressBar(double initialValue) {
+        return createProgressBar(initialValue, 200);
+    }
 }
