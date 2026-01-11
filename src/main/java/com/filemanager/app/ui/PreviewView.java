@@ -339,6 +339,11 @@ public class PreviewView implements IAutoReloadAble {
             Spinner<Integer> previewLimitSpinner = new Spinner<>(1, 10000, 1000);
             previewLimitSpinner.setEditable(true);
             previewLimitSpinner.setPrefWidth(80);
+            previewLimitSpinner.focusedProperty().addListener((observable, oldValue, newValue) -> {
+                if (!newValue) { // 当失去焦点时
+                    previewLimitSpinner.increment(0); // 这是一个小技巧：触发一次位移为0的增量，强制同步文本
+                }
+            });
             JFXCheckBox unlimitedPreview = new JFXCheckBox("不限制");
             unlimitedPreview.setSelected(true);
             unlimitedPreview.selectedProperty().addListener((obs, oldVal, newVal) -> {
@@ -354,6 +359,11 @@ public class PreviewView implements IAutoReloadAble {
             Spinner<Integer> executionLimitSpinner = new Spinner<>(1, 10000, 1000);
             executionLimitSpinner.setEditable(true);
             executionLimitSpinner.setPrefWidth(80);
+            executionLimitSpinner.focusedProperty().addListener((observable, oldValue, newValue) -> {
+                if (!newValue) { // 当失去焦点时
+                    executionLimitSpinner.increment(0); // 这是一个小技巧：触发一次位移为0的增量，强制同步文本
+                }
+            });
             JFXCheckBox unlimitedExecution = new JFXCheckBox("不限制");
             unlimitedExecution.setSelected(true);
             unlimitedExecution.selectedProperty().addListener((obs, oldVal, newVal) -> {

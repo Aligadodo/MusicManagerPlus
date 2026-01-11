@@ -1,11 +1,11 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.app.tools;
 
@@ -54,7 +54,13 @@ public class ConfigFileManager {
             props.clear();
             props.load(is);
             // 1. 恢复全局组件配置
-            app.getAutoReloadNodes().forEach(node -> node.loadConfig(props));
+            app.getAutoReloadNodes().forEach(node -> {
+                try {
+                    node.loadConfig(props);
+                } catch (Exception e) {
+                    app.logError("配置加载失败: " + ExceptionUtils.getStackTrace(e));
+                }
+            });
             // 2. 恢复流水线
             loadPipeline();
             // 3.立即应用外观
@@ -76,7 +82,7 @@ public class ConfigFileManager {
             String prefix = "pipeline." + i + ".";
             // 保存类名以便反射
             props.setProperty(prefix + "class", s.getClass().getName());
-            
+
             // 让策略保存自己的参数
             // 这里使用一个临时的 Props 来捕获策略的参数，然后加上前缀存入全局 Props
             Properties strategyProps = new Properties();
@@ -84,17 +90,17 @@ public class ConfigFileManager {
             for (String key : strategyProps.stringPropertyNames()) {
                 props.setProperty(prefix + "param." + key, strategyProps.getProperty(key));
             }
-            
+
             // 保存通用前置条件 (Condition Groups)
             int gSize = s.getConditionGroups().size();
             props.setProperty(prefix + "cg.size", String.valueOf(gSize));
-            
+
             for (int j = 0; j < gSize; j++) {
                 RuleConditionGroup group = s.getConditionGroups().get(j);
                 String gPre = prefix + "cg." + j + ".";
                 int cSize = group.getConditions().size();
                 props.setProperty(gPre + "c.size", String.valueOf(cSize));
-                
+
                 for (int k = 0; k < cSize; k++) {
                     RuleCondition c = group.getConditions().get(k);
                     props.setProperty(gPre + "c." + k + ".type", c.getType().name());
@@ -108,7 +114,7 @@ public class ConfigFileManager {
         app.getPipelineStrategies().clear();
         // 清空 UI 容器需要主程序配合，这里不直接操作 UI 容器，而是通过数据驱动
         // 实际上需要在主程序加载完后刷新 UI
-        
+
         int size = Integer.parseInt(props.getProperty("pipeline.size", "0"));
         for (int i = 0; i < size; i++) {
             String prefix = "pipeline." + i + ".";
