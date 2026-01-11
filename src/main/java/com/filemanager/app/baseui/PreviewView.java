@@ -72,6 +72,10 @@ public class PreviewView implements IAutoReloadAble {
     private boolean autoRefreshEnabled = false;
     private JFXCheckBox chkAutoRefresh;
     private ScheduledExecutorService autoRefreshExecutor;
+    
+    // 配置面板相关
+    private TitledPane localParamsPane;
+    private VBox configContent;
 
     public PreviewView(IAppController app) {
         this.app = app;
@@ -129,10 +133,22 @@ public class PreviewView implements IAutoReloadAble {
                 // 线程池模式切换成功，更新根路径配置区域的可见性
                 boolean isRootPathMode = ThreadPoolManager.MODE_ROOT_PATH.equals(newVal);
                 rootPathThreadConfigBox.setDisable(!isRootPathMode);
-                if (!isRootPathMode) {
-                    // 如果切换到全局模式，清空所有根路径线程配置
+                
+                // 控制局部参数配置面板的显示
+                if (isRootPathMode) {
+                    // 如果是根路径模式，显示局部参数面板
+                    if (!configContent.getChildren().contains(localParamsPane)) {
+                        configContent.getChildren().add(localParamsPane);
+                    }
+                    // 自动展开局部参数面板
+                    localParamsPane.setExpanded(true);
+                } else {
+                    // 如果是全局模式，隐藏局部参数面板
+                    configContent.getChildren().remove(localParamsPane);
+                    // 清空所有根路径线程配置
                     app.getRootPathThreadConfig().clear();
                 }
+                
                 updateRootPathThreadConfigUI();
             } else {
                 // 切换失败，恢复原来的选择
@@ -275,18 +291,20 @@ public class PreviewView implements IAutoReloadAble {
             Label fileCountLabel = new Label("总文件数: " + fileCount + "，待执行: " + pendingCount);
             fileCountLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #666;");
 
-            // 添加线程数配置
-            HBox threadConfigBox = new HBox(10);
-            threadConfigBox.setAlignment(Pos.CENTER_LEFT);
-            threadConfigBox.getChildren().addAll(
-                    new Label("预览线程数: "),
+            // 所有参数排成一行显示
+            HBox allParamsRow = new HBox(20);
+            allParamsRow.setAlignment(Pos.CENTER_LEFT);
+            allParamsRow.setSpacing(15);
+            
+            // 线程数配置
+            HBox threadConfig = new HBox(10);
+            threadConfig.getChildren().addAll(
+                    new Label("预览线程: "),
                     previewSpinner,
-                    new Label("执行线程数: "),
+                    new Label("执行线程: "),
                     executionSpinner);
-
-            // 添加预览数量上限配置
-            HBox previewLimitBox = new HBox(10);
-            previewLimitBox.setAlignment(Pos.CENTER_LEFT);
+            
+            // 预览数量上限配置
             Spinner<Integer> previewLimitSpinner = new Spinner<>(1, 10000, 1000);
             previewLimitSpinner.setEditable(true);
             previewLimitSpinner.setPrefWidth(100);
@@ -295,14 +313,13 @@ public class PreviewView implements IAutoReloadAble {
             unlimitedPreview.selectedProperty().addListener((obs, oldVal, newVal) -> {
                 previewLimitSpinner.setDisable(newVal);
             });
-            previewLimitBox.getChildren().addAll(
-                    new Label("预览数量上限: "),
+            HBox previewLimit = new HBox(10);
+            previewLimit.getChildren().addAll(
+                    new Label("预览数量: "),
                     previewLimitSpinner,
                     unlimitedPreview);
-
-            // 添加执行数量上限配置
-            HBox executionLimitBox = new HBox(10);
-            executionLimitBox.setAlignment(Pos.CENTER_LEFT);
+            
+            // 执行数量上限配置
             Spinner<Integer> executionLimitSpinner = new Spinner<>(1, 10000, 1000);
             executionLimitSpinner.setEditable(true);
             executionLimitSpinner.setPrefWidth(100);
@@ -311,10 +328,14 @@ public class PreviewView implements IAutoReloadAble {
             unlimitedExecution.selectedProperty().addListener((obs, oldVal, newVal) -> {
                 executionLimitSpinner.setDisable(newVal);
             });
-            executionLimitBox.getChildren().addAll(
-                    new Label("执行数量上限: "),
+            HBox executionLimit = new HBox(10);
+            executionLimit.getChildren().addAll(
+                    new Label("执行数量: "),
                     executionLimitSpinner,
                     unlimitedExecution);
+            
+            // 将所有参数添加到一行
+            allParamsRow.getChildren().addAll(threadConfig, previewLimit, executionLimit);
 
             // 保存根路径数量上限配置引用
             rootPathPreviewLimits.put(rootPath, previewLimitSpinner);
@@ -338,9 +359,7 @@ public class PreviewView implements IAutoReloadAble {
             content.getChildren().addAll(
                     pathLabel,
                     fileCountLabel,
-                    threadConfigBox,
-                    previewLimitBox,
-                    executionLimitBox,
+                    allParamsRow,
                     progressBox);
 
             // 创建折叠面板
@@ -376,8 +395,8 @@ public class PreviewView implements IAutoReloadAble {
         configPane.setExpanded(true);
         configPane.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
 
-        VBox configContent = new VBox(15);
-        configContent.setPadding(new Insets(10));
+        this.configContent = new VBox(15);
+        this.configContent.setPadding(new Insets(10));
 
         // 全局参数设置面板
         TitledPane globalParamsPane = new TitledPane();
@@ -389,37 +408,46 @@ public class PreviewView implements IAutoReloadAble {
         VBox globalParamsContent = new VBox(10);
         globalParamsContent.setPadding(new Insets(10));
 
-        // 运行参数面板
-        VBox runParamsBox = new VBox(10);
-        runParamsBox.setStyle("-fx-background-color: #f9f9f9; -fx-border-radius: 5; -fx-border-color: #e0e0e0; -fx-padding: 10;");
-        runParamsBox.getChildren().addAll(
-                StyleFactory.createChapter(" ��[线程参数]  "),
-                StyleFactory.createHBoxPanel(
-                        StyleFactory.createParamPairLine("预览线程数:", spPreviewThreads),
-                        StyleFactory.createSeparatorWithChange(false),
-                        StyleFactory.createParamPairLine("执行线程数:", spExecutionThreads),
-                        StyleFactory.createSeparatorWithChange(false),
-                        StyleFactory.createParamPairLine("线程池模式:", cbThreadPoolMode)));
+        // 全局参数面板 - 排成一行显示
+        VBox globalParamsBox = new VBox(10);
+        globalParamsBox.setStyle("-fx-background-color: #f9f9f9; -fx-border-radius: 5; -fx-border-color: #e0e0e0; -fx-padding: 10;");
+        
+        // 线程参数行
+        HBox threadParamsRow = new HBox(20);
+        threadParamsRow.setAlignment(Pos.CENTER_LEFT);
+        threadParamsRow.getChildren().addAll(
+                StyleFactory.createParamPairLine("预览线程数:", spPreviewThreads),
+                StyleFactory.createParamPairLine("执行线程数:", spExecutionThreads),
+                StyleFactory.createParamPairLine("线程池模式:", cbThreadPoolMode));
+        
+        // 数量上限行
+        HBox limitParamsRow = new HBox(20);
+        limitParamsRow.setAlignment(Pos.CENTER_LEFT);
+        
+        // 预览数量限制
+        HBox previewLimitBox = new HBox(10);
+        previewLimitBox.getChildren().addAll(
+                StyleFactory.createParamPairLine("预览数量:", spGlobalPreviewLimit),
+                chkUnlimitedPreview);
+        
+        // 执行数量限制
+        HBox executionLimitBox = new HBox(10);
+        executionLimitBox.getChildren().addAll(
+                StyleFactory.createParamPairLine("执行数量:", spGlobalExecutionLimit),
+                chkUnlimitedExecution);
+        
+        limitParamsRow.getChildren().addAll(previewLimitBox, executionLimitBox);
+        
+        globalParamsBox.getChildren().addAll(
+                StyleFactory.createChapter(" ��[全局运行参数]  "),
+                threadParamsRow,
+                limitParamsRow);
 
-        // 全局数量上限配置面板
-        VBox globalLimitParamsBox = new VBox(10);
-        globalLimitParamsBox.setStyle("-fx-background-color: #f9f9f9; -fx-border-radius: 5; -fx-border-color: #e0e0e0; -fx-padding: 10;");
-        globalLimitParamsBox.getChildren().addAll(
-                StyleFactory.createChapter(" ��[全局数量上限]  "),
-                new Label("预览数量上限:"),
-                StyleFactory.createHBoxPanel(
-                        StyleFactory.createParamPairLine("全局:", spGlobalPreviewLimit),
-                        chkUnlimitedPreview),
-                new Label("执行数量上限:"),
-                StyleFactory.createHBoxPanel(
-                        StyleFactory.createParamPairLine("全局:", spGlobalExecutionLimit),
-                        chkUnlimitedExecution));
-
-        globalParamsContent.getChildren().addAll(runParamsBox, globalLimitParamsBox);
+        globalParamsContent.getChildren().addAll(globalParamsBox);
         globalParamsPane.setContent(globalParamsContent);
 
         // 局部参数设置面板
-        TitledPane localParamsPane = new TitledPane();
+        this.localParamsPane = new TitledPane();
         localParamsPane.setText("局部参数设置");
         localParamsPane.setExpanded(true);
         localParamsPane.setStyle("-fx-font-size: 13px; -fx-font-weight: bold;");
@@ -462,9 +490,14 @@ public class PreviewView implements IAutoReloadAble {
         previewTable.setShowRoot(false);
         previewTable.setColumnResizePolicy(TreeTableView.CONSTRAINED_RESIZE_POLICY);
         previewTable.setStyle("-fx-background-color:rgba(255,255,255,0.4);-fx-base:rgba(255,255,255,0.1);");
-        VBox.setVgrow(previewTable, Priority.ALWAYS);
         setupPreviewColumns();
         setupPreviewRows();
+        
+        // 设置根路径线程配置面板的垂直增长优先级
+        VBox.setVgrow(rootPathThreadConfigBox, Priority.NEVER);
+        // 设置表格的垂直增长优先级为最高
+        VBox.setVgrow(previewTable, Priority.ALWAYS);
+        
         viewNode.getChildren().addAll(progressBox, configPane, dash, filterBox, previewTable);
     }
 
@@ -500,6 +533,10 @@ public class PreviewView implements IAutoReloadAble {
                     String displayInfo = estimator.getDisplayInfo();
                     progressBar.setProgress(progress);
                     progressLabel.setText(displayInfo);
+                } else {
+                    // 如果没有估算器，显示默认信息
+                    progressBar.setProgress(-1); // -1表示不确定进度
+                    progressLabel.setText("执行进度: 准备中...");
                 }
             }
         });

@@ -306,6 +306,10 @@ public class PipelineManager {
                             continue;
                         }
 
+                        // 预增加计数器，防止并发问题
+                        globalExecutedCount.incrementAndGet();
+                        executedCountByRootPath.computeIfAbsent(rootPath, k -> new AtomicInteger(0)).incrementAndGet();
+
                         // 获取执行线程池
                         RetryableThreadPool sourceExecutor = threadPoolManager.getExecutionThreadPool(rootPath);
 
@@ -397,9 +401,7 @@ public class PipelineManager {
                 if (rootEstimator != null) {
                     rootEstimator.oneStarted();
                 }
-                // 增加任务数量限制计数器
-                globalExecutedCount.incrementAndGet();
-                executedCountByRootPath.computeIfAbsent(finalRootPath, k -> new AtomicInteger(0)).incrementAndGet();
+                // 计数器已在任务提交前增加，这里不再重复增加
             } else {
                 return;
             }
@@ -441,6 +443,8 @@ public class PipelineManager {
             lastRefresh.set(System.currentTimeMillis());
             app.setRunningUI("▶ ▶ ▶ 执行任务进度: " + threadTaskEstimator.getDisplayInfo());
             app.refreshPreviewTableFilter();
+            // 更新根路径进度UI
+            app.getPreviewView().updateRootPathProgress();
         }
     }
 
