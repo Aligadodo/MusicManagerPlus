@@ -13,15 +13,19 @@ import com.filemanager.app.base.IAppController;
 import com.filemanager.app.base.IAutoReloadAble;
 import com.filemanager.app.tools.AdvancedFileTypeManager;
 import com.filemanager.app.tools.display.StyleFactory;
+import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXComboBox;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Spinner;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.stage.FileChooser;
 import lombok.Getter;
 
-import java.io.File;
+import java.io.*;
 import java.util.Properties;
 import java.util.stream.Collectors;
 
@@ -52,11 +56,74 @@ public class GlobalSettingsView implements IAutoReloadAble {
 
     private void buildUI() {
         viewNode = StyleFactory.createVBoxPanel();
+        
+        // 添加配置管理按钮
+        HBox configManageBox = new HBox(15);
+        configManageBox.setAlignment(Pos.CENTER);
+        configManageBox.setPadding(new javafx.geometry.Insets(15, 0, 15, 0));
+        
+        JFXButton saveConfigBtn = StyleFactory.createActionButton("保存当前配置", "#27ae60", () -> {
+            // 实现保存配置功能
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("保存配置");
+            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("配置文件", "*.properties"));
+            fileChooser.setInitialDirectory(new File("setting"));
+            
+            File file = fileChooser.showSaveDialog(null);
+            if (file != null) {
+                try {
+                    Properties props = new Properties();
+                    saveConfig(props);
+                    
+                    // 确保setting目录存在
+                    createSettingDirIfNotExists();
+                    
+                    try (OutputStream output = new FileOutputStream(file)) {
+                        props.store(output, "Application Configuration");
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        
+        JFXButton loadConfigBtn = StyleFactory.createActionButton("加载配置文件", "#3498db", () -> {
+            // 实现加载配置功能
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("加载配置");
+            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("配置文件", "*.properties"));
+            fileChooser.setInitialDirectory(new File("setting"));
+            
+            File file = fileChooser.showOpenDialog(null);
+            if (file != null) {
+                try (InputStream input = new FileInputStream(file)) {
+                    Properties props = new Properties();
+                    props.load(input);
+                    loadConfig(props);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        
+        configManageBox.getChildren().addAll(saveConfigBtn, loadConfigBtn);
+        
         viewNode.getChildren().addAll(
+                configManageBox,
                 StyleFactory.createParamPairLine("文件扫描模式:", cbRecursionMode),
                 StyleFactory.createParamPairLine("文件扫描层级:", spRecursionDepth),
                 fileTypeManager.getView()
         );
+    }
+    
+    /**
+     * 如果setting目录不存在则创建
+     */
+    private void createSettingDirIfNotExists() {
+        File settingDir = new File("setting");
+        if (!settingDir.exists()) {
+            settingDir.mkdir();
+        }
     }
 
     /**

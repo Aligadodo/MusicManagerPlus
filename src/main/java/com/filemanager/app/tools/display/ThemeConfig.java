@@ -71,6 +71,26 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
     private String fontFamily = "Segoe UI, Arial, sans-serif";
     private double fontSize = 14.0;
     
+    // 组件字体设置
+    private String titleFontFamily = "Segoe UI, Arial, sans-serif";
+    private double titleFontSize = 18.0;
+    
+    private String buttonFontFamily = "Segoe UI, Arial, sans-serif";
+    private double buttonFontSize = 14.0;
+    
+    // 按钮尺寸设置
+    private double largeButtonSize = 80.0;
+    private double smallButtonSize = 60.0;
+    
+    private String descriptionFontFamily = "Segoe UI, Arial, sans-serif";
+    private double descriptionFontSize = 14.0;
+    
+    private String logFontFamily = "Courier New, monospace";
+    private double logFontSize = 12.0;
+    
+    private String runtimeInfoFontFamily = "Segoe UI, Arial, sans-serif";
+    private double runtimeInfoFontSize = 12.0;
+    
     // 间距设置
     private double smallSpacing = 5.0;
     private double mediumSpacing = 10.0;
@@ -110,6 +130,18 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
         props.setProperty("ui.info.color", this.getInfoColor());
         props.setProperty("ui.font.family", this.getFontFamily());
         props.setProperty("ui.font.size", String.valueOf(this.getFontSize()));
+        props.setProperty("ui.font.title.family", this.getTitleFontFamily());
+        props.setProperty("ui.font.title.size", String.valueOf(this.getTitleFontSize()));
+        props.setProperty("ui.font.button.family", this.getButtonFontFamily());
+        props.setProperty("ui.font.button.size", String.valueOf(this.getButtonFontSize()));
+        props.setProperty("ui.button.large.size", String.valueOf(this.getLargeButtonSize()));
+        props.setProperty("ui.button.small.size", String.valueOf(this.getSmallButtonSize()));
+        props.setProperty("ui.font.description.family", this.getDescriptionFontFamily());
+        props.setProperty("ui.font.description.size", String.valueOf(this.getDescriptionFontSize()));
+        props.setProperty("ui.font.log.family", this.getLogFontFamily());
+        props.setProperty("ui.font.log.size", String.valueOf(this.getLogFontSize()));
+        props.setProperty("ui.font.runtime.info.family", this.getRuntimeInfoFontFamily());
+        props.setProperty("ui.font.runtime.info.size", String.valueOf(this.getRuntimeInfoFontSize()));
         props.setProperty("ui.small.spacing", String.valueOf(this.getSmallSpacing()));
         props.setProperty("ui.medium.spacing", String.valueOf(this.getMediumSpacing()));
         props.setProperty("ui.large.spacing", String.valueOf(this.getLargeSpacing()));
@@ -202,6 +234,50 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
         if (props.containsKey("ui.font.size")) {
             this.setFontSize(Double.parseDouble(props.getProperty("ui.font.size")));
         }
+        
+        // 组件字体设置
+        if (props.containsKey("ui.font.title.family")) {
+            this.setTitleFontFamily(props.getProperty("ui.font.title.family"));
+        }
+        if (props.containsKey("ui.font.title.size")) {
+            this.setTitleFontSize(Double.parseDouble(props.getProperty("ui.font.title.size")));
+        }
+        
+        if (props.containsKey("ui.font.button.family")) {
+            this.setButtonFontFamily(props.getProperty("ui.font.button.family"));
+        }
+        if (props.containsKey("ui.font.button.size")) {
+            this.setButtonFontSize(Double.parseDouble(props.getProperty("ui.font.button.size")));
+        }
+        
+        if (props.containsKey("ui.button.large.size")) {
+            this.setLargeButtonSize(Double.parseDouble(props.getProperty("ui.button.large.size")));
+        }
+        if (props.containsKey("ui.button.small.size")) {
+            this.setSmallButtonSize(Double.parseDouble(props.getProperty("ui.button.small.size")));
+        }
+        
+        if (props.containsKey("ui.font.description.family")) {
+            this.setDescriptionFontFamily(props.getProperty("ui.font.description.family"));
+        }
+        if (props.containsKey("ui.font.description.size")) {
+            this.setDescriptionFontSize(Double.parseDouble(props.getProperty("ui.font.description.size")));
+        }
+        
+        if (props.containsKey("ui.font.log.family")) {
+            this.setLogFontFamily(props.getProperty("ui.font.log.family"));
+        }
+        if (props.containsKey("ui.font.log.size")) {
+            this.setLogFontSize(Double.parseDouble(props.getProperty("ui.font.log.size")));
+        }
+        
+        if (props.containsKey("ui.font.runtime.info.family")) {
+            this.setRuntimeInfoFontFamily(props.getProperty("ui.font.runtime.info.family"));
+        }
+        if (props.containsKey("ui.font.runtime.info.size")) {
+            this.setRuntimeInfoFontSize(Double.parseDouble(props.getProperty("ui.font.runtime.info.size")));
+        }
+        
         if (props.containsKey("ui.small.spacing")) {
             this.setSmallSpacing(Double.parseDouble(props.getProperty("ui.small.spacing")));
         }

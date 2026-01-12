@@ -49,13 +49,14 @@ public class StyleFactory {
 
     public static Label createLabel(String text, int size, boolean bold) {
         Label l = new Label(text);
-        l.setFont(Font.font("Segoe UI", bold ? FontWeight.BOLD : FontWeight.NORMAL, size));
+        l.setFont(Font.font(theme.getFontFamily(), bold ? FontWeight.BOLD : FontWeight.NORMAL, size));
         l.setTextFill(Color.web(theme.getTextColor()));
         return l;
     }
 
     public static Node createSeparator() {
         Separator separator = new Separator();
+        separator.setStyle(String.format("-fx-background-color: %s;", theme.getBorderColor()));
         return separator;
     }
 
@@ -66,12 +67,13 @@ public class StyleFactory {
      * @return
      */
     public static Node createSeparatorWithChange(boolean isVertical) {
+        String accentColor = theme.getAccentColor();
         if (isVertical) {
             // 水平渐变分割线
             Region hDivider = new Region();
             hDivider.setPrefHeight(1); // 线条粗细
             hDivider.setStyle(
-                    "-fx-background-color: linear-gradient(to right, transparent, #D6E9FF 50%, transparent);"
+                    String.format("-fx-background-color: linear-gradient(to right, transparent, %s 50%%, transparent);", accentColor)
             );
             return hDivider;
         }
@@ -79,7 +81,7 @@ public class StyleFactory {
         Region vDivider = new Region();
         vDivider.setPrefWidth(1);
         vDivider.setStyle(
-                "-fx-background-color: linear-gradient(to bottom, transparent, #D6E9FF 50%, transparent);"
+                String.format("-fx-background-color: linear-gradient(to bottom, transparent, %s 50%%, transparent);", accentColor)
         );
         return vDivider;
     }
@@ -96,17 +98,18 @@ public class StyleFactory {
         labelDivider.setAlignment(Pos.CENTER);
 
         Label label = new Label(desc);
-        label.setStyle("-fx-text-fill: #A0A0A0; -fx-font-size: 11px;");
+        label.setFont(Font.font(theme.getFontFamily(), FontWeight.NORMAL, 11));
+        label.setTextFill(Color.web(theme.getLightTextColor()));
 
         Region line1 = new Region();
         HBox.setHgrow(line1, Priority.ALWAYS);
         line1.setPrefHeight(1);
-        line1.setStyle("-fx-background-color: #E5E5E5;");
+        line1.setStyle(String.format("-fx-background-color: %s;", theme.getBorderColor()));
 
         Region line2 = new Region();
         HBox.setHgrow(line2, Priority.ALWAYS);
         line2.setPrefHeight(1);
-        line2.setStyle("-fx-background-color: #E5E5E5;");
+        line2.setStyle(String.format("-fx-background-color: %s;", theme.getBorderColor()));
 
         labelDivider.getChildren().addAll(line1, label, line2);
         return labelDivider;
@@ -127,20 +130,25 @@ public class StyleFactory {
     }
 
     public static Label createHeader(String text) {
-        Label label = createLabel(text, 18, true);
+        Label label = new Label(text);
+        label.setFont(Font.font(theme.getTitleFontFamily(), FontWeight.BOLD, theme.getTitleFontSize()));
+        label.setTextFill(Color.web(theme.getTextColor()));
         label.minWidth(30);
         return label;
     }
 
     public static Label createChapter(String text) {
-        Label label = createLabel(text, 16, true);
+        Label label = new Label(text);
+        label.setFont(Font.font(theme.getTitleFontFamily(), FontWeight.BOLD, 16));
+        label.setTextFill(Color.web(theme.getTextColor()));
         label.minWidth(30);
         return label;
     }
 
     public static Label createDescLabel(String text) {
         Label label = new Label(text);
-        label.setTextFill(Color.web("#333333"));
+        label.setFont(Font.font(theme.getDescriptionFontFamily(), FontWeight.NORMAL, theme.getDescriptionFontSize()));
+        label.setTextFill(Color.web(theme.getTextColor()));
         return label;
     }
 
@@ -148,19 +156,21 @@ public class StyleFactory {
         AutoShrinkLabel label = new AutoShrinkLabel(text);
         label.minWidth(70);
         label.maxWidth(70);
+        label.setFont(Font.font(theme.getFontFamily(), FontWeight.BOLD, 12));
+        label.setTextFill(Color.web(theme.getTextColor()));
         return label;
     }
 
     public static HBox createParamPairLine(String labelText, Node... controls) {
         HBox hBox = createHBox(createParamLabel(labelText), createSpacer());
         hBox.getChildren().addAll(controls);
-        hBox.setSpacing(3);
+        hBox.setSpacing(theme.getSmallSpacing());
         return hBox;
     }
 
     public static Label createInfoLabel(String text, int maxWidth) {
         Label l = createLabel(text, 10, false);
-        l.setTextFill(Color.GRAY);
+        l.setTextFill(Color.web(theme.getLightTextColor()));
         l.setMaxWidth(maxWidth);
         l.setWrapText(true);
         return l;
@@ -169,24 +179,80 @@ public class StyleFactory {
     public static TextArea createTextArea() {
         TextArea logArea = new TextArea();
         logArea.setEditable(false);
-        logArea.getStyleClass().add("glass-pane");
-        logArea.setStyle(String.format("-fx-background-color: #e6dfe3; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s;",
-                theme.getGlassOpacity(), theme.getCornerRadius(), theme.getTextColor()));
+        logArea.setStyle(String.format(
+                "-fx-background-color: %s; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-font-family: %s; -fx-font-size: %.1f;",
+                theme.getPanelBgColor(), theme.getCornerRadius(), theme.getTextColor(), theme.getBorderColor(), theme.getBorderWidth(),
+                theme.getLogFontFamily(), theme.getLogFontSize()
+        ));
         return logArea;
     }
 
     private static JFXButton createButton(String text) {
         JFXButton btn = new JFXButton(text);
+        btn.setFont(Font.font(theme.getButtonFontFamily(), FontWeight.NORMAL, theme.getButtonFontSize()));
         return btn;
     }
 
     public static JFXButton createActionButton(String text, String colorOverride, Runnable action) {
+        return createLargeActionButton(text, colorOverride, action); // 默认使用大按钮
+    }
+    
+    public static JFXButton createLargeActionButton(String text, String colorOverride, Runnable action) {
+        return createActionButton(text, colorOverride, action, theme.getLargeButtonSize());
+    }
+    
+    public static JFXButton createSmallActionButton(String text, String colorOverride, Runnable action) {
+        return createActionButton(text, colorOverride, action, theme.getSmallButtonSize());
+    }
+    
+    public static JFXButton createActionButton(String text, String colorOverride, Runnable action, double minWidth) {
         JFXButton btn = createButton(text);
         String color = colorOverride != null ? colorOverride : theme.getAccentColor();
-        btn.setStyle(String.format("-fx-background-color: %s; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: %.1f; -fx-cursor: hand;",
-                color, theme.getCornerRadius()));
-        btn.setMinWidth(80);
-        btn.setPadding(new Insets(5, 5, 5, 5));
+        
+        // 验证颜色格式
+        if (!color.startsWith("#")) {
+            color = "#" + color;
+        }
+        
+        // 基础样式
+        String baseStyle = String.format(
+                "-fx-background-color: %s; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: %.1f; -fx-cursor: hand; -fx-padding: %.1f; -fx-border-width: 0;",
+                color, theme.getCornerRadius(), theme.getMediumSpacing()
+        );
+        
+        // 悬停样式
+        Color baseColor;
+        try {
+            baseColor = Color.web(color);
+        } catch (IllegalArgumentException e) {
+            // 如果颜色格式无效，使用默认颜色
+            baseColor = Color.web(theme.getAccentColor());
+        }
+        
+        // 更好的悬停效果：不使用brighter()，而是添加边框和轻微的背景调整
+        // 对于浅色按钮，添加深色边框；对于深色按钮，添加浅色边框
+        Color borderColor;
+        if (baseColor.getBrightness() > 0.6) {
+            // 浅色背景，使用深色边框
+            borderColor = baseColor.darker().darker();
+        } else {
+            // 深色背景，使用浅色边框
+            borderColor = baseColor.brighter().brighter();
+        }
+        
+        // 保持背景色不变或仅轻微调整
+        String hoverStyle = String.format(
+                "-fx-background-color: %s; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: %.1f; -fx-cursor: hand; -fx-padding: %.1f; -fx-border-width: 2; -fx-border-color: %s;",
+                color, theme.getCornerRadius(), theme.getMediumSpacing(), borderColor
+        );
+        
+        btn.setStyle(baseStyle);
+        btn.setMinWidth(minWidth);
+        
+        // 添加悬停效果
+        btn.setOnMouseEntered(e -> btn.setStyle(hoverStyle));
+        btn.setOnMouseExited(e -> btn.setStyle(baseStyle));
+        
         if (action != null) btn.setOnAction(e -> action.run());
         return btn;
     }
@@ -196,12 +262,18 @@ public class StyleFactory {
      */
     public static JFXButton createIconButton(String iconText, String colorHex, Runnable action) {
         JFXButton btn = createButton(iconText);
-        String textColor = colorHex != null ? colorHex : "#555";
+        String textColor = colorHex != null ? colorHex : theme.getTextColor();
 
         // 基础样式
-        String baseStyle = String.format("-fx-background-color: transparent; -fx-border-color: #ccc; -fx-border-radius: 3; -fx-padding: 2 6 2 6; -fx-font-size: 10px; -fx-text-fill: %s;", textColor);
+        String baseStyle = String.format(
+                "-fx-background-color: transparent; -fx-border-color: %s; -fx-border-radius: %.1f; -fx-padding: %.1f; -fx-font-size: 10px; -fx-text-fill: %s;",
+                theme.getBorderColor(), theme.getCornerRadius(), theme.getSmallSpacing(), textColor
+        );
         // 悬停样式
-        String hoverStyle = String.format("-fx-background-color: #eee; -fx-border-color: #999; -fx-border-radius: 3; -fx-padding: 2 6 2 6; -fx-font-size: 10px; -fx-text-fill: %s;", textColor);
+        String hoverStyle = String.format(
+                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-radius: %.1f; -fx-padding: %.1f; -fx-font-size: 10px; -fx-text-fill: %s;",
+                theme.getHoverColor(), theme.getBorderColor(), theme.getCornerRadius(), theme.getSmallSpacing(), textColor
+        );
 
         btn.setStyle(baseStyle);
 
@@ -238,9 +310,11 @@ public class StyleFactory {
      */
     public static VBox createVBoxPanel(Node... subNodes) {
         VBox p = createVBox(subNodes);
-        p.setStyle(String.format("-fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s;",
-                theme.getGlassOpacity(), theme.getCornerRadius(), theme.getTextColor()));
-        p.setSpacing(5);
+        p.setStyle(String.format(
+                "-fx-background-color: %s; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f;",
+                theme.getPanelBgColor(), theme.getCornerRadius(), theme.getTextColor(), theme.getBorderColor(), theme.getBorderWidth()
+        ));
+        p.setSpacing(theme.getMediumSpacing());
         return p;
     }
 
@@ -290,15 +364,24 @@ public class StyleFactory {
     // [新增] 通用：创建统一风格的微型图标按钮
     public static JFXButton createSmallIconButton(String text, EventHandler<ActionEvent> handler) {
         JFXButton btn = createButton(text);
-        btn.setStyle("-fx-background-color: transparent; -fx-border-color: #ccc; -fx-border-radius: 3; -fx-padding: 2 6 2 6; -fx-font-size: 10px;");
-        btn.setTextFill(Color.web("#555"));
+        String baseStyle = String.format(
+                "-fx-background-color: transparent; -fx-border-color: %s; -fx-border-radius: %.1f; -fx-padding: %.1f; -fx-font-size: 10px; -fx-font-family: %s;",
+                theme.getBorderColor(), theme.getCornerRadius(), theme.getSmallSpacing(), theme.getFontFamily()
+        );
+        String hoverStyle = String.format(
+                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-radius: %.1f; -fx-padding: %.1f; -fx-font-size: 10px; -fx-font-family: %s;",
+                theme.getHoverColor(), theme.getBorderColor(), theme.getCornerRadius(), theme.getSmallSpacing(), theme.getFontFamily()
+        );
+        
+        btn.setStyle(baseStyle);
+        btn.setTextFill(Color.web(theme.getTextColor()));
         btn.setOnAction(e -> {
             handler.handle(e);
             e.consume(); // 防止事件冒泡触发 ListCell 选中
         });
         // Hover 效果
-        btn.setOnMouseEntered(e -> btn.setStyle("-fx-background-color: #eee; -fx-border-color: #999; -fx-border-radius: 3; -fx-padding: 2 6 2 6; -fx-font-size: 10px;"));
-        btn.setOnMouseExited(e -> btn.setStyle("-fx-background-color: transparent; -fx-border-color: #ccc; -fx-border-radius: 3; -fx-padding: 2 6 2 6; -fx-font-size: 10px;"));
+        btn.setOnMouseEntered(e -> btn.setStyle(hoverStyle));
+        btn.setOnMouseExited(e -> btn.setStyle(baseStyle));
         return btn;
     }
 
@@ -307,7 +390,10 @@ public class StyleFactory {
         column.setPrefWidth(prefWidth);
         column.setMinWidth(minWidth);
         column.setMaxWidth(maxWidth);
-        column.setStyle("-fx-border-color: #eee; -fx-border-radius: 1; -fx-padding: 2 6 2 6; -fx-font-size: 10px;");
+        column.setStyle(String.format(
+                "-fx-border-color: %s; -fx-border-radius: %.1f; -fx-padding: 2 6 2 6; -fx-font-size: 10px; -fx-font-family: %s; -fx-text-fill: %s;",
+                theme.getBorderColor(), theme.getCornerRadius(), theme.getFontFamily(), theme.getTextColor()
+        ));
         column.setCellFactory(col -> {
             return new TreeTableCell<ChangeRecord, String>() {
                 private final Tooltip tooltip = new Tooltip();
@@ -322,6 +408,8 @@ public class StyleFactory {
                         setTooltip(null); // 必须清除，否则空行也会显示上一个内容的悬浮
                     } else {
                         setText(item);
+                        setFont(Font.font(theme.getFontFamily(), FontWeight.NORMAL, 12));
+                        setTextFill(Color.web(theme.getTextColor()));
                         // 设置悬浮内容
                         tooltip.setText("详情内容：\n" + item);
                         // 可选：设置换行宽度，防止详情太长变成一条直线

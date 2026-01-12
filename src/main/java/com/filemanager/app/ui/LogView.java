@@ -54,9 +54,9 @@ public class LogView implements IAutoReloadAble {
     private void buildUI() {
         viewNode = new VBox(15);
         viewNode.setPadding(new Insets(10));
-        JFXButton clr = StyleFactory.createActionButton("清空日志", "#dcbecf", this::clearLog);
-        JFXButton btnScrollTop = StyleFactory.createActionButton("查看顶部", "#dcbecf", () -> logArea.setScrollTop(0));
-        JFXButton btnScrollBottom = StyleFactory.createActionButton("查看底部", "#dcbecf", () -> logArea.setScrollTop(Double.MAX_VALUE));
+        JFXButton clr = StyleFactory.createSmallActionButton("清空日志", "#dcbecf", this::clearLog);
+        JFXButton btnScrollTop = StyleFactory.createSmallActionButton("查看顶部", "#dcbecf", () -> logArea.setScrollTop(0));
+        JFXButton btnScrollBottom = StyleFactory.createSmallActionButton("查看底部", "#dcbecf", () -> logArea.setScrollTop(Double.MAX_VALUE));
 
         logArea.setStyle("-fx-font-family:'Consolas'; -fx-control-inner-background: rgba(255,255,255,0.8);");
         VBox.setVgrow(logArea, Priority.ALWAYS);
