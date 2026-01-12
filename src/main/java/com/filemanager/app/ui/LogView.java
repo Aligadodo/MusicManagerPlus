@@ -58,7 +58,7 @@ public class LogView implements IAutoReloadAble {
         JFXButton btnScrollTop = StyleFactory.createSmallActionButton("查看顶部", "#dcbecf", () -> logArea.setScrollTop(0));
         JFXButton btnScrollBottom = StyleFactory.createSmallActionButton("查看底部", "#dcbecf", () -> logArea.setScrollTop(Double.MAX_VALUE));
 
-        logArea.setStyle("-fx-font-family:'Consolas'; -fx-control-inner-background: rgba(255,255,255,0.8);");
+        // 移除硬编码样式，让StyleFactory统一管理
         VBox.setVgrow(logArea, Priority.ALWAYS);
 
         HBox tools = StyleFactory.createHBoxPanel(clr,btnScrollTop, btnScrollBottom);

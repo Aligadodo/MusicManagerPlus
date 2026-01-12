@@ -240,6 +240,9 @@ public class FileManagerPlusApp extends Application implements IAppController {
         themeItem.setOnAction(e -> showAppearanceDialog());
         viewMenu.getItems().add(themeItem);
         menuBar.getMenus().addAll(fileMenu, viewMenu);
+        
+        // 应用菜单样式
+        StyleFactory.setMenuStyle(menuBar);
 
         autoRun = new JFXCheckBox("预览成功立即运行");
         autoRun.setSelected(false);
@@ -251,28 +254,28 @@ public class FileManagerPlusApp extends Application implements IAppController {
         HBox header = new HBox(15);
         header.setPadding(new Insets(10, 20, 10, 20));
         header.setAlignment(Pos.CENTER_LEFT);
+        // 应用主题样式，使用面板背景色
+        header.setStyle(String.format(
+                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: 0 0 %.1f 0;",
+                currentTheme.getPanelBgColor(), currentTheme.getBorderColor(), currentTheme.getBorderWidth()
+        ));
         Label logo = new Label("MUSIC MANAGER PLUS - By chrse1997@163.com");
-        logo.setFont(Font.font("Segoe UI", FontWeight.BLACK, 20));
-        logo.setTextFill(Color.web(currentTheme.getAccentColor()));
+        logo.setFont(Font.font(currentTheme.getFontFamily(), FontWeight.BLACK, 20));
+        logo.setTextFill(Color.web(currentTheme.getTextColor()));
+        logo.setStyle("-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 3, 0, 0, 1);");
 
         header.getChildren().addAll(logo, new Region(), menuBar, autoRun, btnGo, btnExecute, btnStop);
         HBox.setHgrow(header.getChildren().get(1), Priority.ALWAYS);
         VBox top = new VBox(header, new Separator());
         root.setTop(top);
 
-        // Center Content (Tabs are hidden but managed)
-        mainTabPane = new JFXTabPane();
-        mainTabPane.setStyle("-fx-background-color: transparent;");
+        // Center Content with visible Tabs
+        mainTabPane = StyleFactory.createTabPane();
         // 将各模块的 View 挂载到 Tab
         mainTabPane.getTabs().addAll(composeView.getTab(), previewView.getTab(), logView.getTab());
-
-        contentArea = new StackPane();
-        contentArea.setPadding(new Insets(10));
-        root.setCenter(contentArea);
-
-        // Sidebar Navigation
-        VBox sideMenu = createSideMenu();
-        root.setLeft(sideMenu);
+        mainTabPane.setPadding(new Insets(10));
+        root.setCenter(mainTabPane);
+        // 移除侧边栏菜单，使用TabPane进行视图切换
 
         // Status Bar
         HBox statusBar = new HBox(15);
@@ -285,8 +288,8 @@ public class FileManagerPlusApp extends Application implements IAppController {
         statusBar.getChildren().addAll(lblStatusIcon, lblReady); // Stats are now managed by PreviewView internally or via explicit update
         root.setBottom(statusBar);
 
-        // Init Default View
-        switchView(composeView.getViewNode());
+        // 设置默认选中的标签页
+        mainTabPane.getSelectionModel().selectFirst();
 
         return root;
     }
@@ -312,13 +315,17 @@ public class FileManagerPlusApp extends Application implements IAppController {
 
     @Override
     public void switchView(Node node) {
-        if (!contentArea.getChildren().contains(node)) {
-            contentArea.getChildren().clear();
-            contentArea.getChildren().add(node);
-            FadeTransition ft = new FadeTransition(Duration.millis(300), node);
-            ft.setFromValue(0.0);
-            ft.setToValue(1.0);
-            ft.play();
+        // 适配新的TabPane实现，通过选择对应的Tab来切换视图
+        if (mainTabPane == null) {
+            return;
+        }
+        
+        // 遍历所有Tab，找到内容与指定节点匹配的Tab
+        for (Tab tab : mainTabPane.getTabs()) {
+            if (tab.getContent() == node) {
+                mainTabPane.getSelectionModel().select(tab);
+                break;
+            }
         }
     }
 
@@ -479,6 +486,11 @@ public class FileManagerPlusApp extends Application implements IAppController {
         if (task != null) {
             previewView.getMainProgressBar().progressProperty().bind(task.progressProperty());
         }
+    }
+
+    @Override
+    public StackPane getRootContainer() {
+        return rootContainer;
     }
 
     @Override

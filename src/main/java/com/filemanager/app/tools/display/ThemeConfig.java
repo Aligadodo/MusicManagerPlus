@@ -32,9 +32,9 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
     private String accentColor = "#3498db";
     
     // 文本颜色
-    private String textColor = "#333333";
-    private String lightTextColor = "#666666";
-    private String disabledTextColor = "#999999";
+    private String textColor = "#2c3e50";  // 深灰色，提高对比度
+    private String lightTextColor = "#546e7a";  // 中灰色，比原来更深，提高对比度
+    private String disabledTextColor = "#78909c";  // 比原来更深，提高对比度
     
     // 毛玻璃透明度 (0.0 - 1.0, 值越小越透明)
     private double glassOpacity = 0.65;
@@ -95,6 +95,12 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
     private double smallSpacing = 5.0;
     private double mediumSpacing = 10.0;
     private double largeSpacing = 15.0;
+    
+    // 列表样式配置
+    private String listBgColor = "#f5f5f5"; // 列表背景色
+    private String listRowEvenBgColor = "#ffffff"; // 偶数行背景色
+    private String listRowOddBgColor = "#f9f9f9"; // 奇数行背景色
+    private String listRowSelectedBgColor = "#3498db"; // 选中行背景色
 
     @Override
     public ThemeConfig clone() {

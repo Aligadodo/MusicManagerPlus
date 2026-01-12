@@ -153,6 +153,10 @@ public class AppearanceManager {
         grid.setVgap(20);
         grid.setPadding(new Insets(10, 0, 10, 0));
         
+        // 保存所有主题卡片的引用，用于后续更新选中状态
+        final java.util.List<VBox> themeCards = new java.util.ArrayList<>();
+        final java.util.List<ThemeConfig> themes = new java.util.ArrayList<>();
+        
         int col = 0;
         int row = 0;
         for (Map.Entry<String, ThemeConfig> entry : presets.entrySet()) {
@@ -162,9 +166,20 @@ public class AppearanceManager {
             // 创建主题预览卡片
             VBox themeCard = createThemeCard(themeName, theme);
             themeCard.setCursor(Cursor.HAND);
+            
+            // 保存引用
+            themeCards.add(themeCard);
+            themes.add(theme);
+            
+            // 设置点击事件
+            final int index = themeCards.size() - 1;
             themeCard.setOnMouseClicked(e -> {
-                applyTheme(theme);
+                // 应用新主题
+                applyTheme(themes.get(index));
+                // 刷新颜色选择器
                 refreshColorPickers();
+                // 更新所有主题卡片的选中状态
+                updateAllThemeCardSelection(themeCards, themes);
             });
             
             grid.add(themeCard, col, row);
@@ -183,6 +198,24 @@ public class AppearanceManager {
         
         content.getChildren().add(scrollPane);
         return content;
+    }
+    
+    /**
+     * 更新所有主题卡片的选中状态
+     */
+    private void updateAllThemeCardSelection(java.util.List<VBox> themeCards, java.util.List<ThemeConfig> themes) {
+        for (int i = 0; i < themeCards.size(); i++) {
+            VBox card = themeCards.get(i);
+            ThemeConfig theme = themes.get(i);
+            
+            // 重置卡片样式
+            card.setStyle("-fx-background-color: white; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 8, 0, 0, 0);");
+            
+            // 如果是当前主题，添加选中效果
+            if (isCurrentTheme(theme)) {
+                card.setStyle("-fx-background-color: #e3f2fd; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 10, 0, 0, 0); -fx-border-color: #3498db; -fx-border-width: 2; -fx-border-radius: 10;");
+            }
+        }
     }
     
     /**
@@ -564,9 +597,11 @@ public class AppearanceManager {
      * 检查是否为当前主题
      */
     private boolean isCurrentTheme(ThemeConfig theme) {
+        // 比较更多关键属性以确保准确性
         return theme.getAccentColor().equals(currentTheme.getAccentColor()) &&
                theme.getBgColor().equals(currentTheme.getBgColor()) &&
                theme.getPanelBgColor().equals(currentTheme.getPanelBgColor()) &&
+               theme.getTextColor().equals(currentTheme.getTextColor()) &&
                theme.isDarkBackground() == currentTheme.isDarkBackground();
     }
     
@@ -606,6 +641,9 @@ public class AppearanceManager {
     }
     
     public void applyAppearance() {
+        // 重新初始化样式工厂
+        StyleFactory.initStyleFactory(currentTheme);
+        
         // 更新背景覆盖层
         backgroundOverlay.setStyle("-fx-background-color: rgba(" + 
                 (currentTheme.isDarkBackground() ? "0,0,0" : "255,255,255") + 
@@ -622,10 +660,13 @@ public class AppearanceManager {
             backgroundImageView.setImage(null);
         }
         
-        // 重新初始化样式工厂
-        StyleFactory.initStyleFactory(currentTheme);
-        
-        // 刷新界面
-        app.refreshComposeView();
+        // 递归更新所有界面元素的样式
+        if (app != null && app instanceof com.filemanager.app.base.IUIElementProvider) {
+            com.filemanager.app.base.IUIElementProvider uiElementProvider = (com.filemanager.app.base.IUIElementProvider) app;
+            javafx.scene.layout.StackPane rootContainer = uiElementProvider.getRootContainer();
+            if (rootContainer != null) {
+                com.filemanager.app.tools.display.StyleFactory.updateNodeStyle(rootContainer);
+            }
+        }
     }
 }

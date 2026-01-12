@@ -12,6 +12,7 @@ package com.filemanager.app.base;
 import com.jfoenix.controls.JFXCheckBox;
 import com.jfoenix.controls.JFXComboBox;
 import javafx.scene.control.Spinner;
+import javafx.scene.layout.StackPane;
 
 /**
  * 用户界面元素提供者接口
@@ -47,4 +48,10 @@ public interface IUIElementProvider {
      * @return 自动运行复选框
      */
     JFXCheckBox getAutoRun();
+    
+    /**
+     * 获取根容器
+     * @return 根容器
+     */
+    StackPane getRootContainer();
 }

@@ -11,6 +11,7 @@ package com.filemanager.app.tools.display;
 
 import com.filemanager.model.ChangeRecord;
 import com.jfoenix.controls.JFXButton;
+import com.jfoenix.controls.JFXTabPane;
 import javafx.animation.Interpolator;
 import javafx.animation.RotateTransition;
 import javafx.event.ActionEvent;
@@ -20,9 +21,12 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.*;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.SVGPath;
@@ -341,8 +345,8 @@ public class StyleFactory {
      */
     public static HBox createHBoxPanel(Node... subNodes) {
         HBox p = createHBox(subNodes);
-        p.setStyle(String.format("-fx-background-color: rgba(255,255,255,%.2f); -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s;",
-                theme.getGlassOpacity(), theme.getCornerRadius(), theme.getTextColor()));
+        p.setStyle(String.format("-fx-background-color: %s; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f;",
+                theme.getPanelBgColor(), theme.getCornerRadius(), theme.getTextColor(), theme.getBorderColor(), theme.getBorderWidth()));
         p.setPadding(new Insets(5, 5, 5, 5));
         p.setSpacing(5);
         return p;
@@ -422,6 +426,377 @@ public class StyleFactory {
         });
         return column;
     }
+    
+    /**
+     * 递归更新节点及其子节点的样式
+     * 确保所有界面元素都能正确响应样式变化
+     */
+    public static void updateNodeStyle(Node node) {
+        refreshAllComponents(node);
+    }
+    
+    /**
+     * 全面刷新所有组件样式
+     * 遍历所有界面元素及其子元素，根据组件类型应用不同的主题样式
+     */
+    public static void refreshAllComponents(Node node) {
+        if (node == null || theme == null) {
+            return;
+        }
+        
+        // 更新节点本身的样式
+        applyComponentStyle(node);
+        
+        // 递归更新子节点
+        if (node instanceof Parent) {
+            Parent parent = (Parent) node;
+            for (Node child : parent.getChildrenUnmodifiable()) {
+                refreshAllComponents(child);
+            }
+        }
+    }
+    
+    /**
+     * 根据组件类型应用不同的主题样式
+     */
+    private static void applyComponentStyle(Node node) {
+        if (node == null || theme == null) {
+            return;
+        }
+        
+        // 处理标签和按钮等可标记组件
+        if (node instanceof Labeled) {
+            applyLabeledStyle((Labeled) node);
+        }
+        
+        // 处理布局容器组件
+        if (node instanceof VBox) {
+            applyVBoxStyle((VBox) node);
+        } else if (node instanceof HBox) {
+            applyHBoxStyle((HBox) node);
+        } else if (node instanceof BorderPane) {
+            applyBorderPaneStyle((BorderPane) node);
+        } else if (node instanceof GridPane) {
+            applyGridPaneStyle((GridPane) node);
+        } else if (node instanceof StackPane) {
+            applyStackPaneStyle((StackPane) node);
+        }
+        
+        // 处理滚动容器
+        if (node instanceof ScrollPane) {
+            applyScrollPaneStyle((ScrollPane) node);
+        }
+        
+        // 处理标签页容器
+        if (node instanceof TabPane) {
+            applyTabPaneStyle((TabPane) node);
+        }
+        
+        // 处理标题面板
+        if (node instanceof TitledPane) {
+            applyTitledPaneStyle((TitledPane) node);
+        }
+        
+        // 处理分隔线
+        if (node instanceof Separator) {
+            applySeparatorStyle((Separator) node);
+        }
+        
+        // 处理进度条
+        if (node instanceof ProgressBar) {
+            applyProgressBarStyle((ProgressBar) node);
+        }
+        
+        // 处理列表视图
+        if (node instanceof ListView) {
+            applyListViewStyle((ListView<?>) node);
+        }
+        
+        // 处理表格视图
+        if (node instanceof TableView) {
+            applyTableViewStyle((TableView<?>) node);
+        }
+        
+        // 处理树表格视图
+        if (node instanceof TreeTableView) {
+            applyTreeTableViewStyle((TreeTableView<?>) node);
+        }
+        
+        // 处理文本区域
+        if (node instanceof TextArea) {
+            applyTextAreaStyle((TextArea) node);
+        }
+    }
+    
+    /**
+     * 应用标签和按钮等可标记组件的样式
+     */
+    private static void applyLabeledStyle(Labeled labeled) {
+        Font currentFont = labeled.getFont();
+        if (currentFont != null) {
+            labeled.setFont(Font.font(
+                    theme.getFontFamily(),
+                    currentFont.getStyle().contains("Bold") ? FontWeight.BOLD : FontWeight.NORMAL,
+                    currentFont.getSize()
+            ));
+        }
+        labeled.setTextFill(Color.web(theme.getTextColor()));
+    }
+    
+    /**
+     * 应用VBox样式
+     */
+    private static void applyVBoxStyle(VBox vbox) {
+        // 检查是否是我们创建的面板
+        String currentStyle = vbox.getStyle();
+        if (currentStyle.contains("-fx-background-color:") && !currentStyle.contains("transparent")) {
+            // 应用面板样式
+            vbox.setStyle(String.format(
+                    "-fx-background-color: %s; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-spacing: %.1f;",
+                    theme.getPanelBgColor(), theme.getCornerRadius(), theme.getTextColor(), theme.getBorderColor(), theme.getBorderWidth(), vbox.getSpacing()
+            ));
+        }
+    }
+    
+    /**
+     * 应用HBox样式
+     */
+    private static void applyHBoxStyle(HBox hbox) {
+        // 检查是否是我们创建的面板
+        String currentStyle = hbox.getStyle();
+        if (currentStyle.contains("-fx-background-color:") && !currentStyle.contains("transparent")) {
+            // 应用面板样式
+            hbox.setStyle(String.format(
+                    "-fx-background-color: %s; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-spacing: %.1f;",
+                    theme.getPanelBgColor(), theme.getCornerRadius(), theme.getTextColor(), theme.getBorderColor(), theme.getBorderWidth(), hbox.getSpacing()
+            ));
+        }
+    }
+    
+    /**
+     * 应用BorderPane样式
+     */
+    private static void applyBorderPaneStyle(BorderPane borderPane) {
+        String currentStyle = borderPane.getStyle();
+        if (currentStyle.contains("-fx-background-color:") && !currentStyle.contains("transparent")) {
+            // 应用面板样式
+            borderPane.setStyle(String.format(
+                    "-fx-background-color: %s; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f;",
+                    theme.getPanelBgColor(), theme.getCornerRadius(), theme.getTextColor(), theme.getBorderColor(), theme.getBorderWidth()
+            ));
+        }
+    }
+    
+    /**
+     * 应用GridPane样式
+     */
+    private static void applyGridPaneStyle(GridPane gridPane) {
+        String currentStyle = gridPane.getStyle();
+        if (currentStyle.contains("-fx-background-color:") && !currentStyle.contains("transparent")) {
+            // 应用面板样式
+            gridPane.setStyle(String.format(
+                    "-fx-background-color: %s; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f;",
+                    theme.getPanelBgColor(), theme.getCornerRadius(), theme.getTextColor(), theme.getBorderColor(), theme.getBorderWidth()
+            ));
+        }
+    }
+    
+    /**
+     * 应用StackPane样式
+     */
+    private static void applyStackPaneStyle(StackPane stackPane) {
+        String currentStyle = stackPane.getStyle();
+        if (currentStyle.contains("-fx-background-color:") && !currentStyle.contains("transparent")) {
+            // 应用面板样式
+            stackPane.setStyle(String.format(
+                    "-fx-background-color: %s; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f;",
+                    theme.getPanelBgColor(), theme.getCornerRadius(), theme.getTextColor(), theme.getBorderColor(), theme.getBorderWidth()
+            ));
+        }
+    }
+    
+    /**
+     * 应用ScrollPane样式
+     */
+    private static void applyScrollPaneStyle(ScrollPane scrollPane) {
+        scrollPane.setStyle(String.format(
+                "-fx-background-color: transparent; -fx-border-color: transparent;"
+        ));
+    }
+    
+    /**
+     * 应用TabPane样式
+     */
+    private static void applyTabPaneStyle(TabPane tabPane) {
+        tabPane.setStyle(String.format(
+                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-tab-min-height: 40; -fx-tab-max-height: 40; -fx-text-fill: %s;",
+                theme.getPanelBgColor(), theme.getBorderColor(), theme.getBorderWidth(), theme.getTextColor()
+        ));
+        
+        // 更新所有标签页的样式
+        for (Tab tab : tabPane.getTabs()) {
+            tab.setStyle(String.format(
+                    "-fx-text-fill: %s; -fx-font-family: %s; -fx-font-size: 14px;",
+                    theme.getTextColor(), theme.getFontFamily()
+            ));
+        }
+    }
+    
+    /**
+     * 应用TitledPane样式
+     */
+    private static void applyTitledPaneStyle(TitledPane titledPane) {
+        titledPane.setStyle(String.format(
+                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-text-fill: %s; -fx-font-family: %s;",
+                theme.getPanelBgColor(), theme.getBorderColor(), theme.getBorderWidth(), theme.getTextColor(), theme.getFontFamily()
+        ));
+    }
+    
+    /**
+     * 应用Separator样式
+     */
+    private static void applySeparatorStyle(Separator separator) {
+        separator.setStyle(String.format("-fx-background-color: %s;", theme.getBorderColor()));
+    }
+    
+    /**
+     * 应用ProgressBar样式
+     */
+    private static void applyProgressBarStyle(ProgressBar progressBar) {
+        progressBar.setStyle(String.format(
+                "-fx-accent: %s; -fx-background-color: transparent; -fx-border-color: %s; -fx-border-width: %.1f;",
+                theme.getProgressBarColor(), theme.getBorderColor(), theme.getBorderWidth()
+        ));
+    }
+    
+    /**
+     * 应用ListView样式
+     */
+    private static void applyListViewStyle(ListView<?> listView) {
+        // 设置ListView的背景色和边框
+        listView.setStyle(String.format(
+                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-background-radius: %.1f;",
+                theme.getPanelBgColor(), theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius()
+        ));
+    }
+    
+    /**
+     * 应用TableView样式
+     */
+    private static void applyTableViewStyle(TableView<?> tableView) {
+        // 设置TableView的背景色和边框
+        tableView.setStyle(String.format(
+                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-background-radius: %.1f;",
+                theme.getPanelBgColor(), theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius()
+        ));
+    }
+    
+    /**
+     * 应用TreeTableView样式
+     */
+    private static void applyTreeTableViewStyle(TreeTableView<?> treeTableView) {
+        // 设置TreeTableView的背景色和边框
+        treeTableView.setStyle(String.format(
+                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-background-radius: %.1f;",
+                theme.getPanelBgColor(), theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius()
+        ));
+    }
+    
+    /**
+     * 应用TextArea样式
+     */
+    private static void applyTextAreaStyle(TextArea textArea) {
+        // 设置TextArea的背景色、边框和字体
+        textArea.setStyle(String.format(
+                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-background-radius: %.1f; -fx-text-fill: %s; -fx-font-family: 'Consolas'; -fx-font-size: 12px;",
+                theme.getPanelBgColor(), theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius(), theme.getTextColor()
+        ));
+    }
+    
+    /**
+     * 设置面板的基本样式
+     */
+    public static void setBasicStyle(Region region) {
+        if (region == null || theme == null) {
+            return;
+        }
+        
+        region.setStyle(String.format(
+                "-fx-background-color: %s; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f;",
+                theme.getPanelBgColor(), theme.getCornerRadius(), theme.getTextColor(), theme.getBorderColor(), theme.getBorderWidth()
+        ));
+    }
+    
+    /**
+     * 设置菜单和菜单项的样式
+     */
+    public static void setMenuStyle(MenuBar menuBar) {
+        if (menuBar == null || theme == null) {
+            return;
+        }
+        
+        // 设置菜单栏样式
+        menuBar.setStyle(
+                "-fx-background-color: transparent; " +
+                "-fx-text-fill: " + theme.getTextColor() + ";"
+        );
+        
+        // 设置所有菜单和菜单项的样式
+        for (Menu menu : menuBar.getMenus()) {
+            setMenuItemStyle(menu);
+            for (MenuItem item : menu.getItems()) {
+                setMenuItemStyle(item);
+            }
+        }
+    }
+    
+    /**
+     * 设置单个菜单项的样式
+     */
+    public static void setMenuItemStyle(MenuItem item) {
+        if (item == null || theme == null) {
+            return;
+        }
+        
+        item.setStyle(
+                "-fx-text-fill: " + theme.getTextColor() + "; " +
+                "-fx-font-family: " + theme.getFontFamily() + "; " +
+                "-fx-font-size: 14px;"
+        );
+        
+        if (item instanceof Menu) {
+            Menu menu = (Menu) item;
+            for (MenuItem subItem : menu.getItems()) {
+                setMenuItemStyle(subItem);
+            }
+        }
+    }
+    
+    /**
+     * 创建带有主题样式的TabPane
+     */
+    public static JFXTabPane createTabPane() {
+        JFXTabPane tabPane = new JFXTabPane();
+        tabPane.setStyle(String.format(
+                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-tab-min-height: 40; -fx-tab-max-height: 40; -fx-text-fill: %s;",
+                theme.getPanelBgColor(), theme.getBorderColor(), theme.getBorderWidth(), theme.getTextColor()
+        ));
+        
+        return tabPane;
+    }
+    
+    /**
+     * 为Tab添加主题样式
+     */
+    public static Tab createStyledTab(String text, Node content) {
+        Tab tab = new Tab(text, content);
+        tab.setStyle(String.format(
+                "-fx-text-fill: %s; -fx-font-family: %s; -fx-font-size: 14px;",
+                theme.getTextColor(), theme.getFontFamily()
+        ));
+        
+        return tab;
+    }
 
 
     public static HBox createTreeItemMenu(EventHandler<ActionEvent> open, EventHandler<ActionEvent> up, EventHandler<ActionEvent> down, EventHandler<ActionEvent> del) {
@@ -457,12 +832,22 @@ public class StyleFactory {
      * @param selected
      */
     public static void updateTreeItemStyle(Node node, boolean selected) {
+        if (theme == null) {
+            return;
+        }
+        
         if (selected) {
-            // 选中样式：淡蓝色背景 + 左侧/底部蓝色边框
-            node.setStyle("-fx-background-color: rgba(52, 152, 219, 0.15); -fx-border-color: #3498db; -fx-border-width: 0 0 1 0;");
+            // 选中样式：使用主题中的选中颜色
+            node.setStyle(String.format(
+                    "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: 0 0 1 0; -fx-text-fill: %s;",
+                    theme.getListRowSelectedBgColor(), theme.getBorderColor(), theme.getTextColor()
+            ));
         } else {
-            // 默认样式
-            node.setStyle("-fx-background-color: transparent; -fx-border-color: #eee; -fx-border-width: 0 0 1 0;");
+            // 默认样式：使用主题中的边框颜色
+            node.setStyle(String.format(
+                    "-fx-background-color: transparent; -fx-border-color: %s; -fx-border-width: 0 0 1 0; -fx-text-fill: %s;",
+                    theme.getBorderColor(), theme.getTextColor()
+            ));
         }
     }
 

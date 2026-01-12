@@ -447,7 +447,11 @@ public class PreviewView implements IAutoReloadAble {
 
         // 全局参数面板 - 排成一行显示
         VBox globalParamsBox = new VBox(10);
-        globalParamsBox.setStyle("-fx-background-color: #f9f9f9; -fx-border-radius: 5; -fx-border-color: #e0e0e0; -fx-padding: 10;");
+        // 使用主题样式，替换硬编码颜色
+        globalParamsBox.setStyle(String.format(
+                "-fx-background-color: %s; -fx-border-radius: %.1f; -fx-border-color: %s; -fx-padding: 10;",
+                app.getCurrentTheme().getPanelBgColor(), app.getCurrentTheme().getCornerRadius(), app.getCurrentTheme().getBorderColor()
+        ));
 
         // 线程参数行
         HBox threadParamsRow = new HBox(20);
@@ -496,7 +500,11 @@ public class PreviewView implements IAutoReloadAble {
         // 根路径线程数配置
         updateRootPathThreadConfigUI();
         VBox rootPathBox = new VBox(10);
-        rootPathBox.setStyle("-fx-background-color: #f9f9f9; -fx-border-radius: 5; -fx-border-color: #e0e0e0; -fx-padding: 10;");
+        // 使用主题样式，替换硬编码颜色
+        rootPathBox.setStyle(String.format(
+                "-fx-background-color: %s; -fx-border-radius: %.1f; -fx-border-color: %s; -fx-padding: 10;",
+                app.getCurrentTheme().getPanelBgColor(), app.getCurrentTheme().getCornerRadius(), app.getCurrentTheme().getBorderColor()
+        ));
         rootPathBox.getChildren().addAll(
                 StyleFactory.createChapter("[根路径配置]  "),
                 rootPathThreadConfigBox);
@@ -526,7 +534,7 @@ public class PreviewView implements IAutoReloadAble {
         // 表格
         previewTable.setShowRoot(false);
         previewTable.setColumnResizePolicy(TreeTableView.CONSTRAINED_RESIZE_POLICY);
-        previewTable.setStyle("-fx-background-color:rgba(255,255,255,0.4);-fx-base:rgba(255,255,255,0.1);");
+        // 移除硬编码样式，让StyleFactory统一管理
         setupPreviewColumns();
         setupPreviewRows();
 

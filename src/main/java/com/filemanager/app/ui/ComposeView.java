@@ -93,6 +93,7 @@ public class ComposeView implements IAutoReloadAble {
         sourceListView = new ListView<>(app.getSourceRoots());
         sourceListView.setPlaceholder(StyleFactory.createChapter("拖拽文件夹到此"));
         VBox.setVgrow(sourceListView, Priority.ALWAYS);
+        // 移除硬编码样式，让StyleFactory统一管理
 
         // [增强] 源目录列表单元格：支持完整路径显示 + 行内操作
         sourceListView.setCellFactory(p -> new ListCell<File>() {
@@ -181,7 +182,7 @@ public class ComposeView implements IAutoReloadAble {
         centerPanel.setSpacing(10);
 
         pipelineListView = new ListView<>(app.getPipelineStrategies());
-        pipelineListView.setStyle("-fx-background-color: rgba(255,255,255,0.5); -fx-background-radius: 5;");
+        // 移除硬编码样式，让StyleFactory统一管理
         VBox.setVgrow(pipelineListView, Priority.ALWAYS);
 
         pipelineListView.setCellFactory(param -> new ListCell<IAppStrategy>() {
@@ -289,11 +290,19 @@ public class ComposeView implements IAutoReloadAble {
         // --- Right Panel: Config ---
         VBox rightPanel = StyleFactory.createVBoxPanel();
         rightPanel.setPadding(new Insets(15));
+        // 确保面板填充整个区域
+        VBox.setVgrow(rightPanel, Priority.ALWAYS);
+        
         configContainer = new VBox(10);
-        configContainer.setStyle("-fx-background-color: transparent;");
+        // 使用面板背景色，而不是透明背景
+        configContainer.setStyle("-fx-background-color: " + app.getCurrentTheme().getPanelBgColor() + ";");
+        
         ScrollPane sc = new ScrollPane(configContainer);
         sc.setFitToWidth(true);
-        sc.setStyle("-fx-background: transparent; -fx-background-color: transparent;");
+        sc.setFitToHeight(true);
+        // 使用面板背景色，确保一致的显示效果
+        sc.setStyle("-fx-background: " + app.getCurrentTheme().getPanelBgColor() + "; -fx-background-color: " + app.getCurrentTheme().getPanelBgColor() + ";");
+        
         VBox.setVgrow(sc, Priority.ALWAYS);
         rightPanel.getChildren().add(sc);
         return rightPanel;
