@@ -12,6 +12,7 @@ package com.filemanager.app.components;
 import com.filemanager.app.tools.display.StyleFactory;
 import com.filemanager.app.tools.display.ThemeConfig;
 import com.filemanager.app.tools.display.ThemeManager;
+import com.filemanager.app.tools.display.StyleTemplateManager;
 import com.filemanager.app.base.IAppController;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXSlider;
@@ -43,6 +44,7 @@ public class AppearanceManager {
     private final ImageView backgroundImageView;
     private final Region backgroundOverlay;
     private final ThemeManager themeManager;
+    private final StyleTemplateManager templateManager;
     
     public AppearanceManager(IAppController app, ThemeConfig currentTheme,
                            ImageView backgroundImageView, Region backgroundOverlay) {
@@ -51,6 +53,7 @@ public class AppearanceManager {
         this.backgroundImageView = backgroundImageView;
         this.backgroundOverlay = backgroundOverlay;
         this.themeManager = ThemeManager.getInstance();
+        this.templateManager = StyleTemplateManager.getInstance();
     }
     
     public void showAppearanceDialog() {
@@ -121,14 +124,17 @@ public class AppearanceManager {
                 theme.setBgImagePath(currentTheme.getBgImagePath());
                 theme.setBgColor(currentTheme.getBgColor());
                 theme.setAccentColor(currentTheme.getAccentColor());
-                theme.setTextColor(currentTheme.getTextColor());
+                theme.setTextPrimaryColor(currentTheme.getTextPrimaryColor());
+                theme.setTextSecondaryColor(currentTheme.getTextSecondaryColor());
+                theme.setTextTertiaryColor(currentTheme.getTextTertiaryColor());
+                theme.setTextDisabledColor(currentTheme.getTextDisabledColor());
                 theme.setGlassOpacity(currentTheme.getGlassOpacity());
                 theme.setDarkBackground(currentTheme.isDarkBackground());
                 theme.setPanelBgColor(currentTheme.getPanelBgColor());
                 theme.setFontFamily(currentTheme.getFontFamily());
                 theme.setFontSize(currentTheme.getFontSize());
-                theme.setLargeButtonSize(currentTheme.getLargeButtonSize());
-                theme.setSmallButtonSize(currentTheme.getSmallButtonSize());
+                theme.setButtonLargeSize(currentTheme.getButtonLargeSize());
+                theme.setButtonSmallSize(currentTheme.getButtonSmallSize());
             });
             dialog.close();
         });
@@ -144,13 +150,14 @@ public class AppearanceManager {
         content.setPadding(new Insets(20));
         content.setStyle("-fx-background-color: transparent;");
         
-        // 获取所有主题预设
-        Map<String, ThemeConfig> presets = themeManager.getThemePresets();
+        // 获取所有样式模板
+        templateManager.loadAllTemplates();
+        java.util.List<ThemeConfig> templates = templateManager.getAllTemplates();
         
         // 使用网格布局展示主题卡片
         GridPane grid = new GridPane();
-        grid.setHgap(20);
-        grid.setVgap(20);
+        grid.setHgap(30);
+        grid.setVgap(30);
         grid.setPadding(new Insets(10, 0, 10, 0));
         
         // 保存所有主题卡片的引用，用于后续更新选中状态
@@ -159,17 +166,14 @@ public class AppearanceManager {
         
         int col = 0;
         int row = 0;
-        for (Map.Entry<String, ThemeConfig> entry : presets.entrySet()) {
-            String themeName = entry.getKey();
-            ThemeConfig theme = entry.getValue();
-            
+        for (ThemeConfig template : templates) {
             // 创建主题预览卡片
-            VBox themeCard = createThemeCard(themeName, theme);
+            VBox themeCard = createThemeCard(template);
             themeCard.setCursor(Cursor.HAND);
             
             // 保存引用
             themeCards.add(themeCard);
-            themes.add(theme);
+            themes.add(template);
             
             // 设置点击事件
             final int index = themeCards.size() - 1;
@@ -184,7 +188,7 @@ public class AppearanceManager {
             
             grid.add(themeCard, col, row);
             col++;
-            if (col > 4) { // 每行显示5个卡片
+            if (col > 3) { // 每行显示4个卡片，每个卡片更宽
                 col = 0;
                 row++;
             }
@@ -247,9 +251,9 @@ public class AppearanceManager {
         
         // 文本颜色
         Label textLabel = StyleFactory.createLabel("文本颜色", 14, false);
-        ColorPicker textPicker = new ColorPicker(Color.web(currentTheme.getTextColor()));
+        ColorPicker textPicker = new ColorPicker(Color.web(currentTheme.getTextPrimaryColor()));
         textPicker.setOnAction(e -> {
-            currentTheme.setTextColor(String.format("#%02X%02X%02X", 
+            currentTheme.setTextPrimaryColor(String.format("#%02X%02X%02X", 
                     (int) (textPicker.getValue().getRed() * 255), 
                     (int) (textPicker.getValue().getGreen() * 255), 
                     (int) (textPicker.getValue().getBlue() * 255)));
@@ -328,7 +332,7 @@ public class AppearanceManager {
         bgImagePath.setPrefWidth(400);
         bgImagePath.setStyle(String.format(
                 "-fx-background-color: %s; -fx-background-radius: %.1f; -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f;",
-                currentTheme.getPanelBgColor(), currentTheme.getCornerRadius(), currentTheme.getTextColor(), 
+                currentTheme.getPanelBgColor(), currentTheme.getCornerRadius(), currentTheme.getTextPrimaryColor(), 
                 currentTheme.getBorderColor(), currentTheme.getBorderWidth()
         ));
         
@@ -410,7 +414,7 @@ public class AppearanceManager {
         fontFamilyCb.setPrefWidth(400);
         fontFamilyCb.setStyle(String.format(
                 "-fx-background-color: %s; -fx-background-radius: %.1f; -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f;",
-                currentTheme.getPanelBgColor(), currentTheme.getCornerRadius(), currentTheme.getTextColor(), 
+                currentTheme.getPanelBgColor(), currentTheme.getCornerRadius(), currentTheme.getTextPrimaryColor(), 
                 currentTheme.getBorderColor(), currentTheme.getBorderWidth()
         ));
         fontFamilyCb.setOnAction(e -> {
@@ -459,18 +463,18 @@ public class AppearanceManager {
         HBox largeButtonBox = new HBox(20);
         largeButtonBox.setAlignment(Pos.CENTER_LEFT);
         Label largeButtonLabel = StyleFactory.createLabel("大按钮大小", 14, false);
-        JFXSlider largeButtonSlider = new JFXSlider(60, 100, currentTheme.getLargeButtonSize());
+        JFXSlider largeButtonSlider = new JFXSlider(60, 100, currentTheme.getButtonLargeSize());
         largeButtonSlider.setPrefWidth(400);
         largeButtonSlider.setMajorTickUnit(5);
         largeButtonSlider.setMinorTickCount(0);
         largeButtonSlider.setShowTickLabels(true);
         largeButtonSlider.setShowTickMarks(false);
         
-        Label largeButtonValue = StyleFactory.createLabel(String.format("%.1f", currentTheme.getLargeButtonSize()), 14, false);
+        Label largeButtonValue = StyleFactory.createLabel(String.format("%.1f", currentTheme.getButtonLargeSize()), 14, false);
         largeButtonValue.setMinWidth(50);
         
         largeButtonSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
-            currentTheme.setLargeButtonSize(newVal.doubleValue());
+            currentTheme.setButtonLargeSize(newVal.doubleValue());
             largeButtonValue.setText(String.format("%.1f", newVal.doubleValue()));
             applyAppearance();
         });
@@ -482,18 +486,18 @@ public class AppearanceManager {
         HBox smallButtonBox = new HBox(20);
         smallButtonBox.setAlignment(Pos.CENTER_LEFT);
         Label smallButtonLabel = StyleFactory.createLabel("小按钮大小", 14, false);
-        JFXSlider smallButtonSlider = new JFXSlider(40, 80, currentTheme.getSmallButtonSize());
+        JFXSlider smallButtonSlider = new JFXSlider(40, 80, currentTheme.getButtonSmallSize());
         smallButtonSlider.setPrefWidth(400);
         smallButtonSlider.setMajorTickUnit(5);
         smallButtonSlider.setMinorTickCount(0);
         smallButtonSlider.setShowTickLabels(true);
         smallButtonSlider.setShowTickMarks(false);
         
-        Label smallButtonValue = StyleFactory.createLabel(String.format("%.1f", currentTheme.getSmallButtonSize()), 14, false);
+        Label smallButtonValue = StyleFactory.createLabel(String.format("%.1f", currentTheme.getButtonSmallSize()), 14, false);
         smallButtonValue.setMinWidth(50);
         
         smallButtonSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
-            currentTheme.setSmallButtonSize(newVal.doubleValue());
+            currentTheme.setButtonSmallSize(newVal.doubleValue());
             smallButtonValue.setText(String.format("%.1f", newVal.doubleValue()));
             applyAppearance();
         });
@@ -512,82 +516,387 @@ public class AppearanceManager {
         content.setPadding(new Insets(20));
         content.setStyle("-fx-background-color: transparent;");
         
-        HBox buttonBox = new HBox(15);
-        buttonBox.setAlignment(Pos.CENTER);
+        // 保存模板区域
+        VBox saveTemplateBox = new VBox(15);
+        saveTemplateBox.setPadding(new Insets(10));
+        saveTemplateBox.setStyle(String.format(
+                "-fx-background-color: %s; -fx-background-radius: 8; -fx-border-color: %s; -fx-border-width: 1px;",
+                currentTheme.getPanelBgColor(), currentTheme.getBorderColor()
+        ));
         
-        JFXButton saveBtn = StyleFactory.createActionButton("保存当前样式", "#27ae60", () -> {
-            // 实现保存样式功能
-            FileChooser fileChooser = new FileChooser();
-            fileChooser.setTitle("保存样式");
-            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("样式文件", "*.json"));
-            fileChooser.setInitialDirectory(new File("style"));
+        Label saveTitle = new Label("保存自定义模板");
+        saveTitle.setStyle(String.format(
+                "-fx-font-family: %s; -fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: %s;",
+                currentTheme.getFontFamily(), currentTheme.getTextPrimaryColor()
+        ));
+        
+        GridPane saveGrid = new GridPane();
+        saveGrid.setHgap(15);
+        saveGrid.setVgap(15);
+        
+        // 模板名称
+        Label nameLabel = new Label("模板名称:");
+        nameLabel.setStyle(String.format(
+                "-fx-font-family: %s; -fx-font-size: 14px; -fx-text-fill: %s;",
+                currentTheme.getFontFamily(), currentTheme.getTextPrimaryColor()
+        ));
+        TextField nameField = new TextField();
+        nameField.setPromptText("输入模板名称");
+        nameField.setPrefWidth(200);
+        nameField.setStyle(String.format(
+                "-fx-background-color: #ffffff; -fx-background-radius: 4; -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: 1px;",
+                currentTheme.getTextPrimaryColor(), currentTheme.getBorderColor()
+        ));
+        
+        // 模板描述
+        Label descLabel = new Label("模板描述:");
+        descLabel.setStyle(String.format(
+                "-fx-font-family: %s; -fx-font-size: 14px; -fx-text-fill: %s;",
+                currentTheme.getFontFamily(), currentTheme.getTextPrimaryColor()
+        ));
+        TextField descField = new TextField();
+        descField.setPromptText("输入模板描述");
+        descField.setPrefWidth(300);
+        descField.setStyle(String.format(
+                "-fx-background-color: #ffffff; -fx-background-radius: 4; -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: 1px;",
+                currentTheme.getTextPrimaryColor(), currentTheme.getBorderColor()
+        ));
+        
+        // 保存按钮
+        JFXButton saveBtn = StyleFactory.createActionButton("保存为新模板", "#27ae60", () -> {
+            if (nameField.getText() == null || nameField.getText().trim().isEmpty()) {
+                Alert alert = new Alert(Alert.AlertType.WARNING);
+                alert.setTitle("警告");
+                alert.setHeaderText(null);
+                alert.setContentText("请输入模板名称");
+                alert.showAndWait();
+                return;
+            }
             
-            File file = fileChooser.showSaveDialog(null);
-            if (file != null) {
-                themeManager.saveThemeToFile(file, currentTheme);
+            // 创建新模板
+            ThemeConfig newTemplate = currentTheme.clone();
+            newTemplate.setTemplateName(nameField.getText().trim());
+            newTemplate.setTemplateDescription(descField.getText());
+            
+            // 保存模板
+            if (templateManager.saveTemplate(newTemplate)) {
+                Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                alert.setTitle("成功");
+                alert.setHeaderText(null);
+                alert.setContentText("模板保存成功");
+                alert.showAndWait();
+                
+                // 清空输入
+                nameField.clear();
+                descField.clear();
+            } else {
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setTitle("错误");
+                alert.setHeaderText(null);
+                alert.setContentText("模板保存失败");
+                alert.showAndWait();
             }
         });
         
-        JFXButton loadBtn = StyleFactory.createActionButton("加载样式文件", "#3498db", () -> {
-            // 实现加载样式功能
-            FileChooser fileChooser = new FileChooser();
-            fileChooser.setTitle("加载样式");
-            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("样式文件", "*.json"));
-            fileChooser.setInitialDirectory(new File("style"));
-            
-            File file = fileChooser.showOpenDialog(null);
-            if (file != null) {
-                ThemeConfig theme = themeManager.loadThemeFromFile(file);
-                if (theme != null) {
-                    applyTheme(theme);
+        saveGrid.add(nameLabel, 0, 0);
+        saveGrid.add(nameField, 1, 0);
+        saveGrid.add(descLabel, 0, 1);
+        saveGrid.add(descField, 1, 1, 2, 1);
+        saveGrid.add(saveBtn, 1, 2);
+        
+        saveTemplateBox.getChildren().addAll(saveTitle, saveGrid);
+        
+        // 模板管理区域
+        VBox manageTemplateBox = new VBox(15);
+        manageTemplateBox.setPadding(new Insets(10));
+        manageTemplateBox.setStyle(String.format(
+                "-fx-background-color: %s; -fx-background-radius: 8; -fx-border-color: %s; -fx-border-width: 1px;",
+                currentTheme.getPanelBgColor(), currentTheme.getBorderColor()
+        ));
+        
+        Label manageTitle = new Label("管理模板");
+        manageTitle.setStyle(String.format(
+                "-fx-font-family: %s; -fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: %s;",
+                currentTheme.getFontFamily(), currentTheme.getTextPrimaryColor()
+        ));
+        
+        // 模板列表
+        ListView<String> templateListView = new ListView<>();
+        templateListView.setPrefHeight(200);
+        templateListView.setStyle(String.format(
+                "-fx-background-color: #ffffff; -fx-background-radius: 4; -fx-border-color: %s; -fx-border-width: 1px;",
+                currentTheme.getBorderColor()
+        ));
+        
+        // 刷新模板列表
+        javafx.collections.ObservableList<String> templateNames = javafx.collections.FXCollections.observableArrayList();
+        templateManager.loadAllTemplates();
+        templateNames.addAll(templateManager.getAllTemplateNames());
+        templateListView.setItems(templateNames);
+        
+        // 操作按钮
+        HBox manageButtons = new HBox(15);
+        manageButtons.setAlignment(Pos.CENTER);
+        
+        JFXButton useBtn = StyleFactory.createActionButton("应用模板", "#3498db", () -> {
+            String selectedName = templateListView.getSelectionModel().getSelectedItem();
+            if (selectedName != null) {
+                ThemeConfig template = templateManager.getTemplate(selectedName);
+                if (template != null) {
+                    applyTheme(template);
                     refreshColorPickers();
+                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                    alert.setTitle("成功");
+                    alert.setHeaderText(null);
+                    alert.setContentText("模板已应用");
+                    alert.showAndWait();
                 }
             }
         });
         
-        buttonBox.getChildren().addAll(saveBtn, loadBtn);
-        content.getChildren().add(buttonBox);
+        JFXButton deleteBtn = StyleFactory.createActionButton("删除模板", "#e74c3c", () -> {
+            String selectedName = templateListView.getSelectionModel().getSelectedItem();
+            if (selectedName != null) {
+                // 确认删除
+                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                alert.setTitle("确认删除");
+                alert.setHeaderText(null);
+                alert.setContentText("确定要删除此模板吗？");
+                
+                alert.showAndWait().ifPresent(response -> {
+                    if (response == ButtonType.OK) {
+                        if (templateManager.deleteTemplate(selectedName)) {
+                            // 刷新列表
+                            templateNames.clear();
+                            templateManager.loadAllTemplates();
+                            templateNames.addAll(templateManager.getAllTemplateNames());
+                            templateListView.setItems(templateNames);
+                            
+                            Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
+                            successAlert.setTitle("成功");
+                            successAlert.setHeaderText(null);
+                            successAlert.setContentText("模板已删除");
+                            successAlert.showAndWait();
+                        } else {
+                            Alert errorAlert = new Alert(Alert.AlertType.ERROR);
+                            errorAlert.setTitle("错误");
+                            errorAlert.setHeaderText(null);
+                            errorAlert.setContentText("无法删除内置模板");
+                            errorAlert.showAndWait();
+                        }
+                    }
+                });
+            }
+        });
         
+        JFXButton refreshBtn = StyleFactory.createActionButton("刷新列表", "#95a5a6", () -> {
+            templateNames.clear();
+            templateManager.loadAllTemplates();
+            templateNames.addAll(templateManager.getAllTemplateNames());
+            templateListView.setItems(templateNames);
+        });
+        
+        manageButtons.getChildren().addAll(useBtn, deleteBtn, refreshBtn);
+        
+        manageTemplateBox.getChildren().addAll(manageTitle, templateListView, manageButtons);
+        
+        content.getChildren().addAll(saveTemplateBox, manageTemplateBox);
         return content;
     }
     
     /**
      * 创建主题预览卡片
      */
-    private VBox createThemeCard(String themeName, ThemeConfig theme) {
-        VBox card = new VBox(8);
-        card.setPrefWidth(100); // 减小卡片宽度
-        card.setPrefHeight(130); // 减小卡片高度
-        card.setPadding(new Insets(8)); // 减小内边距
-        card.setStyle("-fx-background-color: white; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 8, 0, 0, 0);");
+    private VBox createThemeCard(ThemeConfig theme) {
+        VBox card = new VBox(10);
+        card.setPrefWidth(200); // 增加卡片宽度，显示更多内容
+        card.setPrefHeight(280); // 增加卡片高度
+        card.setPadding(new Insets(15));
+        card.setStyle(String.format(
+                "-fx-background-color: %s; -fx-background-radius: 12; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.15), 10, 0, 0, 0);",
+                theme.getPanelBgColor()
+        ));
         
         // 主题名称
-        Label nameLabel = StyleFactory.createLabel(themeName, 12, true); // 减小字体大小
+        Label nameLabel = new Label(theme.getTemplateName());
+        nameLabel.setStyle(String.format(
+                "-fx-font-family: %s; -fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: %s;",
+                theme.getFontFamily(), theme.getTextPrimaryColor()
+        ));
         nameLabel.setAlignment(Pos.CENTER);
         card.getChildren().add(nameLabel);
         
-        // 主题颜色预览
-        Rectangle accentColor = new Rectangle(80, 16); // 减小预览矩形尺寸
-        accentColor.setFill(Color.web(theme.getAccentColor()));
-        accentColor.setArcWidth(4);
-        accentColor.setArcHeight(4);
-        card.getChildren().add(accentColor);
+        // 主题描述
+        Label descLabel = new Label(theme.getTemplateDescription());
+        descLabel.setStyle(String.format(
+                "-fx-font-family: %s; -fx-font-size: 12px; -fx-text-fill: %s;",
+                theme.getFontFamily(), theme.getTextSecondaryColor()
+        ));
+        descLabel.setAlignment(Pos.CENTER);
+        descLabel.setWrapText(true);
+        descLabel.setMaxWidth(170);
+        card.getChildren().add(descLabel);
         
-        Rectangle bgColor = new Rectangle(80, 16); // 减小预览矩形尺寸
+        // 分隔线
+        Separator separator = new Separator();
+        separator.setStyle(String.format("-fx-background-color: %s;", theme.getBorderColor()));
+        card.getChildren().add(separator);
+        
+        // 颜色预览区
+        GridPane colorGrid = new GridPane();
+        colorGrid.setHgap(8);
+        colorGrid.setVgap(8);
+        colorGrid.setPadding(new Insets(5, 0, 5, 0));
+        
+        // 背景色
+        VBox bgColorBox = new VBox(3);
+        Label bgLabel = new Label("背景色");
+        bgLabel.setStyle(String.format(
+                "-fx-font-family: %s; -fx-font-size: 10px; -fx-text-fill: %s;",
+                theme.getFontFamily(), theme.getTextSecondaryColor()
+        ));
+        bgLabel.setAlignment(Pos.CENTER);
+        Rectangle bgColor = new Rectangle(35, 20);
         bgColor.setFill(Color.web(theme.getBgColor()));
         bgColor.setArcWidth(4);
         bgColor.setArcHeight(4);
-        card.getChildren().add(bgColor);
+        bgColor.setStyle(String.format("-fx-border-color: %s; -fx-border-width: 1px;", theme.getBorderColor()));
+        bgColorBox.getChildren().addAll(bgLabel, bgColor);
+        colorGrid.add(bgColorBox, 0, 0);
         
-        Rectangle panelColor = new Rectangle(80, 16); // 减小预览矩形尺寸
+        // 面板背景色
+        VBox panelColorBox = new VBox(3);
+        Label panelLabel = new Label("面板");
+        panelLabel.setStyle(String.format(
+                "-fx-font-family: %s; -fx-font-size: 10px; -fx-text-fill: %s;",
+                theme.getFontFamily(), theme.getTextSecondaryColor()
+        ));
+        panelLabel.setAlignment(Pos.CENTER);
+        Rectangle panelColor = new Rectangle(35, 20);
         panelColor.setFill(Color.web(theme.getPanelBgColor()));
-        panelColor.setArcWidth(5);
-        panelColor.setArcHeight(5);
-        card.getChildren().add(panelColor);
+        panelColor.setArcWidth(4);
+        panelColor.setArcHeight(4);
+        panelColor.setStyle(String.format("-fx-border-color: %s; -fx-border-width: 1px;", theme.getBorderColor()));
+        panelColorBox.getChildren().addAll(panelLabel, panelColor);
+        colorGrid.add(panelColorBox, 1, 0);
+        
+        // 主色调
+        VBox accentColorBox = new VBox(3);
+        Label accentLabel = new Label("主色");
+        accentLabel.setStyle(String.format(
+                "-fx-font-family: %s; -fx-font-size: 10px; -fx-text-fill: %s;",
+                theme.getFontFamily(), theme.getTextSecondaryColor()
+        ));
+        accentLabel.setAlignment(Pos.CENTER);
+        Rectangle accentColor = new Rectangle(35, 20);
+        accentColor.setFill(Color.web(theme.getAccentColor()));
+        accentColor.setArcWidth(4);
+        accentColor.setArcHeight(4);
+        accentColor.setStyle(String.format("-fx-border-color: %s; -fx-border-width: 1px;", theme.getBorderColor()));
+        accentColorBox.getChildren().addAll(accentLabel, accentColor);
+        colorGrid.add(accentColorBox, 2, 0);
+        
+        // 文本主色
+        VBox textColorBox = new VBox(3);
+        Label textLabel = new Label("文本");
+        textLabel.setStyle(String.format(
+                "-fx-font-family: %s; -fx-font-size: 10px; -fx-text-fill: %s;",
+                theme.getFontFamily(), theme.getTextSecondaryColor()
+        ));
+        textLabel.setAlignment(Pos.CENTER);
+        Rectangle textColor = new Rectangle(35, 20);
+        textColor.setFill(Color.web(theme.getTextPrimaryColor()));
+        textColor.setArcWidth(4);
+        textColor.setArcHeight(4);
+        textColor.setStyle(String.format("-fx-border-color: %s; -fx-border-width: 1px;", theme.getBorderColor()));
+        textColorBox.getChildren().addAll(textLabel, textColor);
+        colorGrid.add(textColorBox, 3, 0);
+        
+        // 按钮样式预览
+        VBox buttonPreviewBox = new VBox(5);
+        Label buttonLabel = new Label("按钮样式");
+        buttonLabel.setStyle(String.format(
+                "-fx-font-family: %s; -fx-font-size: 12px; -fx-text-fill: %s; -fx-font-weight: bold;",
+                theme.getFontFamily(), theme.getTextPrimaryColor()
+        ));
+        buttonLabel.setAlignment(Pos.CENTER);
+        
+        HBox buttonBox = new HBox(8);
+        buttonBox.setAlignment(Pos.CENTER);
+        
+        // 主要按钮
+        Button primaryButton = new Button("主按钮");
+        primaryButton.setStyle(String.format(
+                "-fx-background-color: %s; -fx-text-fill: %s; -fx-background-radius: 4; -fx-font-size: 10px; -fx-min-width: 60; -fx-min-height: 25;",
+                theme.getButtonPrimaryBgColor(), theme.getButtonPrimaryTextColor()
+        ));
+        
+        // 次要按钮
+        Button secondaryButton = new Button("次按钮");
+        secondaryButton.setStyle(String.format(
+                "-fx-background-color: %s; -fx-text-fill: %s; -fx-border-color: %s; -fx-background-radius: 4; -fx-font-size: 10px; -fx-min-width: 60; -fx-min-height: 25;",
+                theme.getButtonSecondaryBgColor(), theme.getButtonSecondaryTextColor(), theme.getButtonSecondaryBorderColor()
+        ));
+        
+        buttonBox.getChildren().addAll(primaryButton, secondaryButton);
+        buttonPreviewBox.getChildren().addAll(buttonLabel, buttonBox);
+        
+        // 列表样式预览
+        VBox listPreviewBox = new VBox(5);
+        Label listLabel = new Label("列表样式");
+        listLabel.setStyle(String.format(
+                "-fx-font-family: %s; -fx-font-size: 12px; -fx-text-fill: %s; -fx-font-weight: bold;",
+                theme.getFontFamily(), theme.getTextPrimaryColor()
+        ));
+        listLabel.setAlignment(Pos.CENTER);
+        
+        VBox listPreview = new VBox();
+        listPreview.setPrefWidth(160);
+        listPreview.setPrefHeight(40);
+        listPreview.setStyle(String.format(
+                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: 1px; -fx-background-radius: 4;",
+                theme.getListBgColor(), theme.getBorderColor()
+        ));
+        
+        // 列表行预览
+        HBox listRow1 = new HBox(5);
+        listRow1.setPadding(new Insets(3, 5, 3, 5));
+        listRow1.setStyle(String.format(
+                "-fx-background-color: %s; -fx-border-color: transparent transparent %s transparent; -fx-border-width: 0 0 1px 0;",
+                theme.getListRowOddBgColor(), theme.getBorderColor()
+        ));
+        Label listItem1 = new Label("列表项 1");
+        listItem1.setStyle(String.format(
+                "-fx-font-family: %s; -fx-font-size: 10px; -fx-text-fill: %s;",
+                theme.getFontFamily(), theme.getTextPrimaryColor()
+        ));
+        listRow1.getChildren().add(listItem1);
+        
+        HBox listRow2 = new HBox(5);
+        listRow2.setPadding(new Insets(3, 5, 3, 5));
+        listRow2.setStyle(String.format(
+                "-fx-background-color: %s;",
+                theme.getListRowEvenBgColor()
+        ));
+        Label listItem2 = new Label("列表项 2");
+        listItem2.setStyle(String.format(
+                "-fx-font-family: %s; -fx-font-size: 10px; -fx-text-fill: %s;",
+                theme.getFontFamily(), theme.getTextPrimaryColor()
+        ));
+        listRow2.getChildren().add(listItem2);
+        
+        listPreview.getChildren().addAll(listRow1, listRow2);
+        listPreviewBox.getChildren().addAll(listLabel, listPreview);
+        
+        // 添加到卡片
+        card.getChildren().addAll(colorGrid, buttonPreviewBox, listPreviewBox);
         
         // 添加选中效果
         if (isCurrentTheme(theme)) {
-            card.setStyle("-fx-background-color: #e3f2fd; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 10, 0, 0, 0); -fx-border-color: #3498db; -fx-border-width: 2; -fx-border-radius: 10;");
+            card.setStyle(String.format(
+                    "-fx-background-color: %s; -fx-background-radius: 12; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.25), 15, 0, 0, 0); -fx-border-color: %s; -fx-border-width: 2px;",
+                    theme.getPanelBgColor(), theme.getAccentColor()
+            ));
         }
         
         return card;
@@ -601,7 +910,7 @@ public class AppearanceManager {
         return theme.getAccentColor().equals(currentTheme.getAccentColor()) &&
                theme.getBgColor().equals(currentTheme.getBgColor()) &&
                theme.getPanelBgColor().equals(currentTheme.getPanelBgColor()) &&
-               theme.getTextColor().equals(currentTheme.getTextColor()) &&
+               theme.getTextPrimaryColor().equals(currentTheme.getTextPrimaryColor()) &&
                theme.isDarkBackground() == currentTheme.isDarkBackground();
     }
     
@@ -611,9 +920,10 @@ public class AppearanceManager {
     private void applyTheme(ThemeConfig theme) {
         currentTheme.setBgColor(theme.getBgColor());
         currentTheme.setAccentColor(theme.getAccentColor());
-        currentTheme.setTextColor(theme.getTextColor());
-        currentTheme.setLightTextColor(theme.getLightTextColor());
-        currentTheme.setDisabledTextColor(theme.getDisabledTextColor());
+        currentTheme.setTextPrimaryColor(theme.getTextPrimaryColor());
+        currentTheme.setTextSecondaryColor(theme.getTextSecondaryColor());
+        currentTheme.setTextTertiaryColor(theme.getTextTertiaryColor());
+        currentTheme.setTextDisabledColor(theme.getTextDisabledColor());
         currentTheme.setGlassOpacity(theme.getGlassOpacity());
         currentTheme.setDarkBackground(theme.isDarkBackground());
         currentTheme.setCornerRadius(theme.getCornerRadius());

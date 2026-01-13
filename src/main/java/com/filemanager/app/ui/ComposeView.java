@@ -169,7 +169,7 @@ public class ComposeView implements IAutoReloadAble {
         TitledPane tpFilters = new TitledPane("全局筛选", app.getGlobalSettingsView());
         tpFilters.setCollapsible(true);
         tpFilters.setExpanded(true);
-        tpFilters.setStyle("-fx-text-fill: " + app.getCurrentTheme().getTextColor() + ";");
+        tpFilters.setStyle("-fx-text-fill: " + app.getCurrentTheme().getTextPrimaryColor() + ";");
 
         leftPanel.getChildren().addAll(srcTools, sourceListView, tpFilters);
         return leftPanel;

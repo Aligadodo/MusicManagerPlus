@@ -155,7 +155,10 @@ public class FileManagerPlusApp extends Application implements IAppController {
             // 使用当前主题配置覆盖默认设置
             theme.setBgColor(currentTheme.getBgColor());
             theme.setAccentColor(currentTheme.getAccentColor());
-            theme.setTextColor(currentTheme.getTextColor());
+            theme.setTextPrimaryColor(currentTheme.getTextPrimaryColor());
+            theme.setTextSecondaryColor(currentTheme.getTextSecondaryColor());
+            theme.setTextTertiaryColor(currentTheme.getTextTertiaryColor());
+            theme.setTextDisabledColor(currentTheme.getTextDisabledColor());
             theme.setGlassOpacity(currentTheme.getGlassOpacity());
             theme.setDarkBackground(currentTheme.isDarkBackground());
             theme.setCornerRadius(currentTheme.getCornerRadius());
@@ -261,7 +264,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
         ));
         Label logo = new Label("MUSIC MANAGER PLUS - By chrse1997@163.com");
         logo.setFont(Font.font(currentTheme.getFontFamily(), FontWeight.BLACK, 20));
-        logo.setTextFill(Color.web(currentTheme.getTextColor()));
+        logo.setTextFill(Color.web(currentTheme.getTextPrimaryColor()));
         logo.setStyle("-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 3, 0, 0, 1);");
 
         header.getChildren().addAll(logo, new Region(), menuBar, autoRun, btnGo, btnExecute, btnStop);
