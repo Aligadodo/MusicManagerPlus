@@ -62,8 +62,114 @@ public class ThemeManager {
      * 初始化内置主题
      */
     private void initBuiltInThemes() {
-        // 浅色主题
+        // 从文件加载主题
+        loadThemesFromDirectory();
+        
+        // 如果没有加载到任何主题，创建默认主题作为后备
+        if (themePresets.isEmpty()) {
+            createDefaultFallbackThemes();
+        }
+    }
+    
+    /**
+     * 从主题目录加载所有主题
+     */
+    private void loadThemesFromDirectory() {
+        createStyleDirIfNotExists();
+        
+        // 尝试从多个位置加载主题文件
+        boolean loaded = false;
+        
+        // 1. 首先尝试从src/main/resources目录加载（IDE环境）
+        loaded = loadThemesFromPath("src/main/resources/style/themes");
+        
+        // 2. 如果没有加载到，尝试从classpath加载（打包后的环境）
+        if (!loaded) {
+            loaded = loadThemesFromClasspath();
+        }
+        
+        // 3. 如果还是没有加载到，创建默认主题目录
+        if (!loaded) {
+            File themesDir = new File("style/themes");
+            themesDir.mkdir();
+        }
+    }
+    
+    /**
+     * 从指定路径加载主题
+     */
+    private boolean loadThemesFromPath(String path) {
+        File themesDir = new File(path);
+        if (!themesDir.exists() || !themesDir.isDirectory()) {
+            return false;
+        }
+        
+        // 获取目录下所有JSON文件
+        File[] jsonFiles = themesDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".json"));
+        if (jsonFiles == null || jsonFiles.length == 0) {
+            return false;
+        }
+        
+        // 加载每个主题文件
+        for (File file : jsonFiles) {
+            try {
+                ThemeConfig theme = loadThemeFromFile(file);
+                if (theme != null) {
+                    // 使用文件名作为主题ID（去除.json后缀）
+                    String themeId = file.getName().replace(".json", "");
+                    themePresets.put(themeId, theme);
+                }
+            } catch (Exception e) {
+                System.err.println("Failed to load theme from file: " + file.getName() + ", error: " + e.getMessage());
+            }
+        }
+        
+        return !themePresets.isEmpty();
+    }
+    
+    /**
+     * 从classpath加载主题
+     */
+    private boolean loadThemesFromClasspath() {
+        try {
+            // 获取当前类的ClassLoader
+            ClassLoader classLoader = getClass().getClassLoader();
+            
+            // 尝试获取classpath下的style/themes目录
+            java.net.URL resource = classLoader.getResource("style/themes");
+            if (resource != null) {
+                File themesDir = new File(resource.toURI());
+                return loadThemesFromPath(themesDir.getAbsolutePath());
+            }
+            
+            // 如果直接获取目录失败，尝试列出所有主题文件
+            java.util.Enumeration<java.net.URL> themeResources = classLoader.getResources("style/themes/");
+            while (themeResources.hasMoreElements()) {
+                java.net.URL url = themeResources.nextElement();
+                if (url.getProtocol().equals("file")) {
+                    File themesDir = new File(url.toURI());
+                    if (loadThemesFromPath(themesDir.getAbsolutePath())) {
+                        return true;
+                    }
+                }
+            }
+            
+        } catch (Exception e) {
+            System.err.println("Failed to load themes from classpath: " + e.getMessage());
+        }
+        
+        return false;
+    }
+    
+    /**
+     * 创建默认后备主题
+     * 当无法从文件加载主题时使用
+     */
+    private void createDefaultFallbackThemes() {
+        // 浅色主题作为默认后备
         ThemeConfig lightTheme = new ThemeConfig();
+        lightTheme.setTemplateName("浅色主题（默认）");
+        lightTheme.setTemplateDescription("默认的浅色主题");
         lightTheme.setBgColor("#f5f5f5");
         lightTheme.setAccentColor("#3498db");
         lightTheme.setTextPrimaryColor("#333333");
@@ -81,8 +187,10 @@ public class ThemeManager {
         lightTheme.setProgressBarColor("#27ae60");
         themePresets.put("light", lightTheme);
         
-        // 深色主题
+        // 深色主题作为第二个后备
         ThemeConfig darkTheme = new ThemeConfig();
+        darkTheme.setTemplateName("深色主题（默认）");
+        darkTheme.setTemplateDescription("默认的深色主题");
         darkTheme.setBgColor("#2c3e50");
         darkTheme.setAccentColor("#3498db");
         darkTheme.setTextPrimaryColor("#ecf0f1");
@@ -99,177 +207,6 @@ public class ThemeManager {
         darkTheme.setDisabledColor("#2c3e50");
         darkTheme.setProgressBarColor("#27ae60");
         themePresets.put("dark", darkTheme);
-        
-        // 蓝色主题
-        ThemeConfig blueTheme = new ThemeConfig();
-        blueTheme.setBgColor("#e3f2fd");
-        blueTheme.setAccentColor("#1976d2");
-        blueTheme.setTextPrimaryColor("#212121");
-        blueTheme.setTextSecondaryColor("#757575");
-        blueTheme.setTextDisabledColor("#bdbdbd");
-        blueTheme.setGlassOpacity(0.70);
-        blueTheme.setDarkBackground(false);
-        blueTheme.setCornerRadius(8.0);
-        blueTheme.setBorderColor("#bbdefb");
-        blueTheme.setPanelBgColor("#ffffff");
-        blueTheme.setPanelBorderColor("#bbdefb");
-        blueTheme.setHoverColor("#bbdefb");
-        blueTheme.setSelectedColor("#90caf9");
-        blueTheme.setDisabledColor("#f5f5f5");
-        blueTheme.setProgressBarColor("#1976d2");
-        themePresets.put("blue", blueTheme);
-        
-        // 绿色主题
-        ThemeConfig greenTheme = new ThemeConfig();
-        greenTheme.setBgColor("#e8f5e9");
-        greenTheme.setAccentColor("#2e7d32");
-        greenTheme.setTextPrimaryColor("#212121");
-        greenTheme.setTextSecondaryColor("#757575");
-        greenTheme.setTextDisabledColor("#bdbdbd");
-        greenTheme.setGlassOpacity(0.70);
-        greenTheme.setDarkBackground(false);
-        greenTheme.setCornerRadius(8.0);
-        greenTheme.setBorderColor("#c8e6c9");
-        greenTheme.setPanelBgColor("#ffffff");
-        greenTheme.setPanelBorderColor("#c8e6c9");
-        greenTheme.setHoverColor("#c8e6c9");
-        greenTheme.setSelectedColor("#a5d6a7");
-        greenTheme.setDisabledColor("#f5f5f5");
-        greenTheme.setProgressBarColor("#2e7d32");
-        themePresets.put("green", greenTheme);
-        
-        // 网易云音乐 - 深色主题
-        ThemeConfig neteaseDarkTheme = new ThemeConfig();
-        neteaseDarkTheme.setBgColor("#18191c");
-        neteaseDarkTheme.setAccentColor("#e8220e");
-        neteaseDarkTheme.setTextPrimaryColor("#ffffff");
-        neteaseDarkTheme.setTextSecondaryColor("#b3b3b3");
-        neteaseDarkTheme.setTextDisabledColor("#666666");
-        neteaseDarkTheme.setGlassOpacity(0.90);
-        neteaseDarkTheme.setDarkBackground(true);
-        neteaseDarkTheme.setCornerRadius(12.0);
-        neteaseDarkTheme.setBorderColor("#2d2d30");
-        neteaseDarkTheme.setPanelBgColor("#212224");
-        neteaseDarkTheme.setPanelBorderColor("#2d2d30");
-        neteaseDarkTheme.setHoverColor("#2d2d30");
-        neteaseDarkTheme.setSelectedColor("#3a3a3d");
-        neteaseDarkTheme.setDisabledColor("#18191c");
-        neteaseDarkTheme.setProgressBarColor("#e8220e");
-        themePresets.put("netease_dark", neteaseDarkTheme);
-        
-        // 网易云音乐 - 浅色主题
-        ThemeConfig neteaseLightTheme = new ThemeConfig();
-        neteaseLightTheme.setBgColor("#f7f7f7");
-        neteaseLightTheme.setAccentColor("#e8220e");
-        neteaseLightTheme.setTextPrimaryColor("#333333");
-        neteaseLightTheme.setTextSecondaryColor("#666666");
-        neteaseLightTheme.setTextDisabledColor("#999999");
-        neteaseLightTheme.setGlassOpacity(0.80);
-        neteaseLightTheme.setDarkBackground(false);
-        neteaseLightTheme.setCornerRadius(12.0);
-        neteaseLightTheme.setBorderColor("#e0e0e0");
-        neteaseLightTheme.setPanelBgColor("#ffffff");
-        neteaseLightTheme.setPanelBorderColor("#e0e0e0");
-        neteaseLightTheme.setHoverColor("#f0f0f0");
-        neteaseLightTheme.setSelectedColor("#ffebee");
-        neteaseLightTheme.setDisabledColor("#f5f5f5");
-        neteaseLightTheme.setProgressBarColor("#e8220e");
-        themePresets.put("netease_light", neteaseLightTheme);
-        
-        // 网易云音乐 - 粉色主题
-        ThemeConfig neteasePinkTheme = new ThemeConfig();
-        neteasePinkTheme.setBgColor("#fce4ec");
-        neteasePinkTheme.setAccentColor("#ec407a");
-        neteasePinkTheme.setTextPrimaryColor("#333333");
-        neteasePinkTheme.setTextSecondaryColor("#757575");
-        neteasePinkTheme.setTextDisabledColor("#bdbdbd");
-        neteasePinkTheme.setGlassOpacity(0.75);
-        neteasePinkTheme.setDarkBackground(false);
-        neteasePinkTheme.setCornerRadius(12.0);
-        neteasePinkTheme.setBorderColor("#f8bbd0");
-        neteasePinkTheme.setPanelBgColor("#ffffff");
-        neteasePinkTheme.setPanelBorderColor("#f8bbd0");
-        neteasePinkTheme.setHoverColor("#f8bbd0");
-        neteasePinkTheme.setSelectedColor("#f48fb1");
-        neteasePinkTheme.setDisabledColor("#f5f5f5");
-        neteasePinkTheme.setProgressBarColor("#ec407a");
-        themePresets.put("netease_pink", neteasePinkTheme);
-        
-        // 网易云音乐 - 蓝色主题
-        ThemeConfig neteaseBlueTheme = new ThemeConfig();
-        neteaseBlueTheme.setBgColor("#e3f2fd");
-        neteaseBlueTheme.setAccentColor("#2196f3");
-        neteaseBlueTheme.setTextPrimaryColor("#333333");
-        neteaseBlueTheme.setTextSecondaryColor("#757575");
-        neteaseBlueTheme.setTextDisabledColor("#bdbdbd");
-        neteaseBlueTheme.setGlassOpacity(0.75);
-        neteaseBlueTheme.setDarkBackground(false);
-        neteaseBlueTheme.setCornerRadius(12.0);
-        neteaseBlueTheme.setBorderColor("#bbdefb");
-        neteaseBlueTheme.setPanelBgColor("#ffffff");
-        neteaseBlueTheme.setPanelBorderColor("#bbdefb");
-        neteaseBlueTheme.setHoverColor("#bbdefb");
-        neteaseBlueTheme.setSelectedColor("#90caf9");
-        neteaseBlueTheme.setDisabledColor("#f5f5f5");
-        neteaseBlueTheme.setProgressBarColor("#2196f3");
-        themePresets.put("netease_blue", neteaseBlueTheme);
-        
-        // 紫色主题
-        ThemeConfig purpleTheme = new ThemeConfig();
-        purpleTheme.setBgColor("#f3e5f5");
-        purpleTheme.setAccentColor("#9c27b0");
-        purpleTheme.setTextPrimaryColor("#333333");
-        purpleTheme.setTextSecondaryColor("#757575");
-        purpleTheme.setTextDisabledColor("#bdbdbd");
-        purpleTheme.setGlassOpacity(0.75);
-        purpleTheme.setDarkBackground(false);
-        purpleTheme.setCornerRadius(10.0);
-        purpleTheme.setBorderColor("#e1bee7");
-        purpleTheme.setPanelBgColor("#ffffff");
-        purpleTheme.setPanelBorderColor("#e1bee7");
-        purpleTheme.setHoverColor("#e1bee7");
-        purpleTheme.setSelectedColor("#ce93d8");
-        purpleTheme.setDisabledColor("#f5f5f5");
-        purpleTheme.setProgressBarColor("#9c27b0");
-        themePresets.put("purple", purpleTheme);
-        
-        // 橙色主题
-        ThemeConfig orangeTheme = new ThemeConfig();
-        orangeTheme.setBgColor("#fff3e0");
-        orangeTheme.setAccentColor("#ff9800");
-        orangeTheme.setTextPrimaryColor("#333333");
-        orangeTheme.setTextSecondaryColor("#757575");
-        orangeTheme.setTextDisabledColor("#bdbdbd");
-        orangeTheme.setGlassOpacity(0.75);
-        orangeTheme.setDarkBackground(false);
-        orangeTheme.setCornerRadius(10.0);
-        orangeTheme.setBorderColor("#ffe0b2");
-        orangeTheme.setPanelBgColor("#ffffff");
-        orangeTheme.setPanelBorderColor("#ffe0b2");
-        orangeTheme.setHoverColor("#ffe0b2");
-        orangeTheme.setSelectedColor("#ffcc80");
-        orangeTheme.setDisabledColor("#f5f5f5");
-        orangeTheme.setProgressBarColor("#ff9800");
-        themePresets.put("orange", orangeTheme);
-        
-        // 薄荷绿主题
-        ThemeConfig mintTheme = new ThemeConfig();
-        mintTheme.setBgColor("#e0f7fa");
-        mintTheme.setAccentColor("#00bcd4");
-        mintTheme.setTextPrimaryColor("#333333");
-        mintTheme.setTextSecondaryColor("#757575");
-        mintTheme.setTextDisabledColor("#bdbdbd");
-        mintTheme.setGlassOpacity(0.75);
-        mintTheme.setDarkBackground(false);
-        mintTheme.setCornerRadius(10.0);
-        mintTheme.setBorderColor("#b2ebf2");
-        mintTheme.setPanelBgColor("#ffffff");
-        mintTheme.setPanelBorderColor("#b2ebf2");
-        mintTheme.setHoverColor("#b2ebf2");
-        mintTheme.setSelectedColor("#80deea");
-        mintTheme.setDisabledColor("#f5f5f5");
-        mintTheme.setProgressBarColor("#00bcd4");
-        themePresets.put("mint", mintTheme);
     }
     
     /**
@@ -367,10 +304,23 @@ public class ThemeManager {
      * 判断是否为内置主题
      */
     public boolean isBuiltInTheme(String name) {
-        // 内置主题包括所有初始加载的主题
-        return name.equals("light") || name.equals("dark") || name.equals("blue") || 
-               name.equals("green") || name.startsWith("netease_") || 
-               name.equals("purple") || name.equals("orange") || name.equals("mint");
+        // 内置主题是从主题目录加载的主题文件
+        // 检查是否存在对应的主题文件
+        
+        // 1. 首先检查项目根目录（IDE环境）
+        File themeFile = new File(String.format("style/themes/%s.json", name));
+        if (themeFile.exists()) {
+            return true;
+        }
+        
+        // 2. 然后检查classpath（打包后的环境）
+        try {
+            ClassLoader classLoader = getClass().getClassLoader();
+            java.net.URL resource = classLoader.getResource(String.format("style/themes/%s.json", name));
+            return resource != null;
+        } catch (Exception e) {
+            return false;
+        }
     }
     
     /**

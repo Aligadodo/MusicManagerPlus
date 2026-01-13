@@ -258,6 +258,33 @@
                 </executions>
             </plugin>
 
+            <!-- 资源复制插件：复制主题文件到输出目录 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.3.1</version>
+                <executions>
+                    <execution>
+                        <id>copy-themes</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/style/themes</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>style/themes</directory>
+                                    <includes>
+                                        <include>*.json</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            
             <!-- 2. ClassFinal Plugin: 对 Fat Jar 进行加密 -->
             <!-- 这里的配置会自动处理 target 目录下的 jar -->
             <plugin>
@@ -270,7 +297,7 @@
                     <!-- 指定要加密的包名，逗号分隔，这里加密您的核心业务代码 -->
                     <packages>com.filemanager</packages>
                     <!-- 排除配置文件，避免加密后无法读取 -->
-                    <cfgfiles>*.properties,*.xml,*.css</cfgfiles>
+                    <cfgfiles>*.properties,*.xml,*.css,*.json</cfgfiles>
                     <!-- 加密后的 Jar 文件名后缀，例如 EchoMusicManager-encrypted.jar -->
                     <!-- 这里留空或者设置成同名覆盖可能会有问题，建议使用默认逻辑 -->
                 </configuration>

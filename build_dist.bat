@@ -77,8 +77,15 @@ if exist "%SOURCE_FFMPEG%\ffmpeg.exe" (
     copy "%SOURCE_FFMPEG%\ffmpeg.exe" "dist\" >nul
 )
 
-REM --- 6. 生成启动脚本 ---
-echo [6/6] 生成启动脚本...
+REM 复制主题文件
+echo [6/7] 正在复制主题文件...
+if exist "style\themes" (
+    xcopy /E /I /Q /Y "style\themes" "dist\style\themes" >nul
+    echo 主题文件复制成功！
+)
+
+REM --- 7. 生成启动脚本 ---
+echo [7/7] 生成启动脚本...
 (
     echo @echo off
     echo chcp 65001 ^>nul
