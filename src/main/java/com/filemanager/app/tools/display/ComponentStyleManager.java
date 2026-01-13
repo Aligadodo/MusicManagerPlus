@@ -72,6 +72,31 @@ public class ComponentStyleManager {
             applyLabeledStyle((Labeled) node);
         }
         
+        // 处理文本输入控件
+        if (node instanceof TextInputControl) {
+            applyTextInputControlStyle((TextInputControl) node);
+        }
+        
+        // 处理组合框
+        if (node instanceof ComboBox) {
+            applyComboBoxStyle((ComboBox<?>) node);
+        }
+        
+        // 处理复选框
+        if (node instanceof CheckBox) {
+            applyCheckBoxStyle((CheckBox) node);
+        }
+        
+        // 处理单选按钮
+        if (node instanceof RadioButton) {
+            applyRadioButtonStyle((RadioButton) node);
+        }
+        
+        // 处理切换按钮
+        if (node instanceof ToggleButton) {
+            applyToggleButtonStyle((ToggleButton) node);
+        }
+        
         // 处理布局容器组件
         if (node instanceof VBox) {
             applyVBoxStyle((VBox) node);
@@ -135,14 +160,29 @@ public class ComponentStyleManager {
      * 应用标签和按钮等可标记组件的样式
      */
     private static void applyLabeledStyle(Labeled labeled) {
-        // 只更新没有显式设置文本颜色的组件
-        String currentStyle = labeled.getStyle();
-        if (!currentStyle.contains("-fx-text-fill:")) {
-            labeled.setStyle(String.format(
-                    "%s -fx-text-fill: %s; -fx-font-family: %s;",
-                    currentStyle, theme.getTextPrimaryColor(), theme.getFontFamily()
-            ));
+        // 跳过MenuBarButton，因为它的style属性已经被绑定了
+        if (labeled.getClass().getName().contains("MenuBarButton")) {
+            // 只更新文本颜色，不设置完整样式
+            labeled.setTextFill(javafx.scene.paint.Color.web(theme.getTextPrimaryColor()));
+            labeled.setFont(javafx.scene.text.Font.font(theme.getFontFamily(), labeled.getFont().getSize()));
+            return;
         }
+        
+        // 更新所有Labeled组件的文本颜色和字体，确保与主题一致
+        String currentStyle = labeled.getStyle();
+        
+        // 如果当前样式已包含文本颜色或字体设置，移除它们
+        if (currentStyle.contains("-fx-text-fill:")) {
+            currentStyle = currentStyle.replaceAll(".*?-fx-text-fill:[^;]*;", "");
+        }
+        if (currentStyle.contains("-fx-font-family:")) {
+            currentStyle = currentStyle.replaceAll(".*?-fx-font-family:[^;]*;", "");
+        }
+        
+        labeled.setStyle(String.format(
+                "%s -fx-text-fill: %s; -fx-font-family: %s;",
+                currentStyle.trim(), theme.getTextPrimaryColor(), theme.getFontFamily()
+        ));
     }
 
     /**
@@ -363,6 +403,126 @@ public class ComponentStyleManager {
         ));
         // 确保文本区域有内边距
         textArea.setPadding(new Insets(10,0,0,0));
+    }
+    
+    /**
+     * 应用文本输入控件样式
+     */
+    private static void applyTextInputControlStyle(TextInputControl control) {
+        // 如果是TextArea，已经有专门的样式处理方法，跳过
+        if (control instanceof TextArea) {
+            return;
+        }
+        
+        String currentStyle = control.getStyle();
+        
+        // 如果当前样式已包含文本颜色或字体设置，移除它们
+        if (currentStyle.contains("-fx-text-fill:")) {
+            currentStyle = currentStyle.replaceAll(".*?-fx-text-fill:[^;]*;", "");
+        }
+        if (currentStyle.contains("-fx-font-family:")) {
+            currentStyle = currentStyle.replaceAll(".*?-fx-font-family:[^;]*;", "");
+        }
+        
+        control.setStyle(String.format(
+                "%s -fx-text-fill: %s; -fx-font-family: %s; -fx-background-color: %s; -fx-border-color: %s;",
+                currentStyle.trim(), theme.getTextPrimaryColor(), theme.getFontFamily(), theme.getPanelBgColor(), theme.getBorderColor()
+        ));
+    }
+    
+    /**
+     * 应用ComboBox样式
+     */
+    private static void applyComboBoxStyle(ComboBox<?> comboBox) {
+        String currentStyle = comboBox.getStyle();
+        
+        // 移除现有样式
+        if (currentStyle.contains("-fx-text-fill:")) {
+            currentStyle = currentStyle.replaceAll(".*?-fx-text-fill:[^;]*;", "");
+        }
+        if (currentStyle.contains("-fx-font-family:")) {
+            currentStyle = currentStyle.replaceAll(".*?-fx-font-family:[^;]*;", "");
+        }
+        if (currentStyle.contains("-fx-background-color:")) {
+            currentStyle = currentStyle.replaceAll(".*?-fx-background-color:[^;]*;", "");
+        }
+        if (currentStyle.contains("-fx-border-color:")) {
+            currentStyle = currentStyle.replaceAll(".*?-fx-border-color:[^;]*;", "");
+        }
+        
+        comboBox.setStyle(String.format(
+                "%s -fx-text-fill: %s; -fx-font-family: %s; -fx-background-color: %s; -fx-border-color: %s;",
+                currentStyle.trim(), theme.getTextPrimaryColor(), theme.getFontFamily(), theme.getPanelBgColor(), theme.getBorderColor()
+        ));
+        
+        // 更新下拉列表样式
+        ContextMenu contextMenu = comboBox.getContextMenu();
+        if (contextMenu != null) {
+            contextMenu.setStyle(
+                    "-fx-background-color: " + theme.getPanelBgColor() + "; " +
+                    "-fx-border-color: " + theme.getBorderColor() + ";"
+            );
+        }
+    }
+    
+    /**
+     * 应用CheckBox样式
+     */
+    private static void applyCheckBoxStyle(CheckBox checkBox) {
+        String currentStyle = checkBox.getStyle();
+        
+        // 移除现有样式
+        if (currentStyle.contains("-fx-text-fill:")) {
+            currentStyle = currentStyle.replaceAll(".*?-fx-text-fill:[^;]*;", "");
+        }
+        if (currentStyle.contains("-fx-font-family:")) {
+            currentStyle = currentStyle.replaceAll(".*?-fx-font-family:[^;]*;", "");
+        }
+        
+        checkBox.setStyle(String.format(
+                "%s -fx-text-fill: %s; -fx-font-family: %s;",
+                currentStyle.trim(), theme.getTextPrimaryColor(), theme.getFontFamily()
+        ));
+    }
+    
+    /**
+     * 应用RadioButton样式
+     */
+    private static void applyRadioButtonStyle(RadioButton radioButton) {
+        String currentStyle = radioButton.getStyle();
+        
+        // 移除现有样式
+        if (currentStyle.contains("-fx-text-fill:")) {
+            currentStyle = currentStyle.replaceAll(".*?-fx-text-fill:[^;]*;", "");
+        }
+        if (currentStyle.contains("-fx-font-family:")) {
+            currentStyle = currentStyle.replaceAll(".*?-fx-font-family:[^;]*;", "");
+        }
+        
+        radioButton.setStyle(String.format(
+                "%s -fx-text-fill: %s; -fx-font-family: %s;",
+                currentStyle.trim(), theme.getTextPrimaryColor(), theme.getFontFamily()
+        ));
+    }
+    
+    /**
+     * 应用ToggleButton样式
+     */
+    private static void applyToggleButtonStyle(ToggleButton toggleButton) {
+        String currentStyle = toggleButton.getStyle();
+        
+        // 移除现有样式
+        if (currentStyle.contains("-fx-text-fill:")) {
+            currentStyle = currentStyle.replaceAll(".*?-fx-text-fill:[^;]*;", "");
+        }
+        if (currentStyle.contains("-fx-font-family:")) {
+            currentStyle = currentStyle.replaceAll(".*?-fx-font-family:[^;]*;", "");
+        }
+        
+        toggleButton.setStyle(String.format(
+                "%s -fx-text-fill: %s; -fx-font-family: %s;",
+                currentStyle.trim(), theme.getTextPrimaryColor(), theme.getFontFamily()
+        ));
     }
 
     /**

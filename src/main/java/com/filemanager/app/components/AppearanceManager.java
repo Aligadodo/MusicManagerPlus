@@ -1033,8 +1033,6 @@ public class AppearanceManager {
                     
                     // 设置图片缩放模式
                     backgroundImageView.setPreserveRatio(false);
-                    backgroundImageView.setFitWidth(-1); // 自动适应容器宽度
-                    backgroundImageView.setFitHeight(-1); // 自动适应容器高度
                     backgroundImageView.setStyle("-fx-background-size: cover; -fx-background-position: center; -fx-background-repeat: no-repeat;");
                     
                     backgroundImageView.setImage(image);
