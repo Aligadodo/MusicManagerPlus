@@ -34,6 +34,10 @@ public abstract class IAppStrategy implements IAutoReloadAble{
     // [修改] 升级为条件组列表 (OR关系)
     protected List<RuleConditionGroup> conditionGroups = new ArrayList<>();
 
+    public List<RuleConditionGroup> getConditionGroups() {
+        return conditionGroups;
+    }
+
     public void setContext(IAppController app) {
         this.app = app;
     }
@@ -118,6 +122,25 @@ public abstract class IAppStrategy implements IAutoReloadAble{
     protected List<ChangeRecord> getFilesUnderDir(File file, Collection<ChangeRecord> changeRecords) {
         return changeRecords.stream().filter(changeRecord -> changeRecord.getFileHandle().getParentFile().equals(file) &&
                 file.getName().equals(changeRecord.getFileHandle().getParentFile().getName())).collect(Collectors.toList());
+    }
+
+    @Override
+    public void saveConfig(Properties props) {
+        // 默认实现，不做任何操作
+    }
+
+    @Override
+    public void loadConfig(Properties props) {
+        // 默认实现，不做任何操作
+    }
+
+    @Override
+    public void reload() {
+        // 默认实现，重新加载配置节点的样式
+        Node configNode = getConfigNode();
+        if (configNode != null) {
+            com.filemanager.app.tools.display.StyleFactory.refreshAllComponents(configNode);
+        }
     }
 
 }

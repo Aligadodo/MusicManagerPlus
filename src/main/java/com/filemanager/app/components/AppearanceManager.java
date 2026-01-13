@@ -13,6 +13,7 @@ import com.filemanager.app.tools.display.StyleFactory;
 import com.filemanager.app.tools.display.ThemeConfig;
 import com.filemanager.app.tools.display.ThemeManager;
 import com.filemanager.app.tools.display.StyleTemplateManager;
+import java.util.List;
 import com.filemanager.app.base.IAppController;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXSlider;
@@ -45,6 +46,7 @@ public class AppearanceManager {
     private final Region backgroundOverlay;
     private final ThemeManager themeManager;
     private final StyleTemplateManager templateManager;
+    private Tab finalPresetTab;
     
     public AppearanceManager(IAppController app, ThemeConfig currentTheme,
                            ImageView backgroundImageView, Region backgroundOverlay) {
@@ -69,17 +71,52 @@ public class AppearanceManager {
         mainContainer.setStyle(String.format("-fx-background-color: %s;", currentTheme.getBgColor()));
         mainContainer.setPrefHeight(Region.USE_COMPUTED_SIZE);
         
+
+        
         // 创建TabPane来组织不同的设置类别
         TabPane tabPane = new TabPane();
         tabPane.setStyle(String.format(
-                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-tab-min-height: 40; -fx-tab-max-height: 40;",
-                currentTheme.getPanelBgColor(), currentTheme.getBorderColor(), currentTheme.getBorderWidth()
+                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-tab-min-height: 40; -fx-tab-max-height: 40; -fx-tab-min-width: 100; -fx-tab-max-width: 200; -fx-text-fill: %s;\n" +
+                ".tab-pane > .tab-header-area > .tab-header-background {\n" +
+                "    -fx-background-color: %s;\n" +
+                "    -fx-border-color: %s;\n" +
+                "    -fx-border-width: 0 0 %.1f 0;\n" +
+                "}\n" +
+                ".tab-pane > .tab-header-area > .headers-region > .tab {\n" +
+                "    -fx-background-color: %s;\n" +
+                "    -fx-border-color: %s;\n" +
+                "    -fx-border-width: %.1f %.1f 0 %.1f;\n" +
+                "    -fx-border-radius: %.1f %.1f 0 0;\n" +
+                "}\n" +
+                ".tab-pane > .tab-header-area > .headers-region > .tab:selected {\n" +
+                "    -fx-background-color: %s;\n" +
+                "    -fx-border-color: %s;\n" +
+                "    -fx-border-width: %.1f %.1f 0 %.1f;\n" +
+                "}\n" +
+                ".tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .tab-label {\n" +
+                "    -fx-text-fill: %s;\n" +
+                "    -fx-font-family: %s;\n" +
+                "    -fx-font-size: 14px;\n" +
+                "}\n" +
+                ".tab-pane > .tab-header-area > .headers-region > .tab:selected > .tab-container > .tab-label {\n" +
+                "    -fx-text-fill: %s;\n" +
+                "    -fx-font-weight: bold;\n" +
+                "}",
+                currentTheme.getPanelBgColor(), currentTheme.getBorderColor(), currentTheme.getBorderWidth(), currentTheme.getTextPrimaryColor(),
+                currentTheme.getPanelBgColor(), currentTheme.getBorderColor(), currentTheme.getBorderWidth(),
+                currentTheme.getPanelBgColor(), currentTheme.getBorderColor(), currentTheme.getBorderWidth(), currentTheme.getBorderWidth(), currentTheme.getBorderWidth(), currentTheme.getCornerRadius(), currentTheme.getCornerRadius(),
+                currentTheme.getPanelBgColor(), currentTheme.getBorderColor(), currentTheme.getBorderWidth(), currentTheme.getBorderWidth(), currentTheme.getBorderWidth(),
+                currentTheme.getTextSecondaryColor(), currentTheme.getFontFamily(),
+                currentTheme.getTextPrimaryColor()
         ));
         
         // 主题预设选项卡
         Tab presetTab = new Tab("主题预设");
         presetTab.setContent(createPresetTabContent());
         tabPane.getTabs().add(presetTab);
+        
+        // 保存对主题预设选项卡的引用，用于后续更新
+        finalPresetTab = presetTab;
         
         // 颜色设置选项卡
         Tab colorTab = new Tab("颜色设置");
@@ -188,7 +225,7 @@ public class AppearanceManager {
             
             grid.add(themeCard, col, row);
             col++;
-            if (col > 3) { // 每行显示4个卡片，每个卡片更宽
+            if (col > 2) { // 每行显示3个卡片，确保在有限宽度内完整显示
                 col = 0;
                 row++;
             }
@@ -370,10 +407,23 @@ public class AppearanceManager {
         Label opacityValue = StyleFactory.createLabel(String.format("%.2f", currentTheme.getGlassOpacity()), 14, false);
         opacityValue.setMinWidth(50);
         
+        // 添加延迟更新机制，减少频繁UI更新导致的卡顿
+        javafx.animation.PauseTransition pauseTransition = new javafx.animation.PauseTransition(javafx.util.Duration.millis(100));
         opacitySlider.valueProperty().addListener((obs, oldVal, newVal) -> {
             currentTheme.setGlassOpacity(newVal.doubleValue());
             opacityValue.setText(String.format("%.2f", newVal.doubleValue()));
-            applyAppearance();
+            
+            // 取消之前的过渡
+            pauseTransition.stop();
+            // 设置新的过渡
+            pauseTransition.setOnFinished(e -> {
+                // 直接更新背景覆盖层样式，避免调用完整的applyAppearance方法
+                backgroundOverlay.setStyle("-fx-background-color: rgba(" + 
+                        (currentTheme.isDarkBackground() ? "0,0,0" : "255,255,255") + 
+                        ", " + (1 - newVal.doubleValue()) + ");");
+            });
+            // 开始新的过渡
+            pauseTransition.play();
         });
         
         opacityBox.getChildren().addAll(opacityLabel, opacitySlider, opacityValue);
@@ -589,6 +639,9 @@ public class AppearanceManager {
                 // 清空输入
                 nameField.clear();
                 descField.clear();
+                
+                // 更新主题预设选项卡的内容，显示最新的主题列表
+                finalPresetTab.setContent(createPresetTabContent());
             } else {
                 Alert alert = new Alert(Alert.AlertType.ERROR);
                 alert.setTitle("错误");
@@ -962,9 +1015,36 @@ public class AppearanceManager {
         // 更新背景图片
         if (!currentTheme.getBgImagePath().isEmpty()) {
             try {
-                backgroundImageView.setImage(new Image(Files.newInputStream(Paths.get(currentTheme.getBgImagePath()))));
+                File bgImageFile = new File(currentTheme.getBgImagePath());
+                if (bgImageFile.exists() && bgImageFile.isFile()) {
+                    // 使用file:// URL方式加载图片，处理特殊字符和空格
+                    String imageUrl = bgImageFile.toURI().toURL().toExternalForm();
+                    
+                    // 创建图片对象并设置加载参数
+                    Image image = new Image(imageUrl, true); // 启用异步加载
+                    
+                    // 设置图片加载完成和错误处理回调
+                    image.errorProperty().addListener((obs, oldVal, newVal) -> {
+                        if (newVal) {
+                            app.logError("背景图加载失败：图片文件可能损坏或格式不支持");
+                            backgroundImageView.setImage(null);
+                        }
+                    });
+                    
+                    // 设置图片缩放模式
+                    backgroundImageView.setPreserveRatio(false);
+                    backgroundImageView.setFitWidth(-1); // 自动适应容器宽度
+                    backgroundImageView.setFitHeight(-1); // 自动适应容器高度
+                    backgroundImageView.setStyle("-fx-background-size: cover; -fx-background-position: center; -fx-background-repeat: no-repeat;");
+                    
+                    backgroundImageView.setImage(image);
+                } else {
+                    app.logError("背景图文件不存在：" + currentTheme.getBgImagePath());
+                    backgroundImageView.setImage(null);
+                }
             } catch (Exception e) {
                 app.logError("背景图加载失败：" + e.getMessage());
+                backgroundImageView.setImage(null);
             }
         } else {
             backgroundImageView.setImage(null);
@@ -976,6 +1056,17 @@ public class AppearanceManager {
             javafx.scene.layout.StackPane rootContainer = uiElementProvider.getRootContainer();
             if (rootContainer != null) {
                 com.filemanager.app.tools.display.StyleFactory.updateNodeStyle(rootContainer);
+            }
+        }
+        
+        // 调用所有IAutoReloadAble组件的reload方法
+        if (app != null && app instanceof com.filemanager.app.base.IAutoReloadAbleProvider) {
+            com.filemanager.app.base.IAutoReloadAbleProvider reloadableProvider = (com.filemanager.app.base.IAutoReloadAbleProvider) app;
+            List<com.filemanager.app.base.IAutoReloadAble> reloadableNodes = reloadableProvider.getAutoReloadNodes();
+            if (reloadableNodes != null) {
+                for (com.filemanager.app.base.IAutoReloadAble reloadable : reloadableNodes) {
+                    reloadable.reload();
+                }
             }
         }
     }

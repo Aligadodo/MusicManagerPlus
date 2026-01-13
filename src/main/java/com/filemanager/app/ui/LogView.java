@@ -111,4 +111,13 @@ public class LogView implements IAutoReloadAble {
     public void loadConfig(Properties props) {
 
     }
+
+    public void reload() {
+        // 更新日志框样式
+        logArea.setStyle(String.format(
+                "-fx-background-color: %s; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-font-family: %s; -fx-font-size: %.1f;",
+                controller.getCurrentTheme().getPanelBgColor(), controller.getCurrentTheme().getCornerRadius(), controller.getCurrentTheme().getTextPrimaryColor(), controller.getCurrentTheme().getBorderColor(),
+                controller.getCurrentTheme().getBorderWidth(), controller.getCurrentTheme().getLogFontFamily(), controller.getCurrentTheme().getLogFontSize()
+        ));
+    }
 }

@@ -9,14 +9,15 @@
  */
 package com.filemanager.app.base;
 
-import java.util.Properties;
+import java.util.List;
 
-public interface IAutoReloadAble {
-    // 配置存取
-    public abstract void saveConfig(Properties props);
-
-    public abstract void loadConfig(Properties props);
-    
-    // 样式重新加载
-    public abstract void reload();
+/**
+ * 提供可自动重新加载的组件列表的接口
+ */
+public interface IAutoReloadAbleProvider {
+    /**
+     * 获取所有需要自动重新加载的组件列表
+     * @return 可自动重新加载的组件列表
+     */
+    List<IAutoReloadAble> getAutoReloadNodes();
 }

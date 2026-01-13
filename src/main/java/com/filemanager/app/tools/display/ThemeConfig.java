@@ -166,132 +166,513 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
         }
     }
 
+    // 手动添加的getter方法，解决Lombok注解处理器问题
+
+    // 字体相关getter方法
+    public String getTitleFontFamily() { return titleFontFamily; }
+    public double getTitleFontSize() { return titleFontSize; }
+    public String getDescriptionFontFamily() { return descriptionFontFamily; }
+    public double getDescriptionFontSize() { return descriptionFontSize; }
+    public String getButtonFontFamily() { return buttonFontFamily; }
+    public double getButtonFontSize() { return buttonFontSize; }
+
+    // 间距相关getter方法
+    public double getSmallSpacing() { return smallSpacing; }
+    public double getMediumSpacing() { return mediumSpacing; }
+    public double getLargeSpacing() { return largeSpacing; }
+
+    // 按钮样式相关getter方法
+    public String getButtonPrimaryBorderColor() { return buttonPrimaryBorderColor; }
+    public String getButtonPrimaryHoverColor() { return buttonPrimaryHoverColor; }
+    public String getButtonSecondaryHoverColor() { return buttonSecondaryHoverColor; }
+    public String getButtonSuccessBgColor() { return buttonSuccessBgColor; }
+    public String getButtonSuccessTextColor() { return buttonSuccessTextColor; }
+    public String getButtonSuccessBorderColor() { return buttonSuccessBorderColor; }
+    public String getButtonSuccessHoverColor() { return buttonSuccessHoverColor; }
+    public String getButtonWarningBgColor() { return buttonWarningBgColor; }
+    public String getButtonWarningTextColor() { return buttonWarningTextColor; }
+    public String getButtonWarningBorderColor() { return buttonWarningBorderColor; }
+    public String getButtonWarningHoverColor() { return buttonWarningHoverColor; }
+    public String getButtonErrorBgColor() { return buttonErrorBgColor; }
+    public String getButtonErrorTextColor() { return buttonErrorTextColor; }
+    public String getButtonErrorBorderColor() { return buttonErrorBorderColor; }
+    public String getButtonErrorHoverColor() { return buttonErrorHoverColor; }
+
+    public String getListRowSelectedBgColor() {
+        return listRowSelectedBgColor;
+    }
+
+    // 模板信息相关方法
+    public String getTemplateName() {
+        return templateName;
+    }
+
+    public void setTemplateName(String templateName) {
+        this.templateName = templateName;
+    }
+
+    public String getTemplateDescription() {
+        return templateDescription;
+    }
+
+    public void setTemplateDescription(String templateDescription) {
+        this.templateDescription = templateDescription;
+    }
+
+    // 背景设置相关方法
+    public String getBgImagePath() {
+        return bgImagePath;
+    }
+
+    public void setBgImagePath(String bgImagePath) {
+        this.bgImagePath = bgImagePath;
+    }
+
+    public String getBgColor() {
+        return bgColor;
+    }
+
+    public void setBgColor(String bgColor) {
+        this.bgColor = bgColor;
+    }
+
+    // 主题色相关方法
+    public String getAccentColor() {
+        return accentColor;
+    }
+
+    public void setAccentColor(String accentColor) {
+        this.accentColor = accentColor;
+    }
+
+    public String getAccentLightColor() {
+        return accentLightColor;
+    }
+
+    public void setAccentLightColor(String accentLightColor) {
+        this.accentLightColor = accentLightColor;
+    }
+
+    public String getAccentDarkColor() {
+        return accentDarkColor;
+    }
+
+    public void setAccentDarkColor(String accentDarkColor) {
+        this.accentDarkColor = accentDarkColor;
+    }
+
+    // 文本颜色分级相关方法
+    public String getTextPrimaryColor() {
+        return textPrimaryColor;
+    }
+
+    public void setTextPrimaryColor(String textPrimaryColor) {
+        this.textPrimaryColor = textPrimaryColor;
+    }
+
+    public String getTextSecondaryColor() {
+        return textSecondaryColor;
+    }
+
+    public void setTextSecondaryColor(String textSecondaryColor) {
+        this.textSecondaryColor = textSecondaryColor;
+    }
+
+    public String getTextTertiaryColor() {
+        return textTertiaryColor;
+    }
+
+    public void setTextTertiaryColor(String textTertiaryColor) {
+        this.textTertiaryColor = textTertiaryColor;
+    }
+
+    public String getTextDisabledColor() {
+        return textDisabledColor;
+    }
+
+    public void setTextDisabledColor(String textDisabledColor) {
+        this.textDisabledColor = textDisabledColor;
+    }
+
+    // 毛玻璃透明度相关方法
+    public double getGlassOpacity() {
+        return glassOpacity;
+    }
+
+    public void setGlassOpacity(double glassOpacity) {
+        this.glassOpacity = glassOpacity;
+    }
+
+    // 深色背景模式相关方法
+    public boolean isDarkBackground() {
+        return isDarkBackground;
+    }
+
+    public void setDarkBackground(boolean isDarkBackground) {
+        this.isDarkBackground = isDarkBackground;
+    }
+
+    // 基础样式设置相关方法
+    public double getCornerRadius() {
+        return cornerRadius;
+    }
+
+    public void setCornerRadius(double cornerRadius) {
+        this.cornerRadius = cornerRadius;
+    }
+
+    public String getBorderColor() {
+        return borderColor;
+    }
+
+    public void setBorderColor(String borderColor) {
+        this.borderColor = borderColor;
+    }
+
+    public double getBorderWidth() {
+        return borderWidth;
+    }
+
+    public void setBorderWidth(double borderWidth) {
+        this.borderWidth = borderWidth;
+    }
+
+    // 面板样式分组相关方法
+    public String getPanelBgColor() {
+        return panelBgColor;
+    }
+
+    public void setPanelBgColor(String panelBgColor) {
+        this.panelBgColor = panelBgColor;
+    }
+
+    public String getPanelBorderColor() {
+        return panelBorderColor;
+    }
+
+    public void setPanelBorderColor(String panelBorderColor) {
+        this.panelBorderColor = panelBorderColor;
+    }
+
+    public String getPanelTitleColor() {
+        return panelTitleColor;
+    }
+
+    public void setPanelTitleColor(String panelTitleColor) {
+        this.panelTitleColor = panelTitleColor;
+    }
+
+    public String getPanelHoverColor() {
+        return panelHoverColor;
+    }
+
+    public void setPanelHoverColor(String panelHoverColor) {
+        this.panelHoverColor = panelHoverColor;
+    }
+
+    // 字体相关方法
+    public String getFontFamily() {
+        return fontFamily;
+    }
+
+    public void setFontFamily(String fontFamily) {
+        this.fontFamily = fontFamily;
+    }
+
+    public double getFontSize() {
+        return fontSize;
+    }
+
+    public void setFontSize(double fontSize) {
+        this.fontSize = fontSize;
+    }
+
+    public String getLogFontFamily() {
+        return logFontFamily;
+    }
+
+    public void setLogFontFamily(String logFontFamily) {
+        this.logFontFamily = logFontFamily;
+    }
+
+    public double getLogFontSize() {
+        return logFontSize;
+    }
+
+    public void setLogFontSize(double logFontSize) {
+        this.logFontSize = logFontSize;
+    }
+
+    // 进度条相关方法
+    public String getProgressBarColor() {
+        return progressBarColor;
+    }
+
+    public void setProgressBarColor(String progressBarColor) {
+        this.progressBarColor = progressBarColor;
+    }
+
+    // 按钮尺寸相关方法
+    public double getButtonLargeSize() {
+        return buttonLargeSize;
+    }
+
+    public void setButtonLargeSize(double buttonLargeSize) {
+        this.buttonLargeSize = buttonLargeSize;
+    }
+
+    public double getButtonSmallSize() {
+        return buttonSmallSize;
+    }
+
+    public void setButtonSmallSize(double buttonSmallSize) {
+        this.buttonSmallSize = buttonSmallSize;
+    }
+
+    // 状态颜色相关方法
+    public String getHoverColor() {
+        return hoverColor;
+    }
+
+    public void setHoverColor(String hoverColor) {
+        this.hoverColor = hoverColor;
+    }
+
+    // 按钮样式相关方法
+    public String getButtonPrimaryBgColor() {
+        return buttonPrimaryBgColor;
+    }
+
+    public String getButtonPrimaryTextColor() {
+        return buttonPrimaryTextColor;
+    }
+
+    public String getButtonSecondaryBgColor() {
+        return buttonSecondaryBgColor;
+    }
+
+    public String getButtonSecondaryTextColor() {
+        return buttonSecondaryTextColor;
+    }
+
+    public String getButtonSecondaryBorderColor() {
+        return buttonSecondaryBorderColor;
+    }
+
+    public void setButtonPrimaryBgColor(String buttonPrimaryBgColor) {
+        this.buttonPrimaryBgColor = buttonPrimaryBgColor;
+    }
+
+    public void setButtonPrimaryTextColor(String buttonPrimaryTextColor) {
+        this.buttonPrimaryTextColor = buttonPrimaryTextColor;
+    }
+
+    public void setButtonSecondaryBgColor(String buttonSecondaryBgColor) {
+        this.buttonSecondaryBgColor = buttonSecondaryBgColor;
+    }
+
+    public void setButtonSecondaryTextColor(String buttonSecondaryTextColor) {
+        this.buttonSecondaryTextColor = buttonSecondaryTextColor;
+    }
+
+    public void setButtonSecondaryBorderColor(String buttonSecondaryBorderColor) {
+        this.buttonSecondaryBorderColor = buttonSecondaryBorderColor;
+    }
+
+    // 列表样式相关方法
+    public String getListBgColor() {
+        return listBgColor;
+    }
+
+    public String getListRowOddBgColor() {
+        return listRowOddBgColor;
+    }
+
+    public String getListRowEvenBgColor() {
+        return listRowEvenBgColor;
+    }
+
+    // 状态颜色和指示颜色相关方法
+    public String getSelectedColor() {
+        return selectedColor;
+    }
+
+    public void setSelectedColor(String selectedColor) {
+        this.selectedColor = selectedColor;
+    }
+
+    public String getDisabledColor() {
+        return disabledColor;
+    }
+
+    public void setDisabledColor(String disabledColor) {
+        this.disabledColor = disabledColor;
+    }
+
+    public String getSuccessColor() {
+        return successColor;
+    }
+
+    public void setSuccessColor(String successColor) {
+        this.successColor = successColor;
+    }
+
+    public String getWarningColor() {
+        return warningColor;
+    }
+
+    public void setWarningColor(String warningColor) {
+        this.warningColor = warningColor;
+    }
+
+    public String getErrorColor() {
+        return errorColor;
+    }
+
+    public void setErrorColor(String errorColor) {
+        this.errorColor = errorColor;
+    }
+
+    public String getInfoColor() {
+        return infoColor;
+    }
+
+    public void setInfoColor(String infoColor) {
+        this.infoColor = infoColor;
+    }
+
     @Override
     public void saveConfig(Properties props) {
         // 模板信息
-        props.setProperty("ui.template.name", this.getTemplateName());
-        props.setProperty("ui.template.description", this.getTemplateDescription());
+        props.setProperty("ui.template.name", this.templateName);
+        props.setProperty("ui.template.description", this.templateDescription);
         
         // 背景设置
-        props.setProperty("ui.bg.image", this.getBgImagePath());
-        props.setProperty("ui.bg.color", this.getBgColor());
+        props.setProperty("ui.bg.image", this.bgImagePath);
+        props.setProperty("ui.bg.color", this.bgColor);
         
         // 主题色
-        props.setProperty("ui.accent.color", this.getAccentColor());
-        props.setProperty("ui.accent.light.color", this.getAccentLightColor());
-        props.setProperty("ui.accent.dark.color", this.getAccentDarkColor());
+        props.setProperty("ui.accent.color", this.accentColor);
+        props.setProperty("ui.accent.light.color", this.accentLightColor);
+        props.setProperty("ui.accent.dark.color", this.accentDarkColor);
         
         // 文本颜色分级
-        props.setProperty("ui.text.primary", this.getTextPrimaryColor());
-        props.setProperty("ui.text.secondary", this.getTextSecondaryColor());
-        props.setProperty("ui.text.tertiary", this.getTextTertiaryColor());
-        props.setProperty("ui.text.disabled", this.getTextDisabledColor());
+        props.setProperty("ui.text.primary", this.textPrimaryColor);
+        props.setProperty("ui.text.secondary", this.textSecondaryColor);
+        props.setProperty("ui.text.tertiary", this.textTertiaryColor);
+        props.setProperty("ui.text.disabled", this.textDisabledColor);
         
         // 透明度和背景模式
-        props.setProperty("ui.glass.opacity", String.valueOf(this.getGlassOpacity()));
-        props.setProperty("ui.dark.bg", String.valueOf(this.isDarkBackground()));
+        props.setProperty("ui.glass.opacity", String.valueOf(this.glassOpacity));
+        props.setProperty("ui.dark.bg", String.valueOf(this.isDarkBackground));
         
         // 基础样式设置
-        props.setProperty("ui.corner.radius", String.valueOf(this.getCornerRadius()));
-        props.setProperty("ui.border.color", this.getBorderColor());
-        props.setProperty("ui.border.width", String.valueOf(this.getBorderWidth()));
+        props.setProperty("ui.corner.radius", String.valueOf(this.cornerRadius));
+        props.setProperty("ui.border.color", this.borderColor);
+        props.setProperty("ui.border.width", String.valueOf(this.borderWidth));
         
         // 面板样式分组
-        props.setProperty("ui.panel.bg.color", this.getPanelBgColor());
-        props.setProperty("ui.panel.border.color", this.getPanelBorderColor());
-        props.setProperty("ui.panel.title.color", this.getPanelTitleColor());
-        props.setProperty("ui.panel.hover.color", this.getPanelHoverColor());
+        props.setProperty("ui.panel.bg.color", this.panelBgColor);
+        props.setProperty("ui.panel.border.color", this.panelBorderColor);
+        props.setProperty("ui.panel.title.color", this.panelTitleColor);
+        props.setProperty("ui.panel.hover.color", this.panelHoverColor);
         
         // 按钮样式分级
-        props.setProperty("ui.button.primary.bg", this.getButtonPrimaryBgColor());
-        props.setProperty("ui.button.primary.text", this.getButtonPrimaryTextColor());
-        props.setProperty("ui.button.primary.border", this.getButtonPrimaryBorderColor());
-        props.setProperty("ui.button.primary.hover", this.getButtonPrimaryHoverColor());
-        props.setProperty("ui.button.primary.pressed", this.getButtonPrimaryPressedColor());
+        props.setProperty("ui.button.primary.bg", this.buttonPrimaryBgColor);
+        props.setProperty("ui.button.primary.text", this.buttonPrimaryTextColor);
+        props.setProperty("ui.button.primary.border", this.buttonPrimaryBorderColor);
+        props.setProperty("ui.button.primary.hover", this.buttonPrimaryHoverColor);
+        props.setProperty("ui.button.primary.pressed", this.buttonPrimaryPressedColor);
         
-        props.setProperty("ui.button.secondary.bg", this.getButtonSecondaryBgColor());
-        props.setProperty("ui.button.secondary.text", this.getButtonSecondaryTextColor());
-        props.setProperty("ui.button.secondary.border", this.getButtonSecondaryBorderColor());
-        props.setProperty("ui.button.secondary.hover", this.getButtonSecondaryHoverColor());
-        props.setProperty("ui.button.secondary.pressed", this.getButtonSecondaryPressedColor());
+        props.setProperty("ui.button.secondary.bg", this.buttonSecondaryBgColor);
+        props.setProperty("ui.button.secondary.text", this.buttonSecondaryTextColor);
+        props.setProperty("ui.button.secondary.border", this.buttonSecondaryBorderColor);
+        props.setProperty("ui.button.secondary.hover", this.buttonSecondaryHoverColor);
+        props.setProperty("ui.button.secondary.pressed", this.buttonSecondaryPressedColor);
         
-        props.setProperty("ui.button.success.bg", this.getButtonSuccessBgColor());
-        props.setProperty("ui.button.success.text", this.getButtonSuccessTextColor());
-        props.setProperty("ui.button.success.border", this.getButtonSuccessBorderColor());
-        props.setProperty("ui.button.success.hover", this.getButtonSuccessHoverColor());
+        props.setProperty("ui.button.success.bg", this.buttonSuccessBgColor);
+        props.setProperty("ui.button.success.text", this.buttonSuccessTextColor);
+        props.setProperty("ui.button.success.border", this.buttonSuccessBorderColor);
+        props.setProperty("ui.button.success.hover", this.buttonSuccessHoverColor);
         
-        props.setProperty("ui.button.warning.bg", this.getButtonWarningBgColor());
-        props.setProperty("ui.button.warning.text", this.getButtonWarningTextColor());
-        props.setProperty("ui.button.warning.border", this.getButtonWarningBorderColor());
-        props.setProperty("ui.button.warning.hover", this.getButtonWarningHoverColor());
+        props.setProperty("ui.button.warning.bg", this.buttonWarningBgColor);
+        props.setProperty("ui.button.warning.text", this.buttonWarningTextColor);
+        props.setProperty("ui.button.warning.border", this.buttonWarningBorderColor);
+        props.setProperty("ui.button.warning.hover", this.buttonWarningHoverColor);
         
-        props.setProperty("ui.button.error.bg", this.getButtonErrorBgColor());
-        props.setProperty("ui.button.error.text", this.getButtonErrorTextColor());
-        props.setProperty("ui.button.error.border", this.getButtonErrorBorderColor());
-        props.setProperty("ui.button.error.hover", this.getButtonErrorHoverColor());
+        props.setProperty("ui.button.error.bg", this.buttonErrorBgColor);
+        props.setProperty("ui.button.error.text", this.buttonErrorTextColor);
+        props.setProperty("ui.button.error.border", this.buttonErrorBorderColor);
+        props.setProperty("ui.button.error.hover", this.buttonErrorHoverColor);
         
         // 按钮尺寸设置
-        props.setProperty("ui.button.height", String.valueOf(this.getButtonHeight()));
-        props.setProperty("ui.button.large.size", String.valueOf(this.getButtonLargeSize()));
-        props.setProperty("ui.button.small.size", String.valueOf(this.getButtonSmallSize()));
-        props.setProperty("ui.button.icon.size", String.valueOf(this.getButtonIconSize()));
+        props.setProperty("ui.button.height", String.valueOf(this.buttonHeight));
+        props.setProperty("ui.button.large.size", String.valueOf(this.buttonLargeSize));
+        props.setProperty("ui.button.small.size", String.valueOf(this.buttonSmallSize));
+        props.setProperty("ui.button.icon.size", String.valueOf(this.buttonIconSize));
         
         // 列表样式分组
-        props.setProperty("ui.list.bg", this.getListBgColor());
-        props.setProperty("ui.list.row.even", this.getListRowEvenBgColor());
-        props.setProperty("ui.list.row.odd", this.getListRowOddBgColor());
-        props.setProperty("ui.list.row.selected.bg", this.getListRowSelectedBgColor());
-        props.setProperty("ui.list.row.selected.text", this.getListRowSelectedTextColor());
-        props.setProperty("ui.list.row.hover", this.getListRowHoverBgColor());
-        props.setProperty("ui.list.border", this.getListBorderColor());
-        props.setProperty("ui.list.header.bg", this.getListHeaderBgColor());
-        props.setProperty("ui.list.header.text", this.getListHeaderTextColor());
+        props.setProperty("ui.list.bg", this.listBgColor);
+        props.setProperty("ui.list.row.even", this.listRowEvenBgColor);
+        props.setProperty("ui.list.row.odd", this.listRowOddBgColor);
+        props.setProperty("ui.list.row.selected.bg", this.listRowSelectedBgColor);
+        props.setProperty("ui.list.row.selected.text", this.listRowSelectedTextColor);
+        props.setProperty("ui.list.row.hover", this.listRowHoverBgColor);
+        props.setProperty("ui.list.border", this.listBorderColor);
+        props.setProperty("ui.list.header.bg", this.listHeaderBgColor);
+        props.setProperty("ui.list.header.text", this.listHeaderTextColor);
         
         // 状态颜色
-        props.setProperty("ui.hover.color", this.getHoverColor());
-        props.setProperty("ui.selected.color", this.getSelectedColor());
-        props.setProperty("ui.disabled.color", this.getDisabledColor());
+        props.setProperty("ui.hover.color", this.hoverColor);
+        props.setProperty("ui.selected.color", this.selectedColor);
+        props.setProperty("ui.disabled.color", this.disabledColor);
         
         // 进度条和状态指示颜色
-        props.setProperty("ui.progress.bar.color", this.getProgressBarColor());
-        props.setProperty("ui.success.color", this.getSuccessColor());
-        props.setProperty("ui.warning.color", this.getWarningColor());
-        props.setProperty("ui.error.color", this.getErrorColor());
-        props.setProperty("ui.info.color", this.getInfoColor());
+        props.setProperty("ui.progress.bar.color", this.progressBarColor);
+        props.setProperty("ui.success.color", this.successColor);
+        props.setProperty("ui.warning.color", this.warningColor);
+        props.setProperty("ui.error.color", this.errorColor);
+        props.setProperty("ui.info.color", this.infoColor);
         
         // 字体设置
-        props.setProperty("ui.font.family", this.getFontFamily());
-        props.setProperty("ui.font.size", String.valueOf(this.getFontSize()));
+        props.setProperty("ui.font.family", this.fontFamily);
+        props.setProperty("ui.font.size", String.valueOf(this.fontSize));
         
         // 字体样式分级
-        props.setProperty("ui.font.title.family", this.getTitleFontFamily());
-        props.setProperty("ui.font.title.size", String.valueOf(this.getTitleFontSize()));
-        props.setProperty("ui.font.title.color", this.getTitleFontColor());
+        props.setProperty("ui.font.title.family", this.titleFontFamily);
+        props.setProperty("ui.font.title.size", String.valueOf(this.titleFontSize));
+        props.setProperty("ui.font.title.color", this.titleFontColor);
         
-        props.setProperty("ui.font.subtitle.family", this.getSubtitleFontFamily());
-        props.setProperty("ui.font.subtitle.size", String.valueOf(this.getSubtitleFontSize()));
-        props.setProperty("ui.font.subtitle.color", this.getSubtitleFontColor());
+        props.setProperty("ui.font.subtitle.family", this.subtitleFontFamily);
+        props.setProperty("ui.font.subtitle.size", String.valueOf(this.subtitleFontSize));
+        props.setProperty("ui.font.subtitle.color", this.subtitleFontColor);
         
-        props.setProperty("ui.font.button.family", this.getButtonFontFamily());
-        props.setProperty("ui.font.button.size", String.valueOf(this.getButtonFontSize()));
+        props.setProperty("ui.font.button.family", this.buttonFontFamily);
+        props.setProperty("ui.font.button.size", String.valueOf(this.buttonFontSize));
         
-        props.setProperty("ui.font.description.family", this.getDescriptionFontFamily());
-        props.setProperty("ui.font.description.size", String.valueOf(this.getDescriptionFontSize()));
-        props.setProperty("ui.font.description.color", this.getDescriptionFontColor());
+        props.setProperty("ui.font.description.family", this.descriptionFontFamily);
+        props.setProperty("ui.font.description.size", String.valueOf(this.descriptionFontSize));
+        props.setProperty("ui.font.description.color", this.descriptionFontColor);
         
-        props.setProperty("ui.font.log.family", this.getLogFontFamily());
-        props.setProperty("ui.font.log.size", String.valueOf(this.getLogFontSize()));
-        props.setProperty("ui.font.log.color", this.getLogFontColor());
+        props.setProperty("ui.font.log.family", this.logFontFamily);
+        props.setProperty("ui.font.log.size", String.valueOf(this.logFontSize));
+        props.setProperty("ui.font.log.color", this.logFontColor);
         
-        props.setProperty("ui.font.runtime.info.family", this.getRuntimeInfoFontFamily());
-        props.setProperty("ui.font.runtime.info.size", String.valueOf(this.getRuntimeInfoFontSize()));
-        props.setProperty("ui.font.runtime.info.color", this.getRuntimeInfoFontColor());
+        props.setProperty("ui.font.runtime.info.family", this.runtimeInfoFontFamily);
+        props.setProperty("ui.font.runtime.info.size", String.valueOf(this.runtimeInfoFontSize));
+        props.setProperty("ui.font.runtime.info.color", this.runtimeInfoFontColor);
         
         // 间距设置
-        props.setProperty("ui.spacing.small", String.valueOf(this.getSmallSpacing()));
-        props.setProperty("ui.spacing.medium", String.valueOf(this.getMediumSpacing()));
-        props.setProperty("ui.spacing.large", String.valueOf(this.getLargeSpacing()));
-        props.setProperty("ui.spacing.extra.large", String.valueOf(this.getExtraLargeSpacing()));
+        props.setProperty("ui.spacing.small", String.valueOf(this.smallSpacing));
+        props.setProperty("ui.spacing.medium", String.valueOf(this.mediumSpacing));
+        props.setProperty("ui.spacing.large", String.valueOf(this.largeSpacing));
+        props.setProperty("ui.spacing.extra.large", String.valueOf(this.extraLargeSpacing));
+    }
+
+    @Override
+    public void reload() {
+        // 主题配置的reload方法，主要用于通知依赖组件更新
+        // 这里可以留空，因为ThemeConfig本身是配置源
     }
 
     @Override
@@ -299,301 +680,301 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
         // 模板信息
         String templateName = props.getProperty("ui.template.name");
         if (templateName != null) {
-            this.setTemplateName(templateName);
+            this.templateName = templateName;
         }
         String templateDesc = props.getProperty("ui.template.description");
         if (templateDesc != null) {
-            this.setTemplateDescription(templateDesc);
+            this.templateDescription = templateDesc;
         }
         
         // 背景设置
         String bgPath = props.getProperty("ui.bg.image");
         if (bgPath != null) {
-            this.setBgImagePath(bgPath);
+            this.bgImagePath = bgPath;
         }
         if (props.containsKey("ui.bg.color")) {
-            this.setBgColor(props.getProperty("ui.bg.color"));
+            this.bgColor = props.getProperty("ui.bg.color");
         }
         
         // 主题色
         if (props.containsKey("ui.accent.color")) {
-            this.setAccentColor(props.getProperty("ui.accent.color"));
+            this.accentColor = props.getProperty("ui.accent.color");
         }
         if (props.containsKey("ui.accent.light.color")) {
-            this.setAccentLightColor(props.getProperty("ui.accent.light.color"));
+            this.accentLightColor = props.getProperty("ui.accent.light.color");
         }
         if (props.containsKey("ui.accent.dark.color")) {
-            this.setAccentDarkColor(props.getProperty("ui.accent.dark.color"));
+            this.accentDarkColor = props.getProperty("ui.accent.dark.color");
         }
         
         // 文本颜色分级
         if (props.containsKey("ui.text.primary")) {
-            this.setTextPrimaryColor(props.getProperty("ui.text.primary"));
+            this.textPrimaryColor = props.getProperty("ui.text.primary");
         }
         if (props.containsKey("ui.text.secondary")) {
-            this.setTextSecondaryColor(props.getProperty("ui.text.secondary"));
+            this.textSecondaryColor = props.getProperty("ui.text.secondary");
         }
         if (props.containsKey("ui.text.tertiary")) {
-            this.setTextTertiaryColor(props.getProperty("ui.text.tertiary"));
+            this.textTertiaryColor = props.getProperty("ui.text.tertiary");
         }
         if (props.containsKey("ui.text.disabled")) {
-            this.setTextDisabledColor(props.getProperty("ui.text.disabled"));
+            this.textDisabledColor = props.getProperty("ui.text.disabled");
         }
         
         // 透明度和背景模式
         if (props.containsKey("ui.glass.opacity")) {
-            this.setGlassOpacity(Double.parseDouble(props.getProperty("ui.glass.opacity")));
+            this.glassOpacity = Double.parseDouble(props.getProperty("ui.glass.opacity"));
         }
         if (props.containsKey("ui.dark.bg")) {
-            this.setDarkBackground(Boolean.parseBoolean(props.getProperty("ui.dark.bg")));
+            this.isDarkBackground = Boolean.parseBoolean(props.getProperty("ui.dark.bg"));
         }
         
         // 基础样式设置
         if (props.containsKey("ui.corner.radius")) {
-            this.setCornerRadius(Double.parseDouble(props.getProperty("ui.corner.radius")));
+            this.cornerRadius = Double.parseDouble(props.getProperty("ui.corner.radius"));
         }
         if (props.containsKey("ui.border.color")) {
-            this.setBorderColor(props.getProperty("ui.border.color"));
+            this.borderColor = props.getProperty("ui.border.color");
         }
         if (props.containsKey("ui.border.width")) {
-            this.setBorderWidth(Double.parseDouble(props.getProperty("ui.border.width")));
+            this.borderWidth = Double.parseDouble(props.getProperty("ui.border.width"));
         }
         
         // 面板样式分组
         if (props.containsKey("ui.panel.bg.color")) {
-            this.setPanelBgColor(props.getProperty("ui.panel.bg.color"));
+            this.panelBgColor = props.getProperty("ui.panel.bg.color");
         }
         if (props.containsKey("ui.panel.border.color")) {
-            this.setPanelBorderColor(props.getProperty("ui.panel.border.color"));
+            this.panelBorderColor = props.getProperty("ui.panel.border.color");
         }
         if (props.containsKey("ui.panel.title.color")) {
-            this.setPanelTitleColor(props.getProperty("ui.panel.title.color"));
+            this.panelTitleColor = props.getProperty("ui.panel.title.color");
         }
         if (props.containsKey("ui.panel.hover.color")) {
-            this.setPanelHoverColor(props.getProperty("ui.panel.hover.color"));
+            this.panelHoverColor = props.getProperty("ui.panel.hover.color");
         }
         
         // 按钮样式分级
         if (props.containsKey("ui.button.primary.bg")) {
-            this.setButtonPrimaryBgColor(props.getProperty("ui.button.primary.bg"));
+            this.buttonPrimaryBgColor = props.getProperty("ui.button.primary.bg");
         }
         if (props.containsKey("ui.button.primary.text")) {
-            this.setButtonPrimaryTextColor(props.getProperty("ui.button.primary.text"));
+            this.buttonPrimaryTextColor = props.getProperty("ui.button.primary.text");
         }
         if (props.containsKey("ui.button.primary.border")) {
-            this.setButtonPrimaryBorderColor(props.getProperty("ui.button.primary.border"));
+            this.buttonPrimaryBorderColor = props.getProperty("ui.button.primary.border");
         }
         if (props.containsKey("ui.button.primary.hover")) {
-            this.setButtonPrimaryHoverColor(props.getProperty("ui.button.primary.hover"));
+            this.buttonPrimaryHoverColor = props.getProperty("ui.button.primary.hover");
         }
         if (props.containsKey("ui.button.primary.pressed")) {
-            this.setButtonPrimaryPressedColor(props.getProperty("ui.button.primary.pressed"));
+            this.buttonPrimaryPressedColor = props.getProperty("ui.button.primary.pressed");
         }
         
         if (props.containsKey("ui.button.secondary.bg")) {
-            this.setButtonSecondaryBgColor(props.getProperty("ui.button.secondary.bg"));
+            this.buttonSecondaryBgColor = props.getProperty("ui.button.secondary.bg");
         }
         if (props.containsKey("ui.button.secondary.text")) {
-            this.setButtonSecondaryTextColor(props.getProperty("ui.button.secondary.text"));
+            this.buttonSecondaryTextColor = props.getProperty("ui.button.secondary.text");
         }
         if (props.containsKey("ui.button.secondary.border")) {
-            this.setButtonSecondaryBorderColor(props.getProperty("ui.button.secondary.border"));
+            this.buttonSecondaryBorderColor = props.getProperty("ui.button.secondary.border");
         }
         if (props.containsKey("ui.button.secondary.hover")) {
-            this.setButtonSecondaryHoverColor(props.getProperty("ui.button.secondary.hover"));
+            this.buttonSecondaryHoverColor = props.getProperty("ui.button.secondary.hover");
         }
         if (props.containsKey("ui.button.secondary.pressed")) {
-            this.setButtonSecondaryPressedColor(props.getProperty("ui.button.secondary.pressed"));
+            this.buttonSecondaryPressedColor = props.getProperty("ui.button.secondary.pressed");
         }
         
         if (props.containsKey("ui.button.success.bg")) {
-            this.setButtonSuccessBgColor(props.getProperty("ui.button.success.bg"));
+            this.buttonSuccessBgColor = props.getProperty("ui.button.success.bg");
         }
         if (props.containsKey("ui.button.success.text")) {
-            this.setButtonSuccessTextColor(props.getProperty("ui.button.success.text"));
+            this.buttonSuccessTextColor = props.getProperty("ui.button.success.text");
         }
         if (props.containsKey("ui.button.success.border")) {
-            this.setButtonSuccessBorderColor(props.getProperty("ui.button.success.border"));
+            this.buttonSuccessBorderColor = props.getProperty("ui.button.success.border");
         }
         if (props.containsKey("ui.button.success.hover")) {
-            this.setButtonSuccessHoverColor(props.getProperty("ui.button.success.hover"));
+            this.buttonSuccessHoverColor = props.getProperty("ui.button.success.hover");
         }
         
         if (props.containsKey("ui.button.warning.bg")) {
-            this.setButtonWarningBgColor(props.getProperty("ui.button.warning.bg"));
+            this.buttonWarningBgColor = props.getProperty("ui.button.warning.bg");
         }
         if (props.containsKey("ui.button.warning.text")) {
-            this.setButtonWarningTextColor(props.getProperty("ui.button.warning.text"));
+            this.buttonWarningTextColor = props.getProperty("ui.button.warning.text");
         }
         if (props.containsKey("ui.button.warning.border")) {
-            this.setButtonWarningBorderColor(props.getProperty("ui.button.warning.border"));
+            this.buttonWarningBorderColor = props.getProperty("ui.button.warning.border");
         }
         if (props.containsKey("ui.button.warning.hover")) {
-            this.setButtonWarningHoverColor(props.getProperty("ui.button.warning.hover"));
+            this.buttonWarningHoverColor = props.getProperty("ui.button.warning.hover");
         }
         
         if (props.containsKey("ui.button.error.bg")) {
-            this.setButtonErrorBgColor(props.getProperty("ui.button.error.bg"));
+            this.buttonErrorBgColor = props.getProperty("ui.button.error.bg");
         }
         if (props.containsKey("ui.button.error.text")) {
-            this.setButtonErrorTextColor(props.getProperty("ui.button.error.text"));
+            this.buttonErrorTextColor = props.getProperty("ui.button.error.text");
         }
         if (props.containsKey("ui.button.error.border")) {
-            this.setButtonErrorBorderColor(props.getProperty("ui.button.error.border"));
+            this.buttonErrorBorderColor = props.getProperty("ui.button.error.border");
         }
         if (props.containsKey("ui.button.error.hover")) {
-            this.setButtonErrorHoverColor(props.getProperty("ui.button.error.hover"));
+            this.buttonErrorHoverColor = props.getProperty("ui.button.error.hover");
         }
         
         // 按钮尺寸设置
         if (props.containsKey("ui.button.height")) {
-            this.setButtonHeight(Double.parseDouble(props.getProperty("ui.button.height")));
+            this.buttonHeight = Double.parseDouble(props.getProperty("ui.button.height"));
         }
         if (props.containsKey("ui.button.large.size")) {
-            this.setButtonLargeSize(Double.parseDouble(props.getProperty("ui.button.large.size")));
+            this.buttonLargeSize = Double.parseDouble(props.getProperty("ui.button.large.size"));
         }
         if (props.containsKey("ui.button.small.size")) {
-            this.setButtonSmallSize(Double.parseDouble(props.getProperty("ui.button.small.size")));
+            this.buttonSmallSize = Double.parseDouble(props.getProperty("ui.button.small.size"));
         }
         if (props.containsKey("ui.button.icon.size")) {
-            this.setButtonIconSize(Double.parseDouble(props.getProperty("ui.button.icon.size")));
+            this.buttonIconSize = Double.parseDouble(props.getProperty("ui.button.icon.size"));
         }
         
         // 列表样式分组
         if (props.containsKey("ui.list.bg")) {
-            this.setListBgColor(props.getProperty("ui.list.bg"));
+            this.listBgColor = props.getProperty("ui.list.bg");
         }
         if (props.containsKey("ui.list.row.even")) {
-            this.setListRowEvenBgColor(props.getProperty("ui.list.row.even"));
+            this.listRowEvenBgColor = props.getProperty("ui.list.row.even");
         }
         if (props.containsKey("ui.list.row.odd")) {
-            this.setListRowOddBgColor(props.getProperty("ui.list.row.odd"));
+            this.listRowOddBgColor = props.getProperty("ui.list.row.odd");
         }
         if (props.containsKey("ui.list.row.selected.bg")) {
-            this.setListRowSelectedBgColor(props.getProperty("ui.list.row.selected.bg"));
+            this.listRowSelectedBgColor = props.getProperty("ui.list.row.selected.bg");
         }
         if (props.containsKey("ui.list.row.selected.text")) {
-            this.setListRowSelectedTextColor(props.getProperty("ui.list.row.selected.text"));
+            this.listRowSelectedTextColor = props.getProperty("ui.list.row.selected.text");
         }
         if (props.containsKey("ui.list.row.hover")) {
-            this.setListRowHoverBgColor(props.getProperty("ui.list.row.hover"));
+            this.listRowHoverBgColor = props.getProperty("ui.list.row.hover");
         }
         if (props.containsKey("ui.list.border")) {
-            this.setListBorderColor(props.getProperty("ui.list.border"));
+            this.listBorderColor = props.getProperty("ui.list.border");
         }
         if (props.containsKey("ui.list.header.bg")) {
-            this.setListHeaderBgColor(props.getProperty("ui.list.header.bg"));
+            this.listHeaderBgColor = props.getProperty("ui.list.header.bg");
         }
         if (props.containsKey("ui.list.header.text")) {
-            this.setListHeaderTextColor(props.getProperty("ui.list.header.text"));
+            this.listHeaderTextColor = props.getProperty("ui.list.header.text");
         }
         
         // 状态颜色
         if (props.containsKey("ui.hover.color")) {
-            this.setHoverColor(props.getProperty("ui.hover.color"));
+            this.hoverColor = props.getProperty("ui.hover.color");
         }
         if (props.containsKey("ui.selected.color")) {
-            this.setSelectedColor(props.getProperty("ui.selected.color"));
+            this.selectedColor = props.getProperty("ui.selected.color");
         }
         if (props.containsKey("ui.disabled.color")) {
-            this.setDisabledColor(props.getProperty("ui.disabled.color"));
+            this.disabledColor = props.getProperty("ui.disabled.color");
         }
         
         // 进度条和状态指示颜色
         if (props.containsKey("ui.progress.bar.color")) {
-            this.setProgressBarColor(props.getProperty("ui.progress.bar.color"));
+            this.progressBarColor = props.getProperty("ui.progress.bar.color");
         }
         if (props.containsKey("ui.success.color")) {
-            this.setSuccessColor(props.getProperty("ui.success.color"));
+            this.successColor = props.getProperty("ui.success.color");
         }
         if (props.containsKey("ui.warning.color")) {
-            this.setWarningColor(props.getProperty("ui.warning.color"));
+            this.warningColor = props.getProperty("ui.warning.color");
         }
         if (props.containsKey("ui.error.color")) {
-            this.setErrorColor(props.getProperty("ui.error.color"));
+            this.errorColor = props.getProperty("ui.error.color");
         }
         if (props.containsKey("ui.info.color")) {
-            this.setInfoColor(props.getProperty("ui.info.color"));
+            this.infoColor = props.getProperty("ui.info.color");
         }
         
         // 字体设置
         if (props.containsKey("ui.font.family")) {
-            this.setFontFamily(props.getProperty("ui.font.family"));
+            this.fontFamily = props.getProperty("ui.font.family");
         }
         if (props.containsKey("ui.font.size")) {
-            this.setFontSize(Double.parseDouble(props.getProperty("ui.font.size")));
+            this.fontSize = Double.parseDouble(props.getProperty("ui.font.size"));
         }
         
         // 字体样式分级
         if (props.containsKey("ui.font.title.family")) {
-            this.setTitleFontFamily(props.getProperty("ui.font.title.family"));
+            this.titleFontFamily = props.getProperty("ui.font.title.family");
         }
         if (props.containsKey("ui.font.title.size")) {
-            this.setTitleFontSize(Double.parseDouble(props.getProperty("ui.font.title.size")));
+            this.titleFontSize = Double.parseDouble(props.getProperty("ui.font.title.size"));
         }
         if (props.containsKey("ui.font.title.color")) {
-            this.setTitleFontColor(props.getProperty("ui.font.title.color"));
+            this.titleFontColor = props.getProperty("ui.font.title.color");
         }
         
         if (props.containsKey("ui.font.subtitle.family")) {
-            this.setSubtitleFontFamily(props.getProperty("ui.font.subtitle.family"));
+            this.subtitleFontFamily = props.getProperty("ui.font.subtitle.family");
         }
         if (props.containsKey("ui.font.subtitle.size")) {
-            this.setSubtitleFontSize(Double.parseDouble(props.getProperty("ui.font.subtitle.size")));
+            this.subtitleFontSize = Double.parseDouble(props.getProperty("ui.font.subtitle.size"));
         }
         if (props.containsKey("ui.font.subtitle.color")) {
-            this.setSubtitleFontColor(props.getProperty("ui.font.subtitle.color"));
+            this.subtitleFontColor = props.getProperty("ui.font.subtitle.color");
         }
         
         if (props.containsKey("ui.font.button.family")) {
-            this.setButtonFontFamily(props.getProperty("ui.font.button.family"));
+            this.buttonFontFamily = props.getProperty("ui.font.button.family");
         }
         if (props.containsKey("ui.font.button.size")) {
-            this.setButtonFontSize(Double.parseDouble(props.getProperty("ui.font.button.size")));
+            this.buttonFontSize = Double.parseDouble(props.getProperty("ui.font.button.size"));
         }
         
         if (props.containsKey("ui.font.description.family")) {
-            this.setDescriptionFontFamily(props.getProperty("ui.font.description.family"));
+            this.descriptionFontFamily = props.getProperty("ui.font.description.family");
         }
         if (props.containsKey("ui.font.description.size")) {
-            this.setDescriptionFontSize(Double.parseDouble(props.getProperty("ui.font.description.size")));
+            this.descriptionFontSize = Double.parseDouble(props.getProperty("ui.font.description.size"));
         }
         if (props.containsKey("ui.font.description.color")) {
-            this.setDescriptionFontColor(props.getProperty("ui.font.description.color"));
+            this.descriptionFontColor = props.getProperty("ui.font.description.color");
         }
         
         if (props.containsKey("ui.font.log.family")) {
-            this.setLogFontFamily(props.getProperty("ui.font.log.family"));
+            this.logFontFamily = props.getProperty("ui.font.log.family");
         }
         if (props.containsKey("ui.font.log.size")) {
-            this.setLogFontSize(Double.parseDouble(props.getProperty("ui.font.log.size")));
+            this.logFontSize = Double.parseDouble(props.getProperty("ui.font.log.size"));
         }
         if (props.containsKey("ui.font.log.color")) {
-            this.setLogFontColor(props.getProperty("ui.font.log.color"));
+            this.logFontColor = props.getProperty("ui.font.log.color");
         }
         
         if (props.containsKey("ui.font.runtime.info.family")) {
-            this.setRuntimeInfoFontFamily(props.getProperty("ui.font.runtime.info.family"));
+            this.runtimeInfoFontFamily = props.getProperty("ui.font.runtime.info.family");
         }
         if (props.containsKey("ui.font.runtime.info.size")) {
-            this.setRuntimeInfoFontSize(Double.parseDouble(props.getProperty("ui.font.runtime.info.size")));
+            this.runtimeInfoFontSize = Double.parseDouble(props.getProperty("ui.font.runtime.info.size"));
         }
         if (props.containsKey("ui.font.runtime.info.color")) {
-            this.setRuntimeInfoFontColor(props.getProperty("ui.font.runtime.info.color"));
+            this.runtimeInfoFontColor = props.getProperty("ui.font.runtime.info.color");
         }
         
         // 间距设置
         if (props.containsKey("ui.spacing.small")) {
-            this.setSmallSpacing(Double.parseDouble(props.getProperty("ui.spacing.small")));
+            this.smallSpacing = Double.parseDouble(props.getProperty("ui.spacing.small"));
         }
         if (props.containsKey("ui.spacing.medium")) {
-            this.setMediumSpacing(Double.parseDouble(props.getProperty("ui.spacing.medium")));
+            this.mediumSpacing = Double.parseDouble(props.getProperty("ui.spacing.medium"));
         }
         if (props.containsKey("ui.spacing.large")) {
-            this.setLargeSpacing(Double.parseDouble(props.getProperty("ui.spacing.large")));
+            this.largeSpacing = Double.parseDouble(props.getProperty("ui.spacing.large"));
         }
         if (props.containsKey("ui.spacing.extra.large")) {
-            this.setExtraLargeSpacing(Double.parseDouble(props.getProperty("ui.spacing.extra.large")));
+            this.extraLargeSpacing = Double.parseDouble(props.getProperty("ui.spacing.extra.large"));
         }
     }
 }

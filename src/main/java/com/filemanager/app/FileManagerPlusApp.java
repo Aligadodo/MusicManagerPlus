@@ -89,6 +89,11 @@ public class FileManagerPlusApp extends Application implements IAppController {
     private final ThemeConfig currentTheme = new ThemeConfig();
     @Getter
     private final AtomicBoolean taskRunningStatus = new AtomicBoolean(false);
+
+    @Override
+    public AtomicBoolean getTaskRunningStatus() {
+        return taskRunningStatus;
+    }
     /**
      * -- GETTER --
      * 获取所有根路径线程数配置
@@ -99,8 +104,18 @@ public class FileManagerPlusApp extends Application implements IAppController {
     @Getter
     private final Map<String, Integer> rootPathThreadConfig = new ConcurrentHashMap<>();
 
+    @Override
+    public Map<String, Integer> getRootPathThreadConfig() {
+        return rootPathThreadConfig;
+    }
+
     @Getter
     private long taskStartTimStamp = System.currentTimeMillis();
+
+    @Override
+    public long getTaskStartTimStamp() {
+        return taskStartTimStamp;
+    }
 
     private List<IAppStrategy> strategyPrototypes;
     // 线程池管理器
@@ -109,13 +124,28 @@ public class FileManagerPlusApp extends Application implements IAppController {
     // --- UI Controls ---
     @Getter
     private JFXCheckBox autoRun;
+
+    @Override
+    public JFXCheckBox getAutoRun() {
+        return autoRun;
+    }
     private JFXButton btnGo, btnExecute, btnStop;
     @Getter
     private Stage primaryStage;
+
+    @Override
+    public Stage getPrimaryStage() {
+        return primaryStage;
+    }
     // --- Infrastructure ---
     private ConfigFileManager configManager;
     @Getter
     private List<ChangeRecord> fullChangeList = new ArrayList<>();
+
+    @Override
+    public List<ChangeRecord> getFullChangeList() {
+        return fullChangeList;
+    }
     // --- Modular Views (UI Modules) ---
     private GlobalSettingsView globalSettingsView;
     private ComposeView composeView;

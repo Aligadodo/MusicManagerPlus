@@ -44,6 +44,7 @@ public class ComposeView implements IAutoReloadAble {
     private VBox configContainer;
     private ListView<IAppStrategy> pipelineListView;
     private ListView<File> sourceListView;
+    private TitledPane tpFilters;
 
     public ComposeView(IAppController app) {
         this.app = app;
@@ -166,10 +167,13 @@ public class ComposeView implements IAutoReloadAble {
                 StyleFactory.createActionButton("清空", "#e74c3c", app::clearSourceDirs)
         );
 
-        TitledPane tpFilters = new TitledPane("全局筛选", app.getGlobalSettingsView());
-        tpFilters.setCollapsible(true);
-        tpFilters.setExpanded(true);
-        tpFilters.setStyle("-fx-text-fill: " + app.getCurrentTheme().getTextPrimaryColor() + ";");
+        this.tpFilters = new TitledPane("全局筛选", app.getGlobalSettingsView());
+        this.tpFilters.setCollapsible(true);
+        this.tpFilters.setExpanded(true);
+        this.tpFilters.setStyle(String.format(
+                "-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: %s; -fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f;",
+                app.getCurrentTheme().getTextPrimaryColor(), app.getCurrentTheme().getPanelBgColor(), app.getCurrentTheme().getBorderColor(), app.getCurrentTheme().getBorderWidth(), app.getCurrentTheme().getCornerRadius()
+        ));
 
         leftPanel.getChildren().addAll(srcTools, sourceListView, tpFilters);
         return leftPanel;
@@ -495,5 +499,22 @@ public class ComposeView implements IAutoReloadAble {
     @Override
     public void loadConfig(Properties props) {
 
+    }
+
+    public void reload() {
+        // 更新文件筛选页面伸缩框的样式
+        if (tpFilters != null) {
+            StyleFactory.updateNodeStyle(tpFilters);
+        }
+        
+        // 更新配置容器的背景色
+        if (configContainer != null) {
+            configContainer.setStyle("-fx-background-color: " + app.getCurrentTheme().getPanelBgColor() + ";");
+        }
+        
+        // 更新所有主要面板的样式
+        if (viewNode != null) {
+            StyleFactory.setBasicStyle(viewNode);
+        }
     }
 }

@@ -70,6 +70,30 @@ public class PreviewView implements IAutoReloadAble {
     private Spinner<Integer> spPreviewThreads;
     @Getter
     private Spinner<Integer> spExecutionThreads;
+
+    public Spinner<Integer> getSpPreviewThreads() {
+        return spPreviewThreads;
+    }
+
+    public Spinner<Integer> getSpExecutionThreads() {
+        return spExecutionThreads;
+    }
+    
+    public JFXComboBox<String> getCbStatusFilter() {
+        return cbStatusFilter;
+    }
+    
+    public JFXCheckBox getChkHideUnchanged() {
+        return chkHideUnchanged;
+    }
+
+    public ProgressBar getMainProgressBar() {
+        return mainProgressBar;
+    }
+
+    public TreeTableView<ChangeRecord> getPreviewTable() {
+        return previewTable;
+    }
     private JFXComboBox<Integer> numberDisplay;
     private JFXComboBox<String> cbThreadPoolMode; // 线程池模式选择：共享或根路径独立
     // 数量上限配置UI
@@ -86,6 +110,8 @@ public class PreviewView implements IAutoReloadAble {
 
     // 配置面板相关
     private TitledPane localParamsPane;
+    private TitledPane configPane;
+    private TitledPane globalParamsPane;
     private VBox configContent;
 
     public PreviewView(IAppController app) {
@@ -406,7 +432,10 @@ public class PreviewView implements IAutoReloadAble {
             titledPane.setText(root.getName() + " (" + fileCount + "个文件)");
             titledPane.setContent(content);
             titledPane.setExpanded(false);
-            titledPane.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
+            titledPane.setStyle(String.format(
+                    "-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: %s; -fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f;",
+                    app.getCurrentTheme().getTextPrimaryColor(), app.getCurrentTheme().getPanelBgColor(), app.getCurrentTheme().getBorderColor(), app.getCurrentTheme().getBorderWidth(), app.getCurrentTheme().getCornerRadius()
+            ));
 
             rootPathThreadConfigBox.getChildren().add(titledPane);
 
@@ -427,20 +456,26 @@ public class PreviewView implements IAutoReloadAble {
         HBox.setHgrow(mainProgressBar, Priority.ALWAYS);
 
         // 配置区域：使用折叠面板组织所有配置
-        TitledPane configPane = new TitledPane();
-        configPane.setText("运行配置");
-        configPane.setExpanded(true);
-        configPane.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
+        this.configPane = new TitledPane();
+        this.configPane.setText("运行配置");
+        this.configPane.setExpanded(true);
+        this.configPane.setStyle(String.format(
+                "-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: %s; -fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f;",
+                app.getCurrentTheme().getTextPrimaryColor(), app.getCurrentTheme().getPanelBgColor(), app.getCurrentTheme().getBorderColor(), app.getCurrentTheme().getBorderWidth(), app.getCurrentTheme().getCornerRadius()
+        ));
 
         this.configContent = new VBox(15);
         this.configContent.setPadding(new Insets(10));
 
         // 全局参数设置面板
-        TitledPane globalParamsPane = new TitledPane();
-        globalParamsPane.setText("全局参数设置");
-        globalParamsPane.setExpanded(true);
-        globalParamsPane.setStyle("-fx-font-size: 13px; -fx-font-weight: bold;");
-        globalParamsPane.setExpanded(false);
+        this.globalParamsPane = new TitledPane();
+        this.globalParamsPane.setText("全局参数设置");
+        this.globalParamsPane.setExpanded(true);
+        this.globalParamsPane.setStyle(String.format(
+                "-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: %s; -fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f;",
+                app.getCurrentTheme().getTextPrimaryColor(), app.getCurrentTheme().getPanelBgColor(), app.getCurrentTheme().getBorderColor(), app.getCurrentTheme().getBorderWidth(), app.getCurrentTheme().getCornerRadius()
+        ));
+        this.globalParamsPane.setExpanded(false);
 
         VBox globalParamsContent = new VBox(10);
         globalParamsContent.setPadding(new Insets(10));
@@ -491,7 +526,10 @@ public class PreviewView implements IAutoReloadAble {
         this.localParamsPane = new TitledPane();
         localParamsPane.setText("局部参数设置");
         localParamsPane.setExpanded(true);
-        localParamsPane.setStyle("-fx-font-size: 13px; -fx-font-weight: bold;");
+        localParamsPane.setStyle(String.format(
+                "-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: %s; -fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f;",
+                app.getCurrentTheme().getTextPrimaryColor(), app.getCurrentTheme().getPanelBgColor(), app.getCurrentTheme().getBorderColor(), app.getCurrentTheme().getBorderWidth(), app.getCurrentTheme().getCornerRadius()
+        ));
         localParamsPane.setExpanded(false);
 
         VBox localParamsContent = new VBox(10);
@@ -962,6 +1000,56 @@ public class PreviewView implements IAutoReloadAble {
                 checkBox.setSelected(unlimited);
                 if (spinner != null) {
                     spinner.setDisable(unlimited);
+                }
+            }
+        }
+    }
+    
+    public void reload() {
+        // 更新所有TitledPane的样式
+        if (configPane != null) {
+            configPane.setStyle(String.format(
+                    "-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: %s; -fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f;",
+                    app.getCurrentTheme().getTextPrimaryColor(), app.getCurrentTheme().getPanelBgColor(), app.getCurrentTheme().getBorderColor(), app.getCurrentTheme().getBorderWidth(), app.getCurrentTheme().getCornerRadius()
+            ));
+        }
+        
+        if (globalParamsPane != null) {
+            globalParamsPane.setStyle(String.format(
+                    "-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: %s; -fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f;",
+                    app.getCurrentTheme().getTextPrimaryColor(), app.getCurrentTheme().getPanelBgColor(), app.getCurrentTheme().getBorderColor(), app.getCurrentTheme().getBorderWidth(), app.getCurrentTheme().getCornerRadius()
+            ));
+        }
+        
+        if (localParamsPane != null) {
+            localParamsPane.setStyle(String.format(
+                    "-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: %s; -fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f;",
+                    app.getCurrentTheme().getTextPrimaryColor(), app.getCurrentTheme().getPanelBgColor(), app.getCurrentTheme().getBorderColor(), app.getCurrentTheme().getBorderWidth(), app.getCurrentTheme().getCornerRadius()
+            ));
+        }
+        
+        // 更新根路径配置的TitledPane样式
+        if (rootPathThreadConfigBox != null) {
+            for (Node node : rootPathThreadConfigBox.getChildren()) {
+                if (node instanceof TitledPane) {
+                    TitledPane tp = (TitledPane) node;
+                    tp.setStyle(String.format(
+                            "-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: %s; -fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f;",
+                            app.getCurrentTheme().getTextPrimaryColor(), app.getCurrentTheme().getPanelBgColor(), app.getCurrentTheme().getBorderColor(), app.getCurrentTheme().getBorderWidth(), app.getCurrentTheme().getCornerRadius()
+                    ));
+                }
+            }
+        }
+        
+        // 更新参数面板样式
+        if (configContent != null) {
+            for (Node node : configContent.getChildren()) {
+                if (node instanceof VBox) {
+                    VBox vbox = (VBox) node;
+                    vbox.setStyle(String.format(
+                            "-fx-background-color: %s; -fx-border-radius: %.1f; -fx-border-color: %s; -fx-padding: 10;",
+                            app.getCurrentTheme().getPanelBgColor(), app.getCurrentTheme().getCornerRadius(), app.getCurrentTheme().getBorderColor()
+                    ));
                 }
             }
         }

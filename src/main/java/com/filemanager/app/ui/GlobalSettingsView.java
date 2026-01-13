@@ -88,6 +88,14 @@ public class GlobalSettingsView implements IAutoReloadAble {
         return viewNode;
     }
 
+    public JFXComboBox<String> getCbRecursionMode() {
+        return cbRecursionMode;
+    }
+
+    public Spinner<Integer> getSpRecursionDepth() {
+        return spRecursionDepth;
+    }
+
     @Override
     public void saveConfig(Properties props) {
         if (props == null) return;
@@ -120,5 +128,14 @@ public class GlobalSettingsView implements IAutoReloadAble {
                 if (f.exists()) app.getSourceRoots().add(f);
             }
         }
+    }
+    
+    @Override
+    public void reload() {
+        // 更新视图节点的基本样式
+        StyleFactory.setBasicStyle(viewNode);
+        
+        // 递归更新所有子组件样式
+        StyleFactory.refreshAllComponents(viewNode);
     }
 }

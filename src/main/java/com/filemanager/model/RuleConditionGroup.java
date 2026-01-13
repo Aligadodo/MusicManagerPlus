@@ -36,6 +36,10 @@ public class RuleConditionGroup {
     public void add(RuleCondition c) { conditions.add(c); }
     public void remove(RuleCondition c) { conditions.remove(c); }
     public void clear() { conditions.clear(); }
+
+    public List<RuleCondition> getConditions() {
+        return conditions;
+    }
     
     @Override
     public String toString() {

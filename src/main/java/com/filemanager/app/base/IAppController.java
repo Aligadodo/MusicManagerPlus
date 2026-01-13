@@ -23,7 +23,8 @@ public interface IAppController extends
         IBusinessOperations, // 业务操作相关
         ILoggingProvider,   // 日志与反馈相关
         IConfigManager,     // 配置管理相关
-        ITaskManager        // 任务管理相关
+        ITaskManager,       // 任务管理相关
+        IAutoReloadAbleProvider // 自动重新加载组件相关
 {
     // 接口组合，无需单独定义方法
 }

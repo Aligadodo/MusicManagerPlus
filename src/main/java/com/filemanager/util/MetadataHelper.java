@@ -130,5 +130,53 @@ public class MetadataHelper {
         public String year = "";
         public String track = "";
         public boolean isGuessed = false; // 标记是否是猜出来的（文件名推断）
+
+        public String getArtist() {
+            return artist;
+        }
+
+        public void setArtist(String artist) {
+            this.artist = artist;
+        }
+
+        public String getAlbum() {
+            return album;
+        }
+
+        public void setAlbum(String album) {
+            this.album = album;
+        }
+
+        public String getTitle() {
+            return title;
+        }
+
+        public void setTitle(String title) {
+            this.title = title;
+        }
+
+        public String getYear() {
+            return year;
+        }
+
+        public void setYear(String year) {
+            this.year = year;
+        }
+
+        public String getTrack() {
+            return track;
+        }
+
+        public void setTrack(String track) {
+            this.track = track;
+        }
+
+        public boolean isGuessed() {
+            return isGuessed;
+        }
+
+        public void setGuessed(boolean guessed) {
+            isGuessed = guessed;
+        }
     }
 }

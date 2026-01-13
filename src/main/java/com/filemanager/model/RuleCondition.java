@@ -22,10 +22,22 @@ import java.util.stream.Collectors;
 
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 public class RuleCondition {
     public ConditionType type;
     public String value;
+
+    public RuleCondition(ConditionType type, String value) {
+        this.type = type;
+        this.value = value;
+    }
+
+    public ConditionType getType() {
+        return type;
+    }
+
+    public String getValue() {
+        return value;
+    }
 
     // --- 预设类型定义 ---
     private static final Set<String> AUDIO_EXTS = new HashSet<>(Arrays.asList(

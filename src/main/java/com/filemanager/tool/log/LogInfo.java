@@ -23,5 +23,13 @@ public class LogInfo {
         this.type = type;
         this.message = message;
     }
+    
+    public LogType getType() {
+        return type;
+    }
+    
+    public String getMessage() {
+        return message;
+    }
 }
 
