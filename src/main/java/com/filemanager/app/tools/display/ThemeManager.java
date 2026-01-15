@@ -80,15 +80,20 @@ public class ThemeManager {
         // 尝试从多个位置加载主题文件
         boolean loaded = false;
         
-        // 1. 首先尝试从src/main/resources目录加载（IDE环境）
-        loaded = loadThemesFromPath("src/main/resources/style/themes");
+        // 1. 首先尝试从项目根目录的style/themes目录加载（用户自定义主题）
+        loaded = loadThemesFromPath("style/themes");
         
-        // 2. 如果没有加载到，尝试从classpath加载（打包后的环境）
+        // 2. 如果没有加载到，尝试从src/main/resources目录加载（IDE环境的内置主题）
+        if (!loaded) {
+            loaded = loadThemesFromPath("src/main/resources/style/themes");
+        }
+        
+        // 3. 如果还是没有加载到，尝试从classpath加载（打包后的环境）
         if (!loaded) {
             loaded = loadThemesFromClasspath();
         }
         
-        // 3. 如果还是没有加载到，创建默认主题目录
+        // 4. 如果还是没有加载到，创建默认主题目录
         if (!loaded) {
             File themesDir = new File("style/themes");
             themesDir.mkdir();

@@ -134,12 +134,24 @@ public class StyleTemplateManager {
      * 加载自定义样式模板
      */
     private void loadCustomTemplates() {
-        File styleDir = new File(STYLE_DIR);
-        if (!styleDir.exists()) {
+        // 加载style目录下的.style.template文件
+        loadTemplatesFromDirectory(STYLE_DIR, TEMPLATE_SUFFIX);
+        
+        // 加载style/themes目录下的.json文件
+        String themesDir = STYLE_DIR + File.separator + "themes";
+        loadTemplatesFromDirectory(themesDir, ".json");
+    }
+    
+    /**
+     * 从指定目录加载指定后缀的样式模板文件
+     */
+    private void loadTemplatesFromDirectory(String dirPath, String suffix) {
+        File dir = new File(dirPath);
+        if (!dir.exists() || !dir.isDirectory()) {
             return;
         }
         
-        File[] files = styleDir.listFiles((dir, name) -> name.endsWith(TEMPLATE_SUFFIX));
+        File[] files = dir.listFiles((d, name) -> name.toLowerCase().endsWith(suffix));
         if (files == null) {
             return;
         }
@@ -148,7 +160,12 @@ public class StyleTemplateManager {
             try {
                 String content = new String(Files.readAllBytes(file.toPath()), "UTF-8");
                 ThemeConfig template = JSON.parseObject(content, ThemeConfig.class);
-                if (template != null && template.getTemplateName() != null) {
+                if (template != null) {
+                    // 如果模板没有名称，使用文件名作为名称
+                    if (template.getTemplateName() == null || template.getTemplateName().isEmpty()) {
+                        String fileName = file.getName();
+                        template.setTemplateName(fileName.substring(0, fileName.length() - suffix.length()));
+                    }
                     templateMap.put(template.getTemplateName(), template);
                 }
             } catch (IOException e) {

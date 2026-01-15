@@ -334,7 +334,7 @@ public class ComponentStyleManager {
         // 设置ListView的背景色和边框
         listView.setStyle(String.format(
                 "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-background-radius: %.1f;",
-                theme.getPanelBgColor(), theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius()
+                theme.getListBgColor(), theme.getListBorderColor(), theme.getBorderWidth(), theme.getCornerRadius()
         ));
     }
 
@@ -345,7 +345,7 @@ public class ComponentStyleManager {
         // 设置TableView的背景色和边框
         tableView.setStyle(String.format(
                 "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-background-radius: %.1f;",
-                theme.getPanelBgColor(), theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius()
+                theme.getListBgColor(), theme.getListBorderColor(), theme.getBorderWidth(), theme.getCornerRadius()
         ));
     }
 
@@ -356,7 +356,7 @@ public class ComponentStyleManager {
         // 设置TreeTableView的背景色和边框
         treeTableView.setStyle(String.format(
                 "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-background-radius: %.1f;",
-                theme.getPanelBgColor(), theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius()
+                theme.getListBgColor(), theme.getListBorderColor(), theme.getBorderWidth(), theme.getCornerRadius()
         ));
     }
 

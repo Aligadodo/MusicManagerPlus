@@ -172,6 +172,17 @@ public class AppearanceManager {
                 theme.setFontSize(currentTheme.getFontSize());
                 theme.setButtonLargeSize(currentTheme.getButtonLargeSize());
                 theme.setButtonSmallSize(currentTheme.getButtonSmallSize());
+                
+                // 添加列表样式属性的更新
+                theme.setListBgColor(currentTheme.getListBgColor());
+                theme.setListRowEvenBgColor(currentTheme.getListRowEvenBgColor());
+                theme.setListRowOddBgColor(currentTheme.getListRowOddBgColor());
+                theme.setListRowSelectedBgColor(currentTheme.getListRowSelectedBgColor());
+                theme.setListRowSelectedTextColor(currentTheme.getListRowSelectedTextColor());
+                theme.setListRowHoverBgColor(currentTheme.getListRowHoverBgColor());
+                theme.setListBorderColor(currentTheme.getListBorderColor());
+                theme.setListHeaderBgColor(currentTheme.getListHeaderBgColor());
+                theme.setListHeaderTextColor(currentTheme.getListHeaderTextColor());
             });
             dialog.close();
         });
@@ -249,12 +260,19 @@ public class AppearanceManager {
             VBox card = themeCards.get(i);
             ThemeConfig theme = themes.get(i);
             
-            // 重置卡片样式
-            card.setStyle("-fx-background-color: white; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 8, 0, 0, 0);");
-            
-            // 如果是当前主题，添加选中效果
+            // 重新应用预设主题的样式，而不是硬编码为白色
             if (isCurrentTheme(theme)) {
-                card.setStyle("-fx-background-color: #e3f2fd; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 10, 0, 0, 0); -fx-border-color: #3498db; -fx-border-width: 2; -fx-border-radius: 10;");
+                // 当前主题卡片，添加选中效果
+                card.setStyle(String.format(
+                        "-fx-background-color: %s; -fx-background-radius: 12; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.25), 15, 0, 0, 0); -fx-border-color: %s; -fx-border-width: 2px;",
+                        theme.getPanelBgColor(), theme.getAccentColor()
+                ));
+            } else {
+                // 非当前主题卡片，应用预设主题的基本样式
+                card.setStyle(String.format(
+                        "-fx-background-color: %s; -fx-background-radius: 12; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.15), 10, 0, 0, 0);",
+                        theme.getPanelBgColor()
+                ));
             }
         }
     }
@@ -991,6 +1009,17 @@ public class AppearanceManager {
         currentTheme.setWarningColor(theme.getWarningColor());
         currentTheme.setErrorColor(theme.getErrorColor());
         currentTheme.setInfoColor(theme.getInfoColor());
+        
+        // 添加列表样式属性的更新
+        currentTheme.setListBgColor(theme.getListBgColor());
+        currentTheme.setListRowEvenBgColor(theme.getListRowEvenBgColor());
+        currentTheme.setListRowOddBgColor(theme.getListRowOddBgColor());
+        currentTheme.setListRowSelectedBgColor(theme.getListRowSelectedBgColor());
+        currentTheme.setListRowSelectedTextColor(theme.getListRowSelectedTextColor());
+        currentTheme.setListRowHoverBgColor(theme.getListRowHoverBgColor());
+        currentTheme.setListBorderColor(theme.getListBorderColor());
+        currentTheme.setListHeaderBgColor(theme.getListHeaderBgColor());
+        currentTheme.setListHeaderTextColor(theme.getListHeaderTextColor());
         
         applyAppearance();
     }

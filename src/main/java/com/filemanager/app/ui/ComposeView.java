@@ -128,7 +128,7 @@ public class ComposeView implements IAutoReloadAble {
                     pane.setCenter(content);
                     pane.setRight(actions);
                     setGraphic(pane);
-                    setStyle("-fx-background-color: transparent; -fx-border-color: #eee; -fx-border-width: 0 0 1 0;");
+                    setStyle("-fx-background-color: transparent; -fx-border-color: " + app.getCurrentTheme().getBorderColor() + "; -fx-border-width: 0 0 1 0;");
 
                     // 拖拽支持
                     setOnDragOver(e -> {

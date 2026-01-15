@@ -709,10 +709,11 @@ public class PreviewView implements IAutoReloadAble {
                     } else {
                         // 根据索引判断单双行
                         // getIndex() 会返回当前行在视图中的位置
-                        if (getIndex() % 2 == 0) {
-                            setStyle("-fx-background-color: #ffffff;");
+                        // 使用主题配置中的列表行颜色
+                if (getIndex() % 2 == 0) {
+                            setStyle("-fx-background-color: " + app.getCurrentTheme().getListRowEvenBgColor() + ";");
                         } else {
-                            setStyle("-fx-background-color: #f2f2f2;");
+                            setStyle("-fx-background-color: " + app.getCurrentTheme().getListRowOddBgColor() + ";");
                         }
                     }
                 }
