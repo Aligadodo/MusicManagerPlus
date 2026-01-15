@@ -347,6 +347,45 @@ public class ComponentFactory {
     /**
      * 创建带样式的按钮
      */
+    /**
+     * 验证并格式化颜色值，确保它是有效的十六进制格式
+     */
+    private static String validateAndFormatColor(String colorValue) {
+        if (colorValue == null || colorValue.isEmpty()) {
+            return "#3498db"; // 默认颜色
+        }
+        
+        // 移除可能的透明度后缀
+        if (colorValue.contains("#") && colorValue.length() > 7) {
+            colorValue = colorValue.substring(0, 7);
+        }
+        
+        // 转换0x开头的颜色值
+        if (colorValue.startsWith("0x")) {
+            try {
+                String hex = colorValue.substring(2);
+                if (hex.length() == 8) {
+                    hex = hex.substring(0, 6); // 移除透明度部分
+                }
+                return "#" + hex;
+            } catch (Exception e) {
+                return "#3498db"; // 默认颜色
+            }
+        }
+        
+        // 确保颜色值以#开头
+        if (!colorValue.startsWith("#")) {
+            return "#" + colorValue;
+        }
+        
+        // 确保颜色值有正确的长度
+        if (colorValue.length() != 7) {
+            return "#3498db"; // 默认颜色
+        }
+        
+        return colorValue;
+    }
+    
     private static JFXButton createStyledButton(String text, Runnable action, 
                                                String bgColor, String textColor, 
                                                String borderColor, String hoverColor,
@@ -354,17 +393,13 @@ public class ComponentFactory {
         JFXButton btn = createButton(text);
         
         // 验证颜色格式
-        if (bgColor != null && !bgColor.startsWith("#")) {
-            bgColor = "#" + bgColor;
+        bgColor = validateAndFormatColor(bgColor);
+        textColor = validateAndFormatColor(textColor);
+        if (borderColor != null) {
+            borderColor = validateAndFormatColor(borderColor);
         }
-        if (textColor != null && !textColor.startsWith("#")) {
-            textColor = "#" + textColor;
-        }
-        if (borderColor != null && !borderColor.startsWith("#")) {
-            borderColor = "#" + borderColor;
-        }
-        if (hoverColor != null && !hoverColor.startsWith("#")) {
-            hoverColor = "#" + hoverColor;
+        if (hoverColor != null) {
+            hoverColor = validateAndFormatColor(hoverColor);
         }
         
         // 如果边框颜色为空，使用背景色的变体

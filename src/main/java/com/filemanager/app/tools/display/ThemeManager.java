@@ -100,27 +100,51 @@ public class ThemeManager {
      */
     private boolean loadThemesFromPath(String path) {
         File themesDir = new File(path);
+        
+        // 添加调试信息，输出当前工作目录和主题目录的绝对路径
+        System.out.println("Current working directory: " + System.getProperty("user.dir"));
+        System.out.println("Themes directory path: " + themesDir.getAbsolutePath());
+        System.out.println("Themes directory exists: " + themesDir.exists());
+        System.out.println("Themes directory is directory: " + themesDir.isDirectory());
+        
         if (!themesDir.exists() || !themesDir.isDirectory()) {
             return false;
         }
         
         // 获取目录下所有JSON文件
         File[] jsonFiles = themesDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".json"));
-        if (jsonFiles == null || jsonFiles.length == 0) {
+        
+        // 添加调试信息
+        if (jsonFiles == null) {
+            System.out.println("Error listing JSON files: listFiles returned null");
+            return false;
+        } else {
+            System.out.println("Found " + jsonFiles.length + " JSON files in themes directory");
+            for (File file : jsonFiles) {
+                System.out.println("Found JSON file: " + file.getName() + ", exists: " + file.exists() + ", readable: " + file.canRead());
+            }
+        }
+        
+        if (jsonFiles.length == 0) {
             return false;
         }
         
         // 加载每个主题文件
         for (File file : jsonFiles) {
             try {
+                System.out.println("Attempting to load theme from file: " + file.getAbsolutePath());
                 ThemeConfig theme = loadThemeFromFile(file);
                 if (theme != null) {
                     // 使用文件名作为主题ID（去除.json后缀）
                     String themeId = file.getName().replace(".json", "");
                     themePresets.put(themeId, theme);
+                    System.out.println("Successfully loaded theme: " + themeId);
+                } else {
+                    System.out.println("Failed to load theme from file: " + file.getName() + ", loadThemeFromFile returned null");
                 }
             } catch (Exception e) {
-                System.err.println("Failed to load theme from file: " + file.getName() + ", error: " + e.getMessage());
+                System.err.println("Exception loading theme from file: " + file.getName() + ", error: " + e.getMessage());
+                e.printStackTrace();
             }
         }
         
@@ -206,6 +230,18 @@ public class ThemeManager {
         darkTheme.setSelectedColor("#4a6fa5");
         darkTheme.setDisabledColor("#2c3e50");
         darkTheme.setProgressBarColor("#27ae60");
+        
+        // 设置深色主题的列表样式
+        darkTheme.setListBgColor("#2c3e50");
+        darkTheme.setListRowEvenBgColor("#2c3e50");
+        darkTheme.setListRowOddBgColor("#34495e");
+        darkTheme.setListRowSelectedBgColor("#4a6fa5");
+        darkTheme.setListRowSelectedTextColor("#ecf0f1");
+        darkTheme.setListRowHoverBgColor("#34495e");
+        darkTheme.setListBorderColor("#2c3e50");
+        darkTheme.setListHeaderBgColor("#34495e");
+        darkTheme.setListHeaderTextColor("#ecf0f1");
+        
         themePresets.put("dark", darkTheme);
     }
     
@@ -365,9 +401,9 @@ public class ThemeManager {
      * 如果style目录不存在则创建
      */
     private void createStyleDirIfNotExists() {
-        File styleDir = new File("style");
+        File styleDir = new File("style/themes");
         if (!styleDir.exists()) {
-            styleDir.mkdir();
+            styleDir.mkdirs();
         }
         
         File settingDir = new File("setting");

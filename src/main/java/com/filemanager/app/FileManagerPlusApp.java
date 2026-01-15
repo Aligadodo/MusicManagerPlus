@@ -230,6 +230,12 @@ public class FileManagerPlusApp extends Application implements IAppController {
         this.autoReloadNodes = Lists.newArrayList(globalSettingsView, logView, previewView, composeView, currentTheme);
         configManager.loadConfig(lastConfigFile);
         applyAppearance();
+        
+        // 确保所有组件应用最新主题样式
+        Platform.runLater(() -> {
+            // 延迟执行，确保所有UI组件已完全初始化
+            StyleFactory.refreshAllComponents(rootContainer);
+        });
 
         // 6. 生命周期管理
         primaryStage.setOnCloseRequest(e -> {

@@ -675,6 +675,45 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
         // 这里可以留空，因为ThemeConfig本身是配置源
     }
 
+    /**
+     * 验证并格式化颜色值，确保它是有效的十六进制格式
+     */
+    private String validateAndFormatColor(String colorValue, String defaultValue) {
+        if (colorValue == null || colorValue.isEmpty()) {
+            return defaultValue;
+        }
+        
+        // 移除可能的透明度后缀
+        if (colorValue.contains("#") && colorValue.length() > 7) {
+            colorValue = colorValue.substring(0, 7);
+        }
+        
+        // 转换0x开头的颜色值
+        if (colorValue.startsWith("0x")) {
+            try {
+                String hex = colorValue.substring(2);
+                if (hex.length() == 8) {
+                    hex = hex.substring(0, 6); // 移除透明度部分
+                }
+                return "#" + hex;
+            } catch (Exception e) {
+                return defaultValue;
+            }
+        }
+        
+        // 确保颜色值以#开头
+        if (!colorValue.startsWith("#")) {
+            return "#" + colorValue;
+        }
+        
+        // 确保颜色值有正确的长度
+        if (colorValue.length() != 7) {
+            return defaultValue;
+        }
+        
+        return colorValue;
+    }
+
     @Override
     public void loadConfig(Properties props) {
         // 模板信息
@@ -693,32 +732,32 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
             this.bgImagePath = bgPath;
         }
         if (props.containsKey("ui.bg.color")) {
-            this.bgColor = props.getProperty("ui.bg.color");
+            this.bgColor = validateAndFormatColor(props.getProperty("ui.bg.color"), this.bgColor);
         }
         
         // 主题色
         if (props.containsKey("ui.accent.color")) {
-            this.accentColor = props.getProperty("ui.accent.color");
+            this.accentColor = validateAndFormatColor(props.getProperty("ui.accent.color"), this.accentColor);
         }
         if (props.containsKey("ui.accent.light.color")) {
-            this.accentLightColor = props.getProperty("ui.accent.light.color");
+            this.accentLightColor = validateAndFormatColor(props.getProperty("ui.accent.light.color"), this.accentLightColor);
         }
         if (props.containsKey("ui.accent.dark.color")) {
-            this.accentDarkColor = props.getProperty("ui.accent.dark.color");
+            this.accentDarkColor = validateAndFormatColor(props.getProperty("ui.accent.dark.color"), this.accentDarkColor);
         }
         
         // 文本颜色分级
         if (props.containsKey("ui.text.primary")) {
-            this.textPrimaryColor = props.getProperty("ui.text.primary");
+            this.textPrimaryColor = validateAndFormatColor(props.getProperty("ui.text.primary"), this.textPrimaryColor);
         }
         if (props.containsKey("ui.text.secondary")) {
-            this.textSecondaryColor = props.getProperty("ui.text.secondary");
+            this.textSecondaryColor = validateAndFormatColor(props.getProperty("ui.text.secondary"), this.textSecondaryColor);
         }
         if (props.containsKey("ui.text.tertiary")) {
-            this.textTertiaryColor = props.getProperty("ui.text.tertiary");
+            this.textTertiaryColor = validateAndFormatColor(props.getProperty("ui.text.tertiary"), this.textTertiaryColor);
         }
         if (props.containsKey("ui.text.disabled")) {
-            this.textDisabledColor = props.getProperty("ui.text.disabled");
+            this.textDisabledColor = validateAndFormatColor(props.getProperty("ui.text.disabled"), this.textDisabledColor);
         }
         
         // 透明度和背景模式
@@ -734,7 +773,7 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
             this.cornerRadius = Double.parseDouble(props.getProperty("ui.corner.radius"));
         }
         if (props.containsKey("ui.border.color")) {
-            this.borderColor = props.getProperty("ui.border.color");
+            this.borderColor = validateAndFormatColor(props.getProperty("ui.border.color"), this.borderColor);
         }
         if (props.containsKey("ui.border.width")) {
             this.borderWidth = Double.parseDouble(props.getProperty("ui.border.width"));
@@ -742,88 +781,88 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
         
         // 面板样式分组
         if (props.containsKey("ui.panel.bg.color")) {
-            this.panelBgColor = props.getProperty("ui.panel.bg.color");
+            this.panelBgColor = validateAndFormatColor(props.getProperty("ui.panel.bg.color"), this.panelBgColor);
         }
         if (props.containsKey("ui.panel.border.color")) {
-            this.panelBorderColor = props.getProperty("ui.panel.border.color");
+            this.panelBorderColor = validateAndFormatColor(props.getProperty("ui.panel.border.color"), this.panelBorderColor);
         }
         if (props.containsKey("ui.panel.title.color")) {
-            this.panelTitleColor = props.getProperty("ui.panel.title.color");
+            this.panelTitleColor = validateAndFormatColor(props.getProperty("ui.panel.title.color"), this.panelTitleColor);
         }
         if (props.containsKey("ui.panel.hover.color")) {
-            this.panelHoverColor = props.getProperty("ui.panel.hover.color");
+            this.panelHoverColor = validateAndFormatColor(props.getProperty("ui.panel.hover.color"), this.panelHoverColor);
         }
         
         // 按钮样式分级
         if (props.containsKey("ui.button.primary.bg")) {
-            this.buttonPrimaryBgColor = props.getProperty("ui.button.primary.bg");
+            this.buttonPrimaryBgColor = validateAndFormatColor(props.getProperty("ui.button.primary.bg"), this.buttonPrimaryBgColor);
         }
         if (props.containsKey("ui.button.primary.text")) {
-            this.buttonPrimaryTextColor = props.getProperty("ui.button.primary.text");
+            this.buttonPrimaryTextColor = validateAndFormatColor(props.getProperty("ui.button.primary.text"), this.buttonPrimaryTextColor);
         }
         if (props.containsKey("ui.button.primary.border")) {
-            this.buttonPrimaryBorderColor = props.getProperty("ui.button.primary.border");
+            this.buttonPrimaryBorderColor = validateAndFormatColor(props.getProperty("ui.button.primary.border"), this.buttonPrimaryBorderColor);
         }
         if (props.containsKey("ui.button.primary.hover")) {
-            this.buttonPrimaryHoverColor = props.getProperty("ui.button.primary.hover");
+            this.buttonPrimaryHoverColor = validateAndFormatColor(props.getProperty("ui.button.primary.hover"), this.buttonPrimaryHoverColor);
         }
         if (props.containsKey("ui.button.primary.pressed")) {
-            this.buttonPrimaryPressedColor = props.getProperty("ui.button.primary.pressed");
+            this.buttonPrimaryPressedColor = validateAndFormatColor(props.getProperty("ui.button.primary.pressed"), this.buttonPrimaryPressedColor);
         }
         
         if (props.containsKey("ui.button.secondary.bg")) {
-            this.buttonSecondaryBgColor = props.getProperty("ui.button.secondary.bg");
+            this.buttonSecondaryBgColor = validateAndFormatColor(props.getProperty("ui.button.secondary.bg"), this.buttonSecondaryBgColor);
         }
         if (props.containsKey("ui.button.secondary.text")) {
-            this.buttonSecondaryTextColor = props.getProperty("ui.button.secondary.text");
+            this.buttonSecondaryTextColor = validateAndFormatColor(props.getProperty("ui.button.secondary.text"), this.buttonSecondaryTextColor);
         }
         if (props.containsKey("ui.button.secondary.border")) {
-            this.buttonSecondaryBorderColor = props.getProperty("ui.button.secondary.border");
+            this.buttonSecondaryBorderColor = validateAndFormatColor(props.getProperty("ui.button.secondary.border"), this.buttonSecondaryBorderColor);
         }
         if (props.containsKey("ui.button.secondary.hover")) {
-            this.buttonSecondaryHoverColor = props.getProperty("ui.button.secondary.hover");
+            this.buttonSecondaryHoverColor = validateAndFormatColor(props.getProperty("ui.button.secondary.hover"), this.buttonSecondaryHoverColor);
         }
         if (props.containsKey("ui.button.secondary.pressed")) {
-            this.buttonSecondaryPressedColor = props.getProperty("ui.button.secondary.pressed");
+            this.buttonSecondaryPressedColor = validateAndFormatColor(props.getProperty("ui.button.secondary.pressed"), this.buttonSecondaryPressedColor);
         }
         
         if (props.containsKey("ui.button.success.bg")) {
-            this.buttonSuccessBgColor = props.getProperty("ui.button.success.bg");
+            this.buttonSuccessBgColor = validateAndFormatColor(props.getProperty("ui.button.success.bg"), this.buttonSuccessBgColor);
         }
         if (props.containsKey("ui.button.success.text")) {
-            this.buttonSuccessTextColor = props.getProperty("ui.button.success.text");
+            this.buttonSuccessTextColor = validateAndFormatColor(props.getProperty("ui.button.success.text"), this.buttonSuccessTextColor);
         }
         if (props.containsKey("ui.button.success.border")) {
-            this.buttonSuccessBorderColor = props.getProperty("ui.button.success.border");
+            this.buttonSuccessBorderColor = validateAndFormatColor(props.getProperty("ui.button.success.border"), this.buttonSuccessBorderColor);
         }
         if (props.containsKey("ui.button.success.hover")) {
-            this.buttonSuccessHoverColor = props.getProperty("ui.button.success.hover");
+            this.buttonSuccessHoverColor = validateAndFormatColor(props.getProperty("ui.button.success.hover"), this.buttonSuccessHoverColor);
         }
         
         if (props.containsKey("ui.button.warning.bg")) {
-            this.buttonWarningBgColor = props.getProperty("ui.button.warning.bg");
+            this.buttonWarningBgColor = validateAndFormatColor(props.getProperty("ui.button.warning.bg"), this.buttonWarningBgColor);
         }
         if (props.containsKey("ui.button.warning.text")) {
-            this.buttonWarningTextColor = props.getProperty("ui.button.warning.text");
+            this.buttonWarningTextColor = validateAndFormatColor(props.getProperty("ui.button.warning.text"), this.buttonWarningTextColor);
         }
         if (props.containsKey("ui.button.warning.border")) {
-            this.buttonWarningBorderColor = props.getProperty("ui.button.warning.border");
+            this.buttonWarningBorderColor = validateAndFormatColor(props.getProperty("ui.button.warning.border"), this.buttonWarningBorderColor);
         }
         if (props.containsKey("ui.button.warning.hover")) {
-            this.buttonWarningHoverColor = props.getProperty("ui.button.warning.hover");
+            this.buttonWarningHoverColor = validateAndFormatColor(props.getProperty("ui.button.warning.hover"), this.buttonWarningHoverColor);
         }
         
         if (props.containsKey("ui.button.error.bg")) {
-            this.buttonErrorBgColor = props.getProperty("ui.button.error.bg");
+            this.buttonErrorBgColor = validateAndFormatColor(props.getProperty("ui.button.error.bg"), this.buttonErrorBgColor);
         }
         if (props.containsKey("ui.button.error.text")) {
-            this.buttonErrorTextColor = props.getProperty("ui.button.error.text");
+            this.buttonErrorTextColor = validateAndFormatColor(props.getProperty("ui.button.error.text"), this.buttonErrorTextColor);
         }
         if (props.containsKey("ui.button.error.border")) {
-            this.buttonErrorBorderColor = props.getProperty("ui.button.error.border");
+            this.buttonErrorBorderColor = validateAndFormatColor(props.getProperty("ui.button.error.border"), this.buttonErrorBorderColor);
         }
         if (props.containsKey("ui.button.error.hover")) {
-            this.buttonErrorHoverColor = props.getProperty("ui.button.error.hover");
+            this.buttonErrorHoverColor = validateAndFormatColor(props.getProperty("ui.button.error.hover"), this.buttonErrorHoverColor);
         }
         
         // 按钮尺寸设置
@@ -842,59 +881,59 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
         
         // 列表样式分组
         if (props.containsKey("ui.list.bg")) {
-            this.listBgColor = props.getProperty("ui.list.bg");
+            this.listBgColor = validateAndFormatColor(props.getProperty("ui.list.bg"), this.listBgColor);
         }
         if (props.containsKey("ui.list.row.even")) {
-            this.listRowEvenBgColor = props.getProperty("ui.list.row.even");
+            this.listRowEvenBgColor = validateAndFormatColor(props.getProperty("ui.list.row.even"), this.listRowEvenBgColor);
         }
         if (props.containsKey("ui.list.row.odd")) {
-            this.listRowOddBgColor = props.getProperty("ui.list.row.odd");
+            this.listRowOddBgColor = validateAndFormatColor(props.getProperty("ui.list.row.odd"), this.listRowOddBgColor);
         }
         if (props.containsKey("ui.list.row.selected.bg")) {
-            this.listRowSelectedBgColor = props.getProperty("ui.list.row.selected.bg");
+            this.listRowSelectedBgColor = validateAndFormatColor(props.getProperty("ui.list.row.selected.bg"), this.listRowSelectedBgColor);
         }
         if (props.containsKey("ui.list.row.selected.text")) {
-            this.listRowSelectedTextColor = props.getProperty("ui.list.row.selected.text");
+            this.listRowSelectedTextColor = validateAndFormatColor(props.getProperty("ui.list.row.selected.text"), this.listRowSelectedTextColor);
         }
         if (props.containsKey("ui.list.row.hover")) {
-            this.listRowHoverBgColor = props.getProperty("ui.list.row.hover");
+            this.listRowHoverBgColor = validateAndFormatColor(props.getProperty("ui.list.row.hover"), this.listRowHoverBgColor);
         }
         if (props.containsKey("ui.list.border")) {
-            this.listBorderColor = props.getProperty("ui.list.border");
+            this.listBorderColor = validateAndFormatColor(props.getProperty("ui.list.border"), this.listBorderColor);
         }
         if (props.containsKey("ui.list.header.bg")) {
-            this.listHeaderBgColor = props.getProperty("ui.list.header.bg");
+            this.listHeaderBgColor = validateAndFormatColor(props.getProperty("ui.list.header.bg"), this.listHeaderBgColor);
         }
         if (props.containsKey("ui.list.header.text")) {
-            this.listHeaderTextColor = props.getProperty("ui.list.header.text");
+            this.listHeaderTextColor = validateAndFormatColor(props.getProperty("ui.list.header.text"), this.listHeaderTextColor);
         }
         
         // 状态颜色
         if (props.containsKey("ui.hover.color")) {
-            this.hoverColor = props.getProperty("ui.hover.color");
+            this.hoverColor = validateAndFormatColor(props.getProperty("ui.hover.color"), this.hoverColor);
         }
         if (props.containsKey("ui.selected.color")) {
-            this.selectedColor = props.getProperty("ui.selected.color");
+            this.selectedColor = validateAndFormatColor(props.getProperty("ui.selected.color"), this.selectedColor);
         }
         if (props.containsKey("ui.disabled.color")) {
-            this.disabledColor = props.getProperty("ui.disabled.color");
+            this.disabledColor = validateAndFormatColor(props.getProperty("ui.disabled.color"), this.disabledColor);
         }
         
         // 进度条和状态指示颜色
         if (props.containsKey("ui.progress.bar.color")) {
-            this.progressBarColor = props.getProperty("ui.progress.bar.color");
+            this.progressBarColor = validateAndFormatColor(props.getProperty("ui.progress.bar.color"), this.progressBarColor);
         }
         if (props.containsKey("ui.success.color")) {
-            this.successColor = props.getProperty("ui.success.color");
+            this.successColor = validateAndFormatColor(props.getProperty("ui.success.color"), this.successColor);
         }
         if (props.containsKey("ui.warning.color")) {
-            this.warningColor = props.getProperty("ui.warning.color");
+            this.warningColor = validateAndFormatColor(props.getProperty("ui.warning.color"), this.warningColor);
         }
         if (props.containsKey("ui.error.color")) {
-            this.errorColor = props.getProperty("ui.error.color");
+            this.errorColor = validateAndFormatColor(props.getProperty("ui.error.color"), this.errorColor);
         }
         if (props.containsKey("ui.info.color")) {
-            this.infoColor = props.getProperty("ui.info.color");
+            this.infoColor = validateAndFormatColor(props.getProperty("ui.info.color"), this.infoColor);
         }
         
         // 字体设置
