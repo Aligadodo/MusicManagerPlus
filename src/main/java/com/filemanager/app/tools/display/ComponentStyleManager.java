@@ -191,10 +191,10 @@ public class ComponentStyleManager {
     private static void applyVBoxStyle(VBox vbox) {
         String currentStyle = vbox.getStyle();
         if (currentStyle.contains("-fx-background-color:") && !currentStyle.contains("transparent")) {
-            // 应用面板样式
+            // 应用面板样式，使用透明背景以便显示整体背景色
             vbox.setStyle(String.format(
-                    "-fx-background-color: %s; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-spacing: %.1f;",
-                    theme.getPanelBgColor(), theme.getCornerRadius(), theme.getTextPrimaryColor(), theme.getBorderColor(), theme.getBorderWidth(), vbox.getSpacing()
+                    "-fx-background-color: transparent; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-spacing: %.1f;",
+                    theme.getCornerRadius(), theme.getTextPrimaryColor(), theme.getBorderColor(), theme.getBorderWidth(), vbox.getSpacing()
             ));
         }
     }
@@ -205,10 +205,10 @@ public class ComponentStyleManager {
     private static void applyHBoxStyle(HBox hbox) {
         String currentStyle = hbox.getStyle();
         if (currentStyle.contains("-fx-background-color:") && !currentStyle.contains("transparent")) {
-            // 应用面板样式
+            // 应用面板样式，使用透明背景以便显示整体背景色
             hbox.setStyle(String.format(
-                    "-fx-background-color: %s; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-spacing: %.1f;",
-                    theme.getPanelBgColor(), theme.getCornerRadius(), theme.getTextPrimaryColor(), theme.getBorderColor(), theme.getBorderWidth(), hbox.getSpacing()
+                    "-fx-background-color: transparent; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-spacing: %.1f;",
+                    theme.getCornerRadius(), theme.getTextPrimaryColor(), theme.getBorderColor(), theme.getBorderWidth(), hbox.getSpacing()
             ));
         }
     }
@@ -219,10 +219,10 @@ public class ComponentStyleManager {
     private static void applyBorderPaneStyle(BorderPane borderPane) {
         String currentStyle = borderPane.getStyle();
         if (currentStyle.contains("-fx-background-color:") && !currentStyle.contains("transparent")) {
-            // 应用面板样式
+            // 应用面板样式，使用透明背景以便显示整体背景色
             borderPane.setStyle(String.format(
-                    "-fx-background-color: %s; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f;",
-                    theme.getPanelBgColor(), theme.getCornerRadius(), theme.getTextPrimaryColor(), theme.getBorderColor(), theme.getBorderWidth()
+                    "-fx-background-color: transparent; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f;",
+                    theme.getCornerRadius(), theme.getTextPrimaryColor(), theme.getBorderColor(), theme.getBorderWidth()
             ));
         }
     }
@@ -233,10 +233,10 @@ public class ComponentStyleManager {
     private static void applyGridPaneStyle(GridPane gridPane) {
         String currentStyle = gridPane.getStyle();
         if (currentStyle.contains("-fx-background-color:") && !currentStyle.contains("transparent")) {
-            // 应用面板样式
+            // 应用面板样式，使用透明背景以便显示整体背景色
             gridPane.setStyle(String.format(
-                    "-fx-background-color: %s; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f;",
-                    theme.getPanelBgColor(), theme.getCornerRadius(), theme.getTextPrimaryColor(), theme.getBorderColor(), theme.getBorderWidth()
+                    "-fx-background-color: transparent; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f;",
+                    theme.getCornerRadius(), theme.getTextPrimaryColor(), theme.getBorderColor(), theme.getBorderWidth()
             ));
         }
     }
@@ -247,10 +247,10 @@ public class ComponentStyleManager {
     private static void applyStackPaneStyle(StackPane stackPane) {
         String currentStyle = stackPane.getStyle();
         if (currentStyle.contains("-fx-background-color:") && !currentStyle.contains("transparent")) {
-            // 应用面板样式
+            // 应用面板样式，使用透明背景以便显示整体背景色
             stackPane.setStyle(String.format(
-                    "-fx-background-color: %s; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f;",
-                    theme.getPanelBgColor(), theme.getCornerRadius(), theme.getTextPrimaryColor(), theme.getBorderColor(), theme.getBorderWidth()
+                    "-fx-background-color: transparent; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f;",
+                    theme.getCornerRadius(), theme.getTextPrimaryColor(), theme.getBorderColor(), theme.getBorderWidth()
             ));
         }
     }

@@ -188,18 +188,27 @@ public class StyleFactory {
                                                double minWidth, double buttonHeight) {
         JFXButton btn = createButton(text);
         
-        // 验证颜色格式
-        if (bgColor != null && !bgColor.startsWith("#")) {
-            bgColor = "#" + bgColor;
+        // 验证颜色格式（只对有效的十六进制颜色值添加#前缀）
+        if (bgColor != null) {
+            // 如果不是预定义颜色（如white、black）且不是以#开头，添加#前缀
+            if (!bgColor.startsWith("#") && !bgColor.matches("^[a-zA-Z]+$") && bgColor.length() <= 6) {
+                bgColor = "#" + bgColor;
+            }
         }
-        if (textColor != null && !textColor.startsWith("#")) {
-            textColor = "#" + textColor;
+        if (textColor != null) {
+            if (!textColor.startsWith("#") && !textColor.matches("^[a-zA-Z]+$") && textColor.length() <= 6) {
+                textColor = "#" + textColor;
+            }
         }
-        if (borderColor != null && !borderColor.startsWith("#")) {
-            borderColor = "#" + borderColor;
+        if (borderColor != null) {
+            if (!borderColor.startsWith("#") && !borderColor.matches("^[a-zA-Z]+$") && borderColor.length() <= 6) {
+                borderColor = "#" + borderColor;
+            }
         }
-        if (hoverColor != null && !hoverColor.startsWith("#")) {
-            hoverColor = "#" + hoverColor;
+        if (hoverColor != null) {
+            if (!hoverColor.startsWith("#") && !hoverColor.matches("^[a-zA-Z]+$") && hoverColor.length() <= 6) {
+                hoverColor = "#" + hoverColor;
+            }
         }
         
         // 如果边框颜色为空，使用背景色的变体
@@ -208,10 +217,10 @@ public class StyleFactory {
                 Color baseColor = Color.web(bgColor);
                 if (baseColor.getBrightness() > 0.6) {
                     // 浅色背景，使用深色边框
-                    borderColor = baseColor.darker().darker().toString();
+                    borderColor = toCssColor(baseColor.darker().darker());
                 } else {
                     // 深色背景，使用浅色边框
-                    borderColor = baseColor.brighter().brighter().toString();
+                    borderColor = toCssColor(baseColor.brighter().brighter());
                 }
             } catch (IllegalArgumentException e) {
                 borderColor = bgColor;
@@ -303,6 +312,16 @@ public class StyleFactory {
         if (node instanceof Parent) {
             for (Node child : ((Parent) node).getChildrenUnmodifiable()) forceDarkText(child);
         }
+    }
+    
+    /**
+     * 将Color对象转换为CSS可用的十六进制颜色字符串
+     */
+    private static String toCssColor(Color color) {
+        int r = (int) (color.getRed() * 255);
+        int g = (int) (color.getGreen() * 255);
+        int b = (int) (color.getBlue() * 255);
+        return String.format("#%02x%02x%02x", r, g, b);
     }
 
     // [新增] 通用：创建统一风格的微型图标按钮
@@ -442,10 +461,10 @@ public class StyleFactory {
         // 检查是否是我们创建的面板
         String currentStyle = vbox.getStyle();
         if (currentStyle.contains("-fx-background-color:") && !currentStyle.contains("transparent")) {
-            // 应用面板样式
+            // 应用面板样式，使用透明背景以便显示整体背景色
             vbox.setStyle(String.format(
-                    "-fx-background-color: %s; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-spacing: %.1f;",
-                    theme.getPanelBgColor(), theme.getCornerRadius(), theme.getTextPrimaryColor(), theme.getBorderColor(), theme.getBorderWidth(), vbox.getSpacing()
+                    "-fx-background-color: transparent; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-spacing: %.1f;",
+                    theme.getCornerRadius(), theme.getTextPrimaryColor(), theme.getBorderColor(), theme.getBorderWidth(), vbox.getSpacing()
             ));
         }
     }
@@ -457,10 +476,10 @@ public class StyleFactory {
         // 检查是否是我们创建的面板
         String currentStyle = hbox.getStyle();
         if (currentStyle.contains("-fx-background-color:") && !currentStyle.contains("transparent")) {
-            // 应用面板样式
+            // 应用面板样式，使用透明背景以便显示整体背景色
             hbox.setStyle(String.format(
-                    "-fx-background-color: %s; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-spacing: %.1f;",
-                    theme.getPanelBgColor(), theme.getCornerRadius(), theme.getTextPrimaryColor(), theme.getBorderColor(), theme.getBorderWidth(), hbox.getSpacing()
+                    "-fx-background-color: transparent; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-spacing: %.1f;",
+                    theme.getCornerRadius(), theme.getTextPrimaryColor(), theme.getBorderColor(), theme.getBorderWidth(), hbox.getSpacing()
             ));
         }
     }
@@ -471,10 +490,10 @@ public class StyleFactory {
     private static void applyBorderPaneStyle(BorderPane borderPane) {
         String currentStyle = borderPane.getStyle();
         if (currentStyle.contains("-fx-background-color:") && !currentStyle.contains("transparent")) {
-            // 应用面板样式
+            // 应用面板样式，使用透明背景以便显示整体背景色
             borderPane.setStyle(String.format(
-                    "-fx-background-color: %s; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f;",
-                    theme.getPanelBgColor(), theme.getCornerRadius(), theme.getTextPrimaryColor(), theme.getBorderColor(), theme.getBorderWidth()
+                    "-fx-background-color: transparent; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f;",
+                    theme.getCornerRadius(), theme.getTextPrimaryColor(), theme.getBorderColor(), theme.getBorderWidth()
             ));
         }
     }
@@ -485,10 +504,10 @@ public class StyleFactory {
     private static void applyGridPaneStyle(GridPane gridPane) {
         String currentStyle = gridPane.getStyle();
         if (currentStyle.contains("-fx-background-color:") && !currentStyle.contains("transparent")) {
-            // 应用面板样式
+            // 应用面板样式，使用透明背景以便显示整体背景色
             gridPane.setStyle(String.format(
-                    "-fx-background-color: %s; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f;",
-                    theme.getPanelBgColor(), theme.getCornerRadius(), theme.getTextPrimaryColor(), theme.getBorderColor(), theme.getBorderWidth()
+                    "-fx-background-color: transparent; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f;",
+                    theme.getCornerRadius(), theme.getTextPrimaryColor(), theme.getBorderColor(), theme.getBorderWidth()
             ));
         }
     }
@@ -499,10 +518,10 @@ public class StyleFactory {
     private static void applyStackPaneStyle(StackPane stackPane) {
         String currentStyle = stackPane.getStyle();
         if (currentStyle.contains("-fx-background-color:") && !currentStyle.contains("transparent")) {
-            // 应用面板样式
+            // 应用面板样式，使用透明背景以便显示整体背景色
             stackPane.setStyle(String.format(
-                    "-fx-background-color: %s; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f;",
-                    theme.getPanelBgColor(), theme.getCornerRadius(), theme.getTextPrimaryColor(), theme.getBorderColor(), theme.getBorderWidth()
+                    "-fx-background-color: transparent; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f;",
+                    theme.getCornerRadius(), theme.getTextPrimaryColor(), theme.getBorderColor(), theme.getBorderWidth()
             ));
         }
     }

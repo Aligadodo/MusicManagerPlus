@@ -14,7 +14,7 @@
   "cornerRadius": 8.0,
   "borderColor": "#c8e6c9",
   "borderWidth": 1.0,
-  "panelBgColor": "#ffffff",
+  "panelBgColor": "transparent",
   "panelBorderColor": "#c8e6c9",
   "panelTitleColor": "#2c3e50",
   "panelHoverColor": "#e8f5e9",
