@@ -293,7 +293,7 @@ public class AppearanceManager {
         
         // 主题色
         Label accentLabel = StyleFactory.createLabel("主题色", 14, false);
-        ColorPicker accentPicker = new ColorPicker(Color.web(currentTheme.getAccentColor()));
+        ColorPicker accentPicker = new ColorPicker(Color.web(validateColor(currentTheme.getAccentColor(), "#3498db")));
         accentPicker.setOnAction(e -> {
             currentTheme.setAccentColor(String.format("#%02X%02X%02X", 
                     (int) (accentPicker.getValue().getRed() * 255), 
@@ -306,7 +306,7 @@ public class AppearanceManager {
         
         // 文本颜色
         Label textLabel = StyleFactory.createLabel("文本颜色", 14, false);
-        ColorPicker textPicker = new ColorPicker(Color.web(currentTheme.getTextPrimaryColor()));
+        ColorPicker textPicker = new ColorPicker(Color.web(validateColor(currentTheme.getTextPrimaryColor(), "#2c3e50")));
         textPicker.setOnAction(e -> {
             currentTheme.setTextPrimaryColor(String.format("#%02X%02X%02X", 
                     (int) (textPicker.getValue().getRed() * 255), 
@@ -319,7 +319,7 @@ public class AppearanceManager {
         
         // 背景色
         Label bgLabel = StyleFactory.createLabel("背景色", 14, false);
-        ColorPicker bgPicker = new ColorPicker(Color.web(currentTheme.getBgColor()));
+        ColorPicker bgPicker = new ColorPicker(Color.web(validateColor(currentTheme.getBgColor(), "#f5f5f5")));
         bgPicker.setOnAction(e -> {
             currentTheme.setBgColor(String.format("#%02X%02X%02X", 
                     (int) (bgPicker.getValue().getRed() * 255), 
@@ -332,7 +332,7 @@ public class AppearanceManager {
         
         // 面板背景色
         Label panelLabel = StyleFactory.createLabel("面板背景色", 14, false);
-        ColorPicker panelPicker = new ColorPicker(Color.web(currentTheme.getPanelBgColor()));
+        ColorPicker panelPicker = new ColorPicker(Color.web(validateColor(currentTheme.getPanelBgColor(), "#ffffff")));
         panelPicker.setOnAction(e -> {
             currentTheme.setPanelBgColor(String.format("#%02X%02X%02X", 
                     (int) (panelPicker.getValue().getRed() * 255), 
@@ -345,7 +345,7 @@ public class AppearanceManager {
         
         // 边框颜色
         Label borderLabel = StyleFactory.createLabel("边框颜色", 14, false);
-        ColorPicker borderPicker = new ColorPicker(Color.web(currentTheme.getBorderColor()));
+        ColorPicker borderPicker = new ColorPicker(Color.web(validateColor(currentTheme.getBorderColor(), "#e0e0e0")));
         borderPicker.setOnAction(e -> {
             currentTheme.setBorderColor(String.format("#%02X%02X%02X", 
                     (int) (borderPicker.getValue().getRed() * 255), 
@@ -358,7 +358,7 @@ public class AppearanceManager {
         
         // 悬停颜色
         Label hoverLabel = StyleFactory.createLabel("悬停颜色", 14, false);
-        ColorPicker hoverPicker = new ColorPicker(Color.web(currentTheme.getHoverColor()));
+        ColorPicker hoverPicker = new ColorPicker(Color.web(validateColor(currentTheme.getHoverColor(), "#f5f5f5")));
         hoverPicker.setOnAction(e -> {
             currentTheme.setHoverColor(String.format("#%02X%02X%02X", 
                     (int) (hoverPicker.getValue().getRed() * 255), 
@@ -371,6 +371,33 @@ public class AppearanceManager {
         
         content.getChildren().add(colorGrid);
         return content;
+    }
+    
+    /**
+     * 验证颜色值是否有效，如果无效则返回默认值
+     */
+    private String validateColor(String color, String defaultValue) {
+        if (color == null || color.isEmpty()) {
+            return defaultValue;
+        }
+        
+        // 确保颜色值以#开头
+        if (!color.startsWith("#")) {
+            color = "#" + color;
+        }
+        
+        // 确保颜色值有正确的长度
+        if (color.length() != 7) {
+            return defaultValue;
+        }
+        
+        // 验证颜色格式是否正确
+        try {
+            Color.web(color);
+            return color;
+        } catch (IllegalArgumentException e) {
+            return defaultValue;
+        }
     }
     
     /**
@@ -828,10 +855,10 @@ public class AppearanceManager {
         ));
         bgLabel.setAlignment(Pos.CENTER);
         Rectangle bgColor = new Rectangle(35, 20);
-        bgColor.setFill(Color.web(theme.getBgColor()));
+        bgColor.setFill(Color.web(validateColor(theme.getBgColor(), "#f5f5f5")));
         bgColor.setArcWidth(4);
         bgColor.setArcHeight(4);
-        bgColor.setStyle(String.format("-fx-border-color: %s; -fx-border-width: 1px;", theme.getBorderColor()));
+        bgColor.setStyle(String.format("-fx-border-color: %s; -fx-border-width: 1px;", validateColor(theme.getBorderColor(), "#e0e0e0")));
         bgColorBox.getChildren().addAll(bgLabel, bgColor);
         colorGrid.add(bgColorBox, 0, 0);
         
@@ -840,14 +867,14 @@ public class AppearanceManager {
         Label panelLabel = new Label("面板");
         panelLabel.setStyle(String.format(
                 "-fx-font-family: %s; -fx-font-size: 10px; -fx-text-fill: %s;",
-                theme.getFontFamily(), theme.getTextSecondaryColor()
+                theme.getFontFamily(), validateColor(theme.getTextSecondaryColor(), "#546e7a")
         ));
         panelLabel.setAlignment(Pos.CENTER);
         Rectangle panelColor = new Rectangle(35, 20);
-        panelColor.setFill(Color.web(theme.getPanelBgColor()));
+        panelColor.setFill(Color.web(validateColor(theme.getPanelBgColor(), "#ffffff")));
         panelColor.setArcWidth(4);
         panelColor.setArcHeight(4);
-        panelColor.setStyle(String.format("-fx-border-color: %s; -fx-border-width: 1px;", theme.getBorderColor()));
+        panelColor.setStyle(String.format("-fx-border-color: %s; -fx-border-width: 1px;", validateColor(theme.getBorderColor(), "#e0e0e0")));
         panelColorBox.getChildren().addAll(panelLabel, panelColor);
         colorGrid.add(panelColorBox, 1, 0);
         
@@ -856,14 +883,14 @@ public class AppearanceManager {
         Label accentLabel = new Label("主色");
         accentLabel.setStyle(String.format(
                 "-fx-font-family: %s; -fx-font-size: 10px; -fx-text-fill: %s;",
-                theme.getFontFamily(), theme.getTextSecondaryColor()
+                theme.getFontFamily(), validateColor(theme.getTextSecondaryColor(), "#546e7a")
         ));
         accentLabel.setAlignment(Pos.CENTER);
         Rectangle accentColor = new Rectangle(35, 20);
-        accentColor.setFill(Color.web(theme.getAccentColor()));
+        accentColor.setFill(Color.web(validateColor(theme.getAccentColor(), "#3498db")));
         accentColor.setArcWidth(4);
         accentColor.setArcHeight(4);
-        accentColor.setStyle(String.format("-fx-border-color: %s; -fx-border-width: 1px;", theme.getBorderColor()));
+        accentColor.setStyle(String.format("-fx-border-color: %s; -fx-border-width: 1px;", validateColor(theme.getBorderColor(), "#e0e0e0")));
         accentColorBox.getChildren().addAll(accentLabel, accentColor);
         colorGrid.add(accentColorBox, 2, 0);
         
@@ -872,14 +899,14 @@ public class AppearanceManager {
         Label textLabel = new Label("文本");
         textLabel.setStyle(String.format(
                 "-fx-font-family: %s; -fx-font-size: 10px; -fx-text-fill: %s;",
-                theme.getFontFamily(), theme.getTextSecondaryColor()
+                theme.getFontFamily(), validateColor(theme.getTextSecondaryColor(), "#546e7a")
         ));
         textLabel.setAlignment(Pos.CENTER);
         Rectangle textColor = new Rectangle(35, 20);
-        textColor.setFill(Color.web(theme.getTextPrimaryColor()));
+        textColor.setFill(Color.web(validateColor(theme.getTextPrimaryColor(), "#2c3e50")));
         textColor.setArcWidth(4);
         textColor.setArcHeight(4);
-        textColor.setStyle(String.format("-fx-border-color: %s; -fx-border-width: 1px;", theme.getBorderColor()));
+        textColor.setStyle(String.format("-fx-border-color: %s; -fx-border-width: 1px;", validateColor(theme.getBorderColor(), "#e0e0e0")));
         textColorBox.getChildren().addAll(textLabel, textColor);
         colorGrid.add(textColorBox, 3, 0);
         
