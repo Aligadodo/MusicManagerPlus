@@ -274,11 +274,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
         MenuItem saveItem = new MenuItem("保存配置...");
         saveItem.setOnAction(e -> saveConfigAction());
         fileMenu.getItems().addAll(loadItem, saveItem);
-        Menu viewMenu = new Menu("外观设置");
-        MenuItem themeItem = new MenuItem("界面设置...");
-        themeItem.setOnAction(e -> showAppearanceDialog());
-        viewMenu.getItems().add(themeItem);
-        menuBar.getMenus().addAll(fileMenu, viewMenu);
+        menuBar.getMenus().add(fileMenu);
         
         // 应用菜单样式
         StyleFactory.setMenuStyle(menuBar);
@@ -293,10 +289,10 @@ public class FileManagerPlusApp extends Application implements IAppController {
         HBox header = new HBox(15);
         header.setPadding(new Insets(10, 20, 10, 20));
         header.setAlignment(Pos.CENTER_LEFT);
-        // 应用主题样式，使用面板背景色
+        // 应用主题样式，使用透明背景
         header.setStyle(String.format(
-                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: 0 0 %.1f 0;",
-                currentTheme.getPanelBgColor(), currentTheme.getBorderColor(), currentTheme.getBorderWidth()
+                "-fx-background-color: transparent; -fx-border-color: %s; -fx-border-width: 0 0 %.1f 0;",
+                currentTheme.getBorderColor(), currentTheme.getBorderWidth()
         ));
         Label logo = new Label("MUSIC MANAGER PLUS - By chrse1997@163.com");
         logo.setFont(Font.font(currentTheme.getFontFamily(), FontWeight.BLACK, 20));
@@ -312,6 +308,12 @@ public class FileManagerPlusApp extends Application implements IAppController {
         mainTabPane = StyleFactory.createTabPane();
         // 将各模块的 View 挂载到 Tab
         mainTabPane.getTabs().addAll(composeView.getTab(), previewView.getTab(), logView.getTab());
+        
+        // 添加界面设置tab页
+        Tab appearanceTab = new Tab("界面设置");
+        appearanceTab.setContent(appearanceManager.getAppearanceSettingsContent());
+        mainTabPane.getTabs().add(appearanceTab);
+        
         mainTabPane.setPadding(new Insets(10));
         root.setCenter(mainTabPane);
         // 移除侧边栏菜单，使用TabPane进行视图切换
@@ -319,7 +321,10 @@ public class FileManagerPlusApp extends Application implements IAppController {
         // Status Bar
         HBox statusBar = new HBox(15);
         statusBar.setPadding(new Insets(5, 15, 5, 15));
-        statusBar.setStyle("-fx-background-color: rgba(240, 240, 240, 0.8); -fx-border-color: #ccc; -fx-border-width: 1 0 0 0;");
+        statusBar.setStyle(String.format(
+                "-fx-background-color: rgba(240, 240, 240, 0.8); -fx-border-color: %s; -fx-border-width: %.1f 0 0 0;",
+                currentTheme.getBorderColor(), currentTheme.getBorderWidth()
+        ));
         statusBar.setAlignment(Pos.CENTER_LEFT);
         Label lblStatusIcon = new Label("●");
         lblStatusIcon.setTextFill(Color.GREEN);

@@ -31,7 +31,15 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
     
     // 背景设置
     private String bgImagePath = "";
+    @com.alibaba.fastjson.annotation.JSONField(alternateNames = "backgroundImage")
+    private String backgroundImage = "";
     private String bgColor = "#f5f5f5";
+    
+    // 当backgroundImage被设置时，同时设置bgImagePath
+    public void setBackgroundImage(String backgroundImage) {
+        this.backgroundImage = backgroundImage;
+        this.bgImagePath = backgroundImage;
+    }
     
     // 主题色
     private String accentColor = "#3498db"; // 主色调
@@ -56,7 +64,7 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
     private double borderWidth = 1.0;
     
     // 面板样式分组
-    private String panelBgColor = "#ffffff";
+    private String panelBgColor = "transparent";
     private String panelBorderColor = "#e0e0e0";
     private String panelTitleColor = "#2c3e50";
     private String panelHoverColor = "#f5f5f5";
@@ -99,6 +107,11 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
     private double buttonLargeSize = 80.0;
     private double buttonSmallSize = 60.0;
     private double buttonIconSize = 16.0;
+    
+    // 统一按钮颜色设置（支持单独设计按钮颜色）
+    private String buttonBgColor = "#3498db"; // 按钮背景色
+    private String buttonTextColor = "#ffffff"; // 按钮文字颜色
+    private String buttonBorderColor = "#2980b9"; // 按钮边框颜色
     
     // 列表样式分组
     private String listBgColor = "#ffffff";
@@ -457,6 +470,31 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
 
     public String getButtonSecondaryBorderColor() {
         return buttonSecondaryBorderColor;
+    }
+
+    // 统一按钮颜色设置相关方法
+    public String getButtonBgColor() {
+        return buttonBgColor;
+    }
+
+    public void setButtonBgColor(String buttonBgColor) {
+        this.buttonBgColor = buttonBgColor;
+    }
+
+    public String getButtonTextColor() {
+        return buttonTextColor;
+    }
+
+    public void setButtonTextColor(String buttonTextColor) {
+        this.buttonTextColor = buttonTextColor;
+    }
+
+    public String getButtonBorderColor() {
+        return buttonBorderColor;
+    }
+
+    public void setButtonBorderColor(String buttonBorderColor) {
+        this.buttonBorderColor = buttonBorderColor;
     }
 
     public void setButtonPrimaryBgColor(String buttonPrimaryBgColor) {

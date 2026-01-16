@@ -42,6 +42,11 @@ public class ComponentFactory {
 
     public static void initComponentFactory(ThemeConfig theme) {
         ComponentFactory.theme = theme;
+        
+        // 注册主题变更监听器
+        ThemeManager.getInstance().addThemeChangeListener(newTheme -> {
+            ComponentFactory.theme = newTheme;
+        });
     }
 
     public static Label createLabel(String text, int size, boolean bold) {
@@ -218,9 +223,12 @@ public class ComponentFactory {
     public static VBox createVBoxPanel() {
         VBox panel = new VBox(theme.getMediumSpacing());
         panel.setPadding(new Insets(theme.getLargeSpacing()));
+        
+        // 使用浅色圆角边框
+        String lightBorderColor = "#e0e0e0"; // 统一的浅色边框
         panel.setStyle(String.format(
-                "-fx-background-color: transparent; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f;",
-                theme.getCornerRadius(), theme.getTextPrimaryColor(), theme.getBorderColor(), theme.getBorderWidth()
+                "-fx-background-color: transparent; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: 1.0; -fx-border-radius: %.1f;",
+                theme.getCornerRadius(), theme.getTextPrimaryColor(), lightBorderColor, theme.getCornerRadius()
         ));
         return panel;
     }
@@ -228,35 +236,58 @@ public class ComponentFactory {
     public static HBox createHBoxPanel() {
         HBox panel = new HBox(theme.getMediumSpacing());
         panel.setPadding(new Insets(theme.getLargeSpacing()));
+        
+        // 使用浅色圆角边框
+        String lightBorderColor = "#e0e0e0"; // 统一的浅色边框
         panel.setStyle(String.format(
-                "-fx-background-color: transparent; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f;",
-                theme.getCornerRadius(), theme.getTextPrimaryColor(), theme.getBorderColor(), theme.getBorderWidth()
+                "-fx-background-color: transparent; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: 1.0; -fx-border-radius: %.1f;",
+                theme.getCornerRadius(), theme.getTextPrimaryColor(), lightBorderColor, theme.getCornerRadius()
         ));
         return panel;
     }
 
     public static JFXButton createButton(String text, boolean filled) {
-        JFXButton btn = new JFXButton(text);
         if (filled) {
-            btn.setStyle(String.format(
-                    "-fx-background-color: %s; -fx-text-fill: white; -fx-font-family: %s; -fx-font-size: 14px; -fx-padding: 8 16;",
-                    theme.getAccentColor(), theme.getFontFamily()
-            ));
+            return createStyledButton(text, null, 
+                    theme.getButtonPrimaryBgColor(), theme.getButtonPrimaryTextColor(), 
+                    theme.getButtonPrimaryBorderColor(), theme.getButtonPrimaryHoverColor(),
+                    theme.getButtonLargeSize(), 36.0);
         } else {
-            btn.setStyle(String.format(
-                    "-fx-background-color: transparent; -fx-text-fill: %s; -fx-font-family: %s; -fx-font-size: 14px; -fx-padding: 8 16; -fx-border-color: %s; -fx-border-width: 1px;",
-                    theme.getTextPrimaryColor(), theme.getFontFamily(), theme.getBorderColor()
-            ));
+            return createStyledButton(text, null, 
+                    theme.getButtonSecondaryBgColor(), theme.getButtonSecondaryTextColor(), 
+                    theme.getButtonSecondaryBorderColor(), theme.getButtonSecondaryHoverColor(),
+                    theme.getButtonSmallSize(), 28.0);
         }
-        return btn;
     }
 
     public static JFXButton createIconButton(String icon, Runnable action) {
-        JFXButton btn = new JFXButton(icon);
-        btn.setStyle(String.format(
-                "-fx-background-color: transparent; -fx-text-fill: %s; -fx-font-family: %s; -fx-font-size: 16px; -fx-padding: 4 8;",
-                theme.getTextPrimaryColor(), theme.getFontFamily()
-        ));
+        JFXButton btn = createButton(icon);
+        
+        // 使用更粗的边框宽度
+        double borderWidth = Math.max(theme.getBorderWidth(), 1.5);
+        
+        // 使用统一的图标按钮样式，确保图标字符可见
+        String baseStyle = String.format(
+                "-fx-background-color: %s; -fx-text-fill: %s; -fx-font-family: %s; -fx-font-size: 16px; -fx-padding: 8 12; -fx-cursor: hand; -fx-background-radius: %.1f;" +
+                " -fx-border-width: %.1f; -fx-border-color: %s; -fx-min-height: 30; -fx-min-width: 50; -fx-max-width: Infinity; -fx-alignment: center; -fx-content-display: center;" +
+                " -fx-faint-focus-color: transparent; -fx-focus-color: transparent; -fx-pressed-color: transparent; -fx-armed-color: transparent;",
+                theme.getBgColor(), theme.getTextPrimaryColor(), theme.getFontFamily(), theme.getCornerRadius(),
+                borderWidth, theme.getBorderColor()
+        );
+        
+        btn.setStyle(baseStyle);
+        
+        // 使用Java代码设置自适应大小，避免CSS中的auto关键字
+        btn.setPrefWidth(Region.USE_COMPUTED_SIZE);
+        btn.setPrefHeight(Region.USE_COMPUTED_SIZE);
+        btn.setMaxHeight(Region.USE_COMPUTED_SIZE);
+        
+        // 移除所有样式变化效果
+        btn.setOnMouseEntered(null);
+        btn.setOnMouseExited(null);
+        btn.setOnMousePressed(null);
+        btn.setOnMouseReleased(null);
+        
         btn.setOnAction(e -> action.run());
         return btn;
     }
@@ -355,19 +386,17 @@ public class ComponentFactory {
             return "#3498db"; // 默认颜色
         }
         
-        // 移除可能的透明度后缀
-        if (colorValue.contains("#") && colorValue.length() > 7) {
-            colorValue = colorValue.substring(0, 7);
-        }
-        
         // 转换0x开头的颜色值
         if (colorValue.startsWith("0x")) {
             try {
                 String hex = colorValue.substring(2);
                 if (hex.length() == 8) {
-                    hex = hex.substring(0, 6); // 移除透明度部分
+                    return "#" + hex; // 保留透明度部分
+                } else if (hex.length() == 6) {
+                    return "#" + hex; // 不包含透明度
+                } else {
+                    return "#3498db"; // 默认颜色
                 }
-                return "#" + hex;
             } catch (Exception e) {
                 return "#3498db"; // 默认颜色
             }
@@ -378,8 +407,8 @@ public class ComponentFactory {
             return "#" + colorValue;
         }
         
-        // 确保颜色值有正确的长度
-        if (colorValue.length() != 7) {
+        // 确保颜色值有正确的长度 (7位: #RRGGBB 或 9位: #RRGGBBAA)
+        if (colorValue.length() != 7 && colorValue.length() != 9) {
             return "#3498db"; // 默认颜色
         }
         
@@ -402,52 +431,64 @@ public class ComponentFactory {
             hoverColor = validateAndFormatColor(hoverColor);
         }
         
-        // 如果边框颜色为空，使用背景色的变体
-        if (borderColor == null && bgColor != null) {
-            try {
-                Color baseColor = Color.web(bgColor);
-                if (baseColor.getBrightness() > 0.6) {
-                    // 浅色背景，使用深色边框
-                    borderColor = baseColor.darker().darker().toString();
-                } else {
-                    // 深色背景，使用浅色边框
-                    borderColor = baseColor.brighter().brighter().toString();
-                }
-            } catch (IllegalArgumentException e) {
-                borderColor = bgColor;
-            }
+        // 如果边框颜色为空或与背景色太接近，使用主题边框颜色
+        if (borderColor == null || isColorTooClose(bgColor, borderColor)) {
+            borderColor = theme.getBorderColor();
         }
         
-        // 如果悬停颜色为空，使用边框颜色
+        // 如果悬停颜色为空，使用主题悬停颜色
         if (hoverColor == null) {
-            hoverColor = borderColor;
+            hoverColor = theme.getHoverColor();
         }
         
-        // 基础样式
+        // 使用更粗的边框宽度
+        double borderWidth = Math.max(theme.getBorderWidth(), 1.5);
+        
+        // 基础样式 - 使用自适应高度和宽度
         String baseStyle = String.format(
                 "-fx-background-color: %s; -fx-text-fill: %s; -fx-font-weight: bold; -fx-background-radius: %.1f; " +
-                "-fx-cursor: hand; -fx-padding: %.1f; -fx-border-width: %.1f; -fx-border-color: %s; -fx-min-height: %.1f;",
+                "-fx-cursor: hand; -fx-padding: 8 %.1f; -fx-border-width: %.1f; -fx-border-color: %s; " +
+                "-fx-min-height: 30; -fx-min-width: %.1f; -fx-max-width: Infinity; -fx-alignment: center; -fx-content-display: center;" +
+                " -fx-faint-focus-color: transparent; -fx-focus-color: transparent; -fx-pressed-color: transparent; -fx-armed-color: transparent;",
                 bgColor, textColor, theme.getCornerRadius(), theme.getSmallSpacing(), 
-                theme.getBorderWidth(), borderColor != null ? borderColor : bgColor, buttonHeight
-        );
-        
-        // 悬停样式
-        String hoverStyle = String.format(
-                "-fx-background-color: %s; -fx-text-fill: %s; -fx-font-weight: bold; -fx-background-radius: %.1f; " +
-                "-fx-cursor: hand; -fx-padding: %.1f; -fx-border-width: %.1f; -fx-border-color: %s; -fx-min-height: %.1f;",
-                hoverColor != null ? hoverColor : bgColor, textColor, theme.getCornerRadius(), 
-                theme.getSmallSpacing(), theme.getBorderWidth(), borderColor != null ? borderColor : bgColor, buttonHeight
+                borderWidth, borderColor, minWidth
         );
         
         btn.setStyle(baseStyle);
-        btn.setMinWidth(minWidth);
         
-        // 添加悬停效果
-        btn.setOnMouseEntered(e -> btn.setStyle(hoverStyle));
-        btn.setOnMouseExited(e -> btn.setStyle(baseStyle));
+        // 使用Java代码设置自适应大小，避免CSS中的auto关键字
+        btn.setPrefWidth(Region.USE_COMPUTED_SIZE);
+        btn.setPrefHeight(Region.USE_COMPUTED_SIZE);
+        btn.setMaxHeight(Region.USE_COMPUTED_SIZE);
+        
+        // 移除所有样式变化效果
+        btn.setOnMouseEntered(null);
+        btn.setOnMouseExited(null);
+        btn.setOnMousePressed(null);
+        btn.setOnMouseReleased(null);
         
         if (action != null) btn.setOnAction(e -> action.run());
         return btn;
+    }
+    
+    /**
+     * 检查两个颜色是否太接近，导致对比度不足
+     */
+    private static boolean isColorTooClose(String color1, String color2) {
+        try {
+            Color c1 = Color.web(color1);
+            Color c2 = Color.web(color2);
+            
+            // 计算RGB分量的差异
+            double rDiff = Math.abs(c1.getRed() - c2.getRed());
+            double gDiff = Math.abs(c1.getGreen() - c2.getGreen());
+            double bDiff = Math.abs(c1.getBlue() - c2.getBlue());
+            
+            // 如果RGB分量差异都小于0.1，认为颜色太接近
+            return rDiff < 0.1 && gDiff < 0.1 && bDiff < 0.1;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
     }
 
     /**
@@ -457,26 +498,37 @@ public class ComponentFactory {
         JFXButton btn = createButton(iconText);
         String textColor = colorHex != null ? colorHex : theme.getTextPrimaryColor();
 
-        // 基础样式
+        // 使用更粗的边框宽度
+        double borderWidth = Math.max(theme.getBorderWidth(), 1.5);
+        
+        // 使用统一的行内图标按钮样式，增大字体大小
+        // 基础样式使用主题背景色，确保文字可见
         String baseStyle = String.format(
-                "-fx-background-color: transparent; -fx-border-color: %s; -fx-border-radius: %.1f; -fx-padding: %.1f; -fx-font-size: 10px; -fx-text-fill: %s;",
-                theme.getBorderColor(), theme.getCornerRadius(), theme.getSmallSpacing(), textColor
+                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-radius: %.1f; -fx-padding: %.1f; -fx-font-size: 12px; -fx-text-fill: %s; -fx-cursor: hand;" +
+                " -fx-min-height: 28; -fx-min-width: 40.0; -fx-max-width: Infinity; -fx-alignment: center; -fx-content-display: center;" +
+                " -fx-border-width: %.1f;" +
+                " -fx-faint-focus-color: transparent; -fx-focus-color: transparent; -fx-pressed-color: transparent; -fx-armed-color: transparent;",
+                theme.getBgColor(), theme.getBorderColor(), theme.getCornerRadius(), theme.getSmallSpacing(), textColor,
+                borderWidth
         );
-        // 悬停样式
-        String hoverStyle = String.format(
-                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-radius: %.1f; -fx-padding: %.1f; -fx-font-size: 10px; -fx-text-fill: %s;",
-                theme.getHoverColor(), theme.getBorderColor(), theme.getCornerRadius(), theme.getSmallSpacing(), textColor
-        );
-
+        
         btn.setStyle(baseStyle);
+        
+        // 使用Java代码设置自适应大小，避免CSS中的auto关键字
+        btn.setPrefWidth(Region.USE_COMPUTED_SIZE);
+        btn.setPrefHeight(Region.USE_COMPUTED_SIZE);
+        btn.setMaxHeight(Region.USE_COMPUTED_SIZE);
 
         btn.setOnAction(e -> {
             if (action != null) action.run();
             e.consume(); // 防止事件冒泡选中列表行
         });
 
-        btn.setOnMouseEntered(e -> btn.setStyle(hoverStyle));
-        btn.setOnMouseExited(e -> btn.setStyle(baseStyle));
+        // 移除所有样式变化效果
+        btn.setOnMouseEntered(null);
+        btn.setOnMouseExited(null);
+        btn.setOnMousePressed(null);
+        btn.setOnMouseReleased(null);
 
         return btn;
     }
@@ -503,9 +555,12 @@ public class ComponentFactory {
      */
     public static VBox createVBoxPanel(Node... subNodes) {
         VBox p = createVBox(subNodes);
+        
+        // 使用浅色圆角边框
+        String lightBorderColor = "#e0e0e0"; // 统一的浅色边框
         p.setStyle(String.format(
-                "-fx-background-color: transparent; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f;",
-                theme.getCornerRadius(), theme.getTextPrimaryColor(), theme.getBorderColor(), theme.getBorderWidth()
+                "-fx-background-color: transparent; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: 1.0; -fx-border-radius: %.1f;",
+                theme.getCornerRadius(), theme.getTextPrimaryColor(), lightBorderColor, theme.getCornerRadius()
         ));
         p.setSpacing(theme.getMediumSpacing());
         return p;
@@ -534,8 +589,11 @@ public class ComponentFactory {
      */
     public static HBox createHBoxPanel(Node... subNodes) {
         HBox p = createHBox(subNodes);
-        p.setStyle(String.format("-fx-background-color: transparent; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f;",
-                theme.getCornerRadius(), theme.getTextPrimaryColor(), theme.getBorderColor(), theme.getBorderWidth()));
+        
+        // 使用浅色圆角边框
+        String lightBorderColor = "#e0e0e0"; // 统一的浅色边框
+        p.setStyle(String.format("-fx-background-color: transparent; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: 1.0; -fx-border-radius: %.1f;",
+                theme.getCornerRadius(), theme.getTextPrimaryColor(), lightBorderColor, theme.getCornerRadius()));
         p.setPadding(new Insets(5, 5, 5, 5));
         p.setSpacing(5);
         return p;
@@ -550,24 +608,35 @@ public class ComponentFactory {
     // [新增] 通用：创建统一风格的微型图标按钮
     public static JFXButton createSmallIconButton(String text, EventHandler<ActionEvent> handler) {
         JFXButton btn = createButton(text);
+        
+        // 使用更粗的边框宽度
+        double borderWidth = Math.max(theme.getBorderWidth(), 1.5);
+        
         String baseStyle = String.format(
-                "-fx-background-color: transparent; -fx-border-color: %s; -fx-border-radius: %.1f; -fx-padding: %.1f; -fx-font-size: 10px; -fx-font-family: %s;",
-                theme.getBorderColor(), theme.getCornerRadius(), theme.getSmallSpacing(), theme.getFontFamily()
-        );
-        String hoverStyle = String.format(
-                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-radius: %.1f; -fx-padding: %.1f; -fx-font-size: 10px; -fx-font-family: %s;",
-                theme.getHoverColor(), theme.getBorderColor(), theme.getCornerRadius(), theme.getSmallSpacing(), theme.getFontFamily()
+                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-radius: %.1f; -fx-padding: %.1f; -fx-font-size: 12px; -fx-font-family: %s; -fx-text-fill: %s;" +
+                " -fx-min-height: 26; -fx-min-width: 30.0; -fx-max-width: Infinity; -fx-cursor: hand; -fx-alignment: center; -fx-content-display: center;" +
+                " -fx-border-width: %.1f;" +
+                " -fx-faint-focus-color: transparent; -fx-focus-color: transparent; -fx-pressed-color: transparent; -fx-armed-color: transparent;",
+                theme.getBgColor(), theme.getBorderColor(), theme.getCornerRadius(), theme.getSmallSpacing(), theme.getFontFamily(), theme.getTextPrimaryColor(),
+                borderWidth
         );
         
         btn.setStyle(baseStyle);
-        btn.setTextFill(Color.web(theme.getTextPrimaryColor()));
+        
+        // 使用Java代码设置自适应大小，避免CSS中的auto关键字
+        btn.setPrefWidth(Region.USE_COMPUTED_SIZE);
+        btn.setPrefHeight(Region.USE_COMPUTED_SIZE);
+        btn.setMaxHeight(Region.USE_COMPUTED_SIZE);
         btn.setOnAction(e -> {
             handler.handle(e);
             e.consume(); // 防止事件冒泡触发 ListCell 选中
         });
-        // Hover 效果
-        btn.setOnMouseEntered(e -> btn.setStyle(hoverStyle));
-        btn.setOnMouseExited(e -> btn.setStyle(baseStyle));
+        
+        // 移除所有样式变化效果
+        btn.setOnMouseEntered(null);
+        btn.setOnMouseExited(null);
+        btn.setOnMousePressed(null);
+        btn.setOnMouseReleased(null);
         return btn;
     }
 
@@ -611,13 +680,22 @@ public class ComponentFactory {
 
     /**
      * 创建带有主题样式的TabPane
+     * @param isSecondary 是否为二级TabPane（尺寸更小）
      */
-    public static JFXTabPane createTabPane() {
+    public static JFXTabPane createTabPane(boolean isSecondary) {
         JFXTabPane tabPane = new JFXTabPane();
+        
+        // 根据是否为二级TabPane设置不同的尺寸
+        double tabHeight = isSecondary ? 35.0 : 45.0;
+        double tabMinWidth = isSecondary ? 80.0 : 120.0;
+        double tabMaxWidth = isSecondary ? 180.0 : 220.0;
+        double fontSize = isSecondary ? 13.0 : 15.0;
+        
         tabPane.setStyle(String.format(
-                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-tab-min-height: 40; -fx-tab-max-height: 40; -fx-tab-min-width: 100; -fx-tab-max-width: 200;\n" +
+                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-tab-min-height: %.1f; -fx-tab-max-height: %.1f; -fx-tab-min-width: %.1f; -fx-tab-max-width: %.1f; -fx-padding: 5 0 0 0;\n" +
                 ".tab-pane > .tab-header-area {\n" +
                 "    -fx-background-color: transparent;\n" +
+                "    -fx-padding: 0 10 0 10;\n" +
                 "}\n" +
                 ".tab-pane > .tab-header-area > .tab-header-background {\n" +
                 "    -fx-background-color: %s;\n" +
@@ -642,15 +720,19 @@ public class ComponentFactory {
                 ".tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .tab-label {\n" +
                 "    -fx-text-fill: %s;\n" +
                 "    -fx-font-family: %s;\n" +
-                "    -fx-font-size: 14px;\n" +
+                "    -fx-font-size: %.1fpx;\n" +
                 "    -fx-font-weight: normal;\n" +
+                "    -fx-alignment: center;\n" +
+                "    -fx-padding: 5 10;\n" +
                 "}\n" +
                 ".tab-pane > .tab-header-area > .headers-region > .tab:hover > .tab-container > .tab-label {\n" +
                 "    -fx-text-fill: %s;\n" +
+                "    -fx-font-weight: 500;\n" +
                 "}\n" +
                 ".tab-pane > .tab-header-area > .headers-region > .tab:selected > .tab-container > .tab-label {\n" +
                 "    -fx-text-fill: %s;\n" +
                 "    -fx-font-weight: bold;\n" +
+                "    -fx-padding: 5 10;\n" +
                 "}\n" +
                 ".tab-pane > .tab-content-area {\n" +
                 "    -fx-background-color: %s;\n" +
@@ -659,17 +741,25 @@ public class ComponentFactory {
                 "    -fx-border-radius: 0 %.1f %.1f %.1f;\n" +
                 "}",
                 theme.getPanelBgColor(), theme.getBorderColor(), theme.getBorderWidth(),
+                tabHeight, tabHeight, tabMinWidth, tabMaxWidth,
                 theme.getPanelBgColor(), theme.getBorderColor(), theme.getBorderWidth(),
                 theme.getBgColor(), theme.getBorderColor(), theme.getBorderWidth(), theme.getBorderWidth(), theme.getBorderWidth(), theme.getCornerRadius(), theme.getCornerRadius(),
                 theme.getPanelHoverColor(),
                 theme.getPanelBgColor(), theme.getAccentColor(), theme.getAccentColor(), theme.getPanelBgColor(), theme.getAccentColor(), theme.getBorderWidth(), theme.getBorderWidth(), theme.getBorderWidth(),
-                theme.getTextSecondaryColor(), theme.getFontFamily(),
+                theme.getTextSecondaryColor(), theme.getFontFamily(), fontSize,
                 theme.getTextPrimaryColor(),
                 theme.getAccentColor(),
                 theme.getPanelBgColor(), theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius(), theme.getCornerRadius(), theme.getCornerRadius()
         ));
         
         return tabPane;
+    }
+    
+    /**
+     * 创建一级TabPane（默认尺寸）
+     */
+    public static JFXTabPane createTabPane() {
+        return createTabPane(false);
     }
     
     /**
@@ -689,24 +779,36 @@ public class ComponentFactory {
         // 1. 创建刷新图标的 SVG 路径 (一个圆圈箭头)
         SVGPath refreshIcon = new SVGPath();
         refreshIcon.setContent("M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z");
-        refreshIcon.setFill(javafx.scene.paint.Color.WHITE);
+        refreshIcon.setFill(Color.web(theme.getTextPrimaryColor()));
 
         // 2. 创建按钮并设置样式
         Button btn = new Button();
         btn.setGraphic(refreshIcon); // 将 SVG 设置为按钮图标
-        btn.setStyle(
-                "-fx-background-color: #BDE0FE;" + // 马卡龙蓝
-                        "-fx-background-radius: 50;" +      // 圆形边框
-                        "-fx-min-width: 20px;" +
-                        "-fx-min-height: 20px;" +
-                        "-fx-cursor: hand;"
-        );
+        btn.setStyle(String.format(
+                "-fx-background-color: %s; -fx-background-radius: 50; -fx-min-width: 20px; -fx-min-height: 20px; -fx-cursor: hand; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: 50;",
+                theme.getButtonPrimaryBgColor(), theme.getBorderColor(), theme.getBorderWidth()
+        ));
 
         // 3. 添加旋转动画（点击时触发）
         RotateTransition rt = new RotateTransition(Duration.millis(600), refreshIcon);
         rt.setByAngle(360); // 旋转 360 度
         rt.setCycleCount(1);
         rt.setInterpolator(Interpolator.EASE_BOTH); // 柔和的启动和停止
+
+        // 4. 添加悬停效果
+        btn.setOnMouseEntered(e -> {
+            btn.setStyle(String.format(
+                    "-fx-background-color: %s; -fx-background-radius: 50; -fx-min-width: 20px; -fx-min-height: 20px; -fx-cursor: hand; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: 50;",
+                    theme.getButtonPrimaryHoverColor(), theme.getBorderColor(), theme.getBorderWidth()
+            ));
+        });
+
+        btn.setOnMouseExited(e -> {
+            btn.setStyle(String.format(
+                    "-fx-background-color: %s; -fx-background-radius: 50; -fx-min-width: 20px; -fx-min-height: 20px; -fx-cursor: hand; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: 50;",
+                    theme.getButtonPrimaryBgColor(), theme.getBorderColor(), theme.getBorderWidth()
+            ));
+        });
 
         btn.setOnAction(e -> {
             handler.handle(e);

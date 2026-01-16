@@ -268,18 +268,103 @@ public class ComponentStyleManager {
      * 应用TabPane样式
      */
     private static void applyTabPaneStyle(TabPane tabPane) {
+        // 检测是否为二级TabPane（通过父容器或其他特征）
+        boolean isSecondary = isSecondaryTabPane(tabPane);
+        
+        // 根据是否为二级TabPane设置不同的尺寸
+        double tabHeight = isSecondary ? 35.0 : 45.0;
+        double tabMinWidth = isSecondary ? 80.0 : 120.0;
+        double tabMaxWidth = isSecondary ? 180.0 : 220.0;
+        double fontSize = isSecondary ? 13.0 : 15.0;
+        
         tabPane.setStyle(String.format(
-                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-tab-min-height: 40; -fx-tab-max-height: 40; -fx-text-fill: %s;",
-                theme.getPanelBgColor(), theme.getBorderColor(), theme.getBorderWidth(), theme.getTextPrimaryColor()
+                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-tab-min-height: %.1f; -fx-tab-max-height: %.1f; -fx-tab-min-width: %.1f; -fx-tab-max-width: %.1f; -fx-text-fill: %s;\n" +
+                ".tab-pane > .tab-header-area {\n" +
+                "    -fx-background-color: transparent;\n" +
+                "    -fx-padding: 0 10 0 10;\n" +
+                "}\n" +
+                ".tab-pane > .tab-header-area > .tab-header-background {\n" +
+                "    -fx-background-color: %s;\n" +
+                "    -fx-border-color: %s;\n" +
+                "    -fx-border-width: 0 0 %.1f 0;\n" +
+                "}\n" +
+                ".tab-pane > .tab-header-area > .headers-region > .tab {\n" +
+                "    -fx-background-color: %s;\n" +
+                "    -fx-border-color: %s;\n" +
+                "    -fx-border-width: %.1f %.1f 0 %.1f;\n" +
+                "    -fx-border-radius: %.1f %.1f 0 0;\n" +
+                "    -fx-cursor: hand;\n" +
+                "}\n" +
+                ".tab-pane > .tab-header-area > .headers-region > .tab:hover {\n" +
+                "    -fx-background-color: %s;\n" +
+                "}\n" +
+                ".tab-pane > .tab-header-area > .headers-region > .tab:selected {\n" +
+                "    -fx-background-color: %s;\n" +
+                "    -fx-border-color: %s %s %s %s;\n" +
+                "    -fx-border-width: %.1f %.1f 0 %.1f;\n" +
+                "}\n" +
+                ".tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .tab-label {\n" +
+                "    -fx-text-fill: %s;\n" +
+                "    -fx-font-family: %s;\n" +
+                "    -fx-font-size: %.1fpx;\n" +
+                "    -fx-font-weight: normal;\n" +
+                "    -fx-alignment: center;\n" +
+                "    -fx-padding: 5 10;\n" +
+                "}\n" +
+                ".tab-pane > .tab-header-area > .headers-region > .tab:hover > .tab-container > .tab-label {\n" +
+                "    -fx-text-fill: %s;\n" +
+                "    -fx-font-weight: 500;\n" +
+                "}\n" +
+                ".tab-pane > .tab-header-area > .headers-region > .tab:selected > .tab-container > .tab-label {\n" +
+                "    -fx-text-fill: %s;\n" +
+                "    -fx-font-weight: bold;\n" +
+                "    -fx-padding: 5 10;\n" +
+                "}\n" +
+                ".tab-pane > .tab-content-area {\n" +
+                "    -fx-background-color: %s;\n" +
+                "    -fx-border-color: %s;\n" +
+                "    -fx-border-width: %.1f;\n" +
+                "    -fx-border-radius: 0 %.1f %.1f %.1f;\n" +
+                "}",
+                theme.getPanelBgColor(), theme.getBorderColor(), theme.getBorderWidth(),
+                tabHeight, tabHeight, tabMinWidth, tabMaxWidth, theme.getTextPrimaryColor(),
+                theme.getPanelBgColor(), theme.getBorderColor(), theme.getBorderWidth(),
+                theme.getBgColor(), theme.getBorderColor(), theme.getBorderWidth(), theme.getBorderWidth(), theme.getBorderWidth(), theme.getCornerRadius(), theme.getCornerRadius(),
+                theme.getPanelHoverColor(),
+                theme.getPanelBgColor(), theme.getAccentColor(), theme.getAccentColor(), theme.getPanelBgColor(), theme.getAccentColor(), theme.getBorderWidth(), theme.getBorderWidth(), theme.getBorderWidth(),
+                theme.getTextSecondaryColor(), theme.getFontFamily(), fontSize,
+                theme.getTextPrimaryColor(),
+                theme.getAccentColor(),
+                theme.getPanelBgColor(), theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius(), theme.getCornerRadius(), theme.getCornerRadius()
         ));
         
         // 更新所有标签页的样式
         for (Tab tab : tabPane.getTabs()) {
             tab.setStyle(String.format(
-                    "-fx-text-fill: %s; -fx-font-family: %s; -fx-font-size: 14px;",
-                    theme.getTextPrimaryColor(), theme.getFontFamily()
+                    "-fx-text-fill: %s; -fx-font-family: %s; -fx-font-size: %.1fpx;",
+                    theme.getTextPrimaryColor(), theme.getFontFamily(), fontSize
             ));
         }
+    }
+    
+    /**
+     * 判断TabPane是否为二级TabPane
+     * @param tabPane TabPane对象
+     * @return 是否为二级TabPane
+     */
+    private static boolean isSecondaryTabPane(TabPane tabPane) {
+        // 检查父容器是否也是TabPane的内容
+        Node parent = tabPane.getParent();
+        if (parent != null) {
+            // 检查父容器或祖父容器是否是TabContentArea或Tab的内容
+            while (parent != null) {
+                if (parent.getClass().getName().contains("TabContentArea")) {
+                    return true;
+                }
+                parent = parent.getParent();
+            }
+        }
+        return false;
     }
 
     /**

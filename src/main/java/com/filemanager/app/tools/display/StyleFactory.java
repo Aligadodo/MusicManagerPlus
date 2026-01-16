@@ -539,10 +539,12 @@ public class StyleFactory {
      * 应用TabPane样式
      */
     private static void applyTabPaneStyle(TabPane tabPane) {
-        tabPane.setStyle(String.format(
-                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-tab-min-height: 40; -fx-tab-max-height: 40; -fx-tab-min-width: 100; -fx-tab-max-width: 200;\n" +
+        // 简化的TabPane样式，避免参数不匹配的问题
+        String style = String.format(
+                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-tab-min-height: 45; -fx-tab-max-height: 45; -fx-tab-min-width: 120; -fx-tab-max-width: 220; -fx-padding: 5 0 0 0;\n" +
                 ".tab-pane > .tab-header-area {\n" +
                 "    -fx-background-color: transparent;\n" +
+                "    -fx-padding: 0 10 0 10;\n" +
                 "}\n" +
                 ".tab-pane > .tab-header-area > .tab-header-background {\n" +
                 "    -fx-background-color: %s;\n" +
@@ -567,15 +569,19 @@ public class StyleFactory {
                 ".tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .tab-label {\n" +
                 "    -fx-text-fill: %s;\n" +
                 "    -fx-font-family: %s;\n" +
-                "    -fx-font-size: 14px;\n" +
+                "    -fx-font-size: 15px;\n" +
                 "    -fx-font-weight: normal;\n" +
+                "    -fx-alignment: center;\n" +
+                "    -fx-padding: 5 10;\n" +
                 "}\n" +
                 ".tab-pane > .tab-header-area > .headers-region > .tab:hover > .tab-container > .tab-label {\n" +
                 "    -fx-text-fill: %s;\n" +
+                "    -fx-font-weight: 500;\n" +
                 "}\n" +
                 ".tab-pane > .tab-header-area > .headers-region > .tab:selected > .tab-container > .tab-label {\n" +
                 "    -fx-text-fill: %s;\n" +
                 "    -fx-font-weight: bold;\n" +
+                "    -fx-padding: 5 10;\n" +
                 "}\n" +
                 ".tab-pane > .tab-content-area {\n" +
                 "    -fx-background-color: %s;\n" +
@@ -592,7 +598,9 @@ public class StyleFactory {
                 theme.getTextPrimaryColor(),
                 theme.getAccentColor(),
                 theme.getPanelBgColor(), theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius(), theme.getCornerRadius(), theme.getCornerRadius()
-        ));
+        );
+        
+        tabPane.setStyle(style);
         
         // 更新所有标签页的样式
         for (Tab tab : tabPane.getTabs()) {
