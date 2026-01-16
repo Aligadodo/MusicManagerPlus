@@ -615,8 +615,58 @@ public class ComponentFactory {
     public static JFXTabPane createTabPane() {
         JFXTabPane tabPane = new JFXTabPane();
         tabPane.setStyle(String.format(
-                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-tab-min-height: 40; -fx-tab-max-height: 40; -fx-text-fill: %s;",
-                theme.getPanelBgColor(), theme.getBorderColor(), theme.getBorderWidth(), theme.getTextPrimaryColor()
+                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-tab-min-height: 40; -fx-tab-max-height: 40; -fx-tab-min-width: 100; -fx-tab-max-width: 200;\n" +
+                ".tab-pane > .tab-header-area {\n" +
+                "    -fx-background-color: transparent;\n" +
+                "}\n" +
+                ".tab-pane > .tab-header-area > .tab-header-background {\n" +
+                "    -fx-background-color: %s;\n" +
+                "    -fx-border-color: %s;\n" +
+                "    -fx-border-width: 0 0 %.1f 0;\n" +
+                "}\n" +
+                ".tab-pane > .tab-header-area > .headers-region > .tab {\n" +
+                "    -fx-background-color: %s;\n" +
+                "    -fx-border-color: %s;\n" +
+                "    -fx-border-width: %.1f %.1f 0 %.1f;\n" +
+                "    -fx-border-radius: %.1f %.1f 0 0;\n" +
+                "    -fx-cursor: hand;\n" +
+                "}\n" +
+                ".tab-pane > .tab-header-area > .headers-region > .tab:hover {\n" +
+                "    -fx-background-color: %s;\n" +
+                "}\n" +
+                ".tab-pane > .tab-header-area > .headers-region > .tab:selected {\n" +
+                "    -fx-background-color: %s;\n" +
+                "    -fx-border-color: %s %s %s %s;\n" +
+                "    -fx-border-width: %.1f %.1f 0 %.1f;\n" +
+                "}\n" +
+                ".tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .tab-label {\n" +
+                "    -fx-text-fill: %s;\n" +
+                "    -fx-font-family: %s;\n" +
+                "    -fx-font-size: 14px;\n" +
+                "    -fx-font-weight: normal;\n" +
+                "}\n" +
+                ".tab-pane > .tab-header-area > .headers-region > .tab:hover > .tab-container > .tab-label {\n" +
+                "    -fx-text-fill: %s;\n" +
+                "}\n" +
+                ".tab-pane > .tab-header-area > .headers-region > .tab:selected > .tab-container > .tab-label {\n" +
+                "    -fx-text-fill: %s;\n" +
+                "    -fx-font-weight: bold;\n" +
+                "}\n" +
+                ".tab-pane > .tab-content-area {\n" +
+                "    -fx-background-color: %s;\n" +
+                "    -fx-border-color: %s;\n" +
+                "    -fx-border-width: %.1f;\n" +
+                "    -fx-border-radius: 0 %.1f %.1f %.1f;\n" +
+                "}",
+                theme.getPanelBgColor(), theme.getBorderColor(), theme.getBorderWidth(),
+                theme.getPanelBgColor(), theme.getBorderColor(), theme.getBorderWidth(),
+                theme.getBgColor(), theme.getBorderColor(), theme.getBorderWidth(), theme.getBorderWidth(), theme.getBorderWidth(), theme.getCornerRadius(), theme.getCornerRadius(),
+                theme.getPanelHoverColor(),
+                theme.getPanelBgColor(), theme.getAccentColor(), theme.getAccentColor(), theme.getPanelBgColor(), theme.getAccentColor(), theme.getBorderWidth(), theme.getBorderWidth(), theme.getBorderWidth(),
+                theme.getTextSecondaryColor(), theme.getFontFamily(),
+                theme.getTextPrimaryColor(),
+                theme.getAccentColor(),
+                theme.getPanelBgColor(), theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius(), theme.getCornerRadius(), theme.getCornerRadius()
         ));
         
         return tabPane;
@@ -723,6 +773,19 @@ public class ComponentFactory {
             actions.getChildren().add(btnDel);
         }
         return actions;
+    }
+    
+    /**
+     * 创建带有主题样式的ListView
+     */
+    public static <T> ListView<T> createListView() {
+        ListView<T> listView = new ListView<>();
+        listView.setStyle(String.format(
+                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-background-radius: %.1f;",
+                theme.getPanelBgColor(), theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius()
+        ));
+        
+        return listView;
     }
     
     /**

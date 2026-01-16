@@ -76,7 +76,10 @@ public class AppearanceManager {
         // 创建TabPane来组织不同的设置类别
         TabPane tabPane = new TabPane();
         tabPane.setStyle(String.format(
-                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-tab-min-height: 40; -fx-tab-max-height: 40; -fx-tab-min-width: 100; -fx-tab-max-width: 200; -fx-text-fill: %s;\n" +
+                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-tab-min-height: 40; -fx-tab-max-height: 40; -fx-tab-min-width: 100; -fx-tab-max-width: 200;\n" +
+                ".tab-pane > .tab-header-area {\n" +
+                "    -fx-background-color: transparent;\n" +
+                "}\n" +
                 ".tab-pane > .tab-header-area > .tab-header-background {\n" +
                 "    -fx-background-color: %s;\n" +
                 "    -fx-border-color: %s;\n" +
@@ -87,27 +90,44 @@ public class AppearanceManager {
                 "    -fx-border-color: %s;\n" +
                 "    -fx-border-width: %.1f %.1f 0 %.1f;\n" +
                 "    -fx-border-radius: %.1f %.1f 0 0;\n" +
+                "    -fx-cursor: hand;\n" +
+                "}\n" +
+                ".tab-pane > .tab-header-area > .headers-region > .tab:hover {\n" +
+                "    -fx-background-color: %s;\n" +
                 "}\n" +
                 ".tab-pane > .tab-header-area > .headers-region > .tab:selected {\n" +
                 "    -fx-background-color: %s;\n" +
-                "    -fx-border-color: %s;\n" +
+                "    -fx-border-color: %s %s %s %s;\n" +
                 "    -fx-border-width: %.1f %.1f 0 %.1f;\n" +
                 "}\n" +
                 ".tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .tab-label {\n" +
                 "    -fx-text-fill: %s;\n" +
                 "    -fx-font-family: %s;\n" +
                 "    -fx-font-size: 14px;\n" +
+                "    -fx-font-weight: normal;\n" +
+                "}\n" +
+                ".tab-pane > .tab-header-area > .headers-region > .tab:hover > .tab-container > .tab-label {\n" +
+                "    -fx-text-fill: %s;\n" +
                 "}\n" +
                 ".tab-pane > .tab-header-area > .headers-region > .tab:selected > .tab-container > .tab-label {\n" +
                 "    -fx-text-fill: %s;\n" +
                 "    -fx-font-weight: bold;\n" +
+                "}\n" +
+                ".tab-pane > .tab-content-area {\n" +
+                "    -fx-background-color: %s;\n" +
+                "    -fx-border-color: %s;\n" +
+                "    -fx-border-width: %.1f;\n" +
+                "    -fx-border-radius: 0 %.1f %.1f %.1f;\n" +
                 "}",
-                currentTheme.getPanelBgColor(), currentTheme.getBorderColor(), currentTheme.getBorderWidth(), currentTheme.getTextPrimaryColor(),
                 currentTheme.getPanelBgColor(), currentTheme.getBorderColor(), currentTheme.getBorderWidth(),
-                currentTheme.getPanelBgColor(), currentTheme.getBorderColor(), currentTheme.getBorderWidth(), currentTheme.getBorderWidth(), currentTheme.getBorderWidth(), currentTheme.getCornerRadius(), currentTheme.getCornerRadius(),
-                currentTheme.getPanelBgColor(), currentTheme.getBorderColor(), currentTheme.getBorderWidth(), currentTheme.getBorderWidth(), currentTheme.getBorderWidth(),
+                currentTheme.getPanelBgColor(), currentTheme.getBorderColor(), currentTheme.getBorderWidth(),
+                currentTheme.getBgColor(), currentTheme.getBorderColor(), currentTheme.getBorderWidth(), currentTheme.getBorderWidth(), currentTheme.getBorderWidth(), currentTheme.getCornerRadius(), currentTheme.getCornerRadius(),
+                currentTheme.getPanelHoverColor(),
+                currentTheme.getPanelBgColor(), currentTheme.getAccentColor(), currentTheme.getAccentColor(), currentTheme.getPanelBgColor(), currentTheme.getAccentColor(), currentTheme.getBorderWidth(), currentTheme.getBorderWidth(), currentTheme.getBorderWidth(),
                 currentTheme.getTextSecondaryColor(), currentTheme.getFontFamily(),
-                currentTheme.getTextPrimaryColor()
+                currentTheme.getTextPrimaryColor(),
+                currentTheme.getAccentColor(),
+                currentTheme.getPanelBgColor(), currentTheme.getBorderColor(), currentTheme.getBorderWidth(), currentTheme.getCornerRadius(), currentTheme.getCornerRadius(), currentTheme.getCornerRadius()
         ));
         
         // 主题预设选项卡

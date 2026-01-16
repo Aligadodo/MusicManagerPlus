@@ -91,7 +91,8 @@ public class ComposeView implements IAutoReloadAble {
         leftPanel.setSpacing(10);
 
         // 初始化主类成员 sourceListView
-        sourceListView = new ListView<>(app.getSourceRoots());
+        sourceListView = StyleFactory.createListView();
+        sourceListView.setItems(app.getSourceRoots());
         sourceListView.setPlaceholder(StyleFactory.createChapter("拖拽文件夹到此"));
         VBox.setVgrow(sourceListView, Priority.ALWAYS);
         // 移除硬编码样式，让StyleFactory统一管理
@@ -185,8 +186,8 @@ public class ComposeView implements IAutoReloadAble {
         centerPanel.setPadding(new Insets(15));
         centerPanel.setSpacing(10);
 
-        pipelineListView = new ListView<>(app.getPipelineStrategies());
-        // 移除硬编码样式，让StyleFactory统一管理
+        pipelineListView = StyleFactory.createListView();
+        pipelineListView.setItems(app.getPipelineStrategies());
         VBox.setVgrow(pipelineListView, Priority.ALWAYS);
 
         pipelineListView.setCellFactory(param -> new ListCell<IAppStrategy>() {
