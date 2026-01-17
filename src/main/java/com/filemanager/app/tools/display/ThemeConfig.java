@@ -62,7 +62,7 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
     private String textDisabledColor = "#b0bec5";  // 禁用文本颜色
     
     // 毛玻璃透明度 (0.0 - 1.0, 值越小越透明)
-    private double glassOpacity = 0.65;
+    private double glassOpacity = 0.85;
     
     // 是否启用深色背景模式
     private boolean isDarkBackground = false;
@@ -112,9 +112,9 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
     private String buttonErrorHoverColor = "#c0392b";
     
     // 按钮尺寸设置
-    private double buttonHeight = 36.0;
-    private double buttonLargeSize = 80.0;
-    private double buttonSmallSize = 60.0;
+    private double buttonHeight = 28.0;
+    private double buttonLargeSize = 32.0;
+    private double buttonSmallSize = 26.0;
     private double buttonIconSize = 16.0;
     
     // 统一按钮颜色设置（支持单独设计按钮颜色）

@@ -16,6 +16,7 @@ import com.filemanager.app.base.IAutoReloadAble;
 import com.filemanager.app.tools.MultiThreadTaskEstimator;
 import com.filemanager.app.tools.display.DetailWindowHelper;
 import com.filemanager.app.tools.display.StyleFactory;
+import com.filemanager.app.tools.display.ThemeConfig;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.tool.ThreadPoolManager;
 import com.filemanager.type.ExecStatus;
@@ -109,6 +110,18 @@ public class PreviewView implements IAutoReloadAble {
     private void initControls() {
         txtSearchFilter = new JFXTextField();
         txtSearchFilter.setPromptText("请输入关键词进行搜索...");
+        // 添加透明度效果
+        ThemeConfig theme = StyleFactory.getTheme();
+        String bgColor = theme.getListBgColor();
+        if (bgColor.startsWith("#") && bgColor.length() == 7) {
+            int alpha = (int) (theme.getGlassOpacity() * 255);
+            String alphaHex = String.format("%02x", alpha);
+            bgColor = bgColor + alphaHex;
+        }
+        txtSearchFilter.setStyle(String.format(
+                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-radius: %.1f; -fx-background-radius: %.1f; -fx-padding: 4 8; -fx-font-size: 12px;",
+                bgColor, theme.getBorderColor(), theme.getCornerRadius(), theme.getCornerRadius()
+        ));
         cbStatusFilter = new JFXComboBox<>(FXCollections.observableArrayList("全部", "执行中", "成功", "失败", "跳过", "无需处理"));
         cbStatusFilter.getSelectionModel().select(0);
         chkHideUnchanged = new JFXCheckBox("仅显示变更");
@@ -129,6 +142,18 @@ public class PreviewView implements IAutoReloadAble {
         statsLabel = StyleFactory.createHeader("暂无统计信息");
 
         previewTable = new TreeTableView<>();
+        // 添加透明度效果，使用更高的透明度值
+        String tableBgColor = theme.getListBgColor();
+        if (tableBgColor.startsWith("#") && tableBgColor.length() == 7) {
+            // 增加透明度值，使表格更透明
+            int alpha = (int) (theme.getGlassOpacity() * 200); // 降低不透明度，使表格更透明
+            String alphaHex = String.format("%02x", alpha);
+            tableBgColor = tableBgColor + alphaHex;
+        }
+        previewTable.setStyle(String.format(
+                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-background-radius: %.1f; -fx-border-radius: %.1f;",
+                tableBgColor, theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius(), theme.getCornerRadius()
+        ));
 
         spPreviewThreads = new Spinner<>(1, 32, 10);
         spPreviewThreads.setEditable(true);
@@ -442,9 +467,21 @@ public class PreviewView implements IAutoReloadAble {
         this.configPane = new TitledPane();
         this.configPane.setText("运行配置");
         this.configPane.setExpanded(true);
+        
+        // 为配置面板添加透明度效果
+        ThemeConfig theme = app.getCurrentTheme();
+        String panelBgColor = theme.getPanelBgColor();
+        
+        // 添加透明度效果
+        if (panelBgColor.startsWith("#") && panelBgColor.length() == 7) {
+            int alpha = (int) (theme.getGlassOpacity() * 255);
+            String alphaHex = String.format("%02x", alpha);
+            panelBgColor = panelBgColor + alphaHex;
+        }
+        
         this.configPane.setStyle(String.format(
                 "-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: %s; -fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f;",
-                app.getCurrentTheme().getTextPrimaryColor(), app.getCurrentTheme().getPanelBgColor(), app.getCurrentTheme().getBorderColor(), app.getCurrentTheme().getBorderWidth(), app.getCurrentTheme().getCornerRadius()
+                theme.getTextPrimaryColor(), panelBgColor, theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius()
         ));
 
         this.configContent = new VBox(15);
@@ -456,7 +493,7 @@ public class PreviewView implements IAutoReloadAble {
         this.globalParamsPane.setExpanded(true);
         this.globalParamsPane.setStyle(String.format(
                 "-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: %s; -fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f;",
-                app.getCurrentTheme().getTextPrimaryColor(), app.getCurrentTheme().getPanelBgColor(), app.getCurrentTheme().getBorderColor(), app.getCurrentTheme().getBorderWidth(), app.getCurrentTheme().getCornerRadius()
+                theme.getTextPrimaryColor(), panelBgColor, theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius()
         ));
         this.globalParamsPane.setExpanded(false);
 
@@ -468,7 +505,7 @@ public class PreviewView implements IAutoReloadAble {
         // 使用主题样式，替换硬编码颜色
         globalParamsBox.setStyle(String.format(
                 "-fx-background-color: %s; -fx-border-radius: %.1f; -fx-border-color: %s; -fx-padding: 10;",
-                app.getCurrentTheme().getPanelBgColor(), app.getCurrentTheme().getCornerRadius(), app.getCurrentTheme().getBorderColor()
+                panelBgColor, theme.getCornerRadius(), theme.getBorderColor()
         ));
 
         // 线程参数行
@@ -509,9 +546,11 @@ public class PreviewView implements IAutoReloadAble {
         this.localParamsPane = new TitledPane();
         localParamsPane.setText("局部参数设置");
         localParamsPane.setExpanded(true);
+        
+        // 为局部参数面板添加透明度效果
         localParamsPane.setStyle(String.format(
                 "-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: %s; -fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f;",
-                app.getCurrentTheme().getTextPrimaryColor(), app.getCurrentTheme().getPanelBgColor(), app.getCurrentTheme().getBorderColor(), app.getCurrentTheme().getBorderWidth(), app.getCurrentTheme().getCornerRadius()
+                theme.getTextPrimaryColor(), panelBgColor, theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius()
         ));
         localParamsPane.setExpanded(false);
 
@@ -524,7 +563,7 @@ public class PreviewView implements IAutoReloadAble {
         // 使用主题样式，替换硬编码颜色
         rootPathBox.setStyle(String.format(
                 "-fx-background-color: %s; -fx-border-radius: %.1f; -fx-border-color: %s; -fx-padding: 10;",
-                app.getCurrentTheme().getPanelBgColor(), app.getCurrentTheme().getCornerRadius(), app.getCurrentTheme().getBorderColor()
+                panelBgColor, theme.getCornerRadius(), theme.getBorderColor()
         ));
         rootPathBox.getChildren().addAll(
                 StyleFactory.createChapter("[根路径配置]  "),
@@ -767,11 +806,22 @@ public class PreviewView implements IAutoReloadAble {
                         // 根据索引判断单双行
                         // getIndex() 会返回当前行在视图中的位置
                         // 使用主题配置中的列表行颜色
-                if (getIndex() % 2 == 0) {
-                            setStyle("-fx-background-color: " + app.getCurrentTheme().getListRowEvenBgColor() + ";");
+                        ThemeConfig theme = app.getCurrentTheme();
+                        String bgColor;
+                        if (getIndex() % 2 == 0) {
+                            bgColor = theme.getListRowEvenBgColor();
                         } else {
-                            setStyle("-fx-background-color: " + app.getCurrentTheme().getListRowOddBgColor() + ";");
+                            bgColor = theme.getListRowOddBgColor();
                         }
+                        
+                        // 添加透明度效果
+                        if (bgColor.startsWith("#") && bgColor.length() == 7) {
+                            int alpha = (int) (theme.getGlassOpacity() * 255);
+                            String alphaHex = String.format("%02x", alpha);
+                            bgColor = bgColor + alphaHex;
+                        }
+                        
+                        setStyle("-fx-background-color: " + bgColor + ";");
                     }
                 }
             };

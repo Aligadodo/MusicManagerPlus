@@ -18,6 +18,7 @@ import com.filemanager.app.base.IAppController;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXSlider;
 import com.jfoenix.controls.JFXComboBox;
+import com.jfoenix.controls.JFXTabPane;
 import com.filemanager.app.tools.display.FontManager;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -75,66 +76,20 @@ public class AppearanceManager {
         // 创建主容器
         VBox mainContainer = new VBox(20);
         mainContainer.setPadding(new Insets(15));
-        mainContainer.setStyle(String.format("-fx-background-color: %s;", currentTheme.getBgColor()));
+        
+        // 应用玻璃效果透明度
+        String bgColor = currentTheme.getPanelBgColor();
+        if (bgColor.startsWith("#") && bgColor.length() == 7) {
+            int alpha = (int) (currentTheme.getGlassOpacity() * 255);
+            String alphaHex = String.format("%02x", alpha);
+            bgColor = bgColor + alphaHex;
+        }
+        mainContainer.setStyle(String.format("-fx-background-color: %s;", bgColor));
         mainContainer.setPrefHeight(Region.USE_COMPUTED_SIZE);
         
         // 创建TabPane来组织不同的设置类别
-        TabPane tabPane = new TabPane();
-        tabPane.setStyle(String.format(
-                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-tab-min-height: 40; -fx-tab-max-height: 40; -fx-tab-min-width: 100; -fx-tab-max-width: 200;\n" +
-                ".tab-pane > .tab-header-area {\n" +
-                "    -fx-background-color: transparent;\n" +
-                "}\n" +
-                ".tab-pane > .tab-header-area > .tab-header-background {\n" +
-                "    -fx-background-color: %s;\n" +
-                "    -fx-border-color: %s;\n" +
-                "    -fx-border-width: 0 0 %.1f 0;\n" +
-                "}\n" +
-                ".tab-pane > .tab-header-area > .headers-region > .tab {\n" +
-                "    -fx-background-color: %s;\n" +
-                "    -fx-border-color: %s;\n" +
-                "    -fx-border-width: %.1f %.1f 0 %.1f;\n" +
-                "    -fx-border-radius: %.1f %.1f 0 0;\n" +
-                "    -fx-cursor: hand;\n" +
-                "}\n" +
-                ".tab-pane > .tab-header-area > .headers-region > .tab:hover {\n" +
-                "    -fx-background-color: %s;\n" +
-                "}\n" +
-                ".tab-pane > .tab-header-area > .headers-region > .tab:selected {\n" +
-                "    -fx-background-color: %s;\n" +
-                "    -fx-border-color: %s %s %s %s;\n" +
-                "    -fx-border-width: %.1f %.1f 0 %.1f;\n" +
-                "}\n" +
-                ".tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .tab-label {\n" +
-                "    -fx-text-fill: %s;\n" +
-                "    -fx-font-family: %s;\n" +
-                "    -fx-font-size: 14px;\n" +
-                "    -fx-font-weight: normal;\n" +
-                "}\n" +
-                ".tab-pane > .tab-header-area > .headers-region > .tab:hover > .tab-container > .tab-label {\n" +
-                "    -fx-text-fill: %s;\n" +
-                "}\n" +
-                ".tab-pane > .tab-header-area > .headers-region > .tab:selected > .tab-container > .tab-label {\n" +
-                "    -fx-text-fill: %s;\n" +
-                "    -fx-font-weight: bold;\n" +
-                "}\n" +
-                ".tab-pane > .tab-content-area {\n" +
-                "    -fx-background-color: %s;\n" +
-                "    -fx-border-color: %s;\n" +
-                "    -fx-border-width: %.1f;\n" +
-                "    -fx-border-radius: 0 %.1f %.1f %.1f;\n" +
-                "}",
-                currentTheme.getPanelBgColor(), currentTheme.getBorderColor(), currentTheme.getBorderWidth(),
-                currentTheme.getPanelBgColor(), currentTheme.getBorderColor(), currentTheme.getBorderWidth(),
-                currentTheme.getBgColor(), currentTheme.getBorderColor(), currentTheme.getBorderWidth(), currentTheme.getBorderWidth(), currentTheme.getBorderWidth(), currentTheme.getCornerRadius(), currentTheme.getCornerRadius(),
-                currentTheme.getPanelHoverColor(),
-                currentTheme.getPanelBgColor(), currentTheme.getAccentColor(), currentTheme.getAccentColor(), currentTheme.getPanelBgColor(), currentTheme.getAccentColor(), currentTheme.getBorderWidth(), currentTheme.getBorderWidth(), currentTheme.getBorderWidth(),
-                currentTheme.getTextSecondaryColor(), currentTheme.getFontFamily(),
-                currentTheme.getTextPrimaryColor(),
-                currentTheme.getAccentColor(),
-                currentTheme.getPanelBgColor(), currentTheme.getBorderColor(), currentTheme.getBorderWidth(), currentTheme.getCornerRadius(), currentTheme.getCornerRadius(), currentTheme.getCornerRadius()
-        ));
-        
+        JFXTabPane tabPane = StyleFactory.createTabPane(true);
+       
         // 主题预设选项卡
         Tab presetTab = new Tab("主题预设");
         presetTab.setContent(createPresetTabContent());
@@ -686,9 +641,18 @@ public class AppearanceManager {
         // 背景图选择面板
         VBox bgImagePanel = new VBox(15);
         bgImagePanel.setPadding(new Insets(20, 0, 0, 0));
+        
+        // 应用玻璃效果透明度
+        String panelBgColor = currentTheme.getPanelBgColor();
+        if (panelBgColor.startsWith("#") && panelBgColor.length() == 7) {
+            int alpha = (int) (currentTheme.getGlassOpacity() * 255);
+            String alphaHex = String.format("%02x", alpha);
+            panelBgColor = panelBgColor + alphaHex;
+        }
+        
         bgImagePanel.setStyle(String.format(
                 "-fx-background-color: %s; -fx-background-radius: 8; -fx-border-color: %s; -fx-border-width: 1px;",
-                currentTheme.getPanelBgColor(), currentTheme.getBorderColor()
+                panelBgColor, currentTheme.getBorderColor()
         ));
         
         Label bgImagePanelTitle = new Label("选择背景图");
@@ -741,10 +705,10 @@ public class AppearanceManager {
                             }
                         });
                         
-                        // 创建按钮
+                        // 创建按钮，增大预览框尺寸
                         Button imageButton = new Button();
                         imageButton.setGraphic(imageView);
-                        imageButton.setPrefSize(130, 90);
+                        imageButton.setPrefSize(160, 120); // 增大预览框尺寸
                         imageButton.setStyle(String.format(
                                 "-fx-background-color: transparent; -fx-background-radius: 4; -fx-border-color: %s; -fx-border-width: 1px; -fx-content-display: graphic-only; -fx-padding: 5px;",
                                 currentTheme.getBorderColor()
@@ -944,63 +908,6 @@ public class AppearanceManager {
         buttonBorderColorBox.getChildren().addAll(buttonBorderColorLabel, buttonBorderColorPicker);
         content.getChildren().add(buttonBorderColorBox);
         
-        // 按钮大小设置
-        Label buttonSizeTitle = new Label("按钮大小设置");
-        buttonSizeTitle.setStyle(String.format(
-                "-fx-font-family: %s; -fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: %s;",
-                currentTheme.getFontFamily(), currentTheme.getTextPrimaryColor()
-        ));
-        content.getChildren().add(buttonSizeTitle);
-        
-        // 大按钮大小设置
-        HBox largeButtonBox = new HBox(20);
-        largeButtonBox.setAlignment(Pos.CENTER_LEFT);
-        Label largeButtonLabel = StyleFactory.createLabel("大按钮大小", 14, false);
-        JFXSlider largeButtonSlider = new JFXSlider(60, 100, Math.round(currentTheme.getButtonLargeSize()));
-        largeButtonSlider.setPrefWidth(400);
-        largeButtonSlider.setMajorTickUnit(5);
-        largeButtonSlider.setMinorTickCount(0);
-        largeButtonSlider.setShowTickLabels(true);
-        largeButtonSlider.setShowTickMarks(false);
-        largeButtonSlider.setSnapToTicks(true); // 自动对齐到刻度
-        
-        Label largeButtonValue = StyleFactory.createLabel(String.format("%d", Math.round(currentTheme.getButtonLargeSize())), 14, false);
-        largeButtonValue.setMinWidth(50);
-        
-        largeButtonSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
-            int intValue = (int) Math.round(newVal.doubleValue());
-            currentTheme.setButtonLargeSize(intValue);
-            largeButtonValue.setText(String.format("%d", intValue));
-            updateButtonExamples(); // 更新示例按钮
-        });
-        
-        largeButtonBox.getChildren().addAll(largeButtonLabel, largeButtonSlider, largeButtonValue);
-        content.getChildren().add(largeButtonBox);
-        
-        // 小按钮大小设置
-        HBox smallButtonBox = new HBox(20);
-        smallButtonBox.setAlignment(Pos.CENTER_LEFT);
-        Label smallButtonLabel = StyleFactory.createLabel("小按钮大小", 14, false);
-        JFXSlider smallButtonSlider = new JFXSlider(40, 80, Math.round(currentTheme.getButtonSmallSize()));
-        smallButtonSlider.setPrefWidth(400);
-        smallButtonSlider.setMajorTickUnit(5);
-        smallButtonSlider.setMinorTickCount(0);
-        smallButtonSlider.setShowTickLabels(true);
-        smallButtonSlider.setShowTickMarks(false);
-        smallButtonSlider.setSnapToTicks(true); // 自动对齐到刻度
-        
-        Label smallButtonValue = StyleFactory.createLabel(String.format("%d", Math.round(currentTheme.getButtonSmallSize())), 14, false);
-        smallButtonValue.setMinWidth(50);
-        
-        smallButtonSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
-            int intValue = (int) Math.round(newVal.doubleValue());
-            currentTheme.setButtonSmallSize(intValue);
-            smallButtonValue.setText(String.format("%d", intValue));
-            updateButtonExamples(); // 更新示例按钮
-        });
-        
-        smallButtonBox.getChildren().addAll(smallButtonLabel, smallButtonSlider, smallButtonValue);
-        content.getChildren().add(smallButtonBox);
         
         // 按钮示例展示
         Label buttonExampleTitle = new Label("按钮示例");
@@ -1282,16 +1189,27 @@ public class AppearanceManager {
         card.setPrefWidth(180); // 调整卡片宽度，使其更紧凑
         card.setPrefHeight(250); // 调整卡片高度，使其更紧凑
         card.setPadding(new Insets(12)); // 减小内边距
-        card.setStyle(String.format(
-                "-fx-background-color: %s; -fx-background-radius: 12; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.15), 10, 0, 0, 0);",
-                theme.getPanelBgColor()
-        ));
+        
+        // 检查当前主题是否为选中状态
+        boolean isCurrentTheme = theme.getTemplateName().equals(currentTheme.getTemplateName());
+        
+        // 设置卡片样式，当前选中的主题使用特殊边框
+        if (isCurrentTheme) {
+            card.setStyle(
+                    "-fx-background-color: #ffffff; -fx-background-radius: 12; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.15), 10, 0, 0, 0); " +
+                    "-fx-border-color: #3498db; -fx-border-width: 3px; -fx-border-radius: 12;"
+            );
+        } else {
+            card.setStyle(
+                    "-fx-background-color: #ffffff; -fx-background-radius: 12; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.15), 10, 0, 0, 0);"
+            );
+        }
         
         // 主题名称
         Label nameLabel = new Label(theme.getTemplateName());
         nameLabel.setStyle(String.format(
-                "-fx-font-family: %s; -fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: %s;",
-                theme.getFontFamily(), theme.getTextPrimaryColor()
+                "-fx-font-family: %s; -fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #333333;",
+                theme.getFontFamily()
         ));
         nameLabel.setAlignment(Pos.CENTER);
         card.getChildren().add(nameLabel);
@@ -1299,8 +1217,8 @@ public class AppearanceManager {
         // 主题描述
         Label descLabel = new Label(theme.getTemplateDescription());
         descLabel.setStyle(String.format(
-                "-fx-font-family: %s; -fx-font-size: 12px; -fx-text-fill: %s;",
-                theme.getFontFamily(), theme.getTextSecondaryColor()
+                "-fx-font-family: %s; -fx-font-size: 12px; -fx-text-fill: #666666;",
+                theme.getFontFamily()
         ));
         descLabel.setAlignment(Pos.CENTER);
         descLabel.setWrapText(true);
@@ -1309,7 +1227,7 @@ public class AppearanceManager {
         
         // 分隔线
         Separator separator = new Separator();
-        separator.setStyle(String.format("-fx-background-color: %s;", theme.getBorderColor()));
+        separator.setStyle("-fx-background-color: #e0e0e0;");
         card.getChildren().add(separator);
         
         // 颜色预览区
@@ -1322,8 +1240,8 @@ public class AppearanceManager {
         VBox bgColorBox = new VBox(3);
         Label bgLabel = new Label("背景色");
         bgLabel.setStyle(String.format(
-                "-fx-font-family: %s; -fx-font-size: 10px; -fx-text-fill: %s;",
-                theme.getFontFamily(), theme.getTextSecondaryColor()
+                "-fx-font-family: %s; -fx-font-size: 10px; -fx-text-fill: #666666;",
+                theme.getFontFamily()
         ));
         bgLabel.setAlignment(Pos.CENTER);
         Rectangle bgColor = new Rectangle(35, 20);
@@ -1338,8 +1256,8 @@ public class AppearanceManager {
         VBox panelColorBox = new VBox(3);
         Label panelLabel = new Label("面板");
         panelLabel.setStyle(String.format(
-                "-fx-font-family: %s; -fx-font-size: 10px; -fx-text-fill: %s;",
-                theme.getFontFamily(), validateColor(theme.getTextSecondaryColor(), "#546e7a")
+                "-fx-font-family: %s; -fx-font-size: 10px; -fx-text-fill: #666666;",
+                theme.getFontFamily()
         ));
         panelLabel.setAlignment(Pos.CENTER);
         Rectangle panelColor = new Rectangle(35, 20);
@@ -1354,8 +1272,8 @@ public class AppearanceManager {
         VBox accentColorBox = new VBox(3);
         Label accentLabel = new Label("主色");
         accentLabel.setStyle(String.format(
-                "-fx-font-family: %s; -fx-font-size: 10px; -fx-text-fill: %s;",
-                theme.getFontFamily(), validateColor(theme.getTextSecondaryColor(), "#546e7a")
+                "-fx-font-family: %s; -fx-font-size: 10px; -fx-text-fill: #666666;",
+                theme.getFontFamily()
         ));
         accentLabel.setAlignment(Pos.CENTER);
         Rectangle accentColor = new Rectangle(35, 20);
@@ -1370,8 +1288,8 @@ public class AppearanceManager {
         VBox textColorBox = new VBox(3);
         Label textLabel = new Label("文本");
         textLabel.setStyle(String.format(
-                "-fx-font-family: %s; -fx-font-size: 10px; -fx-text-fill: %s;",
-                theme.getFontFamily(), validateColor(theme.getTextSecondaryColor(), "#546e7a")
+                "-fx-font-family: %s; -fx-font-size: 10px; -fx-text-fill: #666666;",
+                theme.getFontFamily()
         ));
         textLabel.setAlignment(Pos.CENTER);
         Rectangle textColor = new Rectangle(35, 20);
@@ -1386,8 +1304,8 @@ public class AppearanceManager {
         VBox buttonPreviewBox = new VBox(5);
         Label buttonLabel = new Label("按钮样式");
         buttonLabel.setStyle(String.format(
-                "-fx-font-family: %s; -fx-font-size: 12px; -fx-text-fill: %s; -fx-font-weight: bold;",
-                theme.getFontFamily(), theme.getTextPrimaryColor()
+                "-fx-font-family: %s; -fx-font-size: 12px; -fx-text-fill: #333333; -fx-font-weight: bold;",
+                theme.getFontFamily()
         ));
         buttonLabel.setAlignment(Pos.CENTER);
         
@@ -1415,8 +1333,8 @@ public class AppearanceManager {
         VBox listPreviewBox = new VBox(5);
         Label listLabel = new Label("列表样式");
         listLabel.setStyle(String.format(
-                "-fx-font-family: %s; -fx-font-size: 12px; -fx-text-fill: %s; -fx-font-weight: bold;",
-                theme.getFontFamily(), theme.getTextPrimaryColor()
+                "-fx-font-family: %s; -fx-font-size: 12px; -fx-text-fill: #333333; -fx-font-weight: bold;",
+                theme.getFontFamily()
         ));
         listLabel.setAlignment(Pos.CENTER);
         

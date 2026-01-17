@@ -51,6 +51,14 @@ public class StyleFactory {
         ComponentStyleManager.initComponentStyleManager(theme);
     }
     
+    /**
+     * 获取当前主题配置
+     * @return 当前主题配置
+     */
+    public static ThemeConfig getTheme() {
+        return theme;
+    }
+    
     // 创建基础按钮
     public static JFXButton createButton(String text) {
         JFXButton btn = new JFXButton(text);
@@ -720,6 +728,10 @@ public class StyleFactory {
      */
     public static JFXTabPane createTabPane() {
         return ComponentFactory.createTabPane();
+    }
+    
+    public static JFXTabPane createTabPane(boolean isSecondary) {
+        return ComponentFactory.createTabPane(isSecondary);
     }
     
     /**
