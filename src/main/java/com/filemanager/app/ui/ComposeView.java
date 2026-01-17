@@ -197,14 +197,27 @@ public class ComposeView implements IAutoReloadAble {
                 if (empty || item == null) {
                     setText(null);
                     setGraphic(null);
-                    setStyle("-fx-background-color: transparent;");
+                    setStyle("-fx-background-color: transparent; -fx-min-height: 60; -fx-max-height: 60;");
                 } else {
                     setText(null);
+                    setMinHeight(60);
+                    setMaxHeight(60);
+                    
                     BorderPane pane = new BorderPane();
+                    pane.setPadding(new Insets(8, 0, 8, 0));
 
                     VBox v = new VBox(2);
                     Label n = StyleFactory.createLabel((getIndex() + 1) + ". " + item.getName(), 14, true);
-                    Label d = StyleFactory.createInfoLabel(item.getDescription(), 300);
+                    
+                    // 创建描述标签，不使用自动换行，而是使用省略号截断
+                    Label d = new Label(item.getDescription());
+                    d.setFont(javafx.scene.text.Font.font(10));
+                    d.setTextFill(javafx.scene.paint.Color.web("#666666")); // 使用灰色文本
+                    d.setMaxWidth(220);
+                    d.setWrapText(false);
+                    d.setEllipsisString("...");
+                    d.setTooltip(new Tooltip(item.getDescription())); // 添加悬浮提示
+                    
                     v.getChildren().addAll(n, d);
 
                     HBox actions = StyleFactory.createTreeItemMenu(null, e -> {
@@ -365,9 +378,7 @@ public class ComposeView implements IAutoReloadAble {
             groupsContainer.getChildren().clear();
             List<RuleConditionGroup> groups = strategy.getConditionGroups();
             if (groups.isEmpty()) {
-                Label placeholder = new Label("(点击下方按钮添加条件组)");
-                placeholder.setTextFill(Color.GRAY);
-                groupsContainer.getChildren().add(placeholder);
+                groupsContainer.getChildren().add(StyleFactory.createParamLabel("(点击下方按钮添加条件组)"));
             } else {
                 for (int i = 0; i < groups.size(); i++) {
                     RuleConditionGroup group = groups.get(i);

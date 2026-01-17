@@ -7,7 +7,7 @@
  * Mail: chrse1997@163.com 
  * Date: 2026-01-12 
  */
-package com.filemanager.app.components;
+package com.filemanager.app.ui;
 
 import com.filemanager.app.tools.display.StyleFactory;
 import com.filemanager.app.tools.display.ThemeConfig;

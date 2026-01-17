@@ -882,9 +882,19 @@ public class ComponentFactory {
      */
     public static <T> ListView<T> createListView() {
         ListView<T> listView = new ListView<>();
+        
+        // 为面板背景添加透明度，实现玻璃效果
+        String panelBgColor = theme.getPanelBgColor();
+        if (panelBgColor.startsWith("#")) {
+            // 将十六进制颜色转换为带透明度的RGBA颜色
+            int alpha = (int) (theme.getGlassOpacity() * 255);
+            String alphaHex = String.format("%02x", alpha);
+            panelBgColor = panelBgColor + alphaHex;
+        }
+        
         listView.setStyle(String.format(
-                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-background-radius: %.1f;",
-                theme.getPanelBgColor(), theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius()
+                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-background-radius: %.1f; -fx-border-radius: %.1f;",
+                panelBgColor, theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius(), theme.getCornerRadius()
         ));
         
         return listView;

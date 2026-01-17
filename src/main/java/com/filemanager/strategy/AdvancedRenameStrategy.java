@@ -56,7 +56,7 @@ public class AdvancedRenameStrategy extends IAppStrategy {
     private int pProcessScopeIndex;
 
     public AdvancedRenameStrategy() {
-        lvRules = new ListView<>();
+        lvRules = StyleFactory.createListView();
         lvRules.setCellFactory(p -> new RenameRuleListCell(this));
         lvRules.setPlaceholder(StyleFactory.createParamLabel("暂无规则，请点击下方添加..."));
         lvRules.setPrefHeight(150);
@@ -305,7 +305,7 @@ public class AdvancedRenameStrategy extends IAppStrategy {
         grid.setPadding(new Insets(20));
 
         // Conditions
-        ListView<RuleCondition> lvConds = new ListView<>();
+        ListView<RuleCondition> lvConds = StyleFactory.createListView();
         lvConds.setPrefHeight(80);
         ObservableList<RuleCondition> condList = FXCollections.observableArrayList();
         if (existingRule != null)

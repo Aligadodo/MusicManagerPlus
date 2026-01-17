@@ -415,6 +415,11 @@ public class StyleFactory {
             applyTreeTableViewStyle((TreeTableView<?>) node);
         }
         
+        // 处理树视图
+        if (node instanceof TreeView) {
+            applyTreeViewStyle((TreeView<?>) node);
+        }
+        
         // 处理文本区域
         if (node instanceof TextArea) {
             applyTextAreaStyle((TextArea) node);
@@ -658,78 +663,42 @@ public class StyleFactory {
      * 应用ListView样式
      */
     private static void applyListViewStyle(ListView<?> listView) {
-        // 设置ListView的背景色和边框，使用半透明背景以便显示底层背景图
-        listView.setStyle(String.format(
-                "-fx-background-color: rgba(255, 255, 255, 0.85); -fx-border-color: %s; -fx-border-width: %.1f; -fx-background-radius: %.1f;",
-                theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius()
-        ));
+        ComponentStyleManager.applyListViewStyle(listView);
     }
     
     /**
      * 应用TableView样式
      */
     private static void applyTableViewStyle(TableView<?> tableView) {
-        // 设置TableView的背景色和边框，使用半透明背景以便显示底层背景图
-        tableView.setStyle(String.format(
-                "-fx-background-color: rgba(255, 255, 255, 0.85); -fx-border-color: %s; -fx-border-width: %.1f; -fx-background-radius: %.1f;",
-                theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius()
-        ));
+        ComponentStyleManager.applyTableViewStyle(tableView);
     }
     
     /**
      * 应用TreeTableView样式
      */
     private static void applyTreeTableViewStyle(TreeTableView<?> treeTableView) {
-        // 设置TreeTableView的背景色和边框，使用半透明背景以便显示底层背景图
-        treeTableView.setStyle(String.format(
-                "-fx-background-color: rgba(255, 255, 255, 0.85); -fx-border-color: %s; -fx-border-width: %.1f; -fx-background-radius: %.1f;",
-                theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius()
-        ));
+        ComponentStyleManager.applyTreeTableViewStyle(treeTableView);
+    }
+    
+    /**
+     * 应用TreeView样式
+     */
+    public static void applyTreeViewStyle(TreeView<?> treeView) {
+        ComponentStyleManager.applyTreeViewStyle(treeView);
+    }
+    
+    /**
+     * 应用文本输入控件样式（公共方法）
+     */
+    public static void applyTextInputControlStyle(TextInputControl control) {
+        ComponentStyleManager.applyTextInputControlStyle(control);
     }
     
     /**
      * 应用TextArea样式
      */
     private static void applyTextAreaStyle(TextArea textArea) {
-        // 设置TextArea的背景色、边框和字体，与createTextArea保持一致
-        textArea.setStyle(String.format(
-                "-fx-background-color: rgba(255, 255, 255, 0.85); -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f; -fx-background-radius: %.1f;\n" +
-                "-fx-text-fill: %s; -fx-font-family: %s; -fx-font-size: %.1f;\n" +
-                ".text-area .scroll-pane {\n" +
-                "    -fx-background-color: transparent;\n" +
-                "}\n" +
-                ".text-area .scroll-pane .viewport {\n" +
-                "    -fx-background-color: transparent;\n" +
-                "}\n" +
-                ".text-area .scroll-pane .content {\n" +
-                "    -fx-background-color: transparent;\n" +
-                "}\n" +
-                ".text-area .scroll-bar:vertical {\n" +
-                "    -fx-background-color: transparent;\n" +
-                "    -fx-background-radius: 0;\n" +
-                "}\n" +
-                ".text-area .scroll-bar:horizontal {\n" +
-                "    -fx-background-color: transparent;\n" +
-                "    -fx-background-radius: 0;\n" +
-                "}\n" +
-                ".text-area .scroll-bar .thumb {\n" +
-                "    -fx-background-color: %s;\n" +
-                "    -fx-background-radius: 4;\n" +
-                "}\n" +
-                ".text-area .scroll-bar .track {\n" +
-                "    -fx-background-color: transparent;\n" +
-                "}\n" +
-                ".text-area .scroll-bar .increment-button, .text-area .scroll-bar .decrement-button {\n" +
-                "    -fx-background-color: transparent;\n" +
-                "    -fx-pref-height: 0;\n" +
-                "    -fx-pref-width: 0;\n" +
-                "}",
-                theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius(), theme.getCornerRadius(),
-                theme.getTextPrimaryColor(), theme.getLogFontFamily(), theme.getLogFontSize(),
-                theme.getTextTertiaryColor()
-        ));
-        // 确保文本区域有内边距
-        textArea.setPadding(new Insets(10));
+        ComponentStyleManager.applyTextAreaStyle(textArea);
     }
     
     /**

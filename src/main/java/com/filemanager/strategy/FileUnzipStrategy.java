@@ -11,6 +11,7 @@ package com.filemanager.strategy;
 
 import com.filemanager.app.base.IAppStrategy;
 import com.filemanager.model.*;
+import com.filemanager.app.tools.display.StyleFactory;
 import com.filemanager.tool.file.PathUtils;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
@@ -115,9 +116,9 @@ public class FileUnzipStrategy extends IAppStrategy {
         chkOverwrite.setSelected(false);
 
         // 密码箱初始化
-        lvPasswords = new ListView<>();
+        lvPasswords = StyleFactory.createListView();
         lvPasswords.setPrefHeight(80);
-        lvPasswords.setPlaceholder(new Label("无密码 (默认尝试空密码)"));
+        lvPasswords.setPlaceholder(StyleFactory.createParamLabel("无密码 (默认尝试空密码)"));
 
         txtNewPass = new TextField();
         txtNewPass.setPromptText("输入常用密码...");

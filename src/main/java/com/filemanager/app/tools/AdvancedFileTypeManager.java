@@ -211,10 +211,23 @@ public class AdvancedFileTypeManager {
      */
     public VBox getView() {
         Node lblCustom = StyleFactory.createParamLabel("自定义扩展名:");
+        
+        // 创建自定义输入框并应用主题样式
+        StyleFactory.applyTextInputControlStyle(customInputCallback);
+        
         VBox topBox = new VBox(5, lblCustom, customInputCallback);
-        VBox layout = new VBox(5);
+        StyleFactory.setBasicStyle(topBox);
+        
+        // 创建TreeView并应用主题样式
+        StyleFactory.applyTreeViewStyle(treeView);
+        
+        VBox layout = StyleFactory.createVBoxPanel();
         layout.getChildren().addAll(topBox, treeView);
         VBox.setVgrow(treeView, Priority.ALWAYS);
+        
+        // 应用主题样式到整个面板
+        StyleFactory.setBasicStyle(layout);
+        
         return layout;
     }
 
