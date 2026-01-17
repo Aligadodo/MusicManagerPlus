@@ -57,6 +57,8 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
     protected final TextField txtSnapDir;
     protected final CheckBox chkEnableTempSuffix;
     protected final CheckBox chkForceFilenameMeta;
+    // 自动格式化目标文件名
+    protected final CheckBox chkAutoFormatFilename;
     // --- 运行时参数 ---
     protected String pFormat;
     protected String pMode;
@@ -73,6 +75,8 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
     protected int pInnerThreads;
     protected String pSampleRate;
     protected String pChannels;
+    // 自动格式化目标文件名
+    protected boolean pAutoFormatFilename;
 
     public AbstractFfmpegStrategy() {
         cbTargetFormat = new JFXComboBox<>(FXCollections.observableArrayList("WAV (CD标准)", "FLAC", "WAV", "MP3", "ALAC", "AAC", "OGG"));
@@ -126,6 +130,11 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
         chkEnableTempSuffix = new CheckBox("启用.temp文件后缀(文件缓存启用时不生效)");
         chkEnableTempSuffix.disableProperty().bind(chkEnableCache.selectedProperty());
         chkEnableTempSuffix.setSelected(true);
+
+        // 初始化自动格式化目标文件名复选框
+        chkAutoFormatFilename = new CheckBox("自动格式化目标文件名");
+        chkAutoFormatFilename.setTooltip(new Tooltip("自动将目标文件名转换为简体中文并去除首尾空格"));
+        chkAutoFormatFilename.setSelected(true);
 
         txtCacheDir = new TextField();
         txtCacheDir.setPromptText("临时文件缓存目录路径");
@@ -194,6 +203,7 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
                 StyleFactory.createSeparator(),
                 StyleFactory.createChapter("文件处理选项"),
                 StyleFactory.createVBoxPanel(chkOverwrite, chkForceFilenameMeta),
+                chkAutoFormatFilename,
                 chkEnableSnap,
                 StyleFactory.createHBox(snapCacheLabel, txtSnapDir, btnPickSnap),
                 chkEnableCache,
@@ -250,6 +260,7 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
         pInnerThreads = spFfmpegThreads.getValue();
         pSampleRate = cbSampleRate.getValue();
         pChannels = cbChannels.getValue();
+        pAutoFormatFilename = chkAutoFormatFilename.isSelected();
     }
 
     @Override
@@ -280,6 +291,7 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
         props.setProperty("ac_innerThreads", String.valueOf(spFfmpegThreads.getValue()));
         props.setProperty("ac_sampleRate", cbSampleRate.getValue());
         props.setProperty("ac_channels", cbChannels.getValue());
+        props.setProperty("ac_autoFormatFilename", String.valueOf(chkAutoFormatFilename.isSelected()));
     }
 
     @Override
@@ -328,6 +340,9 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
         }
         if (props.containsKey("ac_snapPath")) {
             txtSnapDir.setText(props.getProperty("ac_snapPath"));
+        }
+        if (props.containsKey("ac_autoFormatFilename")) {
+            chkAutoFormatFilename.setSelected(Boolean.parseBoolean(props.getProperty("ac_autoFormatFilename")));
         }
     }
 
@@ -532,6 +547,9 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
         } else if (pUseTempSuffix) {
             params.put("stagingPath", new File(parentPath, tempName + ".temp").getAbsolutePath());
         }
+        
+        // 添加自动格式化目标文件名的参数
+        params.put("autoFormatFilename", String.valueOf(pAutoFormatFilename));
         return params;
     }
 

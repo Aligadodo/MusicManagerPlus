@@ -14,6 +14,7 @@ import com.filemanager.tool.file.FileTypeUtil;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
+import com.filemanager.util.LanguageUtil;
 import com.google.common.collect.Lists;
 import javafx.scene.Node;
 
@@ -91,6 +92,12 @@ public class AudioConverterStrategy extends AbstractFfmpegStrategy {
         }
         Map<String, String> param = getParams(virtualInput.getParentFile(), name);
         String newName = name.substring(0, dotIndex) + "." + param.get("format");
+        
+        // 自动格式化目标文件名
+        if (Boolean.parseBoolean(param.getOrDefault("autoFormatFilename", "true"))) {
+            newName = LanguageUtil.toSimpleChinese(newName).trim();
+        }
+        
         File targetFile = new File(param.get("parentPath"), newName);
         ExecStatus status = ExecStatus.PENDING;
         boolean targetExists = targetFile.exists();

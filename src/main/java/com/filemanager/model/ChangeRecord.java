@@ -38,6 +38,8 @@ public class ChangeRecord {
     private String failReason;
     private boolean isCreate = false;
     private boolean isDeleteOrMove = false;
+    // 选择状态
+    private boolean selected = false;
 
     // 链式处理中的中间状态文件（如果不为空，说明这是上一步产生的临时状态）
     private File intermediateFile;
@@ -93,4 +95,6 @@ public class ChangeRecord {
     public void setDeleteOrMove(boolean deleteOrMove) { this.isDeleteOrMove = deleteOrMove; }
     public File getIntermediateFile() { return this.intermediateFile; }
     public void setIntermediateFile(File intermediateFile) { this.intermediateFile = intermediateFile; }
+    public boolean isSelected() { return this.selected; }
+    public void setSelected(boolean selected) { this.selected = selected; }
 }

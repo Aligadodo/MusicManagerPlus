@@ -20,6 +20,7 @@ import com.filemanager.model.ChangeRecord;
 import com.filemanager.tool.ThreadPoolManager;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.util.file.FileSizeFormatUtil;
+import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXCheckBox;
 import com.jfoenix.controls.JFXComboBox;
 import com.jfoenix.controls.JFXTextField;
@@ -39,7 +40,9 @@ import javafx.stage.Stage;
 import lombok.Getter;
 
 import java.io.File;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -51,13 +54,13 @@ public class PreviewView implements IAutoReloadAble {
     private static final long AUTO_REFRESH_INTERVAL = 3000; // 3秒自动刷新一次
     private final IAppController app;
     private final Tab tabPreview;
-    private final java.util.Map<String, Spinner<Integer>> rootPathPreviewLimits = new java.util.HashMap<>();
-    private final java.util.Map<String, Spinner<Integer>> rootPathExecutionLimits = new java.util.HashMap<>();
-    private final java.util.Map<String, JFXCheckBox> rootPathUnlimitedPreview = new java.util.HashMap<>();
-    private final java.util.Map<String, JFXCheckBox> rootPathUnlimitedExecution = new java.util.HashMap<>();
-    private final java.util.Map<String, Spinner<Integer>> rootPathSpinners = new java.util.HashMap<>();
-    private final java.util.Map<String, ProgressBar> rootPathProgressBars = new java.util.HashMap<>();
-    private final java.util.Map<String, Label> rootPathProgressLabels = new java.util.HashMap<>();
+    private final Map<String, Spinner<Integer>> rootPathPreviewLimits = new HashMap<>();
+    private final Map<String, Spinner<Integer>> rootPathExecutionLimits = new HashMap<>();
+    private final Map<String, JFXCheckBox> rootPathUnlimitedPreview = new HashMap<>();
+    private final Map<String, JFXCheckBox> rootPathUnlimitedExecution = new HashMap<>();
+    private final Map<String, Spinner<Integer>> rootPathSpinners = new HashMap<>();
+    private final Map<String, ProgressBar> rootPathProgressBars = new HashMap<>();
+    private final Map<String, Label> rootPathProgressLabels = new HashMap<>();
     private VBox viewNode;
     // UI Components
     private TreeTableView<ChangeRecord> previewTable;
@@ -66,30 +69,10 @@ public class PreviewView implements IAutoReloadAble {
     private JFXTextField txtSearchFilter;
     private JFXComboBox<String> cbStatusFilter;
     private JFXCheckBox chkHideUnchanged;
-    @Getter
     private Spinner<Integer> spPreviewThreads;
-    @Getter
     private Spinner<Integer> spExecutionThreads;
-
-    public Spinner<Integer> getSpPreviewThreads() {
-        return spPreviewThreads;
-    }
-
-    public Spinner<Integer> getSpExecutionThreads() {
-        return spExecutionThreads;
-    }
-    
-    public JFXComboBox<String> getCbStatusFilter() {
-        return cbStatusFilter;
-    }
-    
-    public JFXCheckBox getChkHideUnchanged() {
-        return chkHideUnchanged;
-    }
-
-    public ProgressBar getMainProgressBar() {
-        return mainProgressBar;
-    }
+    // 全选复选框
+    private JFXCheckBox chkSelectAll;
 
     public TreeTableView<ChangeRecord> getPreviewTable() {
         return previewTable;
@@ -558,16 +541,48 @@ public class PreviewView implements IAutoReloadAble {
                 StyleFactory.createHBoxPanel(StyleFactory.createChapter("[运行状态]  "), runningLabel),
                 StyleFactory.createHBoxPanel(StyleFactory.createChapter("[统计信息]  "), statsLabel));
 
+        // 全选复选框
+        chkSelectAll = new JFXCheckBox("全选");
+        chkSelectAll.setTooltip(new Tooltip("选择所有可见行"));
+        chkSelectAll.selectedProperty().addListener((obs, oldVal, newVal) -> {
+            TreeTableView<ChangeRecord> tableView = getPreviewTable();
+            if (tableView != null && tableView.getRoot() != null) {
+                for (TreeItem<ChangeRecord> item : tableView.getRoot().getChildren()) {
+                    ChangeRecord record = item.getValue();
+                    if (record != null) {
+                        record.setSelected(newVal);
+                    }
+                }
+                // 刷新表格显示
+                tableView.refresh();
+            }
+        });
+        
         // 表格过滤器
         HBox filterBox = StyleFactory.createHBoxPanel(
                 StyleFactory.createChapter("[筛选条件]  "), txtSearchFilter,
                 StyleFactory.createSeparatorWithChange(false), cbStatusFilter,
                 StyleFactory.createSeparatorWithChange(false), chkHideUnchanged,
                 StyleFactory.createSeparatorWithChange(false), chkAutoRefresh,
+                StyleFactory.createSeparatorWithChange(false), chkSelectAll,
                 StyleFactory.createSeparatorWithChange(false),
                 StyleFactory.createParamPairLine("显示数量限制:", numberDisplay),
                 StyleFactory.createSpacer(),
                 StyleFactory.createRefreshButton(e -> refresh()));
+        
+        // 添加删除操作按钮
+        HBox actionBox = StyleFactory.createHBoxPanel();
+        JFXButton btnDeleteOriginal = StyleFactory.createSecondaryButton("删除原始文件", () -> {
+            deleteSelectedFiles(true);
+        });
+        JFXButton btnDeleteTarget = StyleFactory.createSecondaryButton("删除目标文件", () -> {
+            deleteSelectedFiles(false);
+        });
+        actionBox.getChildren().addAll(
+                StyleFactory.createChapter("[批量操作]  "),
+                btnDeleteOriginal,
+                btnDeleteTarget);
+        actionBox.setPadding(new Insets(5));
 
         // 表格
         previewTable.setShowRoot(false);
@@ -581,7 +596,7 @@ public class PreviewView implements IAutoReloadAble {
         // 设置表格的垂直增长优先级为最高
         VBox.setVgrow(previewTable, Priority.ALWAYS);
 
-        viewNode.getChildren().addAll(progressBox, configPane, dash, filterBox, previewTable);
+        viewNode.getChildren().addAll(progressBox, configPane, dash, filterBox, actionBox, previewTable);
     }
 
     public void updateRunningProgress(String msg) {
@@ -626,6 +641,48 @@ public class PreviewView implements IAutoReloadAble {
     }
 
     private void setupPreviewColumns() {
+        // 添加选择列
+        TreeTableColumn<ChangeRecord, Boolean> selectionColumn = new TreeTableColumn<>();
+        selectionColumn.setPrefWidth(30);
+        selectionColumn.setMinWidth(30);
+        selectionColumn.setMaxWidth(30);
+        selectionColumn.setCellValueFactory(p -> {
+            ChangeRecord record = p.getValue().getValue();
+            return new javafx.beans.property.SimpleBooleanProperty(record.isSelected());
+        });
+        
+        // 在选择列的表头添加全选复选框
+        CheckBox headerCheckBox = new CheckBox();
+        headerCheckBox.setStyle("-fx-padding: 0;");
+        headerCheckBox.selectedProperty().bindBidirectional(chkSelectAll.selectedProperty());
+        selectionColumn.setGraphic(headerCheckBox);
+        selectionColumn.setCellFactory(column -> new TreeTableCell<ChangeRecord, Boolean>() {
+            private final CheckBox checkBox = new CheckBox();
+            {
+                checkBox.setStyle("-fx-padding: 0;");
+                checkBox.selectedProperty().addListener((obs, oldVal, newVal) -> {
+                    TreeTableView<ChangeRecord> tableView = getTreeTableView();
+                    if (tableView != null) {
+                        ChangeRecord record = getTreeTableRow().getItem();
+                        if (record != null) {
+                            record.setSelected(newVal);
+                        }
+                    }
+                });
+            }
+            @Override
+            protected void updateItem(Boolean item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || getTreeTableRow().getItem() == null) {
+                    setGraphic(null);
+                } else {
+                    ChangeRecord record = getTreeTableRow().getItem();
+                    checkBox.setSelected(record.isSelected());
+                    setGraphic(checkBox);
+                }
+            }
+        });
+        
         TreeTableColumn<ChangeRecord, String> c1 = StyleFactory.createTreeTableColumn("原始文件", false, 220, 120, 300);
         c1.setCellValueFactory(p -> new SimpleStringProperty(p.getValue().getValue().getOriginalName()));
         TreeTableColumn<ChangeRecord, String> cS = StyleFactory.createTreeTableColumn("文件大小", false, 60, 60, 60);
@@ -694,7 +751,7 @@ public class PreviewView implements IAutoReloadAble {
         TreeTableColumn<ChangeRecord, String> c4 = StyleFactory.createTreeTableColumn(
                 "目标文件路径", true, 250, 150, 600);
         c4.setCellValueFactory(p -> new SimpleStringProperty(p.getValue().getValue().getNewPath()));
-        previewTable.getColumns().setAll(c1, cS, c2, cS2, c3, c4);
+        previewTable.getColumns().setAll(selectionColumn, c1, cS, c2, cS2, c3, c4);
 
     }
 
@@ -802,6 +859,73 @@ public class PreviewView implements IAutoReloadAble {
                 s = fullChangeList.stream().filter(r -> r.getStatus() == ExecStatus.SUCCESS).count(),
                 f = fullChangeList.stream().filter(r -> r.getStatus() == ExecStatus.FAILED).count();
         this.updateStatsDisplay(t, c, s, f, MultiThreadTaskEstimator.formatDuration(System.currentTimeMillis() - startT));
+    }
+    
+    /**
+     * 删除选中的文件
+     * @param deleteOriginal 是否删除原始文件（true）还是目标文件（false）
+     */
+    private void deleteSelectedFiles(boolean deleteOriginal) {
+        TreeTableView<ChangeRecord> tableView = getPreviewTable();
+        if (tableView != null && tableView.getRoot() != null) {
+            AtomicInteger deletedCount = new AtomicInteger(0);
+            AtomicInteger failedCount = new AtomicInteger(0);
+            
+            Task<Void> deleteTask = new Task<Void>() {
+                @Override
+                protected Void call() {
+                    Platform.runLater(() -> {
+                        app.updateRunningProgress("正在准备删除文件...");
+                    });
+                    
+                    for (TreeItem<ChangeRecord> item : tableView.getRoot().getChildren()) {
+                        ChangeRecord record = item.getValue();
+                        if (record != null && record.isSelected()) {
+                            try {
+                                File fileToDelete;
+                                if (deleteOriginal) {
+                                    fileToDelete = record.getFileHandle();
+                                } else {
+                                    fileToDelete = new File(record.getNewPath());
+                                }
+                                
+                                if (fileToDelete.exists()) {
+                                    if (fileToDelete.delete()) {
+                                        deletedCount.incrementAndGet();
+                                    } else {
+                                        failedCount.incrementAndGet();
+                                    }
+                                } else {
+                                    failedCount.incrementAndGet();
+                                }
+                                
+                                // 处理中间文件
+                                if (record.getIntermediateFile() != null && record.getIntermediateFile().exists()) {
+                                    record.getIntermediateFile().delete();
+                                }
+                            } catch (Exception e) {
+                                failedCount.incrementAndGet();
+                            }
+                        }
+                    }
+                    
+                    return null;
+                }
+                
+                @Override
+                protected void succeeded() {
+                    super.succeeded();
+                    Platform.runLater(() -> {
+                        app.updateRunningProgress(String.format("文件删除完成：成功删除 %d 个文件，失败 %d 个文件", deletedCount.get(), failedCount.get()));
+                        // 刷新表格
+                        refresh();
+                    });
+                }
+            };
+            
+            // 运行删除任务
+            new Thread(deleteTask).start();
+        }
     }
 
     // Getters
