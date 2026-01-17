@@ -419,13 +419,11 @@ public class FileManagerPlusApp extends Application implements IAppController {
 
     @Override
     public void runPipelineAnalysis() {
-        taskStartTimStamp = System.currentTimeMillis();
         pipelineManager.runPipelineAnalysis();
     }
 
     @Override
     public void runPipelineExecution() {
-         taskStartTimStamp = System.currentTimeMillis();
         pipelineManager.runPipelineExecution();
     }
 
