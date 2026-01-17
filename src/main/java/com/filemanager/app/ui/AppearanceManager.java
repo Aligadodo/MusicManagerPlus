@@ -71,6 +71,9 @@ public class AppearanceManager {
     // 跟踪主题是否被修改
     private boolean isThemeModified = false;
     
+    // 图片缩略图缓存，键为"图片路径_预览尺寸"，值为Image对象
+    private final java.util.Map<String, Image> thumbnailCache = new java.util.HashMap<>();
+    
     public AppearanceManager(IAppController app, ThemeConfig currentTheme,
                            ImageView backgroundImageView, Region backgroundOverlay) {
         this.app = app;
@@ -702,31 +705,39 @@ public class AppearanceManager {
         // 保存当前预览尺寸
         String[] currentPreviewSize = {"中"};
         
-        // 添加预览尺寸变化监听器
-        previewSizeCb.valueProperty().addListener((obs, oldVal, newVal) -> {
-            if (newVal != null) {
-                currentPreviewSize[0] = newVal;
-                // 重新加载整个背景图片面板
-                if (tpAppearance != null) {
-                    // 找到背景设置选项卡并重新加载
-                    for (int i = 0; i < tpAppearance.getTabs().size(); i++) {
-                        Tab tab = tpAppearance.getTabs().get(i);
-                        if (tab.getText().equals("背景设置")) {
-                            tpAppearance.getTabs().set(i, new Tab("背景设置", createBackgroundTabContent()));
-                            break;
-                        }
-                    }
-                }
-            }
-        });
-        bgImagePanel.getChildren().add(previewSizeBox);
-        
         // 背景图显示区域
         FlowPane bgImageFlow = new FlowPane();
         bgImageFlow.setPadding(new Insets(10));
         bgImageFlow.setHgap(15);
         bgImageFlow.setVgap(15);
         
+        // 添加预览尺寸变化监听器
+        previewSizeCb.valueProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null) {
+                currentPreviewSize[0] = newVal;
+                // 只更新FlowPane中的内容，而不是整个选项卡
+                bgImageFlow.getChildren().clear();
+                loadBackgroundImages(bgImageFlow, currentPreviewSize[0], bgImagePath);
+            }
+        });
+        bgImagePanel.getChildren().add(previewSizeBox);
+        
+        // 加载背景图片
+        loadBackgroundImages(bgImageFlow, currentPreviewSize[0], bgImagePath);
+        
+        bgImagePanel.getChildren().add(bgImageFlow);
+        content.getChildren().add(bgImagePanel);
+        
+        return content;
+    }
+    
+    /**
+     * 加载背景图片到FlowPane中
+     * @param bgImageFlow 要添加图片的FlowPane
+     * @param previewSize 预览尺寸（"小"、"中"、"大"）
+     * @param bgImagePath 背景图片路径TextField
+     */
+    private void loadBackgroundImages(FlowPane bgImageFlow, String previewSize, TextField bgImagePath) {
         // 确保style/themes/images目录存在
         File imagesDir = new File("style/themes/images");
         if (!imagesDir.exists()) {
@@ -747,10 +758,10 @@ public class AppearanceManager {
                     try {
                         // 根据当前预览尺寸设置不同的图片大小
                         int width, height;
-                        if (currentPreviewSize[0].equals("小")) {
+                        if (previewSize.equals("小")) {
                             width = 100;
                             height = 75;
-                        } else if (currentPreviewSize[0].equals("大")) {
+                        } else if (previewSize.equals("大")) {
                             width = 200;
                             height = 150;
                         } else {
@@ -758,30 +769,53 @@ public class AppearanceManager {
                             height = 110;
                         }
                         
-                        // 创建缩略图
-                        Image image = new Image(imageFile.toURI().toURL().toExternalForm());
-                        ImageView imageView = new ImageView(image);
+                        // 尝试从缓存中获取缩略图
+                        String cacheKey = imageFile.getAbsolutePath() + "_" + width + "x" + height;
+                        Image cachedImage = thumbnailCache.get(cacheKey);
+                        
+                        ImageView imageView = new ImageView();
                         imageView.setPreserveRatio(true);
                         imageView.setFitWidth(width);
                         imageView.setFitHeight(height);
                         imageView.setStyle("-fx-background-color: transparent; -fx-border-color: transparent; -fx-border-width: 0px;");
                         
-                        // 添加图片加载错误处理
-                        image.errorProperty().addListener((obs, oldVal, newVal) -> {
-                            if (newVal) {
+                        if (cachedImage != null) {
+                            // 缓存中存在，直接使用
+                            imageView.setImage(cachedImage);
+                        } else {
+                            // 异步加载缩略图
+                            javafx.concurrent.Task<Image> loadTask = new javafx.concurrent.Task<Image>() {
+                                @Override
+                                protected Image call() throws Exception {
+                                    // 加载指定大小的缩略图
+                                    return new Image(imageFile.toURI().toURL().toExternalForm(), width, height, true, true);
+                                }
+                            };
+                            
+                            loadTask.setOnSucceeded(e -> {
+                                Image image = loadTask.getValue();
+                                imageView.setImage(image);
+                                // 将加载的图片放入缓存
+                                thumbnailCache.put(cacheKey, image);
+                            });
+                            
+                            loadTask.setOnFailed(e -> {
                                 System.err.println("预览图加载失败: " + imageFile.getAbsolutePath());
                                 // 显示错误占位图
                                 imageView.setImage(null);
                                 imageView.setStyle("-fx-background-color: #f0f0f0; -fx-border-color: #ff0000; -fx-border-width: 1px;");
-                            }
-                        });
+                            });
+                            
+                            // 启动加载任务
+                            new Thread(loadTask).start();
+                        }
                         
                         // 根据当前预览尺寸设置不同的按钮大小
                         int buttonWidth, buttonHeight;
-                        if (currentPreviewSize[0].equals("小")) {
+                        if (previewSize.equals("小")) {
                             buttonWidth = 120;
                             buttonHeight = 95;
-                        } else if (currentPreviewSize[0].equals("大")) {
+                        } else if (previewSize.equals("大")) {
                             buttonWidth = 220;
                             buttonHeight = 170;
                         } else {
@@ -839,10 +873,10 @@ public class AppearanceManager {
                         e.printStackTrace();
                         // 根据当前预览尺寸设置不同的按钮大小
                         int buttonWidth, buttonHeight;
-                        if (currentPreviewSize[0].equals("小")) {
+                        if (previewSize.equals("小")) {
                             buttonWidth = 120;
                             buttonHeight = 95;
-                        } else if (currentPreviewSize[0].equals("大")) {
+                        } else if (previewSize.equals("大")) {
                             buttonWidth = 220;
                             buttonHeight = 170;
                         } else {
@@ -869,11 +903,6 @@ public class AppearanceManager {
                 bgImageFlow.getChildren().add(noImagesLabel);
             }
         }
-        
-        bgImagePanel.getChildren().add(bgImageFlow);
-        content.getChildren().add(bgImagePanel);
-        
-        return content;
     }
     
     /**
