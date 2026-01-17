@@ -35,6 +35,15 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
     private String backgroundImage = "";
     private String bgColor = "#f5f5f5";
     
+    // 背景图显示策略
+    public enum BackgroundStrategy {
+        STRETCH,      // 拉伸填充
+        CENTER,       // 居中显示
+        COVER,        // 覆盖（保持比例，可能裁切）
+        CONTAIN       // 包含（保持比例，全部显示）
+    }
+    private BackgroundStrategy bgImageStrategy = BackgroundStrategy.STRETCH;
+    
     // 当backgroundImage被设置时，同时设置bgImagePath
     public void setBackgroundImage(String backgroundImage) {
         this.backgroundImage = backgroundImage;

@@ -577,7 +577,8 @@ public class AppearanceManager {
         content.setStyle("-fx-background-color: transparent;");
         
         // 背景图片选择
-        HBox imageBox = new HBox(10);
+        VBox imageSettingsBox = new VBox(10);
+        HBox imagePathBox = new HBox(10);
         TextField bgImagePath = new TextField(currentTheme.getBgImagePath());
         bgImagePath.setPrefWidth(400);
         bgImagePath.setStyle(String.format(
@@ -585,6 +586,28 @@ public class AppearanceManager {
                 currentTheme.getPanelBgColor(), currentTheme.getCornerRadius(), currentTheme.getTextPrimaryColor(), 
                 currentTheme.getBorderColor(), currentTheme.getBorderWidth()
         ));
+        
+        // 背景图策略选择器
+        HBox strategyBox = new HBox(10);
+        strategyBox.setAlignment(Pos.CENTER_LEFT);
+        Label strategyLabel = new Label("显示策略：");
+        strategyLabel.setStyle(String.format("-fx-text-fill: %s; -fx-font-weight: bold;", currentTheme.getTextPrimaryColor()));
+        
+        ComboBox<ThemeConfig.BackgroundStrategy> strategyCombo = new ComboBox<>();
+        strategyCombo.getItems().addAll(ThemeConfig.BackgroundStrategy.values());
+        strategyCombo.setValue(currentTheme.getBgImageStrategy());
+        strategyCombo.setStyle(String.format(
+                "-fx-background-color: %s; -fx-background-radius: %.1f; -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f;",
+                currentTheme.getPanelBgColor(), currentTheme.getCornerRadius(), currentTheme.getTextPrimaryColor(), 
+                currentTheme.getBorderColor(), currentTheme.getBorderWidth()
+        ));
+        strategyCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
+            currentTheme.setBgImageStrategy(newVal);
+            isThemeModified = true;
+            applyAppearance();
+        });
+        
+        strategyBox.getChildren().addAll(strategyLabel, strategyCombo);
         
         JFXButton browseBtn = StyleFactory.createActionButton("浏览背景图", "#3498db", () -> {
             FileChooser fc = new FileChooser();
@@ -606,60 +629,11 @@ public class AppearanceManager {
             applyAppearance();
         });
         
-        imageBox.getChildren().addAll(bgImagePath, browseBtn, clearBtn);
-        content.getChildren().add(imageBox);
+        imagePathBox.getChildren().addAll(bgImagePath, browseBtn, clearBtn);
+        imageSettingsBox.getChildren().addAll(imagePathBox, strategyBox);
+        content.getChildren().add(imageSettingsBox);
         
-        // 背景图显示模式选择
-        VBox displayModeBox = new VBox(15);
-        displayModeBox.setPadding(new Insets(10, 0, 0, 0));
-        displayModeBox.setStyle(String.format("-fx-background-color: %s; -fx-background-radius: %.1f; -fx-border-color: %s; -fx-border-width: %.1f; -fx-padding: 20;",
-                currentTheme.getPanelBgColor(), currentTheme.getCornerRadius(), currentTheme.getBorderColor(), currentTheme.getBorderWidth()));
-        
-        Label displayModeLabel = StyleFactory.createLabel("背景图显示模式", 16, true);
-        displayModeBox.getChildren().add(displayModeLabel);
-        
-        HBox modeButtons = new HBox(10);
-        
-        JFXButton stretchBtn = StyleFactory.createActionButton("拉伸", "#3498db", () -> {
-            // 设置背景图拉伸模式
-            backgroundImageView.setPreserveRatio(false);
-            backgroundImageView.setStyle("-fx-background-size: stretch; -fx-background-position: center; -fx-background-repeat: no-repeat;");
-            applyAppearance();
-        });
-        
-        JFXButton cropBtn = StyleFactory.createActionButton("裁剪", "#3498db", () -> {
-            // 设置背景图裁剪模式
-            backgroundImageView.setPreserveRatio(true);
-            backgroundImageView.setStyle("-fx-background-size: cover; -fx-background-position: center; -fx-background-repeat: no-repeat;");
-            applyAppearance();
-        });
-        
-        JFXButton centerBtn = StyleFactory.createActionButton("居中", "#3498db", () -> {
-            // 设置背景图居中模式
-            backgroundImageView.setPreserveRatio(true);
-            backgroundImageView.setStyle("-fx-background-size: contain; -fx-background-position: center; -fx-background-repeat: no-repeat;");
-            applyAppearance();
-        });
-        
-        modeButtons.getChildren().addAll(stretchBtn, cropBtn, centerBtn);
-        displayModeBox.getChildren().add(modeButtons);
-        
-        // 背景图裁切功能
-        JFXButton cropImageBtn = StyleFactory.createActionButton("裁切背景图", "#e67e22", () -> {
-            if (!currentTheme.getBgImagePath().isEmpty()) {
-                // 显示裁切对话框
-                showCropBackgroundDialog();
-            } else {
-                Alert alert = new Alert(Alert.AlertType.WARNING);
-                alert.setTitle("警告");
-                alert.setHeaderText(null);
-                alert.setContentText("请先选择一张背景图");
-                alert.showAndWait();
-            }
-        });
-        displayModeBox.getChildren().add(cropImageBtn);
-        
-        content.getChildren().add(displayModeBox);
+        // 删除了旧的背景图显示模式选择部分，改用新的策略选择器
         
         // 玻璃效果透明度
         HBox opacityBox = new HBox(20);
@@ -757,6 +731,16 @@ public class AppearanceManager {
                         imageView.setFitHeight(80);
                         imageView.setStyle("-fx-background-color: transparent; -fx-border-color: transparent; -fx-border-width: 0px;");
                         
+                        // 添加图片加载错误处理
+                        image.errorProperty().addListener((obs, oldVal, newVal) -> {
+                            if (newVal) {
+                                System.err.println("预览图加载失败: " + imageFile.getAbsolutePath());
+                                // 显示错误占位图
+                                imageView.setImage(null);
+                                imageView.setStyle("-fx-background-color: #f0f0f0; -fx-border-color: #ff0000; -fx-border-width: 1px;");
+                            }
+                        });
+                        
                         // 创建按钮
                         Button imageButton = new Button();
                         imageButton.setGraphic(imageView);
@@ -774,9 +758,45 @@ public class AppearanceManager {
                             applyAppearance();
                         });
                         
+                        // 保存图片路径，用于双击查看大图
+                        final String finalImagePath = imageFile.getAbsolutePath();
+                        imageButton.setOnMouseClicked(event -> {
+                            if (event.getClickCount() == 2) {
+                                try {
+                                    // 显示大图对话框
+                                    Dialog<Void> dialog = new Dialog<>();
+                                    dialog.setTitle("背景图预览");
+                                    dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+                                    dialog.getDialogPane().setPrefSize(1000, 800);
+                                    
+                                    StackPane previewPane = new StackPane();
+                                    Image fullSizeImage = new Image(new File(finalImagePath).toURI().toURL().toExternalForm());
+                                    ImageView fullSizeImageView = new ImageView(fullSizeImage);
+                                    fullSizeImageView.setPreserveRatio(true);
+                                    fullSizeImageView.setFitWidth(950);
+                                    fullSizeImageView.setFitHeight(750);
+                                    
+                                    previewPane.getChildren().add(fullSizeImageView);
+                                    dialog.getDialogPane().setContent(previewPane);
+                                    
+                                    dialog.showAndWait();
+                                } catch (Exception ex) {
+                                    ex.printStackTrace();
+                                }
+                            }
+                        });
+                        
                         bgImageFlow.getChildren().add(imageButton);
                     } catch (Exception e) {
                         e.printStackTrace();
+                        // 创建错误占位按钮
+                        Button errorButton = new Button("图片加载失败");
+                        errorButton.setPrefSize(130, 90);
+                        errorButton.setStyle(String.format(
+                                "-fx-background-color: #f0f0f0; -fx-background-radius: 4; -fx-border-color: #ff0000; -fx-border-width: 1px; -fx-text-fill: #ff0000;",
+                                currentTheme.getBorderColor()
+                        ));
+                        bgImageFlow.getChildren().add(errorButton);
                     }
                 }
             } else {
@@ -1813,30 +1833,57 @@ public class AppearanceManager {
             currentTheme.setPanelHoverColor("transparent");
         }
         
+        // 获取根容器用于背景图调整
+        StackPane rootContainer = null;
+        if (app != null && app instanceof com.filemanager.app.base.IUIElementProvider) {
+            com.filemanager.app.base.IUIElementProvider uiElementProvider = (com.filemanager.app.base.IUIElementProvider) app;
+            rootContainer = uiElementProvider.getRootContainer();
+        }
+        
         // 更新背景图片
         if (hasBackgroundImage) {
             try {
-                File bgImageFile = new File(currentTheme.getBgImagePath());
+                String bgImagePath = currentTheme.getBgImagePath();
                 String imageUrl;
                 
                 // 检查文件是否存在（绝对路径或相对路径）
+                File bgImageFile = new File(bgImagePath);
                 if (bgImageFile.exists() && bgImageFile.isFile()) {
                     // 本地文件，使用file:// URL方式加载
                     imageUrl = bgImageFile.toURI().toURL().toExternalForm();
                 } else {
-                    // 尝试从资源路径加载（相对路径）
-                    java.net.URL resourceUrl = getClass().getClassLoader().getResource(currentTheme.getBgImagePath());
-                    if (resourceUrl != null) {
-                        imageUrl = resourceUrl.toExternalForm();
+                    // 尝试从相对路径加载
+                    File projectRelativeFile = new File("style/themes/images/" + bgImagePath);
+                    if (projectRelativeFile.exists() && projectRelativeFile.isFile()) {
+                        imageUrl = projectRelativeFile.toURI().toURL().toExternalForm();
                     } else {
-                        app.logError("背景图文件不存在：" + currentTheme.getBgImagePath());
-                        backgroundImageView.setImage(null);
-                        return;
+                        // 尝试从项目根目录开始加载相对路径
+                        File rootRelativeFile = new File(bgImagePath);
+                        if (rootRelativeFile.exists() && rootRelativeFile.isFile()) {
+                            imageUrl = rootRelativeFile.toURI().toURL().toExternalForm();
+                        } else {
+                            // 尝试从资源路径加载
+                            java.net.URL resourceUrl = getClass().getClassLoader().getResource(bgImagePath);
+                            if (resourceUrl != null) {
+                                imageUrl = resourceUrl.toExternalForm();
+                            } else {
+                                // 最后尝试从主题images目录加载
+                                java.net.URL themeResourceUrl = getClass().getClassLoader().getResource("style/themes/images/" + bgImagePath);
+                                if (themeResourceUrl != null) {
+                                    imageUrl = themeResourceUrl.toExternalForm();
+                                } else {
+                                    app.logError("背景图文件不存在：" + bgImagePath);
+                                    backgroundImageView.setImage(null);
+                                    return;
+                                }
+                            }
+                        }
                     }
                 }
                 
                 // 创建图片对象并设置加载参数
-                Image image = new Image(imageUrl, true); // 启用异步加载
+                // 尝试同步加载，提高SVG加载成功率
+                Image image = new Image(imageUrl, false);
                 
                 // 设置图片加载完成和错误处理回调
                 image.errorProperty().addListener((obs, oldVal, newVal) -> {
@@ -1846,9 +1893,62 @@ public class AppearanceManager {
                     }
                 });
                 
-                // 设置图片缩放模式
-                backgroundImageView.setPreserveRatio(false);
-                backgroundImageView.setStyle("-fx-background-size: cover; -fx-background-position: center; -fx-background-repeat: no-repeat;");
+                // 根据背景图策略设置图片显示方式
+                ThemeConfig.BackgroundStrategy strategy = currentTheme.getBgImageStrategy();
+                
+                // 先解除现有的绑定，避免多次绑定导致内存泄漏
+                backgroundImageView.fitWidthProperty().unbind();
+                backgroundImageView.fitHeightProperty().unbind();
+                
+                if (rootContainer != null) {
+                    switch (strategy) {
+                        case STRETCH:
+                            // 拉伸填充
+                            backgroundImageView.setPreserveRatio(false);
+                            backgroundImageView.fitWidthProperty().bind(rootContainer.widthProperty());
+                            backgroundImageView.fitHeightProperty().bind(rootContainer.heightProperty());
+                            break;
+                        case CENTER:
+                            // 居中显示
+                            backgroundImageView.setPreserveRatio(true);
+                            // 不设置固定大小，保持图片原始比例
+                            break;
+                        case COVER:
+                            // 覆盖（保持比例，可能裁切）
+                            backgroundImageView.setPreserveRatio(true);
+                            backgroundImageView.fitWidthProperty().bind(rootContainer.widthProperty());
+                            backgroundImageView.fitHeightProperty().bind(rootContainer.heightProperty());
+                            break;
+                        case CONTAIN:
+                            // 包含（保持比例，全部显示）
+                            backgroundImageView.setPreserveRatio(true);
+                            backgroundImageView.fitWidthProperty().bind(rootContainer.widthProperty());
+                            backgroundImageView.fitHeightProperty().bind(rootContainer.heightProperty());
+                            break;
+                    }
+                }
+                
+                // 添加双击事件，显示详细大图
+                backgroundImageView.setOnMouseClicked(event -> {
+                    if (event.getClickCount() == 2 && image != null) {
+                        // 显示大图对话框
+                        Dialog<Void> dialog = new Dialog<>();
+                        dialog.setTitle("背景图预览");
+                        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+                        dialog.getDialogPane().setPrefSize(1000, 800);
+                        
+                        StackPane previewPane = new StackPane();
+                        ImageView fullSizeImageView = new ImageView(image);
+                        fullSizeImageView.setPreserveRatio(true);
+                        fullSizeImageView.setFitWidth(950);
+                        fullSizeImageView.setFitHeight(750);
+                        
+                        previewPane.getChildren().add(fullSizeImageView);
+                        dialog.getDialogPane().setContent(previewPane);
+                        
+                        dialog.showAndWait();
+                    }
+                });
                 
                 backgroundImageView.setImage(image);
             } catch (Exception e) {
@@ -1862,7 +1962,8 @@ public class AppearanceManager {
         // 递归更新所有界面元素的样式
         if (app != null && app instanceof com.filemanager.app.base.IUIElementProvider) {
             com.filemanager.app.base.IUIElementProvider uiElementProvider = (com.filemanager.app.base.IUIElementProvider) app;
-            javafx.scene.layout.StackPane rootContainer = uiElementProvider.getRootContainer();
+            // 复用已定义的rootContainer变量
+            rootContainer = uiElementProvider.getRootContainer();
             if (rootContainer != null) {
                 com.filemanager.app.tools.display.StyleFactory.updateNodeStyle(rootContainer);
             }

@@ -658,10 +658,10 @@ public class StyleFactory {
      * 应用ListView样式
      */
     private static void applyListViewStyle(ListView<?> listView) {
-        // 设置ListView的背景色和边框
+        // 设置ListView的背景色和边框，使用半透明背景以便显示底层背景图
         listView.setStyle(String.format(
-                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-background-radius: %.1f;",
-                theme.getPanelBgColor(), theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius()
+                "-fx-background-color: rgba(255, 255, 255, 0.85); -fx-border-color: %s; -fx-border-width: %.1f; -fx-background-radius: %.1f;",
+                theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius()
         ));
     }
     
@@ -669,10 +669,10 @@ public class StyleFactory {
      * 应用TableView样式
      */
     private static void applyTableViewStyle(TableView<?> tableView) {
-        // 设置TableView的背景色和边框
+        // 设置TableView的背景色和边框，使用半透明背景以便显示底层背景图
         tableView.setStyle(String.format(
-                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-background-radius: %.1f;",
-                theme.getPanelBgColor(), theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius()
+                "-fx-background-color: rgba(255, 255, 255, 0.85); -fx-border-color: %s; -fx-border-width: %.1f; -fx-background-radius: %.1f;",
+                theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius()
         ));
     }
     
@@ -680,10 +680,10 @@ public class StyleFactory {
      * 应用TreeTableView样式
      */
     private static void applyTreeTableViewStyle(TreeTableView<?> treeTableView) {
-        // 设置TreeTableView的背景色和边框
+        // 设置TreeTableView的背景色和边框，使用半透明背景以便显示底层背景图
         treeTableView.setStyle(String.format(
-                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-background-radius: %.1f;",
-                theme.getPanelBgColor(), theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius()
+                "-fx-background-color: rgba(255, 255, 255, 0.85); -fx-border-color: %s; -fx-border-width: %.1f; -fx-background-radius: %.1f;",
+                theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius()
         ));
     }
     
@@ -693,7 +693,7 @@ public class StyleFactory {
     private static void applyTextAreaStyle(TextArea textArea) {
         // 设置TextArea的背景色、边框和字体，与createTextArea保持一致
         textArea.setStyle(String.format(
-                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f; -fx-background-radius: %.1f;\n" +
+                "-fx-background-color: rgba(255, 255, 255, 0.85); -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f; -fx-background-radius: %.1f;\n" +
                 "-fx-text-fill: %s; -fx-font-family: %s; -fx-font-size: %.1f;\n" +
                 ".text-area .scroll-pane {\n" +
                 "    -fx-background-color: transparent;\n" +
@@ -724,7 +724,7 @@ public class StyleFactory {
                 "    -fx-pref-height: 0;\n" +
                 "    -fx-pref-width: 0;\n" +
                 "}",
-                theme.getPanelBgColor(), theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius(), theme.getCornerRadius(),
+                theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius(), theme.getCornerRadius(),
                 theme.getTextPrimaryColor(), theme.getLogFontFamily(), theme.getLogFontSize(),
                 theme.getTextTertiaryColor()
         ));
