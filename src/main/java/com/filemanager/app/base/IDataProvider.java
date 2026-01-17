@@ -14,7 +14,6 @@ import com.filemanager.app.ui.PreviewView;
 import com.filemanager.model.ChangeRecord;
 
 import javafx.collections.ObservableList;
-import javafx.scene.Node;
 import java.io.File;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;

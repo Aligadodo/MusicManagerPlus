@@ -606,14 +606,22 @@ public class ComponentFactory {
      */
     public static VBox createVBoxPanel(Node... subNodes) {
         VBox p = createVBox(subNodes);
-        
-        // 使用浅色圆角边框
-        String lightBorderColor = "#e0e0e0"; // 统一的浅色边框
-        p.setStyle(String.format(
-                "-fx-background-color: transparent; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: 1.0; -fx-border-radius: %.1f;",
-                theme.getCornerRadius(), theme.getTextPrimaryColor(), lightBorderColor, theme.getCornerRadius()
-        ));
         p.setSpacing(theme.getMediumSpacing());
+        p.setPadding(new Insets(theme.getLargeSpacing()));
+        
+        // 应用玻璃效果透明度
+        String bgColor = theme.getPanelBgColor();
+        if (bgColor.startsWith("#") && bgColor.length() == 7) {
+            int alpha = (int) (theme.getGlassOpacity() * 255);
+            String alphaHex = String.format("%02x", alpha);
+            bgColor = bgColor + alphaHex;
+        }
+        
+        p.setStyle(String.format(
+                "-fx-background-color: %s; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f;",
+                bgColor, theme.getCornerRadius(), theme.getTextPrimaryColor(), theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius()
+        ));
+        
         return p;
     }
 
@@ -640,13 +648,22 @@ public class ComponentFactory {
      */
     public static HBox createHBoxPanel(Node... subNodes) {
         HBox p = createHBox(subNodes);
-        
-        // 使用浅色圆角边框
-        String lightBorderColor = "#e0e0e0"; // 统一的浅色边框
-        p.setStyle(String.format("-fx-background-color: transparent; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: 1.0; -fx-border-radius: %.1f;",
-                theme.getCornerRadius(), theme.getTextPrimaryColor(), lightBorderColor, theme.getCornerRadius()));
         p.setPadding(new Insets(5, 5, 5, 5));
         p.setSpacing(5);
+        
+        // 应用玻璃效果透明度
+        String bgColor = theme.getPanelBgColor();
+        if (bgColor.startsWith("#") && bgColor.length() == 7) {
+            int alpha = (int) (theme.getGlassOpacity() * 255);
+            String alphaHex = String.format("%02x", alpha);
+            bgColor = bgColor + alphaHex;
+        }
+        
+        p.setStyle(String.format(
+                "-fx-background-color: %s; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f;",
+                bgColor, theme.getCornerRadius(), theme.getTextPrimaryColor(), theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius()
+        ));
+        
         return p;
     }
 

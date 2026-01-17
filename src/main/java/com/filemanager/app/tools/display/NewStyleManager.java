@@ -11,8 +11,6 @@ package com.filemanager.app.tools.display;
 
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.control.*;
-import javafx.scene.layout.*;
 
 import java.util.HashMap;
 import java.util.Map;

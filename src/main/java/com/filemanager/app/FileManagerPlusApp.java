@@ -35,8 +35,6 @@ import com.google.common.collect.Lists;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXCheckBox;
 import com.jfoenix.controls.JFXComboBox;
-import com.jfoenix.controls.JFXTabPane;
-import javafx.animation.FadeTransition;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -59,7 +57,6 @@ import javafx.scene.text.FontWeight;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-import javafx.util.Duration;
 import lombok.Getter;
 
 import java.awt.*;
@@ -67,7 +64,6 @@ import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -101,7 +97,6 @@ public class FileManagerPlusApp extends Application implements IAppController {
      * @return 根路径线程数配置
      */
     // 存储根路径线程配置：存储每个根路径对应的最大线程数
-    @Getter
     private final Map<String, Integer> rootPathThreadConfig = new ConcurrentHashMap<>();
 
     @Override
@@ -109,7 +104,6 @@ public class FileManagerPlusApp extends Application implements IAppController {
         return rootPathThreadConfig;
     }
 
-    @Getter
     private long taskStartTimStamp = System.currentTimeMillis();
 
     @Override
@@ -122,7 +116,6 @@ public class FileManagerPlusApp extends Application implements IAppController {
     private ThreadPoolManager threadPoolManager;
 
     // --- UI Controls ---
-    @Getter
     private JFXCheckBox autoRun;
 
     @Override
@@ -130,7 +123,6 @@ public class FileManagerPlusApp extends Application implements IAppController {
         return autoRun;
     }
     private JFXButton btnGo, btnExecute, btnStop;
-    @Getter
     private Stage primaryStage;
 
     @Override

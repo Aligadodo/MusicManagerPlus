@@ -9,25 +9,22 @@
  */
 package com.filemanager.app.ui;
 
+import java.io.File;
+import java.util.Properties;
+import java.util.stream.Collectors;
+
 import com.filemanager.app.base.IAppController;
 import com.filemanager.app.base.IAutoReloadAble;
 import com.filemanager.app.tools.AdvancedFileTypeManager;
 import com.filemanager.app.tools.display.StyleFactory;
-import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXComboBox;
+
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Spinner;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import javafx.stage.FileChooser;
 import lombok.Getter;
-
-import java.io.*;
-import java.util.Properties;
-import java.util.stream.Collectors;
 
 @Getter
 public class GlobalSettingsView implements IAutoReloadAble {

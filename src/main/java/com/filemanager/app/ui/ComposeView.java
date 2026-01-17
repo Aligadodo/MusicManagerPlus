@@ -171,9 +171,18 @@ public class ComposeView implements IAutoReloadAble {
         this.tpFilters = new TitledPane("全局筛选", app.getGlobalSettingsView());
         this.tpFilters.setCollapsible(true);
         this.tpFilters.setExpanded(true);
+        
+        // 应用玻璃效果透明度
+        String bgColor = app.getCurrentTheme().getPanelBgColor();
+        if (bgColor.startsWith("#") && bgColor.length() == 7) {
+            int alpha = (int) (app.getCurrentTheme().getGlassOpacity() * 255);
+            String alphaHex = String.format("%02x", alpha);
+            bgColor = bgColor + alphaHex;
+        }
+        
         this.tpFilters.setStyle(String.format(
                 "-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: %s; -fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f;",
-                app.getCurrentTheme().getTextPrimaryColor(), app.getCurrentTheme().getPanelBgColor(), app.getCurrentTheme().getBorderColor(), app.getCurrentTheme().getBorderWidth(), app.getCurrentTheme().getCornerRadius()
+                app.getCurrentTheme().getTextPrimaryColor(), bgColor, app.getCurrentTheme().getBorderColor(), app.getCurrentTheme().getBorderWidth(), app.getCurrentTheme().getCornerRadius()
         ));
 
         leftPanel.getChildren().addAll(srcTools, sourceListView, tpFilters);

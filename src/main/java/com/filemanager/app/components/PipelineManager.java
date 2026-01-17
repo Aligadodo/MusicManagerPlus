@@ -401,7 +401,6 @@ public class PipelineManager {
         }
         // 文件解锁
         FileLockManagerUtil.unlock(rec.getFileHandle());
-        int c = curr.incrementAndGet();
         if (System.currentTimeMillis() - lastRefresh.get() > 1000) {
             lastRefresh.set(System.currentTimeMillis());
             app.setRunningUI("▶ ▶ ▶ 执行任务进度: " + threadTaskEstimator.getDisplayInfo());
@@ -411,7 +410,7 @@ public class PipelineManager {
         }
     }
 
-    private void setStartTaskUI(String msg, Task task) {
+    private void setStartTaskUI(String msg, Task<?> task) {
         app.changeStopButton(true);
         isTaskRunning.set(true);
         lastRefresh.set(System.currentTimeMillis());

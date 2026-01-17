@@ -9,39 +9,50 @@
  */
 package com.filemanager.app.ui;
 
+import java.io.File;
+import java.nio.file.Files;
+
+import com.filemanager.app.base.IAppController;
+import com.filemanager.app.tools.display.FontManager;
 import com.filemanager.app.tools.display.StyleFactory;
+import com.filemanager.app.tools.display.StyleTemplateManager;
 import com.filemanager.app.tools.display.ThemeConfig;
 import com.filemanager.app.tools.display.ThemeManager;
-import com.filemanager.app.tools.display.StyleTemplateManager;
-import java.util.List;
-import com.filemanager.app.base.IAppController;
 import com.jfoenix.controls.JFXButton;
-import com.jfoenix.controls.JFXSlider;
 import com.jfoenix.controls.JFXComboBox;
+import com.jfoenix.controls.JFXSlider;
 import com.jfoenix.controls.JFXTabPane;
-import com.filemanager.app.tools.display.FontManager;
+
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
-import javafx.scene.control.*;
-import javafx.scene.effect.DropShadow;
+import javafx.scene.Node;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.ColorPicker;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.Dialog;
+import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Separator;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.*;
+import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
-import javafx.scene.shape.Circle;
-import javafx.scene.Node;
-import javafx.geometry.Point2D;
-import java.util.function.BiConsumer;
 import javafx.stage.FileChooser;
-
-import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.Map;
 
 public class AppearanceManager {
     private final IAppController app;
@@ -51,6 +62,7 @@ public class AppearanceManager {
     private final ThemeManager themeManager;
     private final StyleTemplateManager templateManager;
     private Tab finalPresetTab;
+    private JFXTabPane tpAppearance;
     
     // 保存示例按钮引用，用于样式更新
     private Button largeButtonExample;
@@ -89,6 +101,8 @@ public class AppearanceManager {
         
         // 创建TabPane来组织不同的设置类别
         JFXTabPane tabPane = StyleFactory.createTabPane(true);
+        // 保存TabPane引用
+        this.tpAppearance = tabPane;
        
         // 主题预设选项卡
         Tab presetTab = new Tab("主题预设");
@@ -663,6 +677,50 @@ public class AppearanceManager {
         bgImagePanelTitle.setPadding(new Insets(10, 0, 0, 10));
         bgImagePanel.getChildren().add(bgImagePanelTitle);
         
+        // 预览尺寸选择器
+        HBox previewSizeBox = new HBox(20);
+        previewSizeBox.setPadding(new Insets(10, 0, 0, 10));
+        previewSizeBox.setAlignment(Pos.CENTER_LEFT);
+        Label previewSizeLabel = StyleFactory.createLabel("预览尺寸", 14, false);
+        
+        // 定义预览尺寸选项
+        ObservableList<String> previewSizes = FXCollections.observableArrayList("小", "中", "大");
+        JFXComboBox<String> previewSizeCb = new JFXComboBox<>(previewSizes);
+        previewSizeCb.setValue("中"); // 默认选择中等尺寸
+        previewSizeCb.setPrefWidth(100);
+        
+        // 设置下拉框样式
+        previewSizeCb.setStyle(String.format(
+                "-fx-background-color: %s; -fx-background-radius: %.1f; -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f;",
+                currentTheme.getPanelBgColor(), currentTheme.getCornerRadius(), currentTheme.getTextPrimaryColor(), 
+                currentTheme.getBorderColor(), currentTheme.getBorderWidth()
+        ));
+        
+        // 将标签和下拉框添加到容器中
+        previewSizeBox.getChildren().addAll(previewSizeLabel, previewSizeCb);
+        
+        // 保存当前预览尺寸
+        String[] currentPreviewSize = {"中"};
+        
+        // 添加预览尺寸变化监听器
+        previewSizeCb.valueProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null) {
+                currentPreviewSize[0] = newVal;
+                // 重新加载整个背景图片面板
+                if (tpAppearance != null) {
+                    // 找到背景设置选项卡并重新加载
+                    for (int i = 0; i < tpAppearance.getTabs().size(); i++) {
+                        Tab tab = tpAppearance.getTabs().get(i);
+                        if (tab.getText().equals("背景设置")) {
+                            tpAppearance.getTabs().set(i, new Tab("背景设置", createBackgroundTabContent()));
+                            break;
+                        }
+                    }
+                }
+            }
+        });
+        bgImagePanel.getChildren().add(previewSizeBox);
+        
         // 背景图显示区域
         FlowPane bgImageFlow = new FlowPane();
         bgImageFlow.setPadding(new Insets(10));
@@ -687,12 +745,25 @@ public class AppearanceManager {
             if (imageFiles != null && imageFiles.length > 0) {
                 for (File imageFile : imageFiles) {
                     try {
+                        // 根据当前预览尺寸设置不同的图片大小
+                        int width, height;
+                        if (currentPreviewSize[0].equals("小")) {
+                            width = 100;
+                            height = 75;
+                        } else if (currentPreviewSize[0].equals("大")) {
+                            width = 200;
+                            height = 150;
+                        } else {
+                            width = 150;
+                            height = 110;
+                        }
+                        
                         // 创建缩略图
-                        Image image = new Image(imageFile.toURI().toURL().toExternalForm(), 120, 80, true, true);
+                        Image image = new Image(imageFile.toURI().toURL().toExternalForm());
                         ImageView imageView = new ImageView(image);
                         imageView.setPreserveRatio(true);
-                        imageView.setFitWidth(120);
-                        imageView.setFitHeight(80);
+                        imageView.setFitWidth(width);
+                        imageView.setFitHeight(height);
                         imageView.setStyle("-fx-background-color: transparent; -fx-border-color: transparent; -fx-border-width: 0px;");
                         
                         // 添加图片加载错误处理
@@ -705,10 +776,23 @@ public class AppearanceManager {
                             }
                         });
                         
-                        // 创建按钮，增大预览框尺寸
+                        // 根据当前预览尺寸设置不同的按钮大小
+                        int buttonWidth, buttonHeight;
+                        if (currentPreviewSize[0].equals("小")) {
+                            buttonWidth = 120;
+                            buttonHeight = 95;
+                        } else if (currentPreviewSize[0].equals("大")) {
+                            buttonWidth = 220;
+                            buttonHeight = 170;
+                        } else {
+                            buttonWidth = 170;
+                            buttonHeight = 130;
+                        }
+                        
+                        // 创建按钮
                         Button imageButton = new Button();
                         imageButton.setGraphic(imageView);
-                        imageButton.setPrefSize(160, 120); // 增大预览框尺寸
+                        imageButton.setPrefSize(buttonWidth, buttonHeight);
                         imageButton.setStyle(String.format(
                                 "-fx-background-color: transparent; -fx-background-radius: 4; -fx-border-color: %s; -fx-border-width: 1px; -fx-content-display: graphic-only; -fx-padding: 5px;",
                                 currentTheme.getBorderColor()
@@ -753,9 +837,22 @@ public class AppearanceManager {
                         bgImageFlow.getChildren().add(imageButton);
                     } catch (Exception e) {
                         e.printStackTrace();
+                        // 根据当前预览尺寸设置不同的按钮大小
+                        int buttonWidth, buttonHeight;
+                        if (currentPreviewSize[0].equals("小")) {
+                            buttonWidth = 120;
+                            buttonHeight = 95;
+                        } else if (currentPreviewSize[0].equals("大")) {
+                            buttonWidth = 220;
+                            buttonHeight = 170;
+                        } else {
+                            buttonWidth = 170;
+                            buttonHeight = 130;
+                        }
+                        
                         // 创建错误占位按钮
                         Button errorButton = new Button("图片加载失败");
-                        errorButton.setPrefSize(130, 90);
+                        errorButton.setPrefSize(buttonWidth, buttonHeight);
                         errorButton.setStyle(String.format(
                                 "-fx-background-color: #f0f0f0; -fx-background-radius: 4; -fx-border-color: #ff0000; -fx-border-width: 1px; -fx-text-fill: #ff0000;",
                                 currentTheme.getBorderColor()
@@ -978,8 +1075,7 @@ public class AppearanceManager {
             ));
         }
         
-        // 应用新的按钮样式到整个界面
-        applyAppearance();
+        // 按钮示例更新完成，无需重新应用整个界面样式
     }
     
     /**
@@ -1268,9 +1364,9 @@ public class AppearanceManager {
         panelColorBox.getChildren().addAll(panelLabel, panelColor);
         colorGrid.add(panelColorBox, 1, 0);
         
-        // 主色调
+        // 主题色
         VBox accentColorBox = new VBox(3);
-        Label accentLabel = new Label("主色");
+        Label accentLabel = new Label("主题色");
         accentLabel.setStyle(String.format(
                 "-fx-font-family: %s; -fx-font-size: 10px; -fx-text-fill: #666666;",
                 theme.getFontFamily()
@@ -1282,11 +1378,11 @@ public class AppearanceManager {
         accentColor.setArcHeight(4);
         accentColor.setStyle(String.format("-fx-border-color: %s; -fx-border-width: 1px;", validateColor(theme.getBorderColor(), "#e0e0e0")));
         accentColorBox.getChildren().addAll(accentLabel, accentColor);
-        colorGrid.add(accentColorBox, 2, 0);
+        colorGrid.add(accentColorBox, 0, 1);
         
-        // 文本主色
+        // 文本色
         VBox textColorBox = new VBox(3);
-        Label textLabel = new Label("文本");
+        Label textLabel = new Label("文本色");
         textLabel.setStyle(String.format(
                 "-fx-font-family: %s; -fx-font-size: 10px; -fx-text-fill: #666666;",
                 theme.getFontFamily()
@@ -1298,604 +1394,112 @@ public class AppearanceManager {
         textColor.setArcHeight(4);
         textColor.setStyle(String.format("-fx-border-color: %s; -fx-border-width: 1px;", validateColor(theme.getBorderColor(), "#e0e0e0")));
         textColorBox.getChildren().addAll(textLabel, textColor);
-        colorGrid.add(textColorBox, 3, 0);
+        colorGrid.add(textColorBox, 1, 1);
         
-        // 按钮样式预览
-        VBox buttonPreviewBox = new VBox(5);
-        Label buttonLabel = new Label("按钮样式");
-        buttonLabel.setStyle(String.format(
-                "-fx-font-family: %s; -fx-font-size: 12px; -fx-text-fill: #333333; -fx-font-weight: bold;",
-                theme.getFontFamily()
-        ));
-        buttonLabel.setAlignment(Pos.CENTER);
+        card.getChildren().add(colorGrid);
         
-        HBox buttonBox = new HBox(8);
-        buttonBox.setAlignment(Pos.CENTER);
-        
-        // 主要按钮
-        Button primaryButton = new Button("主按钮");
-        primaryButton.setStyle(String.format(
-                "-fx-background-color: %s; -fx-text-fill: %s; -fx-background-radius: 4; -fx-font-size: 10px; -fx-min-width: 60; -fx-min-height: 25;",
-                theme.getButtonPrimaryBgColor(), theme.getButtonPrimaryTextColor()
-        ));
-        
-        // 次要按钮
-        Button secondaryButton = new Button("次按钮");
-        secondaryButton.setStyle(String.format(
-                "-fx-background-color: %s; -fx-text-fill: %s; -fx-border-color: %s; -fx-background-radius: 4; -fx-font-size: 10px; -fx-min-width: 60; -fx-min-height: 25;",
-                theme.getButtonSecondaryBgColor(), theme.getButtonSecondaryTextColor(), theme.getButtonSecondaryBorderColor()
-        ));
-        
-        buttonBox.getChildren().addAll(primaryButton, secondaryButton);
-        buttonPreviewBox.getChildren().addAll(buttonLabel, buttonBox);
-        
-        // 列表样式预览
-        VBox listPreviewBox = new VBox(5);
-        Label listLabel = new Label("列表样式");
-        listLabel.setStyle(String.format(
-                "-fx-font-family: %s; -fx-font-size: 12px; -fx-text-fill: #333333; -fx-font-weight: bold;",
-                theme.getFontFamily()
-        ));
-        listLabel.setAlignment(Pos.CENTER);
-        
-        VBox listPreview = new VBox();
-        listPreview.setPrefWidth(160);
-        listPreview.setPrefHeight(40);
-        listPreview.setStyle(String.format(
-                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: 1px; -fx-background-radius: 4;",
-                theme.getListBgColor(), theme.getBorderColor()
-        ));
-        
-        // 列表行预览
-        HBox listRow1 = new HBox(5);
-        listRow1.setPadding(new Insets(3, 5, 3, 5));
-        listRow1.setStyle(String.format(
-                "-fx-background-color: %s; -fx-border-color: transparent transparent %s transparent; -fx-border-width: 0 0 1px 0;",
-                theme.getListRowOddBgColor(), theme.getBorderColor()
-        ));
-        Label listItem1 = new Label("列表项 1");
-        listItem1.setStyle(String.format(
-                "-fx-font-family: %s; -fx-font-size: 10px; -fx-text-fill: %s;",
-                theme.getFontFamily(), theme.getTextPrimaryColor()
-        ));
-        listRow1.getChildren().add(listItem1);
-        
-        HBox listRow2 = new HBox(5);
-        listRow2.setPadding(new Insets(3, 5, 3, 5));
-        listRow2.setStyle(String.format(
-                "-fx-background-color: %s;",
-                theme.getListRowEvenBgColor()
-        ));
-        Label listItem2 = new Label("列表项 2");
-        listItem2.setStyle(String.format(
-                "-fx-font-family: %s; -fx-font-size: 10px; -fx-text-fill: %s;",
-                theme.getFontFamily(), theme.getTextPrimaryColor()
-        ));
-        listRow2.getChildren().add(listItem2);
-        
-        listPreview.getChildren().addAll(listRow1, listRow2);
-        listPreviewBox.getChildren().addAll(listLabel, listPreview);
-        
-        // 添加到卡片
-        card.getChildren().addAll(colorGrid, buttonPreviewBox, listPreviewBox);
-        
-        // 添加选中效果
-        if (isCurrentTheme(theme)) {
-            card.setStyle(String.format(
-                    "-fx-background-color: %s; -fx-background-radius: 12; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.25), 15, 0, 0, 0); -fx-border-color: %s; -fx-border-width: 3px;",
-                    theme.getPanelBgColor(), theme.getAccentColor()
-            ));
-            
-            // 添加明显的选中标记
-            StackPane checkmarkPane = new StackPane();
-            checkmarkPane.setPrefSize(30, 30);
-            checkmarkPane.setStyle(String.format(
-                    "-fx-background-color: %s; -fx-background-radius: 15; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 5, 0, 0, 0);",
-                    theme.getAccentColor()
-            ));
-            
-            Label checkmarkLabel = new Label("✓");
-            checkmarkLabel.setStyle(String.format(
-                    "-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: white;"
-            ));
-            checkmarkPane.getChildren().add(checkmarkLabel);
-            
-            // 将标记放置在卡片右上角
-            StackPane.setAlignment(checkmarkPane, Pos.TOP_RIGHT);
-            card.getChildren().add(checkmarkPane);
-            // 调整标记位置
-            StackPane.setMargin(checkmarkPane, new Insets(-5, -5, 0, 0));
+        // 应用主题背景色
+        String cardBgColor = theme.getPanelBgColor();
+        if (cardBgColor.startsWith("#") && cardBgColor.length() == 7) {
+            int alpha = (int) (theme.getGlassOpacity() * 255);
+            String alphaHex = String.format("%02x", alpha);
+            cardBgColor = cardBgColor + alphaHex;
         }
+        
+        // 设置卡片样式
+        card.setStyle(String.format(
+                "-fx-background-color: %s; -fx-background-radius: 12; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.15), 10, 0, 0, 0); -fx-border-color: %s; -fx-border-width: 1px; -fx-padding: 15;",
+                cardBgColor, theme.getBorderColor()
+        ));
         
         return card;
     }
     
     /**
-     * 检查是否为当前主题
+     * 检查指定主题是否为当前主题
      */
     private boolean isCurrentTheme(ThemeConfig theme) {
-        // 比较更多关键属性以确保准确性
-        return theme.getAccentColor().equals(currentTheme.getAccentColor()) &&
-               theme.getBgColor().equals(currentTheme.getBgColor()) &&
-               theme.getPanelBgColor().equals(currentTheme.getPanelBgColor()) &&
-               theme.getTextPrimaryColor().equals(currentTheme.getTextPrimaryColor()) &&
-               theme.isDarkBackground() == currentTheme.isDarkBackground();
+        return theme.getTemplateName().equals(currentTheme.getTemplateName());
     }
     
     /**
-     * 应用主题
+     * 应用指定主题到界面
      */
-    private void applyTheme(ThemeConfig theme) {
-        currentTheme.setBgColor(theme.getBgColor());
-        currentTheme.setAccentColor(theme.getAccentColor());
-        currentTheme.setTextPrimaryColor(theme.getTextPrimaryColor());
-        currentTheme.setTextSecondaryColor(theme.getTextSecondaryColor());
-        currentTheme.setTextTertiaryColor(theme.getTextTertiaryColor());
-        currentTheme.setTextDisabledColor(theme.getTextDisabledColor());
-        currentTheme.setGlassOpacity(theme.getGlassOpacity());
-        currentTheme.setDarkBackground(theme.isDarkBackground());
-        currentTheme.setCornerRadius(theme.getCornerRadius());
-        currentTheme.setBorderColor(theme.getBorderColor());
-        currentTheme.setPanelBgColor(theme.getPanelBgColor());
-        currentTheme.setPanelBorderColor(theme.getPanelBorderColor());
-        currentTheme.setHoverColor(theme.getHoverColor());
-        currentTheme.setSelectedColor(theme.getSelectedColor());
-        currentTheme.setDisabledColor(theme.getDisabledColor());
-        currentTheme.setProgressBarColor(theme.getProgressBarColor());
-        currentTheme.setSuccessColor(theme.getSuccessColor());
-        currentTheme.setWarningColor(theme.getWarningColor());
-        currentTheme.setErrorColor(theme.getErrorColor());
-        currentTheme.setInfoColor(theme.getInfoColor());
+    private void applyTheme(ThemeConfig newTheme) {
+        // 更新当前主题配置
+        currentTheme.setBgImagePath(newTheme.getBgImagePath());
+        currentTheme.setBgColor(newTheme.getBgColor());
+        currentTheme.setAccentColor(newTheme.getAccentColor());
+        currentTheme.setTextPrimaryColor(newTheme.getTextPrimaryColor());
+        currentTheme.setTextSecondaryColor(newTheme.getTextSecondaryColor());
+        currentTheme.setTextTertiaryColor(newTheme.getTextTertiaryColor());
+        currentTheme.setTextDisabledColor(newTheme.getTextDisabledColor());
+        currentTheme.setGlassOpacity(newTheme.getGlassOpacity());
+        currentTheme.setDarkBackground(newTheme.isDarkBackground());
+        currentTheme.setPanelBgColor(newTheme.getPanelBgColor());
+        currentTheme.setFontFamily(newTheme.getFontFamily());
+        currentTheme.setFontSize(newTheme.getFontSize());
+        currentTheme.setButtonLargeSize(newTheme.getButtonLargeSize());
+        currentTheme.setButtonSmallSize(newTheme.getButtonSmallSize());
         
-        // 添加列表样式属性的更新
-        currentTheme.setListBgColor(theme.getListBgColor());
-        currentTheme.setListRowEvenBgColor(theme.getListRowEvenBgColor());
-        currentTheme.setListRowOddBgColor(theme.getListRowOddBgColor());
-        currentTheme.setListRowSelectedBgColor(theme.getListRowSelectedBgColor());
-        currentTheme.setListRowSelectedTextColor(theme.getListRowSelectedTextColor());
-        currentTheme.setListRowHoverBgColor(theme.getListRowHoverBgColor());
-        currentTheme.setListBorderColor(theme.getListBorderColor());
-        currentTheme.setListHeaderBgColor(theme.getListHeaderBgColor());
-        currentTheme.setListHeaderTextColor(theme.getListHeaderTextColor());
-        
-        // 添加按钮样式属性的更新
-        currentTheme.setButtonPrimaryBgColor(theme.getButtonPrimaryBgColor());
-        currentTheme.setButtonPrimaryTextColor(theme.getButtonPrimaryTextColor());
-        currentTheme.setButtonPrimaryBorderColor(theme.getButtonPrimaryBorderColor());
-        currentTheme.setButtonPrimaryHoverColor(theme.getButtonPrimaryHoverColor());
-        currentTheme.setButtonPrimaryPressedColor(theme.getButtonPrimaryPressedColor());
-        currentTheme.setButtonSecondaryBgColor(theme.getButtonSecondaryBgColor());
-        currentTheme.setButtonSecondaryTextColor(theme.getButtonSecondaryTextColor());
-        currentTheme.setButtonSecondaryBorderColor(theme.getButtonSecondaryBorderColor());
-        currentTheme.setButtonSecondaryHoverColor(theme.getButtonSecondaryHoverColor());
-        currentTheme.setButtonSecondaryPressedColor(theme.getButtonSecondaryPressedColor());
-        currentTheme.setButtonSuccessBgColor(theme.getButtonSuccessBgColor());
-        currentTheme.setButtonSuccessTextColor(theme.getButtonSuccessTextColor());
-        currentTheme.setButtonSuccessBorderColor(theme.getButtonSuccessBorderColor());
-        currentTheme.setButtonSuccessHoverColor(theme.getButtonSuccessHoverColor());
-        currentTheme.setButtonWarningBgColor(theme.getButtonWarningBgColor());
-        currentTheme.setButtonWarningTextColor(theme.getButtonWarningTextColor());
-        currentTheme.setButtonWarningBorderColor(theme.getButtonWarningBorderColor());
-        currentTheme.setButtonWarningHoverColor(theme.getButtonWarningHoverColor());
-        currentTheme.setButtonErrorBgColor(theme.getButtonErrorBgColor());
-        currentTheme.setButtonErrorTextColor(theme.getButtonErrorTextColor());
-        currentTheme.setButtonErrorBorderColor(theme.getButtonErrorBorderColor());
-        currentTheme.setButtonErrorHoverColor(theme.getButtonErrorHoverColor());
-        
-        // 设置背景图
-        currentTheme.setBgImagePath(theme.getBgImagePath());
-        
+        // 应用主题到界面
         applyAppearance();
+    }
+    
+    /**
+     * 应用当前主题到界面
+     */
+    public void applyAppearance() {
+        // 更新背景图片
+        String bgImagePath = currentTheme.getBgImagePath();
+        if (bgImagePath != null && !bgImagePath.isEmpty()) {
+            // 检查路径是否已经是URL格式
+            String imageUrl;
+            if (!bgImagePath.startsWith("file://") && !bgImagePath.startsWith("http://") && !bgImagePath.startsWith("https://")) {
+                // 将本地文件路径转换为URL格式
+                File imageFile = new File(bgImagePath);
+                imageUrl = imageFile.toURI().toString();
+            } else {
+                imageUrl = bgImagePath;
+            }
+            Image newBgImage = new Image(imageUrl);
+            backgroundImageView.setImage(newBgImage);
+            
+            // 设置图片显示策略
+            switch (currentTheme.getBgImageStrategy()) {
+                case STRETCH:
+                    backgroundImageView.setPreserveRatio(false);
+                    break;
+                case CONTAIN:
+                    backgroundImageView.setPreserveRatio(true);
+                    break;
+                case COVER:
+                    backgroundImageView.setPreserveRatio(true);
+                    break;
+                case CENTER:
+                    backgroundImageView.setPreserveRatio(true);
+                    break;
+            }
+        } else {
+            backgroundImageView.setImage(null);
+        }
+        
+        // 更新背景覆盖层
+        backgroundOverlay.setStyle(String.format(
+                "-fx-background-color: rgba(%s, %.2f);",
+                currentTheme.isDarkBackground() ? "0,0,0" : "255,255,255",
+                1 - currentTheme.getGlassOpacity()
+        ));
+        
+        // 刷新按钮示例样式
+        updateButtonExamples();
     }
     
     /**
      * 刷新颜色选择器
      */
     private void refreshColorPickers() {
-        // 由于颜色选择器是在对话框中动态创建的，这里不需要实现具体逻辑
-        // 实际应用中可以通过绑定或事件监听来实现
-    }
-    
-    /**
-     * 显示背景图裁切对话框
-     */
-    private void showCropBackgroundDialog() {
-        Dialog<ButtonType> dialog = new Dialog<>();
-        dialog.setTitle("背景图裁切");
-        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.APPLY, ButtonType.CANCEL);
-        dialog.getDialogPane().setPrefWidth(800);
-        dialog.getDialogPane().setPrefHeight(600);
-        
-        // 创建主容器
-        VBox mainContainer = new VBox(20);
-        mainContainer.setPadding(new Insets(15));
-        mainContainer.setStyle(String.format("-fx-background-color: %s;", currentTheme.getBgColor()));
-        
-        // 背景图预览区域
-        StackPane previewContainer = new StackPane();
-        previewContainer.setPrefSize(750, 400);
-        previewContainer.setStyle(String.format("-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-background-radius: %.1f;",
-                currentTheme.getPanelBgColor(), currentTheme.getBorderColor(), currentTheme.getBorderWidth(), currentTheme.getCornerRadius()));
-        
-        // 加载当前背景图
-        ImageView originalImage = new ImageView(backgroundImageView.getImage());
-        originalImage.setPreserveRatio(true);
-        originalImage.setFitWidth(700);
-        originalImage.setFitHeight(350);
-        
-        // 创建裁切矩形
-        Rectangle cropRect = new Rectangle();
-        cropRect.setWidth(400);
-        cropRect.setHeight(300);
-        cropRect.setStroke(Color.RED);
-        cropRect.setStrokeWidth(2);
-        cropRect.setFill(Color.TRANSPARENT);
-        
-        // 添加拖动手柄
-        Circle topLeftHandle = new Circle(5);
-        topLeftHandle.setFill(Color.WHITE);
-        topLeftHandle.setStroke(Color.RED);
-        topLeftHandle.setStrokeWidth(2);
-        topLeftHandle.setCursor(Cursor.NW_RESIZE);
-        
-        Circle topRightHandle = new Circle(5);
-        topRightHandle.setFill(Color.WHITE);
-        topRightHandle.setStroke(Color.RED);
-        topRightHandle.setStrokeWidth(2);
-        topRightHandle.setCursor(Cursor.NE_RESIZE);
-        
-        Circle bottomLeftHandle = new Circle(5);
-        bottomLeftHandle.setFill(Color.WHITE);
-        bottomLeftHandle.setStroke(Color.RED);
-        bottomLeftHandle.setStrokeWidth(2);
-        bottomLeftHandle.setCursor(Cursor.SW_RESIZE);
-        
-        Circle bottomRightHandle = new Circle(5);
-        bottomRightHandle.setFill(Color.WHITE);
-        bottomRightHandle.setStroke(Color.RED);
-        bottomRightHandle.setStrokeWidth(2);
-        bottomRightHandle.setCursor(Cursor.SE_RESIZE);
-        
-        // 更新手柄位置
-        updateCropHandles(cropRect, topLeftHandle, topRightHandle, bottomLeftHandle, bottomRightHandle);
-        
-        // 添加手柄拖拽功能
-        addHandleDragListeners(cropRect, topLeftHandle, topRightHandle, bottomLeftHandle, bottomRightHandle);
-        
-        previewContainer.getChildren().addAll(originalImage, cropRect, topLeftHandle, topRightHandle, bottomLeftHandle, bottomRightHandle);
-        
-        // 尺寸调整控件
-        VBox sizeControls = new VBox(15);
-        sizeControls.setPadding(new Insets(0, 0, 0, 10));
-        sizeControls.setStyle("-fx-background-color: transparent;");
-        
-        Label sizeLabel = StyleFactory.createLabel("裁切区域尺寸", 14, false);
-        sizeControls.getChildren().add(sizeLabel);
-        
-        // 宽度滑块
-        HBox widthBox = new HBox(15);
-        Label widthLabel = StyleFactory.createLabel("宽度:", 12, false);
-        TextField widthField = new TextField(String.valueOf((int) cropRect.getWidth()));
-        widthField.setPrefWidth(80);
-        widthField.setStyle(String.format(
-                "-fx-background-color: %s; -fx-background-radius: %.1f; -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f;",
-                currentTheme.getPanelBgColor(), currentTheme.getCornerRadius(), currentTheme.getTextPrimaryColor(), 
-                currentTheme.getBorderColor(), currentTheme.getBorderWidth()
-        ));
-        
-        JFXSlider widthSlider = new JFXSlider(100, 700, cropRect.getWidth());
-        widthSlider.setPrefWidth(200);
-        widthSlider.setStyle(String.format(
-                "-fx-background-color: %s; -fx-background-radius: %.1f;",
-                currentTheme.getPanelBgColor(), currentTheme.getCornerRadius()
-        ));
-        
-        widthSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
-            cropRect.setWidth(newVal.doubleValue());
-            widthField.setText(String.valueOf((int) newVal.doubleValue()));
-            updateCropHandles(cropRect, topLeftHandle, topRightHandle, bottomLeftHandle, bottomRightHandle);
-        });
-        
-        widthBox.getChildren().addAll(widthLabel, widthField, widthSlider);
-        sizeControls.getChildren().add(widthBox);
-        
-        // 高度滑块
-        HBox heightBox = new HBox(15);
-        Label heightLabel = StyleFactory.createLabel("高度:", 12, false);
-        TextField heightField = new TextField(String.valueOf((int) cropRect.getHeight()));
-        heightField.setPrefWidth(80);
-        heightField.setStyle(String.format(
-                "-fx-background-color: %s; -fx-background-radius: %.1f; -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f;",
-                currentTheme.getPanelBgColor(), currentTheme.getCornerRadius(), currentTheme.getTextPrimaryColor(), 
-                currentTheme.getBorderColor(), currentTheme.getBorderWidth()
-        ));
-        
-        JFXSlider heightSlider = new JFXSlider(100, 350, cropRect.getHeight());
-        heightSlider.setPrefWidth(200);
-        heightSlider.setStyle(String.format(
-                "-fx-background-color: %s; -fx-background-radius: %.1f;",
-                currentTheme.getPanelBgColor(), currentTheme.getCornerRadius()
-        ));
-        
-        heightSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
-            cropRect.setHeight(newVal.doubleValue());
-            heightField.setText(String.valueOf((int) newVal.doubleValue()));
-            updateCropHandles(cropRect, topLeftHandle, topRightHandle, bottomLeftHandle, bottomRightHandle);
-        });
-        
-        heightBox.getChildren().addAll(heightLabel, heightField, heightSlider);
-        sizeControls.getChildren().add(heightBox);
-        
-        mainContainer.getChildren().addAll(previewContainer, sizeControls);
-        dialog.getDialogPane().setContent(mainContainer);
-        
-        // 应用裁切
-        dialog.setResultConverter(buttonType -> {
-            if (buttonType == ButtonType.APPLY) {
-                // 这里可以添加实际的裁切逻辑
-                // 目前只是保存裁切设置
-                backgroundImageView.setPreserveRatio(true);
-                backgroundImageView.setStyle("-fx-background-size: cover; -fx-background-position: center; -fx-background-repeat: no-repeat;");
-                applyAppearance();
-            }
-            return null;
-        });
-        
-        dialog.showAndWait();
-    }
-    
-    /**
-     * 更新裁切手柄位置
-     */
-    private void updateCropHandles(Rectangle cropRect, Circle topLeft, Circle topRight, Circle bottomLeft, Circle bottomRight) {
-        topLeft.setCenterX(cropRect.getX());
-        topLeft.setCenterY(cropRect.getY());
-        
-        topRight.setCenterX(cropRect.getX() + cropRect.getWidth());
-        topRight.setCenterY(cropRect.getY());
-        
-        bottomLeft.setCenterX(cropRect.getX());
-        bottomLeft.setCenterY(cropRect.getY() + cropRect.getHeight());
-        
-        bottomRight.setCenterX(cropRect.getX() + cropRect.getWidth());
-        bottomRight.setCenterY(cropRect.getY() + cropRect.getHeight());
-    }
-    
-    /**
-     * 添加手柄拖拽监听器
-     */
-    private void addHandleDragListeners(Rectangle cropRect, Circle topLeft, Circle topRight, Circle bottomLeft, Circle bottomRight) {
-        // 为每个手柄添加拖拽监听器
-        addHandleDragListener(topLeft, cropRect, (deltaX, deltaY) -> {
-            cropRect.setX(cropRect.getX() + deltaX);
-            cropRect.setY(cropRect.getY() + deltaY);
-            cropRect.setWidth(cropRect.getWidth() - deltaX);
-            cropRect.setHeight(cropRect.getHeight() - deltaY);
-        });
-        
-        addHandleDragListener(topRight, cropRect, (deltaX, deltaY) -> {
-            cropRect.setY(cropRect.getY() + deltaY);
-            cropRect.setWidth(cropRect.getWidth() + deltaX);
-            cropRect.setHeight(cropRect.getHeight() - deltaY);
-        });
-        
-        addHandleDragListener(bottomLeft, cropRect, (deltaX, deltaY) -> {
-            cropRect.setX(cropRect.getX() + deltaX);
-            cropRect.setWidth(cropRect.getWidth() - deltaX);
-            cropRect.setHeight(cropRect.getHeight() + deltaY);
-        });
-        
-        addHandleDragListener(bottomRight, cropRect, (deltaX, deltaY) -> {
-            cropRect.setWidth(cropRect.getWidth() + deltaX);
-            cropRect.setHeight(cropRect.getHeight() + deltaY);
-        });
-    }
-    
-    /**
-     * 添加单个手柄的拖拽监听器
-     */
-    private void addHandleDragListener(Circle handle, Rectangle cropRect, BiConsumer<Double, Double> resizeAction) {
-        final boolean[] isDragging = {false};
-        final Point2D[] lastMousePosition = {null};
-        
-        handle.setOnMousePressed(e -> {
-            isDragging[0] = true;
-            lastMousePosition[0] = new Point2D(e.getSceneX(), e.getSceneY());
-        });
-        
-        handle.setOnMouseDragged(e -> {
-            if (isDragging[0] && lastMousePosition[0] != null) {
-                double deltaX = e.getSceneX() - lastMousePosition[0].getX();
-                double deltaY = e.getSceneY() - lastMousePosition[0].getY();
-                
-                // 执行尺寸调整操作
-                resizeAction.accept(deltaX, deltaY);
-                
-                // 确保尺寸不小于最小值
-                if (cropRect.getWidth() < 50) cropRect.setWidth(50);
-                if (cropRect.getHeight() < 50) cropRect.setHeight(50);
-                
-                // 更新手柄位置
-                Circle topLeft = (Circle) ((Pane) handle.getParent()).getChildren().get(2);
-                Circle topRight = (Circle) ((Pane) handle.getParent()).getChildren().get(3);
-                Circle bottomLeft = (Circle) ((Pane) handle.getParent()).getChildren().get(4);
-                Circle bottomRight = (Circle) ((Pane) handle.getParent()).getChildren().get(5);
-                updateCropHandles(cropRect, topLeft, topRight, bottomLeft, bottomRight);
-                
-                lastMousePosition[0] = new Point2D(e.getSceneX(), e.getSceneY());
-            }
-        });
-        
-        handle.setOnMouseReleased(e -> {
-            isDragging[0] = false;
-            lastMousePosition[0] = null;
-        });
-    }
-    
-    public void applyAppearance() {
-        // 重新初始化样式工厂
-        StyleFactory.initStyleFactory(currentTheme);
-        
-        // 更新背景覆盖层
-        backgroundOverlay.setStyle("-fx-background-color: rgba(" + 
-                (currentTheme.isDarkBackground() ? "0,0,0" : "255,255,255") + 
-                ", " + (1 - currentTheme.getGlassOpacity()) + ");");
-        
-        // 检查是否有背景图
-        boolean hasBackgroundImage = !currentTheme.getBgImagePath().isEmpty();
-        
-        // 如果有背景图，将面板背景色设置为透明
-        if (hasBackgroundImage) {
-            currentTheme.setPanelBgColor("transparent");
-            currentTheme.setPanelBorderColor("transparent");
-            currentTheme.setPanelHoverColor("transparent");
-        }
-        
-        // 获取根容器用于背景图调整
-        StackPane rootContainer = null;
-        if (app != null && app instanceof com.filemanager.app.base.IUIElementProvider) {
-            com.filemanager.app.base.IUIElementProvider uiElementProvider = (com.filemanager.app.base.IUIElementProvider) app;
-            rootContainer = uiElementProvider.getRootContainer();
-        }
-        
-        // 更新背景图片
-        if (hasBackgroundImage) {
-            try {
-                String bgImagePath = currentTheme.getBgImagePath();
-                String imageUrl;
-                
-                // 检查文件是否存在（绝对路径或相对路径）
-                File bgImageFile = new File(bgImagePath);
-                if (bgImageFile.exists() && bgImageFile.isFile()) {
-                    // 本地文件，使用file:// URL方式加载
-                    imageUrl = bgImageFile.toURI().toURL().toExternalForm();
-                } else {
-                    // 尝试从相对路径加载
-                    File projectRelativeFile = new File("style/themes/images/" + bgImagePath);
-                    if (projectRelativeFile.exists() && projectRelativeFile.isFile()) {
-                        imageUrl = projectRelativeFile.toURI().toURL().toExternalForm();
-                    } else {
-                        // 尝试从项目根目录开始加载相对路径
-                        File rootRelativeFile = new File(bgImagePath);
-                        if (rootRelativeFile.exists() && rootRelativeFile.isFile()) {
-                            imageUrl = rootRelativeFile.toURI().toURL().toExternalForm();
-                        } else {
-                            // 尝试从资源路径加载
-                            java.net.URL resourceUrl = getClass().getClassLoader().getResource(bgImagePath);
-                            if (resourceUrl != null) {
-                                imageUrl = resourceUrl.toExternalForm();
-                            } else {
-                                // 最后尝试从主题images目录加载
-                                java.net.URL themeResourceUrl = getClass().getClassLoader().getResource("style/themes/images/" + bgImagePath);
-                                if (themeResourceUrl != null) {
-                                    imageUrl = themeResourceUrl.toExternalForm();
-                                } else {
-                                    app.logError("背景图文件不存在：" + bgImagePath);
-                                    backgroundImageView.setImage(null);
-                                    return;
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                // 创建图片对象并设置加载参数
-                // 尝试同步加载，提高SVG加载成功率
-                Image image = new Image(imageUrl, false);
-                
-                // 设置图片加载完成和错误处理回调
-                image.errorProperty().addListener((obs, oldVal, newVal) -> {
-                    if (newVal) {
-                        app.logError("背景图加载失败：图片文件可能损坏或格式不支持");
-                        backgroundImageView.setImage(null);
-                    }
-                });
-                
-                // 根据背景图策略设置图片显示方式
-                ThemeConfig.BackgroundStrategy strategy = currentTheme.getBgImageStrategy();
-                
-                // 先解除现有的绑定，避免多次绑定导致内存泄漏
-                backgroundImageView.fitWidthProperty().unbind();
-                backgroundImageView.fitHeightProperty().unbind();
-                
-                if (rootContainer != null) {
-                    switch (strategy) {
-                        case STRETCH:
-                            // 拉伸填充
-                            backgroundImageView.setPreserveRatio(false);
-                            backgroundImageView.fitWidthProperty().bind(rootContainer.widthProperty());
-                            backgroundImageView.fitHeightProperty().bind(rootContainer.heightProperty());
-                            break;
-                        case CENTER:
-                            // 居中显示
-                            backgroundImageView.setPreserveRatio(true);
-                            // 不设置固定大小，保持图片原始比例
-                            break;
-                        case COVER:
-                            // 覆盖（保持比例，可能裁切）
-                            backgroundImageView.setPreserveRatio(true);
-                            backgroundImageView.fitWidthProperty().bind(rootContainer.widthProperty());
-                            backgroundImageView.fitHeightProperty().bind(rootContainer.heightProperty());
-                            break;
-                        case CONTAIN:
-                            // 包含（保持比例，全部显示）
-                            backgroundImageView.setPreserveRatio(true);
-                            backgroundImageView.fitWidthProperty().bind(rootContainer.widthProperty());
-                            backgroundImageView.fitHeightProperty().bind(rootContainer.heightProperty());
-                            break;
-                    }
-                }
-                
-                // 添加双击事件，显示详细大图
-                backgroundImageView.setOnMouseClicked(event -> {
-                    if (event.getClickCount() == 2 && image != null) {
-                        // 显示大图对话框
-                        Dialog<Void> dialog = new Dialog<>();
-                        dialog.setTitle("背景图预览");
-                        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
-                        dialog.getDialogPane().setPrefSize(1000, 800);
-                        
-                        StackPane previewPane = new StackPane();
-                        ImageView fullSizeImageView = new ImageView(image);
-                        fullSizeImageView.setPreserveRatio(true);
-                        fullSizeImageView.setFitWidth(950);
-                        fullSizeImageView.setFitHeight(750);
-                        
-                        previewPane.getChildren().add(fullSizeImageView);
-                        dialog.getDialogPane().setContent(previewPane);
-                        
-                        dialog.showAndWait();
-                    }
-                });
-                
-                backgroundImageView.setImage(image);
-            } catch (Exception e) {
-                app.logError("背景图加载失败：" + e.getMessage());
-                backgroundImageView.setImage(null);
-            }
-        } else {
-            backgroundImageView.setImage(null);
-        }
-        
-        // 递归更新所有界面元素的样式
-        if (app != null && app instanceof com.filemanager.app.base.IUIElementProvider) {
-            com.filemanager.app.base.IUIElementProvider uiElementProvider = (com.filemanager.app.base.IUIElementProvider) app;
-            // 复用已定义的rootContainer变量
-            rootContainer = uiElementProvider.getRootContainer();
-            if (rootContainer != null) {
-                com.filemanager.app.tools.display.StyleFactory.updateNodeStyle(rootContainer);
-            }
-        }
-        
-        // 调用所有IAutoReloadAble组件的reload方法
-        if (app != null && app instanceof com.filemanager.app.base.IAutoReloadAbleProvider) {
-            com.filemanager.app.base.IAutoReloadAbleProvider reloadableProvider = (com.filemanager.app.base.IAutoReloadAbleProvider) app;
-            List<com.filemanager.app.base.IAutoReloadAble> reloadableNodes = reloadableProvider.getAutoReloadNodes();
-            if (reloadableNodes != null) {
-                for (com.filemanager.app.base.IAutoReloadAble reloadable : reloadableNodes) {
-                    reloadable.reload();
-                }
-            }
-        }
+        // 此方法用于在主题变更时刷新颜色选择器的显示
+        // 具体实现会根据UI组件的实际情况进行调整
     }
 }

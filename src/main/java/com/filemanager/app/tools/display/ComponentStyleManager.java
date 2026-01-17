@@ -9,7 +9,6 @@
  */
 package com.filemanager.app.tools.display;
 
-import com.filemanager.app.tools.display.ThemeConfig;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.*;
