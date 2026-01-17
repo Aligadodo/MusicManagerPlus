@@ -14,6 +14,7 @@ import com.filemanager.model.CueSheet;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
+import com.filemanager.util.LanguageUtil;
 import com.filemanager.util.file.CueParserUtil;
 import javafx.collections.FXCollections;
 import javafx.scene.Node;
@@ -381,6 +382,11 @@ public class CueSplitterStrategy extends AbstractFfmpegStrategy {
 
             // 构建文件名
             String trackName = t.getFormatedTrackName(params.get("format"));
+
+            // 自动格式化目标文件名
+            if (Boolean.parseBoolean(params.getOrDefault("autoFormatFilename", "true"))) {
+                trackName = LanguageUtil.toSimpleChinese(trackName).trim();
+            }
 
             // 继承全局信息
             String artist = t.getPerformer();
