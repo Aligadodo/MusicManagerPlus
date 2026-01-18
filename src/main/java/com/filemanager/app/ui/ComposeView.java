@@ -94,6 +94,8 @@ public class ComposeView implements IAutoReloadAble {
         sourceListView = StyleFactory.createListView();
         sourceListView.setItems(app.getSourceRoots());
         sourceListView.setPlaceholder(StyleFactory.createChapter("拖拽文件夹到此"));
+        // 限制来源目录列表的最大高度，确保全局筛选面板有足够空间显示
+        sourceListView.setMaxHeight(200);
         VBox.setVgrow(sourceListView, Priority.ALWAYS);
         // 移除硬编码样式，让StyleFactory统一管理
 
@@ -172,17 +174,10 @@ public class ComposeView implements IAutoReloadAble {
         this.tpFilters.setCollapsible(true);
         this.tpFilters.setExpanded(true);
         
-        // 应用玻璃效果透明度
-        String bgColor = app.getCurrentTheme().getPanelBgColor();
-        if (bgColor.startsWith("#") && bgColor.length() == 7) {
-            int alpha = (int) (app.getCurrentTheme().getGlassOpacity() * 255);
-            String alphaHex = String.format("%02x", alpha);
-            bgColor = bgColor + alphaHex;
-        }
-        
+        // 应用与整体风格一致的不透明背景
         this.tpFilters.setStyle(String.format(
                 "-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: %s; -fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f;",
-                app.getCurrentTheme().getTextPrimaryColor(), bgColor, app.getCurrentTheme().getBorderColor(), app.getCurrentTheme().getBorderWidth(), app.getCurrentTheme().getCornerRadius()
+                app.getCurrentTheme().getTextPrimaryColor(), app.getCurrentTheme().getPanelBgColor(), app.getCurrentTheme().getBorderColor(), app.getCurrentTheme().getBorderWidth(), app.getCurrentTheme().getCornerRadius()
         ));
 
         leftPanel.getChildren().addAll(srcTools, sourceListView, tpFilters);

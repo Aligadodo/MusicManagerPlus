@@ -11,7 +11,6 @@ package com.filemanager.app.tools;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
-import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.CheckBoxTreeCell;
 import javafx.scene.layout.Priority;
@@ -210,19 +209,19 @@ public class AdvancedFileTypeManager {
      * 对外提供 UI 面板
      */
     public VBox getView() {
-        Node lblCustom = StyleFactory.createParamLabel("自定义扩展名:");
-        
         // 创建自定义输入框并应用主题样式
         StyleFactory.applyTextInputControlStyle(customInputCallback);
-        
-        VBox topBox = new VBox(5, lblCustom, customInputCallback);
-        StyleFactory.setBasicStyle(topBox);
+        // 更新占位符文本
+        customInputCallback.setPromptText("请输入要扫描的文件类型尾缀如: jpg;mepg;");
         
         // 创建TreeView并应用主题样式
         StyleFactory.applyTreeViewStyle(treeView);
+        // 限制TreeView的高度，确保显示合适
+        treeView.setPrefHeight(200);
+        treeView.setMaxHeight(300);
         
         VBox layout = StyleFactory.createVBoxPanel();
-        layout.getChildren().addAll(topBox, treeView);
+        layout.getChildren().addAll(customInputCallback, treeView);
         VBox.setVgrow(treeView, Priority.ALWAYS);
         
         // 应用主题样式到整个面板

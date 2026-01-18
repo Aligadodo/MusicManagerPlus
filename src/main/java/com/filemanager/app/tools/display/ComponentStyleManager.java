@@ -677,15 +677,38 @@ public class ComponentStyleManager {
                 "}\n" +
                 ".tree-table-view .tree-table-row-cell:filled:selected {\n" +
                 "    -fx-background-color: %s;\n" +
+                "    -fx-table-cell-border-color: transparent;\n" +
+                "    -fx-border-color: transparent;\n" +
                 "}\n" +
                 ".tree-table-view .tree-table-row-cell:filled:hover {\n" +
                 "    -fx-background-color: %s;\n" +
+                "    -fx-table-cell-border-color: transparent;\n" +
+                "    -fx-border-color: transparent;\n" +
+                "}\n" +
+                ".tree-table-view .tree-table-row-cell:focused {\n" +
+                "    -fx-background-color: %s;\n" +
+                "    -fx-table-cell-border-color: transparent;\n" +
+                "    -fx-border-color: transparent;\n" +
+                "}\n" +
+                ".tree-table-view .tree-table-row-cell:focused:selected {\n" +
+                "    -fx-background-color: %s;\n" +
+                "    -fx-table-cell-border-color: transparent;\n" +
+                "    -fx-border-color: transparent;\n" +
                 "}\n" +
                 ".tree-table-view .tree-table-cell {\n" +
                 "    -fx-text-fill: %s;\n" +
                 "    -fx-font-family: %s;\n" +
                 "    -fx-padding: 10 10;\n" +
                 "    -fx-border-color: transparent;\n" +
+                "    -fx-alignment: center-left;\n" +
+                "}\n" +
+                ".tree-table-view .tree-table-cell:selected {\n" +
+                "    -fx-text-fill: %s;\n" +
+                "    -fx-background-color: transparent;\n" +
+                "}\n" +
+                ".tree-table-view .tree-table-cell:focused {\n" +
+                "    -fx-text-fill: %s;\n" +
+                "    -fx-background-color: transparent;\n" +
                 "}\n" +
                 ".tree-table-view .virtual-flow .scroll-bar:vertical,\n" +
                 ".tree-table-view .virtual-flow .scroll-bar:horizontal {\n" +
@@ -697,6 +720,12 @@ public class ComponentStyleManager {
                 "}\n" +
                 ".tree-table-view .virtual-flow .scroll-bar .track {\n" +
                 "    -fx-background-color: transparent;\n" +
+                "}\n" +
+                ".tree-table-view .virtual-flow .scroll-bar .increment-button,\n" +
+                ".tree-table-view .virtual-flow .scroll-bar .decrement-button {\n" +
+                "    -fx-background-color: transparent;\n" +
+                "    -fx-shape: none;\n" +
+                "    -fx-padding: 0;\n" +
                 "}",
                 listBgColor, theme.getListBorderColor(), theme.getBorderWidth(), theme.getCornerRadius(), theme.getCornerRadius(),
                 headerBgColor, theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius(),
@@ -704,7 +733,11 @@ public class ComponentStyleManager {
                 theme.getTextPrimaryColor(), theme.getFontFamily(),
                 selectedBgColor,
                 hoverBgColor,
+                selectedBgColor,
+                selectedBgColor,
                 theme.getTextPrimaryColor(), theme.getFontFamily(),
+                theme.getTextPrimaryColor(),
+                theme.getTextPrimaryColor(),
                 theme.getTextTertiaryColor()
         ));
     }

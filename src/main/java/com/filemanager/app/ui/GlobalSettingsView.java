@@ -23,6 +23,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.control.Spinner;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import lombok.Getter;
 
@@ -54,9 +55,17 @@ public class GlobalSettingsView implements IAutoReloadAble {
     private void buildUI() {
         viewNode = StyleFactory.createVBoxPanel();
         
+        // 将扫描模式和层级合并到一行显示
+        HBox scanSettingsBox = new HBox(10);
+        // 调整扫描层级Spinner的宽度
+        spRecursionDepth.setPrefWidth(60);
+        scanSettingsBox.getChildren().addAll(
+                StyleFactory.createParamPairLine("扫描模式:", cbRecursionMode),
+                StyleFactory.createParamPairLine("扫描层级:", spRecursionDepth)
+        );
+        
         viewNode.getChildren().addAll(
-                StyleFactory.createParamPairLine("文件扫描模式:", cbRecursionMode),
-                StyleFactory.createParamPairLine("文件扫描层级:", spRecursionDepth),
+                scanSettingsBox,
                 fileTypeManager.getView()
         );
     }
