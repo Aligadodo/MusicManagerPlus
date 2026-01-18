@@ -296,56 +296,50 @@ public class DuplicateAnalyzer {
             if (child.isDirectory() && child.getName().equals(currentDirName)) {
                 // 找到同名子目录，需要合并
                 
-                // 首先处理同名子目录中的所有文件
+                // 检查是否有冲突文件
+                List<String> conflictingFiles = new ArrayList<>();
                 File[] subFiles = child.listFiles();
                 if (subFiles != null) {
                     for (File subFile : subFiles) {
-                        // 创建移动记录
-                        String destPath = file.getPath() + File.separator + subFile.getName();
-                        File destFile = new File(destPath);
-                        
-                        // 如果目标文件已存在，需要处理冲突
-                        if (destFile.exists()) {
-                            // 生成新的文件名
-                            String fileName = subFile.getName();
-                            String nameWithoutExt = fileName;
-                            String ext = "";
-                            int dotIndex = fileName.lastIndexOf('.');
-                            if (dotIndex > 0) {
-                                nameWithoutExt = fileName.substring(0, dotIndex);
-                                ext = fileName.substring(dotIndex);
-                            }
-                            
-                            // 生成唯一的文件名
-                            int counter = 1;
-                            while (destFile.exists()) {
-                                destPath = file.getPath() + File.separator + nameWithoutExt + " (" + counter + ")" + ext;
-                                destFile = new File(destPath);
-                                counter++;
+                        if (subFile.isFile()) {
+                            File destFile = new File(file, subFile.getName());
+                            if (destFile.exists()) {
+                                conflictingFiles.add(subFile.getName());
                             }
                         }
-                        
-                        // 创建移动记录 - 使用DELETE OperationType，但在extraParams中增加标识
-                        Map<String, String> params = new HashMap<>();
-                        params.put("operation", "merge_move"); // 标识这是合并操作中的移动
-                        params.put("destPath", destPath); // 目标文件路径
-                        
-                        ChangeRecord record = new ChangeRecord(
-                                subFile.getName(),
-                                "移动文件 " + subFile.getName() + " 到父目录",
-                                subFile,
-                                true,
-                                destPath, // newPath设置为实际的目标文件绝对路径
-                                OperationType.DELETE, // 使用DELETE OperationType
-                                params, // 使用extraParams传递额外信息
-                                null
-                        );
-                        result.add(record);
                     }
                 }
                 
-                // 添加删除同名子目录的记录
-                result.add(createDeleteRecord(child, "删除空的同名子目录"));
+                // 创建合并记录
+                Map<String, String> params = new HashMap<>();
+                params.put("operation", "merge_folder"); // 标识这是文件夹合并操作
+                params.put("childDir", child.getAbsolutePath()); // 子文件夹路径
+                params.put("parentDir", file.getAbsolutePath()); // 父文件夹路径
+                
+                // 记录冲突文件
+                if (!conflictingFiles.isEmpty()) {
+                    params.put("conflictingFiles", String.join(",", conflictingFiles));
+                    params.put("conflictCount", String.valueOf(conflictingFiles.size()));
+                }
+                
+                // 设置新名称，包含冲突信息
+                String newName = "合并文件夹 " + child.getName();
+                if (!conflictingFiles.isEmpty()) {
+                    newName += " (发现 " + conflictingFiles.size() + " 个重名文件)";
+                }
+                
+                ChangeRecord record = new ChangeRecord(
+                        child.getName(),
+                        newName,
+                        child, // 使用子文件夹作为fileHandle
+                        true,
+                        file.getAbsolutePath(), // newPath设置为父文件夹路径
+                        OperationType.DELETE, // 使用DELETE OperationType
+                        params, // 使用extraParams传递额外信息
+                        null
+                );
+                
+                result.add(record);
                 
                 // 停止遍历，因为一个目录最多只有一个同名子目录
                 break;

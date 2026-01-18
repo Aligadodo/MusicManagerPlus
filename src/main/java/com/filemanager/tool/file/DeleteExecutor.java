@@ -31,10 +31,61 @@ public class DeleteExecutor {
         if (!file.exists()) return; // 可能已经被处理了
 
         if (rec.getOpType() == OperationType.DELETE) {
-            // 检查是否是合并操作中的移动
+            // 检查是否是合并操作
             Map<String, String> params = rec.getExtraParams();
-            if (params != null && "merge_move".equals(params.get("operation"))) {
-                // 合并操作中的移动 - 从extraParams获取目标路径
+            if (params != null && "merge_folder".equals(params.get("operation"))) {
+                // 文件夹合并操作
+                String childDirPath = params.get("childDir");
+                String parentDirPath = params.get("parentDir");
+                
+                if (childDirPath != null && parentDirPath != null) {
+                    File childDir = new File(childDirPath);
+                    File parentDir = new File(parentDirPath);
+                    
+                    if (childDir.exists() && parentDir.exists() && parentDir.isDirectory()) {
+                        // 将子文件夹中的所有文件移动到父文件夹
+                        File[] subFiles = childDir.listFiles();
+                        if (subFiles != null) {
+                            for (File subFile : subFiles) {
+                                if (subFile.isFile()) {
+                                    File destFile = new File(parentDir, subFile.getName());
+                                    
+                                    // 检查是否存在冲突
+                                    boolean conflict = destFile.exists();
+                                    
+                                    // 处理冲突：当前默认覆盖，后续可以扩展为支持用户选择
+                                    StandardCopyOption[] copyOptions = conflict ? 
+                                            new StandardCopyOption[]{StandardCopyOption.REPLACE_EXISTING} : 
+                                            new StandardCopyOption[]{};
+                                    
+                                    // 尝试移动
+                                    try {
+                                        Files.move(subFile.toPath(), destFile.toPath(), copyOptions);
+                                    } catch (IOException e) {
+                                        // 跨盘移动 fallback
+                                        Files.copy(subFile.toPath(), destFile.toPath(), copyOptions);
+                                        Files.delete(subFile.toPath());
+                                    }
+                                } else if (subFile.isDirectory()) {
+                                    // 如果是子目录，递归处理（创建对应目录并复制内容）
+                                    File destDir = new File(parentDir, subFile.getName());
+                                    if (!destDir.exists()) {
+                                        destDir.mkdirs();
+                                    }
+                                    
+                                    // 递归复制子目录内容
+                                    copyDirectory(subFile, destDir);
+                                    deleteDirectoryRecursively(subFile);
+                                }
+                            }
+                        }
+                        
+                        // 删除空的子文件夹
+                        deleteDirectoryRecursively(childDir);
+                    }
+                }
+            } else if (params != null && "merge_move".equals(params.get("operation"))) {
+                // 兼容旧的合并移动操作（可以考虑在后续版本中移除）
                 String destPath = params.get("destPath");
                 if (destPath != null && !destPath.isEmpty()) {
                     File destFile = new File(destPath);
