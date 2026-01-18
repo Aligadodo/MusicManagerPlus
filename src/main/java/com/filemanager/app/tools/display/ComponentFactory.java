@@ -376,7 +376,7 @@ public class ComponentFactory {
         // 使用主题配置中的按钮文本颜色，而不是硬编码的white
         return createStyledButton(text, action, 
                 colorOverride != null ? colorOverride : theme.getButtonPrimaryBgColor(), theme.getButtonPrimaryTextColor(),
-                null, null, theme.getButtonSmallSize(), theme.getButtonSmallSize());
+                null, null, 120.0, 30.0); // 设置固定高度和合适的最小宽度
     }
     
     /**
@@ -486,10 +486,10 @@ public class ComponentFactory {
         
         btn.setStyle(baseStyle);
         
-        // 使用Java代码设置自适应大小
+        // 使用固定高度和自适应宽度
         btn.setPrefWidth(Region.USE_COMPUTED_SIZE);
-        btn.setPrefHeight(Region.USE_COMPUTED_SIZE);
-        btn.setMaxHeight(Region.USE_COMPUTED_SIZE);
+        btn.setPrefHeight(buttonHeight); // 使用传入的固定高度
+        btn.setMaxHeight(buttonHeight); // 限制最大高度
         btn.setWrapText(false); // 不允许文字换行，确保文字在一行完整显示
         
         // 添加样式变化效果，提供交互反馈

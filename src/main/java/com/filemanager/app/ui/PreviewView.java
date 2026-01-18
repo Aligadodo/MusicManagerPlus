@@ -472,9 +472,10 @@ public class PreviewView implements IAutoReloadAble {
         ThemeConfig theme = app.getCurrentTheme();
         String panelBgColor = theme.getPanelBgColor();
         
-        // 添加透明度效果
+        // 添加透明度效果，增强透明度
         if (panelBgColor.startsWith("#") && panelBgColor.length() == 7) {
-            int alpha = (int) (theme.getGlassOpacity() * 255);
+            // 降低不透明度，使面板更透明
+            int alpha = (int) (theme.getGlassOpacity() * 100); // 从255降低到100，增强透明度
             String alphaHex = String.format("%02x", alpha);
             panelBgColor = panelBgColor + alphaHex;
         }
@@ -821,7 +822,19 @@ public class PreviewView implements IAutoReloadAble {
                             bgColor = bgColor + alphaHex;
                         }
                         
-                        setStyle("-fx-background-color: " + bgColor + ";");
+                        // 检查行是否被选中
+                        if (this.isSelected()) {
+                            // 如果选中，添加边框和阴影效果，而不是改变背景色
+                            setStyle(String.format(
+                                    "-fx-background-color: %s; " +
+                                    "-fx-border-width: 2; -fx-border-color: %s; " +
+                                    "-fx-effect: dropshadow(three-pass-box, rgba(52, 152, 219, 0.5), 10, 0, 0, 0);",
+                                    bgColor, theme.getAccentColor()
+                            ));
+                        } else {
+                            // 如果未选中，只设置背景色
+                            setStyle("-fx-background-color: " + bgColor + ";");
+                        }
                     }
                 }
             };

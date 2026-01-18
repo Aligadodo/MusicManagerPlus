@@ -471,7 +471,10 @@ public class ComposeView implements IAutoReloadAble {
         HBox addForm = new HBox(5);
         ComboBox<ConditionType> cbType = new ComboBox<>(FXCollections.observableArrayList(ConditionType.values()));
         cbType.getSelectionModel().select(0);
-        cbType.setPrefWidth(120);
+        cbType.setPrefWidth(140);
+        cbType.setStyle("-fx-font-size: 10px; -fx-padding: 2 4; -fx-min-width: 130; -fx-max-width: 160;");
+        // 确保下拉列表能显示完整的选项文本
+        cbType.setMaxWidth(Double.MAX_VALUE);
         TextField txtVal = new TextField();
         txtVal.setPromptText("值");
         HBox.setHgrow(txtVal, Priority.ALWAYS);
