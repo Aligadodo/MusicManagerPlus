@@ -461,8 +461,8 @@ public class ComponentStyleManager {
         // 为选中行背景色添加透明度
         String selectedBgColor = theme.getListRowSelectedBgColor();
         if (selectedBgColor.startsWith("#")) {
-            // 选中行使用比列表背景更高的透明度
-            int alpha = (int) (theme.getGlassOpacity() * 255 * 0.8);
+            // 降低选中行的透明度
+            int alpha = (int) (theme.getGlassOpacity() * 255 * 0.6); // 降低透明度到原来的60%
             String alphaHex = String.format("%02x", alpha);
             selectedBgColor = selectedBgColor + alphaHex;
         }
@@ -479,6 +479,9 @@ public class ComponentStyleManager {
                 ".list-view .list-cell:filled:selected {\n" +
                 "    -fx-background-color: %s;\n" +
                 "    -fx-text-fill: %s;\n" +
+                "    -fx-border-color: %s;\n" +
+                "    -fx-border-width: 2;\n" +
+                "    -fx-border-radius: %.1f;\n" +
                 "}\n" +
                 ".list-view .list-cell:filled:hover {\n" +
                 "    -fx-background-color: %s;\n" +
@@ -497,7 +500,7 @@ public class ComponentStyleManager {
                 "}",
                 listBgColor, theme.getListBorderColor(), theme.getBorderWidth(), theme.getCornerRadius(), theme.getCornerRadius(),
                 theme.getTextPrimaryColor(), theme.getFontFamily(),
-                selectedBgColor, theme.getListRowSelectedTextColor(),
+                selectedBgColor, theme.getListRowSelectedTextColor(), theme.getBorderColor(), theme.getCornerRadius(),
                 theme.getListRowHoverBgColor(), theme.getTextPrimaryColor(),
                 theme.getTextTertiaryColor()
         ));
@@ -644,6 +647,15 @@ public class ComponentStyleManager {
             hoverBgColor = hoverBgColor + alphaHex;
         }
         
+        // 为普通表格行添加半透明背景色
+        String rowBgColor = theme.getListBgColor();
+        if (rowBgColor.startsWith("#")) {
+            // 普通行使用与列表背景相同的透明度
+            int alpha = (int) (theme.getGlassOpacity() * 255 * 0.1); // 30%透明度
+            String alphaHex = String.format("%02x", alpha);
+            rowBgColor = rowBgColor + alphaHex;
+        }
+        
         // 设置TreeTableView的完整样式，包括背景、边框、表头、单元格等
         treeTableView.setStyle(String.format(
                 "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-background-radius: %.1f; -fx-border-radius: %.1f;\n" +
@@ -668,17 +680,19 @@ public class ComponentStyleManager {
                 "    -fx-padding: 12 10;\n" +
                 "}\n" +
                 ".tree-table-view .tree-table-row-cell {\n" +
-                "    -fx-background-color: transparent;\n" +
+                "    -fx-background-color: %s;\n" +
                 "    -fx-border-color: transparent;\n" +
                 "    -fx-border-width: 1 0 0 0;\n" +
                 "}\n" +
                 ".tree-table-view .tree-table-row-cell:filled {\n" +
-                "    -fx-background-color: transparent;\n" +
+                "    -fx-background-color: %s;\n" +
                 "}\n" +
                 ".tree-table-view .tree-table-row-cell:filled:selected {\n" +
                 "    -fx-background-color: %s;\n" +
                 "    -fx-table-cell-border-color: transparent;\n" +
-                "    -fx-border-color: transparent;\n" +
+                "    -fx-border-color: %s;\n" +
+                "    -fx-border-width: 2;\n" +
+                "    -fx-border-radius: %.1f;\n" +
                 "}\n" +
                 ".tree-table-view .tree-table-row-cell:filled:hover {\n" +
                 "    -fx-background-color: %s;\n" +
@@ -688,12 +702,16 @@ public class ComponentStyleManager {
                 ".tree-table-view .tree-table-row-cell:focused {\n" +
                 "    -fx-background-color: %s;\n" +
                 "    -fx-table-cell-border-color: transparent;\n" +
-                "    -fx-border-color: transparent;\n" +
+                "    -fx-border-color: %s;\n" +
+                "    -fx-border-width: 2;\n" +
+                "    -fx-border-radius: %.1f;\n" +
                 "}\n" +
                 ".tree-table-view .tree-table-row-cell:focused:selected {\n" +
                 "    -fx-background-color: %s;\n" +
                 "    -fx-table-cell-border-color: transparent;\n" +
-                "    -fx-border-color: transparent;\n" +
+                "    -fx-border-color: %s;\n" +
+                "    -fx-border-width: 2;\n" +
+                "    -fx-border-radius: %.1f;\n" +
                 "}\n" +
                 ".tree-table-view .tree-table-cell {\n" +
                 "    -fx-text-fill: %s;\n" +
@@ -731,10 +749,11 @@ public class ComponentStyleManager {
                 headerBgColor, theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius(),
                 theme.getBorderColor(), theme.getBorderWidth(),
                 theme.getTextPrimaryColor(), theme.getFontFamily(),
-                selectedBgColor,
+                rowBgColor, rowBgColor,
+                selectedBgColor, theme.getBorderColor(), theme.getCornerRadius(),
                 hoverBgColor,
-                selectedBgColor,
-                selectedBgColor,
+                selectedBgColor, theme.getBorderColor(), theme.getCornerRadius(),
+                selectedBgColor, theme.getBorderColor(), theme.getCornerRadius(),
                 theme.getTextPrimaryColor(), theme.getFontFamily(),
                 theme.getTextPrimaryColor(),
                 theme.getTextPrimaryColor(),
@@ -1096,10 +1115,19 @@ public class ComponentStyleManager {
         }
         
         if (selected) {
-            // 选中样式：使用主题中的选中颜色
+            // 为选中行背景色添加透明度
+            String selectedBgColor = theme.getListRowSelectedBgColor();
+            if (selectedBgColor.startsWith("#")) {
+                // 降低选中行的透明度
+                int alpha = (int) (theme.getGlassOpacity() * 255 * 0.6); // 降低透明度到60%
+                String alphaHex = String.format("%02x", alpha);
+                selectedBgColor = selectedBgColor + alphaHex;
+            }
+            
+            // 选中样式：使用带透明度的背景色，加强边框
             node.setStyle(String.format(
-                    "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: 0 0 1 0; -fx-text-fill: %s;",
-                    theme.getListRowSelectedBgColor(), theme.getBorderColor(), theme.getTextPrimaryColor()
+                    "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: 2; -fx-border-radius: %.1f; -fx-text-fill: %s;",
+                    selectedBgColor, theme.getBorderColor(), theme.getCornerRadius(), theme.getTextPrimaryColor()
             ));
         } else {
             // 默认样式：使用主题中的边框颜色

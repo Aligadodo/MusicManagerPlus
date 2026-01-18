@@ -185,7 +185,7 @@ public class MultiThreadTaskEstimator {
     
     public String getDisplayInfo() {
         return " 总共：" + totalTasks
-                + " 已执行:" + completedTasks.get()
+                + " 已处理:" + completedTasks.get()
                 + " 耗时:" + MultiThreadTaskEstimator.formatDuration(System.currentTimeMillis() - startTime)
                 + " 进度:" + getProgressPercentage()
                 + "% 预计剩余时间：" + this.getFormattedRemainingTime();
