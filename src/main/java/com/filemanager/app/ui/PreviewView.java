@@ -289,6 +289,9 @@ public class PreviewView implements IAutoReloadAble {
             return;
         }
 
+        // 获取主题配置
+        ThemeConfig theme = app.getCurrentTheme();
+        
         // 为每个根路径创建折叠面板
         for (File root : app.getSourceRoots()) {
             String rootPath = root.getAbsolutePath();
@@ -345,24 +348,28 @@ public class PreviewView implements IAutoReloadAble {
             // 创建折叠面板内容
             VBox content = new VBox(10);
             content.setPadding(new Insets(10));
-            content.setStyle("-fx-background-color: #f5f5f5; -fx-border-color: #e0e0e0; -fx-border-radius: 5; -fx-background-radius: 5;");
+            // 使用主题样式，替换硬编码颜色
+            content.setStyle(String.format(
+                    "-fx-background-color: %s; -fx-border-radius: %.1f; -fx-border-color: %s; -fx-background-radius: %.1f;",
+                    theme.getPanelBgColor(), theme.getCornerRadius(), theme.getBorderColor(), theme.getCornerRadius()
+            ));
 
             // 添加路径信息
             Label pathLabel = new Label("完整路径: " + rootPath);
-            pathLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #666;");
+            pathLabel.setStyle(String.format("-fx-font-size: 12px; -fx-text-fill: %s;", theme.getTextSecondaryColor()));
             pathLabel.setWrapText(true);
+            pathLabel.setMaxWidth(Double.MAX_VALUE);
 
             // 添加文件数量信息
             Label fileCountLabel = new Label("总文件数: " + fileCount + "，待执行: " + pendingCount);
-            fileCountLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #666;");
-
-            // 所有参数排成一行显示
-            HBox allParamsRow = new HBox(20);
-            allParamsRow.setAlignment(Pos.CENTER_LEFT);
-            allParamsRow.setSpacing(15);
+            fileCountLabel.setStyle(String.format("-fx-font-size: 12px; -fx-text-fill: %s;", theme.getTextSecondaryColor()));
+            fileCountLabel.setMaxWidth(Double.MAX_VALUE);
 
             // 线程数配置
             HBox threadConfig = new HBox(10);
+            threadConfig.setAlignment(Pos.CENTER_LEFT);
+            threadConfig.setFillHeight(false);
+            threadConfig.setPrefHeight(25);
             threadConfig.getChildren().addAll(
                     new Label("预览线程: "),
                     previewSpinner,
@@ -384,6 +391,9 @@ public class PreviewView implements IAutoReloadAble {
                 previewLimitSpinner.setDisable(newVal);
             });
             HBox previewLimit = new HBox(10);
+            previewLimit.setAlignment(Pos.CENTER_LEFT);
+            previewLimit.setFillHeight(false);
+            previewLimit.setPrefHeight(25);
             previewLimit.getChildren().addAll(
                     new Label("预览数量: "),
                     previewLimitSpinner,
@@ -404,13 +414,18 @@ public class PreviewView implements IAutoReloadAble {
                 executionLimitSpinner.setDisable(newVal);
             });
             HBox executionLimit = new HBox(10);
+            executionLimit.setAlignment(Pos.CENTER_LEFT);
+            executionLimit.setFillHeight(false);
+            executionLimit.setPrefHeight(25);
             executionLimit.getChildren().addAll(
                     new Label("执行数量: "),
                     executionLimitSpinner,
                     unlimitedExecution);
 
-            // 将所有参数添加到一行
-            allParamsRow.getChildren().addAll(threadConfig, previewLimit, executionLimit);
+            // 将所有参数添加到垂直布局中，避免一行显示过多内容
+            VBox allParamsBox = new VBox(10);
+            allParamsBox.setAlignment(Pos.CENTER_LEFT);
+            allParamsBox.getChildren().addAll(threadConfig, previewLimit, executionLimit);
 
             // 保存根路径数量上限配置引用
             rootPathPreviewLimits.put(rootPath, previewLimitSpinner);
@@ -432,7 +447,7 @@ public class PreviewView implements IAutoReloadAble {
             content.getChildren().addAll(
                     pathLabel,
                     fileCountLabel,
-                    allParamsRow,
+                    allParamsBox,
                     progressBox);
 
             // 创建折叠面板
@@ -468,17 +483,9 @@ public class PreviewView implements IAutoReloadAble {
         this.configPane.setText("运行配置");
         this.configPane.setExpanded(true);
         
-        // 为配置面板添加透明度效果
+        // 使用主题默认的面板背景色，不添加额外的透明度效果
         ThemeConfig theme = app.getCurrentTheme();
         String panelBgColor = theme.getPanelBgColor();
-        
-        // 添加透明度效果，增强透明度
-        if (panelBgColor.startsWith("#") && panelBgColor.length() == 7) {
-            // 降低不透明度，使面板更透明
-            int alpha = (int) (theme.getGlassOpacity() * 100); // 从255降低到100，增强透明度
-            String alphaHex = String.format("%02x", alpha);
-            panelBgColor = panelBgColor + alphaHex;
-        }
         
         this.configPane.setStyle(String.format(
                 "-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: %s; -fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f;",
@@ -512,28 +519,42 @@ public class PreviewView implements IAutoReloadAble {
         // 线程参数行
         HBox threadParamsRow = new HBox(20);
         threadParamsRow.setAlignment(Pos.CENTER_LEFT);
+        threadParamsRow.setFillHeight(false);
+        threadParamsRow.setPrefHeight(30);
+        
+        // 使用默认的参数对创建，不设置最小宽度
         threadParamsRow.getChildren().addAll(
                 StyleFactory.createParamPairLine("预览线程数:", spPreviewThreads),
                 StyleFactory.createParamPairLine("执行线程数:", spExecutionThreads),
                 StyleFactory.createParamPairLine("线程池模式:", cbThreadPoolMode));
+        
+        // 设置整个参数行的最小宽度
+        threadParamsRow.setMinWidth(500);
 
         // 数量上限行
         HBox limitParamsRow = new HBox(20);
         limitParamsRow.setAlignment(Pos.CENTER_LEFT);
+        limitParamsRow.setFillHeight(false);
+        limitParamsRow.setPrefHeight(30);
 
         // 预览数量限制
         HBox previewLimitBox = new HBox(10);
+        previewLimitBox.setAlignment(Pos.CENTER_LEFT);
+        previewLimitBox.setFillHeight(false);
         previewLimitBox.getChildren().addAll(
                 StyleFactory.createParamPairLine("预览数量:", spGlobalPreviewLimit),
                 chkUnlimitedPreview);
 
         // 执行数量限制
         HBox executionLimitBox = new HBox(10);
+        executionLimitBox.setAlignment(Pos.CENTER_LEFT);
+        executionLimitBox.setFillHeight(false);
         executionLimitBox.getChildren().addAll(
                 StyleFactory.createParamPairLine("执行数量:", spGlobalExecutionLimit),
                 chkUnlimitedExecution);
 
         limitParamsRow.getChildren().addAll(previewLimitBox, executionLimitBox);
+        limitParamsRow.setMinWidth(500);
 
         globalParamsBox.getChildren().addAll(
                 StyleFactory.createChapter("[全局运行参数]  "),
@@ -752,10 +773,28 @@ public class PreviewView implements IAutoReloadAble {
             }
         });
         TreeTableColumn<ChangeRecord, String> cS2 = StyleFactory.createTreeTableColumn("目标文件大小", false, 60, 60, 60);
-        cS2.setCellValueFactory(p -> new SimpleStringProperty(FileSizeFormatUtil.formatFileSize(new File(p.getValue().getValue().getNewPath()))));
+        cS2.setCellValueFactory(p -> {
+            try {
+                if (p.getValue() != null && p.getValue().getValue() != null && p.getValue().getValue().getNewPath() != null) {
+                    return new SimpleStringProperty(FileSizeFormatUtil.formatFileSize(new File(p.getValue().getValue().getNewPath())));
+                }
+            } catch (Exception e) {
+                // 捕获可能的异常，避免程序崩溃
+            }
+            return new SimpleStringProperty("");
+        });
         TreeTableColumn<ChangeRecord, String> c3 = StyleFactory.createTreeTableColumn(
                 "运行状态", false, 60, 60, 60);
-        c3.setCellValueFactory(p -> new SimpleStringProperty(p.getValue().getValue().getStatus().toString()));
+        c3.setCellValueFactory(p -> {
+            try {
+                if (p.getValue() != null && p.getValue().getValue() != null && p.getValue().getValue().getStatus() != null) {
+                    return new SimpleStringProperty(p.getValue().getValue().getStatus().toString());
+                }
+            } catch (Exception e) {
+                // 捕获可能的异常，避免程序崩溃
+            }
+            return new SimpleStringProperty("");
+        });
         // 为状态列添加颜色标识
         c3.setCellFactory(c -> new TreeTableCell<ChangeRecord, String>() {
             @Override
@@ -769,28 +808,43 @@ public class PreviewView implements IAutoReloadAble {
                 // 根据状态设置不同的背景色和文字颜色
                 ChangeRecord record = getTreeTableRow().getItem();
                 if (record != null) {
-                    switch (record.getStatus()) {
-                        case RUNNING:
-                            setStyle("-fx-background-color: rgba(52, 152, 219, 0.2); -fx-text-fill: #2980b9;");
-                            break;
-                        case SUCCESS:
-                            setStyle("-fx-background-color: rgba(46, 204, 113, 0.2); -fx-text-fill: #27ae60;");
-                            break;
-                        case FAILED:
-                            setStyle("-fx-background-color: rgba(231, 76, 60, 0.2); -fx-text-fill: #e74c3c;");
-                            break;
-                        case PENDING:
-                            setStyle("-fx-background-color: rgba(243, 156, 18, 0.2); -fx-text-fill: #f39c12;");
-                            break;
-                        default:
-                            setStyle("-fx-background-color: transparent;");
+                    ExecStatus status = record.getStatus();
+                    if (status != null) {
+                        switch (status) {
+                            case RUNNING:
+                                setStyle("-fx-background-color: rgba(52, 152, 219, 0.2); -fx-text-fill: #2980b9;");
+                                break;
+                            case SUCCESS:
+                                setStyle("-fx-background-color: rgba(46, 204, 113, 0.2); -fx-text-fill: #27ae60;");
+                                break;
+                            case FAILED:
+                                setStyle("-fx-background-color: rgba(231, 76, 60, 0.2); -fx-text-fill: #e74c3c;");
+                                break;
+                            case PENDING:
+                                setStyle("-fx-background-color: rgba(243, 156, 18, 0.2); -fx-text-fill: #f39c12;");
+                                break;
+                            default:
+                                setStyle("-fx-background-color: transparent;");
+                        }
+                    } else {
+                        // 状态为null时，使用默认样式
+                        setStyle("-fx-background-color: transparent;");
                     }
                 }
             }
         });
         TreeTableColumn<ChangeRecord, String> c4 = StyleFactory.createTreeTableColumn(
                 "目标文件路径", true, 250, 150, 600);
-        c4.setCellValueFactory(p -> new SimpleStringProperty(p.getValue().getValue().getNewPath()));
+        c4.setCellValueFactory(p -> {
+            try {
+                if (p.getValue() != null && p.getValue().getValue() != null && p.getValue().getValue().getNewPath() != null) {
+                    return new SimpleStringProperty(p.getValue().getValue().getNewPath());
+                }
+            } catch (Exception e) {
+                // 捕获可能的异常，避免程序崩溃
+            }
+            return new SimpleStringProperty("");
+        });
         previewTable.getColumns().setAll(selectionColumn, c1, cS, c2, cS2, c3, c4);
 
     }
@@ -840,13 +894,45 @@ public class PreviewView implements IAutoReloadAble {
             };
             ContextMenu cm = new ContextMenu();
             MenuItem i1 = new MenuItem("打开原始文件");
-            i1.setOnAction(e -> app.openFileInSystem(row.getItem().getFileHandle()));
+            i1.setOnAction(e -> {
+                ChangeRecord item = row.getItem();
+                if (item != null && item.getFileHandle() != null) {
+                    app.openFileInSystem(item.getFileHandle());
+                }
+            });
             MenuItem i2 = new MenuItem("打开原始目录");
-            i2.setOnAction(e -> app.openParentDirectory(row.getItem().getFileHandle()));
+            i2.setOnAction(e -> {
+                ChangeRecord item = row.getItem();
+                if (item != null && item.getFileHandle() != null) {
+                    app.openParentDirectory(item.getFileHandle());
+                }
+            });
             MenuItem i3 = new MenuItem("打开目标文件");
-            i3.setOnAction(e -> app.openFileInSystem(new File(row.getItem().getNewPath())));
+            i3.setOnAction(e -> {
+                ChangeRecord item = row.getItem();
+                if (item != null && item.getNewPath() != null) {
+                    try {
+                        app.openFileInSystem(new File(item.getNewPath()));
+                    } catch (Exception ex) {
+                        // 捕获可能的异常
+                    }
+                }
+            });
             MenuItem i4 = new MenuItem("打开目标目录");
-            i4.setOnAction(e -> app.openParentDirectory(new File(row.getItem().getNewPath()).getParentFile()));
+            i4.setOnAction(e -> {
+                ChangeRecord item = row.getItem();
+                if (item != null && item.getNewPath() != null) {
+                    try {
+                        File newFile = new File(item.getNewPath());
+                        File parentFile = newFile.getParentFile();
+                        if (parentFile != null) {
+                            app.openParentDirectory(parentFile);
+                        }
+                    } catch (Exception ex) {
+                        // 捕获可能的异常
+                    }
+                }
+            });
             cm.getItems().addAll(i1, i2, i3, i4);
             row.contextMenuProperty().bind(javafx.beans.binding.Bindings.when(row.emptyProperty()).then((ContextMenu) null).otherwise(cm));
             // 支持双击查看详情数据
@@ -854,10 +940,18 @@ public class PreviewView implements IAutoReloadAble {
                 // 检查双击且行非空
                 if (event.getClickCount() > 1 && !row.isEmpty()) {
                     ChangeRecord item = row.getItem();
-                    // 获取当前 Stage 实例
-                    Stage currentStage = (Stage) previewTable.getScene().getWindow();
-                    // 弹出 JSON 详情窗口
-                    DetailWindowHelper.showJsonDetail(currentStage, item);
+                    // 添加额外的空值检查，确保安全
+                    if (item != null) {
+                        try {
+                            // 获取当前 Stage 实例
+                            Stage currentStage = (Stage) previewTable.getScene().getWindow();
+                            // 弹出 JSON 详情窗口
+                            DetailWindowHelper.showJsonDetail(currentStage, item);
+                        } catch (Exception e) {
+                            // 捕获可能的异常，避免程序崩溃
+                            e.printStackTrace();
+                        }
+                    }
                 }
             });
             return row;

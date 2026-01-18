@@ -67,6 +67,9 @@ public class DuplicateAnalyzer {
                 }
                 return Collections.emptyList();
             }
+        } else if (params.getMode() == FileCleanupStrategy.CleanupMode.MERGE_SAME_NAME_PARENT_CHILD) {
+            // 同名父子文件夹合并模式
+            return analyzeMergeSameNameFolders(file);
         } else {
             // 默认是文件去重模式
             File[] files = file.listFiles();
@@ -268,6 +271,90 @@ public class DuplicateAnalyzer {
         return result;
     }
 
+    /**
+     * 同名父子文件夹合并
+     */
+    private List<ChangeRecord> analyzeMergeSameNameFolders(File file) {
+        List<ChangeRecord> result = new ArrayList<>();
+        
+        // 确保当前文件是目录
+        if (!file.isDirectory()) {
+            return result;
+        }
+        
+        // 获取当前目录的名称
+        String currentDirName = file.getName();
+        
+        // 遍历当前目录的所有子文件/目录
+        File[] files = file.listFiles();
+        if (files == null) {
+            return result;
+        }
+        
+        // 检查是否存在与当前目录同名的子目录
+        for (File child : files) {
+            if (child.isDirectory() && child.getName().equals(currentDirName)) {
+                // 找到同名子目录，需要合并
+                
+                // 首先处理同名子目录中的所有文件
+                File[] subFiles = child.listFiles();
+                if (subFiles != null) {
+                    for (File subFile : subFiles) {
+                        // 创建移动记录
+                        String destPath = file.getPath() + File.separator + subFile.getName();
+                        File destFile = new File(destPath);
+                        
+                        // 如果目标文件已存在，需要处理冲突
+                        if (destFile.exists()) {
+                            // 生成新的文件名
+                            String fileName = subFile.getName();
+                            String nameWithoutExt = fileName;
+                            String ext = "";
+                            int dotIndex = fileName.lastIndexOf('.');
+                            if (dotIndex > 0) {
+                                nameWithoutExt = fileName.substring(0, dotIndex);
+                                ext = fileName.substring(dotIndex);
+                            }
+                            
+                            // 生成唯一的文件名
+                            int counter = 1;
+                            while (destFile.exists()) {
+                                destPath = file.getPath() + File.separator + nameWithoutExt + " (" + counter + ")" + ext;
+                                destFile = new File(destPath);
+                                counter++;
+                            }
+                        }
+                        
+                        // 创建移动记录 - 使用DELETE OperationType，但在extraParams中增加标识
+                        Map<String, String> params = new HashMap<>();
+                        params.put("operation", "merge_move"); // 标识这是合并操作中的移动
+                        params.put("destPath", destPath); // 目标文件路径
+                        
+                        ChangeRecord record = new ChangeRecord(
+                                subFile.getName(),
+                                "移动文件 " + subFile.getName() + " 到父目录",
+                                subFile,
+                                true,
+                                destPath, // newPath设置为实际的目标文件绝对路径
+                                OperationType.DELETE, // 使用DELETE OperationType
+                                params, // 使用extraParams传递额外信息
+                                null
+                        );
+                        result.add(record);
+                    }
+                }
+                
+                // 添加删除同名子目录的记录
+                result.add(createDeleteRecord(child, "删除空的同名子目录"));
+                
+                // 停止遍历，因为一个目录最多只有一个同名子目录
+                break;
+            }
+        }
+        
+        return result;
+    }
+    
     /**
      * 文件夹去重 (内容一致性检查)
      */

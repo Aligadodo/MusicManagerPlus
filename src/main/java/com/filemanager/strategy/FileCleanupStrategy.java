@@ -34,7 +34,8 @@ public class FileCleanupStrategy extends IAppStrategy {
         DEDUP_FILES("同目录下的文件去重"),     // 文件去重
         DEDUP_FOLDERS("文件夹去重"),   // 文件夹去重
         REMOVE_EMPTY_DIRS("空目录清理"), // 空目录清理
-        DIRECT_CLEANUP("直接清理");   // 直接清理模式
+        DIRECT_CLEANUP("直接清理"),   // 直接清理模式
+        MERGE_SAME_NAME_PARENT_CHILD("同名父子文件夹合并"); // 同名父子文件夹合并模式
 
         private final String desc;
 
@@ -131,7 +132,7 @@ public class FileCleanupStrategy extends IAppStrategy {
 
     @Override
     public String getDescription() {
-        return "智能识别重复文件/文件夹、清理空目录。支持按盘符结构伪删除。";
+        return "智能识别重复文件/文件夹、清理空目录、合并同名父子文件夹。支持按盘符结构伪删除。";
     }
 
     @Override

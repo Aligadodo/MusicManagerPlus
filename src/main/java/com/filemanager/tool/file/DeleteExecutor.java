@@ -27,32 +27,54 @@ public class DeleteExecutor {
     }
 
     public void execute(ChangeRecord rec) throws Exception {
-        if (rec.getOpType() != OperationType.DELETE) return;
-
         File file = rec.getFileHandle();
         if (!file.exists()) return; // 可能已经被处理了
 
-        String method = rec.getExtraParams().get("method");
+        if (rec.getOpType() == OperationType.DELETE) {
+            // 检查是否是合并操作中的移动
+            Map<String, String> params = rec.getExtraParams();
+            if (params != null && "merge_move".equals(params.get("operation"))) {
+                // 合并操作中的移动 - 从extraParams获取目标路径
+                String destPath = params.get("destPath");
+                if (destPath != null && !destPath.isEmpty()) {
+                    File destFile = new File(destPath);
+                    if (!destFile.getParentFile().exists()) destFile.getParentFile().mkdirs();
+                    // 尝试移动
+                    try {
+                        Files.move(file.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                    } catch (IOException e) {
+                        // 跨盘移动 fallback
+                        if (file.isDirectory()) copyDirectory(file, destFile);
+                        else Files.copy(file.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
 
-        if ("DIRECT".equals(method)) {
-            // 递归删除（如果是文件夹）
-            if (file.isDirectory()) deleteDirectoryRecursively(file);
-            else Files.delete(file.toPath());
-        } else {
-            // 伪删除：移动到 Trash
-            String trashPath = rec.getNewPath();
-            if (trashPath != null && !trashPath.isEmpty()) {
-                File trashFile = new File(trashPath);
-                if (!trashFile.getParentFile().exists()) trashFile.getParentFile().mkdirs();
-                // 尝试移动
-                try {
-                    Files.move(file.toPath(), trashFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                } catch (IOException e) {
-                    // 跨盘移动 fallback
-                    if (file.isDirectory()) copyDirectory(file, trashFile);
-                    else Files.copy(file.toPath(), trashFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                        deleteDirectoryRecursively(file); // 移完后删源
+                    }
+                }
+            } else {
+                // 普通删除操作
+                String method = params != null ? params.get("method") : null;
 
-                    deleteDirectoryRecursively(file); // 移完后删源
+                if ("DIRECT".equals(method)) {
+                    // 递归删除（如果是文件夹）
+                    if (file.isDirectory()) deleteDirectoryRecursively(file);
+                    else Files.delete(file.toPath());
+                } else {
+                    // 伪删除：移动到 Trash
+                    String trashPath = rec.getNewPath();
+                    if (trashPath != null && !trashPath.isEmpty()) {
+                        File trashFile = new File(trashPath);
+                        if (!trashFile.getParentFile().exists()) trashFile.getParentFile().mkdirs();
+                        // 尝试移动
+                        try {
+                            Files.move(file.toPath(), trashFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                        } catch (IOException e) {
+                            // 跨盘移动 fallback
+                            if (file.isDirectory()) copyDirectory(file, trashFile);
+                            else Files.copy(file.toPath(), trashFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+
+                            deleteDirectoryRecursively(file); // 移完后删源
+                        }
+                    }
                 }
             }
         }
