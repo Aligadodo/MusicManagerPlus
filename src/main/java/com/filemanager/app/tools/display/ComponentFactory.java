@@ -500,9 +500,9 @@ public class ComponentFactory {
                 "-fx-min-height: %.1f; -fx-min-width: %.1f; -fx-max-width: Infinity; -fx-alignment: center; -fx-content-display: center;" +
                 " -fx-faint-focus-color: transparent; -fx-focus-color: transparent; -fx-pressed-color: transparent; -fx-armed-color: transparent;" +
                 " -fx-font-size: 12px;", // 保持字体大小一致
-                hoverColor, textColor, theme.getCornerRadius(), 
+                bgColor, textColor, theme.getCornerRadius(), // 使用原始背景色，避免悬浮时变白
                 theme.getSmallSpacing(), horizontalPadding, // 使用相同的水平内边距
-                borderWidth, borderColor, 
+                Math.min(borderWidth + 1.0, 3.0), theme.getAccentColor(), // 边框加粗并使用强调色
                 buttonHeight, Math.max(minWidth * 0.8, 60.0) // 使用相同的最小宽度
         );
         

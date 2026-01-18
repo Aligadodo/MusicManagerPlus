@@ -294,7 +294,7 @@ public class ComposeView implements IAutoReloadAble {
             }
         });
 
-        JFXButton btnAddStep = StyleFactory.createSmallActionButton("添加步骤", null,
+        JFXButton btnAddStep = StyleFactory.createActionButton("添加步骤", null,
                 () -> {
                     try {
                         if (cbAdd.getValue() == null) {

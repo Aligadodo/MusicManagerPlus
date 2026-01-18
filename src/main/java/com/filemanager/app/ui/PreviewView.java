@@ -20,6 +20,9 @@ import com.filemanager.app.tools.display.ThemeConfig;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.tool.ThreadPoolManager;
 import com.filemanager.type.ExecStatus;
+import com.filemanager.type.OperationType;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import com.filemanager.util.file.FileSizeFormatUtil;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXCheckBox;
@@ -49,6 +52,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 @Getter
 public class PreviewView implements IAutoReloadAble {
@@ -69,11 +74,15 @@ public class PreviewView implements IAutoReloadAble {
     private Label runningLabel, statsLabel;
     private JFXTextField txtSearchFilter;
     private JFXComboBox<String> cbStatusFilter;
+    private JFXComboBox<String> cbOperationTypeFilter;
     private JFXCheckBox chkHideUnchanged;
     private Spinner<Integer> spPreviewThreads;
     private Spinner<Integer> spExecutionThreads;
     // 全选复选框
     private JFXCheckBox chkSelectAll;
+    // 删除按钮
+    private JFXButton btnDeleteOriginal;
+    private JFXButton btnDeleteTarget;
 
     public TreeTableView<ChangeRecord> getPreviewTable() {
         return previewTable;
@@ -124,6 +133,15 @@ public class PreviewView implements IAutoReloadAble {
         ));
         cbStatusFilter = new JFXComboBox<>(FXCollections.observableArrayList("全部", "执行中", "成功", "失败", "跳过", "无需处理"));
         cbStatusFilter.getSelectionModel().select(0);
+        
+        // 初始化操作类型筛选下拉框
+        ObservableList<String> operationTypes = FXCollections.observableArrayList("全部");
+        for (OperationType type : OperationType.values()) {
+            operationTypes.add(type.name);
+        }
+        cbOperationTypeFilter = new JFXComboBox<>(operationTypes);
+        cbOperationTypeFilter.getSelectionModel().select(0);
+        
         chkHideUnchanged = new JFXCheckBox("仅显示变更");
         chkHideUnchanged.setSelected(true);
 
@@ -135,6 +153,7 @@ public class PreviewView implements IAutoReloadAble {
 
         txtSearchFilter.textProperty().addListener((o, old, v) -> app.refreshPreviewTableFilter());
         cbStatusFilter.valueProperty().addListener((o, old, v) -> app.refreshPreviewTableFilter());
+        cbOperationTypeFilter.valueProperty().addListener((o, old, v) -> app.refreshPreviewTableFilter());
         chkHideUnchanged.selectedProperty().addListener((o, old, v) -> app.refreshPreviewTableFilter());
 
         mainProgressBar = StyleFactory.createMainProgressBar(0);
@@ -602,7 +621,38 @@ public class PreviewView implements IAutoReloadAble {
                 StyleFactory.createHBoxPanel(StyleFactory.createChapter("[运行状态]  "), runningLabel),
                 StyleFactory.createHBoxPanel(StyleFactory.createChapter("[统计信息]  "), statsLabel));
 
-        // 全选复选框
+        // 表格过滤器
+        HBox filterBox = StyleFactory.createHBoxPanel(
+                StyleFactory.createChapter("[筛选条件]  "), txtSearchFilter,
+                StyleFactory.createSeparatorWithChange(false), cbStatusFilter,
+                StyleFactory.createSeparatorWithChange(false), cbOperationTypeFilter,
+                StyleFactory.createSeparatorWithChange(false), chkHideUnchanged,
+                StyleFactory.createSeparatorWithChange(false), chkAutoRefresh,
+                StyleFactory.createSeparatorWithChange(false),
+                StyleFactory.createParamPairLine("显示数量限制:", numberDisplay),
+                StyleFactory.createSpacer(),
+                StyleFactory.createRefreshButton(e -> refresh()));
+        
+        // 设置操作类型筛选下拉框的宽度
+        cbOperationTypeFilter.setPrefWidth(120);
+        
+        // 添加删除操作按钮
+        HBox actionBox = StyleFactory.createHBoxPanel();
+        btnDeleteOriginal = StyleFactory.createSecondaryButton("删除原始文件", () -> {
+            deleteSelectedFiles(true);
+        });
+        // 移除悬浮效果
+        btnDeleteOriginal.setOnMouseEntered(null);
+        btnDeleteOriginal.setOnMouseExited(null);
+        
+        btnDeleteTarget = StyleFactory.createSecondaryButton("删除目标文件", () -> {
+            deleteSelectedFiles(false);
+        });
+        // 移除悬浮效果
+        btnDeleteTarget.setOnMouseEntered(null);
+        btnDeleteTarget.setOnMouseExited(null);
+        
+        // 将全选按钮移动到批量操作区域
         chkSelectAll = new JFXCheckBox("全选");
         chkSelectAll.setTooltip(new Tooltip("选择所有可见行"));
         chkSelectAll.selectedProperty().addListener((obs, oldVal, newVal) -> {
@@ -616,33 +666,19 @@ public class PreviewView implements IAutoReloadAble {
                 }
                 // 刷新表格显示
                 tableView.refresh();
+                // 更新按钮状态
+                updateDeleteButtonsState();
             }
         });
         
-        // 表格过滤器
-        HBox filterBox = StyleFactory.createHBoxPanel(
-                StyleFactory.createChapter("[筛选条件]  "), txtSearchFilter,
-                StyleFactory.createSeparatorWithChange(false), cbStatusFilter,
-                StyleFactory.createSeparatorWithChange(false), chkHideUnchanged,
-                StyleFactory.createSeparatorWithChange(false), chkAutoRefresh,
-                StyleFactory.createSeparatorWithChange(false), chkSelectAll,
-                StyleFactory.createSeparatorWithChange(false),
-                StyleFactory.createParamPairLine("显示数量限制:", numberDisplay),
-                StyleFactory.createSpacer(),
-                StyleFactory.createRefreshButton(e -> refresh()));
-        
-        // 添加删除操作按钮
-        HBox actionBox = StyleFactory.createHBoxPanel();
-        JFXButton btnDeleteOriginal = StyleFactory.createSecondaryButton("删除原始文件", () -> {
-            deleteSelectedFiles(true);
-        });
-        JFXButton btnDeleteTarget = StyleFactory.createSecondaryButton("删除目标文件", () -> {
-            deleteSelectedFiles(false);
-        });
         actionBox.getChildren().addAll(
                 StyleFactory.createChapter("[批量操作]  "),
+                chkSelectAll,
                 btnDeleteOriginal,
                 btnDeleteTarget);
+                
+        // 初始化按钮状态 - 确保在所有按钮都实例化后再调用
+        updateDeleteButtonsState();
         actionBox.setPadding(new Insets(5));
 
         // 表格
@@ -966,6 +1002,7 @@ public class PreviewView implements IAutoReloadAble {
         if (fullChangeList.isEmpty()) return;
         String s = getTxtSearchFilter().getText().toLowerCase();
         String st = getCbStatusFilter().getValue();
+        String opType = getCbOperationTypeFilter().getValue();
         boolean h = getChkHideUnchanged().isSelected();
 
         Task<TreeItem<ChangeRecord>> t = new Task<TreeItem<ChangeRecord>>() {
@@ -974,31 +1011,57 @@ public class PreviewView implements IAutoReloadAble {
                 TreeItem<ChangeRecord> root = new TreeItem<>(new ChangeRecord());
                 root.setExpanded(true);
                 int limit = numberDisplay.getValue();
-                AtomicInteger count = new AtomicInteger();
-                for (ChangeRecord r : fullChangeList) {
-                    if (h && !r.isChanged() && r.getStatus() != ExecStatus.FAILED) continue;
-                    if (!s.isEmpty() && !r.getOriginalName().toLowerCase().contains(s)) continue;
-                    boolean sm = true;
-                    if ("执行中".equals(st)) sm = r.getStatus() == ExecStatus.RUNNING;
-                    else if ("成功".equals(st)) sm = r.getStatus() == ExecStatus.SUCCESS;
-                    else if ("失败".equals(st)) sm = r.getStatus() == ExecStatus.FAILED;
-                    else if ("跳过".equals(st)) sm = r.getStatus() == ExecStatus.SKIPPED;
-                    if (!sm) continue;
-                    count.incrementAndGet();
-                    root.getChildren().add(new TreeItem<>(r));
-                    if (count.get() > limit) {
-                        app.log("注意：实时预览数据限制为" + limit + "条！");
-                        break;
-                    }
+                
+                // 构建筛选条件
+                Predicate<ChangeRecord> hideUnchangedPredicate = r -> !h || r.isChanged() || r.getStatus() == ExecStatus.FAILED;
+                Predicate<ChangeRecord> searchPredicate = r -> s.isEmpty() || r.getOriginalName().toLowerCase().contains(s);
+                Predicate<ChangeRecord> statusPredicate = r -> {
+                    if ("全部".equals(st)) return true;
+                    if ("执行中".equals(st)) return r.getStatus() == ExecStatus.RUNNING;
+                    if ("成功".equals(st)) return r.getStatus() == ExecStatus.SUCCESS;
+                    if ("失败".equals(st)) return r.getStatus() == ExecStatus.FAILED;
+                    if ("跳过".equals(st)) return r.getStatus() == ExecStatus.SKIPPED;
+                    return true;
+                };
+                Predicate<ChangeRecord> operationTypePredicate = r -> {
+                    if ("全部".equals(opType)) return true;
+                    return r.getOpType() != null && opType.equals(r.getOpType().name);
+                };
+                
+                // 组合所有筛选条件
+                Predicate<ChangeRecord> allPredicates = hideUnchangedPredicate
+                        .and(searchPredicate)
+                        .and(statusPredicate)
+                        .and(operationTypePredicate);
+                
+                // 使用并行流处理，优化性能
+                List<ChangeRecord> filteredList = fullChangeList.parallelStream()
+                        .filter(allPredicates)
+                        .limit(limit)
+                        .collect(Collectors.toList());
+                
+                // 如果超过限制，记录日志
+                if (filteredList.size() >= limit) {
+                    app.log("注意：实时预览数据限制为" + limit + "条！");
                 }
+                
+                // 将筛选结果添加到树结构中
+                for (ChangeRecord r : filteredList) {
+                    root.getChildren().add(new TreeItem<>(r));
+                }
+                
                 return root;
             }
         };
         t.setOnSucceeded(e -> {
             getPreviewTable().setRoot(t.getValue());
+            // 更新按钮状态
+            updateDeleteButtonsState();
         });
         t.setOnFailed(e -> {
             getPreviewTable().setRoot(t.getValue());
+            // 更新按钮状态
+            updateDeleteButtonsState();
         });
         new Thread(t).start();
         // 顺便也刷新下统计
@@ -1008,6 +1071,19 @@ public class PreviewView implements IAutoReloadAble {
     /**
      * 更新统计信息
      */
+    /**
+     * 更新删除按钮和全选按钮的状态
+     */
+    private void updateDeleteButtonsState() {
+        TreeTableView<ChangeRecord> tableView = getPreviewTable();
+        boolean hasData = tableView != null && tableView.getRoot() != null && !tableView.getRoot().getChildren().isEmpty();
+        
+        // 禁用或启用按钮
+        btnDeleteOriginal.setDisable(!hasData);
+        btnDeleteTarget.setDisable(!hasData);
+        chkSelectAll.setDisable(!hasData);
+    }
+    
     public void updateStats() {
         List<ChangeRecord> fullChangeList = app.getFullChangeList();
         long startT = app.getTaskStartTimStamp();
