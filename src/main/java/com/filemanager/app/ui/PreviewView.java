@@ -1,11 +1,11 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.app.ui;
 
@@ -30,7 +30,6 @@ import com.jfoenix.controls.JFXComboBox;
 import com.jfoenix.controls.JFXTextField;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
-import javafx.collections.FXCollections;
 import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -57,7 +56,7 @@ import java.util.stream.Collectors;
 
 @Getter
 public class PreviewView implements IAutoReloadAble {
-    private static final long AUTO_REFRESH_INTERVAL = 3000; // 3秒自动刷新一次
+    private static final long AUTO_REFRESH_INTERVAL = 10000; // 10秒自动刷新一次
     private final IAppController app;
     private final Tab tabPreview;
     private final Map<String, Spinner<Integer>> rootPathPreviewLimits = new HashMap<>();
@@ -133,7 +132,7 @@ public class PreviewView implements IAutoReloadAble {
         ));
         cbStatusFilter = new JFXComboBox<>(FXCollections.observableArrayList("全部", "执行中", "成功", "失败", "跳过", "无需处理"));
         cbStatusFilter.getSelectionModel().select(0);
-        
+
         // 初始化操作类型筛选下拉框
         ObservableList<String> operationTypes = FXCollections.observableArrayList("全部");
         for (OperationType type : OperationType.values()) {
@@ -141,7 +140,7 @@ public class PreviewView implements IAutoReloadAble {
         }
         cbOperationTypeFilter = new JFXComboBox<>(operationTypes);
         cbOperationTypeFilter.getSelectionModel().select(0);
-        
+
         chkHideUnchanged = new JFXCheckBox("仅显示变更");
         chkHideUnchanged.setSelected(true);
 
@@ -174,11 +173,11 @@ public class PreviewView implements IAutoReloadAble {
                 tableBgColor, theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius(), theme.getCornerRadius()
         ));
 
-        spPreviewThreads = new Spinner<>(1, 32, 10);
+        spPreviewThreads = new Spinner<>(1, 16, 10);
         spPreviewThreads.setEditable(true);
         spPreviewThreads.setTooltip(new Tooltip("预览线程数：用于文件扫描和分析"));
 
-        spExecutionThreads = new Spinner<>(1, 32, 10);
+        spExecutionThreads = new Spinner<>(1, 12, 4);
         spExecutionThreads.setEditable(true);
         spExecutionThreads.setTooltip(new Tooltip("执行线程数：用于管道任务执行"));
 
@@ -226,7 +225,7 @@ public class PreviewView implements IAutoReloadAble {
         spGlobalPreviewLimit.setPrefWidth(80);
         spGlobalPreviewLimit.setTooltip(new Tooltip("全局预览数量上限"));
         spGlobalPreviewLimit.focusedProperty().addListener((observable, oldValue, newValue) -> {
-            if (!newValue) { // 当失去焦点时
+            if (Boolean.FALSE.equals(newValue)) { // 当失去焦点时
                 spGlobalPreviewLimit.increment(0); // 这是一个小技巧：触发一次位移为0的增量，强制同步文本
             }
         });
@@ -236,7 +235,7 @@ public class PreviewView implements IAutoReloadAble {
         spGlobalExecutionLimit.setPrefWidth(80);
         spGlobalExecutionLimit.setTooltip(new Tooltip("全局执行数量上限"));
         spGlobalExecutionLimit.focusedProperty().addListener((observable, oldValue, newValue) -> {
-            if (!newValue) { // 当失去焦点时
+            if (Boolean.FALSE.equals(newValue)) { // 当失去焦点时
                 spGlobalExecutionLimit.increment(0); // 这是一个小技巧：触发一次位移为0的增量，强制同步文本
             }
         });
@@ -271,7 +270,7 @@ public class PreviewView implements IAutoReloadAble {
             // 创建并启动调度服务
             autoRefreshExecutor = Executors.newSingleThreadScheduledExecutor();
             autoRefreshExecutor.scheduleAtFixedRate(() -> {
-                Platform.runLater(() -> refresh());
+                Platform.runLater(this::refresh);
             }, AUTO_REFRESH_INTERVAL, AUTO_REFRESH_INTERVAL, TimeUnit.MILLISECONDS);
         } else {
             // 关闭调度服务
@@ -310,7 +309,7 @@ public class PreviewView implements IAutoReloadAble {
 
         // 获取主题配置
         ThemeConfig theme = app.getCurrentTheme();
-        
+
         // 为每个根路径创建折叠面板
         for (File root : app.getSourceRoots()) {
             String rootPath = root.getAbsolutePath();
@@ -488,8 +487,8 @@ public class PreviewView implements IAutoReloadAble {
     }
 
     private void buildUI() {
-        viewNode = new VBox(15);
-        viewNode.setPadding(new Insets(10));
+        viewNode = new VBox(5);
+        viewNode.setPadding(new Insets(4));
 
         // 进度显示
         HBox progressBox = StyleFactory.createHBoxPanel(mainProgressBar);
@@ -501,11 +500,11 @@ public class PreviewView implements IAutoReloadAble {
         this.configPane = new TitledPane();
         this.configPane.setText("运行配置");
         this.configPane.setExpanded(true);
-        
+
         // 使用主题默认的面板背景色，不添加额外的透明度效果
         ThemeConfig theme = app.getCurrentTheme();
         String panelBgColor = theme.getPanelBgColor();
-        
+
         this.configPane.setStyle(String.format(
                 "-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: %s; -fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f;",
                 theme.getTextPrimaryColor(), panelBgColor, theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius()
@@ -540,13 +539,13 @@ public class PreviewView implements IAutoReloadAble {
         threadParamsRow.setAlignment(Pos.CENTER_LEFT);
         threadParamsRow.setFillHeight(false);
         threadParamsRow.setPrefHeight(30);
-        
+
         // 使用默认的参数对创建，不设置最小宽度
         threadParamsRow.getChildren().addAll(
                 StyleFactory.createParamPairLine("预览线程数:", spPreviewThreads),
                 StyleFactory.createParamPairLine("执行线程数:", spExecutionThreads),
                 StyleFactory.createParamPairLine("线程池模式:", cbThreadPoolMode));
-        
+
         // 设置整个参数行的最小宽度
         threadParamsRow.setMinWidth(500);
 
@@ -587,7 +586,7 @@ public class PreviewView implements IAutoReloadAble {
         this.localParamsPane = new TitledPane();
         localParamsPane.setText("局部参数设置");
         localParamsPane.setExpanded(true);
-        
+
         // 为局部参数面板添加透明度效果
         localParamsPane.setStyle(String.format(
                 "-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: %s; -fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f;",
@@ -616,11 +615,6 @@ public class PreviewView implements IAutoReloadAble {
         configContent.getChildren().addAll(globalParamsPane, localParamsPane);
         configPane.setContent(configContent);
 
-        // 运行状态和统计信息
-        VBox dash = StyleFactory.createVBoxPanel(
-                StyleFactory.createHBoxPanel(StyleFactory.createChapter("[运行状态]  "), runningLabel),
-                StyleFactory.createHBoxPanel(StyleFactory.createChapter("[统计信息]  "), statsLabel));
-
         // 表格过滤器
         HBox filterBox = StyleFactory.createHBoxPanel(
                 StyleFactory.createChapter("[筛选条件]  "), txtSearchFilter,
@@ -632,10 +626,10 @@ public class PreviewView implements IAutoReloadAble {
                 StyleFactory.createParamPairLine("显示数量限制:", numberDisplay),
                 StyleFactory.createSpacer(),
                 StyleFactory.createRefreshButton(e -> refresh()));
-        
+
         // 设置操作类型筛选下拉框的宽度
         cbOperationTypeFilter.setPrefWidth(120);
-        
+
         // 添加删除操作按钮
         HBox actionBox = StyleFactory.createHBoxPanel();
         btnDeleteOriginal = StyleFactory.createSecondaryButton("删除原始文件", () -> {
@@ -644,14 +638,14 @@ public class PreviewView implements IAutoReloadAble {
         // 移除悬浮效果
         btnDeleteOriginal.setOnMouseEntered(null);
         btnDeleteOriginal.setOnMouseExited(null);
-        
+
         btnDeleteTarget = StyleFactory.createSecondaryButton("删除目标文件", () -> {
             deleteSelectedFiles(false);
         });
         // 移除悬浮效果
         btnDeleteTarget.setOnMouseEntered(null);
         btnDeleteTarget.setOnMouseExited(null);
-        
+
         // 将全选按钮移动到批量操作区域
         chkSelectAll = new JFXCheckBox("全选");
         chkSelectAll.setTooltip(new Tooltip("选择所有可见行"));
@@ -670,13 +664,13 @@ public class PreviewView implements IAutoReloadAble {
                 updateDeleteButtonsState();
             }
         });
-        
+
         actionBox.getChildren().addAll(
                 StyleFactory.createChapter("[批量操作]  "),
                 chkSelectAll,
                 btnDeleteOriginal,
                 btnDeleteTarget);
-                
+
         // 初始化按钮状态 - 确保在所有按钮都实例化后再调用
         updateDeleteButtonsState();
         actionBox.setPadding(new Insets(5));
@@ -693,7 +687,9 @@ public class PreviewView implements IAutoReloadAble {
         // 设置表格的垂直增长优先级为最高
         VBox.setVgrow(previewTable, Priority.ALWAYS);
 
-        viewNode.getChildren().addAll(progressBox, configPane, dash, filterBox, actionBox, previewTable);
+        HBox status = StyleFactory.createHBoxPanel(StyleFactory.createChapter("[运行状态]  "), runningLabel);
+        HBox status2 =StyleFactory.createHBoxPanel(StyleFactory.createChapter("[统计信息]  "), statsLabel);
+        viewNode.getChildren().addAll( configPane, progressBox,status, status2, filterBox, actionBox, previewTable);
     }
 
     public void updateRunningProgress(String msg) {
@@ -747,7 +743,7 @@ public class PreviewView implements IAutoReloadAble {
             ChangeRecord record = p.getValue().getValue();
             return new javafx.beans.property.SimpleBooleanProperty(record.isSelected());
         });
-        
+
         // 在选择列的表头添加全选复选框
         CheckBox headerCheckBox = new CheckBox();
         headerCheckBox.setStyle("-fx-padding: 0;");
@@ -779,7 +775,7 @@ public class PreviewView implements IAutoReloadAble {
                 }
             }
         });
-        
+
         TreeTableColumn<ChangeRecord, String> c1 = StyleFactory.createTreeTableColumn("原始文件", false, 220, 120, 300);
         c1.setCellValueFactory(p -> new SimpleStringProperty(p.getValue().getValue().getOriginalName()));
         TreeTableColumn<ChangeRecord, String> cS = StyleFactory.createTreeTableColumn("文件大小", false, 60, 60, 60);
@@ -904,21 +900,21 @@ public class PreviewView implements IAutoReloadAble {
                         } else {
                             bgColor = theme.getListRowOddBgColor();
                         }
-                        
+
                         // 添加透明度效果
                         if (bgColor.startsWith("#") && bgColor.length() == 7) {
                             int alpha = (int) (theme.getGlassOpacity() * 255);
                             String alphaHex = String.format("%02x", alpha);
                             bgColor = bgColor + alphaHex;
                         }
-                        
+
                         // 检查行是否被选中
                         if (this.isSelected()) {
                             // 如果选中，添加边框和阴影效果，而不是改变背景色
                             setStyle(String.format(
                                     "-fx-background-color: %s; " +
-                                    "-fx-border-width: 2; -fx-border-color: %s; " +
-                                    "-fx-effect: dropshadow(three-pass-box, rgba(52, 152, 219, 0.5), 10, 0, 0, 0);",
+                                            "-fx-border-width: 2; -fx-border-color: %s; " +
+                                            "-fx-effect: dropshadow(three-pass-box, rgba(52, 152, 219, 0.5), 10, 0, 0, 0);",
                                     bgColor, theme.getAccentColor()
                             ));
                         } else {
@@ -1011,7 +1007,7 @@ public class PreviewView implements IAutoReloadAble {
                 TreeItem<ChangeRecord> root = new TreeItem<>(new ChangeRecord());
                 root.setExpanded(true);
                 int limit = numberDisplay.getValue();
-                
+
                 // 构建筛选条件
                 Predicate<ChangeRecord> hideUnchangedPredicate = r -> !h || r.isChanged() || r.getStatus() == ExecStatus.FAILED;
                 Predicate<ChangeRecord> searchPredicate = r -> s.isEmpty() || r.getOriginalName().toLowerCase().contains(s);
@@ -1027,29 +1023,29 @@ public class PreviewView implements IAutoReloadAble {
                     if ("全部".equals(opType)) return true;
                     return r.getOpType() != null && opType.equals(r.getOpType().name);
                 };
-                
+
                 // 组合所有筛选条件
                 Predicate<ChangeRecord> allPredicates = hideUnchangedPredicate
                         .and(searchPredicate)
                         .and(statusPredicate)
                         .and(operationTypePredicate);
-                
+
                 // 使用并行流处理，优化性能
                 List<ChangeRecord> filteredList = fullChangeList.parallelStream()
                         .filter(allPredicates)
                         .limit(limit)
                         .collect(Collectors.toList());
-                
+
                 // 如果超过限制，记录日志
                 if (filteredList.size() >= limit) {
                     app.log("注意：实时预览数据限制为" + limit + "条！");
                 }
-                
+
                 // 将筛选结果添加到树结构中
                 for (ChangeRecord r : filteredList) {
                     root.getChildren().add(new TreeItem<>(r));
                 }
-                
+
                 return root;
             }
         };
@@ -1077,13 +1073,13 @@ public class PreviewView implements IAutoReloadAble {
     private void updateDeleteButtonsState() {
         TreeTableView<ChangeRecord> tableView = getPreviewTable();
         boolean hasData = tableView != null && tableView.getRoot() != null && !tableView.getRoot().getChildren().isEmpty();
-        
+
         // 禁用或启用按钮
         btnDeleteOriginal.setDisable(!hasData);
         btnDeleteTarget.setDisable(!hasData);
         chkSelectAll.setDisable(!hasData);
     }
-    
+
     public void updateStats() {
         List<ChangeRecord> fullChangeList = app.getFullChangeList();
         long startT = app.getTaskStartTimStamp();
@@ -1093,7 +1089,7 @@ public class PreviewView implements IAutoReloadAble {
                 f = fullChangeList.stream().filter(r -> r.getStatus() == ExecStatus.FAILED).count();
         this.updateStatsDisplay(t, c, s, f, MultiThreadTaskEstimator.formatDuration(System.currentTimeMillis() - startT));
     }
-    
+
     /**
      * 删除选中的文件
      * @param deleteOriginal 是否删除原始文件（true）还是目标文件（false）
@@ -1103,14 +1099,14 @@ public class PreviewView implements IAutoReloadAble {
         if (tableView != null && tableView.getRoot() != null) {
             AtomicInteger deletedCount = new AtomicInteger(0);
             AtomicInteger failedCount = new AtomicInteger(0);
-            
+
             Task<Void> deleteTask = new Task<Void>() {
                 @Override
                 protected Void call() {
                     Platform.runLater(() -> {
                         app.updateRunningProgress("正在准备删除文件...");
                     });
-                    
+
                     for (TreeItem<ChangeRecord> item : tableView.getRoot().getChildren()) {
                         ChangeRecord record = item.getValue();
                         if (record != null && record.isSelected()) {
@@ -1121,7 +1117,7 @@ public class PreviewView implements IAutoReloadAble {
                                 } else {
                                     fileToDelete = new File(record.getNewPath());
                                 }
-                                
+
                                 if (fileToDelete.exists()) {
                                     if (fileToDelete.delete()) {
                                         deletedCount.incrementAndGet();
@@ -1131,7 +1127,7 @@ public class PreviewView implements IAutoReloadAble {
                                 } else {
                                     failedCount.incrementAndGet();
                                 }
-                                
+
                                 // 处理中间文件
                                 if (record.getIntermediateFile() != null && record.getIntermediateFile().exists()) {
                                     record.getIntermediateFile().delete();
@@ -1141,10 +1137,10 @@ public class PreviewView implements IAutoReloadAble {
                             }
                         }
                     }
-                    
+
                     return null;
                 }
-                
+
                 @Override
                 protected void succeeded() {
                     super.succeeded();
@@ -1155,7 +1151,7 @@ public class PreviewView implements IAutoReloadAble {
                     });
                 }
             };
-            
+
             // 运行删除任务
             new Thread(deleteTask).start();
         }
@@ -1362,7 +1358,7 @@ public class PreviewView implements IAutoReloadAble {
             }
         }
     }
-    
+
     public void reload() {
         // 更新所有TitledPane的样式
         if (configPane != null) {
@@ -1371,21 +1367,21 @@ public class PreviewView implements IAutoReloadAble {
                     app.getCurrentTheme().getTextPrimaryColor(), app.getCurrentTheme().getPanelBgColor(), app.getCurrentTheme().getBorderColor(), app.getCurrentTheme().getBorderWidth(), app.getCurrentTheme().getCornerRadius()
             ));
         }
-        
+
         if (globalParamsPane != null) {
             globalParamsPane.setStyle(String.format(
                     "-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: %s; -fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f;",
                     app.getCurrentTheme().getTextPrimaryColor(), app.getCurrentTheme().getPanelBgColor(), app.getCurrentTheme().getBorderColor(), app.getCurrentTheme().getBorderWidth(), app.getCurrentTheme().getCornerRadius()
             ));
         }
-        
+
         if (localParamsPane != null) {
             localParamsPane.setStyle(String.format(
                     "-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: %s; -fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f;",
                     app.getCurrentTheme().getTextPrimaryColor(), app.getCurrentTheme().getPanelBgColor(), app.getCurrentTheme().getBorderColor(), app.getCurrentTheme().getBorderWidth(), app.getCurrentTheme().getCornerRadius()
             ));
         }
-        
+
         // 更新根路径配置的TitledPane样式
         if (rootPathThreadConfigBox != null) {
             for (Node node : rootPathThreadConfigBox.getChildren()) {
@@ -1398,7 +1394,7 @@ public class PreviewView implements IAutoReloadAble {
                 }
             }
         }
-        
+
         // 更新参数面板样式
         if (configContent != null) {
             for (Node node : configContent.getChildren()) {

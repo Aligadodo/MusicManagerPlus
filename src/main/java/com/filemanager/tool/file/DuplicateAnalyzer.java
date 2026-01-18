@@ -3,6 +3,7 @@ package com.filemanager.tool.file;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.CleanupParams;
 import com.filemanager.strategy.FileCleanupStrategy;
+import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
 import com.filemanager.util.LanguageUtil;
 import org.apache.commons.lang3.StringUtils;
@@ -336,7 +337,7 @@ public class DuplicateAnalyzer {
                         file.getAbsolutePath(), // newPath设置为父文件夹路径
                         OperationType.DELETE, // 使用DELETE OperationType
                         params, // 使用extraParams传递额外信息
-                        null
+                        ExecStatus.PENDING
                 );
                 
                 result.add(record);

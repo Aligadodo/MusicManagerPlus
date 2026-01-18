@@ -66,13 +66,13 @@ public class ComposeView implements IAutoReloadAble {
         ColumnConstraints c3 = new ColumnConstraints();
         c3.setPercentWidth(35);
         grid.getColumnConstraints().addAll(c1, c2, c3);
-        grid.add(StyleFactory.createHBoxPanel(StyleFactory.createSectionHeader("step1-选择目录",
+        grid.add(StyleFactory.createHBoxPanel(StyleFactory.createSectionHeader("Step1-选择目录",
                 "通过弹窗或者拖拽至空白处来添加需要处理的文件或文件夹。")), 0, 0);
-        grid.add(StyleFactory.createHBoxPanel(StyleFactory.createSectionHeader("step2-流水线配置",
+        grid.add(StyleFactory.createHBoxPanel(StyleFactory.createSectionHeader("Step2-流水线配置",
                 "添加必要的处理流程，可同时应用不同的操作。" +
                         "点击任意项目，可打开详细的配置界面。" +
-                        "（同一文件只会被成功修改一次）。")), 1, 0);
-        grid.add(StyleFactory.createHBoxPanel(StyleFactory.createSectionHeader("step3-参数配置",
+                        "（同一文件只会被修改一次）。")), 1, 0);
+        grid.add(StyleFactory.createHBoxPanel(StyleFactory.createSectionHeader("Step3-参数配置",
                 "支持选中步骤并编辑步骤下的参数。" +
                         "支持配置步骤的前置条件，以在满足特定条件下才执行特定操作，用于更精细化的操作控制。")), 2, 0);
         grid.add(createLeftPanel(), 0, 1);
@@ -95,7 +95,7 @@ public class ComposeView implements IAutoReloadAble {
         sourceListView.setItems(app.getSourceRoots());
         sourceListView.setPlaceholder(StyleFactory.createChapter("拖拽文件夹到此"));
         // 限制来源目录列表的最大高度，确保全局筛选面板有足够空间显示
-        sourceListView.setMaxHeight(200);
+        sourceListView.setMaxHeight(150);
         VBox.setVgrow(sourceListView, Priority.ALWAYS);
         // 移除硬编码样式，让StyleFactory统一管理
 
@@ -164,7 +164,7 @@ public class ComposeView implements IAutoReloadAble {
             }
         });
 
-        HBox srcTools = new HBox(10);
+        HBox srcTools = new HBox(5);
         srcTools.getChildren().addAll(
                 StyleFactory.createActionButton("添加目录", null, app::addDirectoryAction),
                 StyleFactory.createActionButton("清空", "#e74c3c", app::clearSourceDirs)
@@ -173,11 +173,16 @@ public class ComposeView implements IAutoReloadAble {
         this.tpFilters = new TitledPane("全局筛选", app.getGlobalSettingsView());
         this.tpFilters.setCollapsible(true);
         this.tpFilters.setExpanded(true);
-        
-        // 应用与整体风格一致的不透明背景
+        String bgColor = app.getCurrentTheme().getPanelBgColor();
+        if (bgColor.startsWith("#") && bgColor.length() == 7) {
+            int alpha = (int) (app.getCurrentTheme().getGlassOpacity() * 255);
+            String alphaHex = String.format("%02x", alpha);
+            bgColor = bgColor + alphaHex;
+        }
+        // 应用与整体风格一致的透明背景
         this.tpFilters.setStyle(String.format(
                 "-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: %s; -fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f;",
-                app.getCurrentTheme().getTextPrimaryColor(), app.getCurrentTheme().getPanelBgColor(), app.getCurrentTheme().getBorderColor(), app.getCurrentTheme().getBorderWidth(), app.getCurrentTheme().getCornerRadius()
+                app.getCurrentTheme().getTextPrimaryColor(), bgColor, app.getCurrentTheme().getBorderColor(), app.getCurrentTheme().getBorderWidth(), app.getCurrentTheme().getCornerRadius()
         ));
 
         leftPanel.getChildren().addAll(srcTools, sourceListView, tpFilters);
