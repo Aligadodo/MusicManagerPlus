@@ -96,7 +96,7 @@ public class ComposeView implements IAutoReloadAble {
         sourceListView.setPlaceholder(StyleFactory.createChapter("拖拽文件夹到此"));
         // 限制来源目录列表的最大高度，确保全局筛选面板有足够空间显示
         sourceListView.setMaxHeight(150);
-        VBox.setVgrow(sourceListView, Priority.ALWAYS);
+        VBox.setVgrow(sourceListView, Priority.NEVER);
         // 移除硬编码样式，让StyleFactory统一管理
 
         // [增强] 源目录列表单元格：支持完整路径显示 + 行内操作
@@ -186,6 +186,8 @@ public class ComposeView implements IAutoReloadAble {
         ));
 
         leftPanel.getChildren().addAll(srcTools, sourceListView, tpFilters);
+        // 设置tpFilters自动填充剩余空间
+        VBox.setVgrow(tpFilters, Priority.ALWAYS);
         return leftPanel;
     }
 

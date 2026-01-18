@@ -216,9 +216,7 @@ public class AdvancedFileTypeManager {
         
         // 创建TreeView并应用主题样式
         StyleFactory.applyTreeViewStyle(treeView);
-        // 限制TreeView的高度，确保显示合适
-        treeView.setPrefHeight(200);
-        treeView.setMaxHeight(300);
+        // 移除硬编码的高度限制，让TreeView能够自动扩展
         
         VBox layout = StyleFactory.createVBoxPanel();
         layout.getChildren().addAll(customInputCallback, treeView);

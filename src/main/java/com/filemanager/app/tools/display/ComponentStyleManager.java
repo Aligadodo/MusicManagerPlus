@@ -449,23 +449,10 @@ public class ComponentStyleManager {
      * 应用ListView样式
      */
     public static void applyListViewStyle(ListView<?> listView) {
-        // 为列表背景添加透明度，实现玻璃效果
-        String listBgColor = theme.getListBgColor();
-        if (listBgColor.startsWith("#")) {
-            // 将十六进制颜色转换为带透明度的RGBA颜色
-            int alpha = (int) (theme.getGlassOpacity() * 255);
-            String alphaHex = String.format("%02x", alpha);
-            listBgColor = listBgColor + alphaHex;
-        }
-        
-        // 为选中行背景色添加透明度
-        String selectedBgColor = theme.getListRowSelectedBgColor();
-        if (selectedBgColor.startsWith("#")) {
-            // 降低选中行的透明度
-            int alpha = (int) (theme.getGlassOpacity() * 255 * 0.6); // 降低透明度到原来的60%
-            String alphaHex = String.format("%02x", alpha);
-            selectedBgColor = selectedBgColor + alphaHex;
-        }
+        // 使用ThemeConfig的透明度计算方法
+        String listBgColor = theme.getListBgColorWithOpacity();
+        String selectedBgColor = theme.getListRowSelectedBgColorWithOpacity(0.6); // 60%透明度
+        String hoverBgColor = theme.getListRowHoverBgColorWithOpacity(0.5); // 50%透明度
         
         // 设置ListView的背景色、边框和内部元素样式
         listView.setStyle(String.format(
@@ -510,39 +497,11 @@ public class ComponentStyleManager {
      * 应用TableView样式
      */
     public static void applyTableViewStyle(TableView<?> tableView) {
-        // 为列表背景添加透明度，实现玻璃效果
-        String listBgColor = theme.getListBgColor();
-        String headerBgColor = theme.getPanelBgColor();
-        
-        if (listBgColor.startsWith("#")) {
-            // 将十六进制颜色转换为带透明度的RGBA颜色
-            int alpha = (int) (theme.getGlassOpacity() * 255);
-            String alphaHex = String.format("%02x", alpha);
-            listBgColor = listBgColor + alphaHex;
-        }
-        
-        if (headerBgColor.startsWith("#")) {
-            // 表头使用较高的透明度
-            int alpha = (int) ((theme.getGlassOpacity() + 0.1) * 255);
-            String alphaHex = String.format("%02x", alpha);
-            headerBgColor = headerBgColor + alphaHex;
-        }
-        
-        // 为选中行和悬停行背景色添加透明度
-        String selectedBgColor = theme.getListRowSelectedBgColor();
-        String hoverBgColor = theme.getListRowHoverBgColor();
-        
-        if (selectedBgColor.startsWith("#")) {
-            int alpha = (int) (theme.getGlassOpacity() * 255 * 0.8);
-            String alphaHex = String.format("%02x", alpha);
-            selectedBgColor = selectedBgColor + alphaHex;
-        }
-        
-        if (hoverBgColor.startsWith("#")) {
-            int alpha = (int) (theme.getGlassOpacity() * 255 * 0.6);
-            String alphaHex = String.format("%02x", alpha);
-            hoverBgColor = hoverBgColor + alphaHex;
-        }
+        // 使用ThemeConfig的透明度计算方法
+        String listBgColor = theme.getListBgColorWithOpacity();
+        String headerBgColor = theme.getTableHeaderBgColorWithOpacity(); // 特殊处理：使用比毛玻璃透明度高0.1的透明度
+        String selectedBgColor = theme.getListRowSelectedBgColorWithOpacity(0.8); // 80%透明度
+        String hoverBgColor = theme.getListRowHoverBgColorWithOpacity(0.6); // 60%透明度
         
         // 设置TableView的完整样式，包括背景、边框、表头、单元格等
         tableView.setStyle(String.format(
@@ -613,48 +572,12 @@ public class ComponentStyleManager {
      * 应用TreeTableView样式
      */
     public static void applyTreeTableViewStyle(TreeTableView<?> treeTableView) {
-        // 为列表背景添加透明度，实现玻璃效果
-        String listBgColor = theme.getListBgColor();
-        String headerBgColor = theme.getPanelBgColor();
-        
-        if (listBgColor.startsWith("#")) {
-            // 将十六进制颜色转换为带透明度的RGBA颜色
-            int alpha = (int) (theme.getGlassOpacity() * 255);
-            String alphaHex = String.format("%02x", alpha);
-            listBgColor = listBgColor + alphaHex;
-        }
-        
-        if (headerBgColor.startsWith("#")) {
-            // 表头使用较高的透明度
-            int alpha = (int) ((theme.getGlassOpacity() + 0.1) * 255);
-            String alphaHex = String.format("%02x", alpha);
-            headerBgColor = headerBgColor + alphaHex;
-        }
-        
-        // 为选中行和悬停行背景色添加透明度
-        String selectedBgColor = theme.getListRowSelectedBgColor();
-        String hoverBgColor = theme.getListRowHoverBgColor();
-        
-        if (selectedBgColor.startsWith("#")) {
-            int alpha = (int) (theme.getGlassOpacity() * 255 * 0.8);
-            String alphaHex = String.format("%02x", alpha);
-            selectedBgColor = selectedBgColor + alphaHex;
-        }
-        
-        if (hoverBgColor.startsWith("#")) {
-            int alpha = (int) (theme.getGlassOpacity() * 255 * 0.6);
-            String alphaHex = String.format("%02x", alpha);
-            hoverBgColor = hoverBgColor + alphaHex;
-        }
-        
-        // 为普通表格行添加半透明背景色
-        String rowBgColor = theme.getListBgColor();
-        if (rowBgColor.startsWith("#")) {
-            // 普通行使用与列表背景相同的透明度
-            int alpha = (int) (theme.getGlassOpacity() * 255 * 0.1); // 30%透明度
-            String alphaHex = String.format("%02x", alpha);
-            rowBgColor = rowBgColor + alphaHex;
-        }
+        // 使用ThemeConfig的透明度计算方法
+        String listBgColor = theme.getListBgColorWithOpacity();
+        String headerBgColor = theme.getTableHeaderBgColorWithOpacity(); // 特殊处理：使用比毛玻璃透明度高0.1的透明度
+        String selectedBgColor = theme.getListRowSelectedBgColorWithOpacity(0.8); // 80%透明度
+        String hoverBgColor = theme.getListRowHoverBgColorWithOpacity(0.6); // 60%透明度
+        String rowBgColor = theme.getListRowBgColorWithOpacity(0.1); // 10%透明度
         
         // 设置TreeTableView的完整样式，包括背景、边框、表头、单元格等
         treeTableView.setStyle(String.format(
@@ -1115,14 +1038,8 @@ public class ComponentStyleManager {
         }
         
         if (selected) {
-            // 为选中行背景色添加透明度
-            String selectedBgColor = theme.getListRowSelectedBgColor();
-            if (selectedBgColor.startsWith("#")) {
-                // 降低选中行的透明度
-                int alpha = (int) (theme.getGlassOpacity() * 255 * 0.6); // 降低透明度到60%
-                String alphaHex = String.format("%02x", alpha);
-                selectedBgColor = selectedBgColor + alphaHex;
-            }
+            // 使用ThemeConfig的透明度计算方法
+            String selectedBgColor = theme.getListRowSelectedBgColorWithOpacity(0.6); // 60%透明度
             
             // 选中样式：使用带透明度的背景色，加强边框
             node.setStyle(String.format(

@@ -197,6 +197,83 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
     public double getDescriptionFontSize() { return descriptionFontSize; }
     public String getButtonFontFamily() { return buttonFontFamily; }
     public double getButtonFontSize() { return buttonFontSize; }
+    
+    // 透明度计算方法
+    /**
+     * 获取带透明度的颜色值
+     * @param color 原始颜色值（如 #ffffff）
+     * @param opacityMultiplier 透明度倍数（0.0-1.0）
+     * @return 带透明度的颜色值（如 #ffffff80）
+     */
+    public String getColorWithOpacity(String color, double opacityMultiplier) {
+        if (color == null || !color.startsWith("#") || color.length() != 7) {
+            return color;
+        }
+        // 计算最终透明度（毛玻璃透明度 * 倍数）
+        double finalOpacity = Math.max(0.0, Math.min(1.0, this.glassOpacity * opacityMultiplier));
+        int alpha = (int) (finalOpacity * 255);
+        String alphaHex = String.format("%02x", alpha);
+        return color + alphaHex;
+    }
+    
+    /**
+     * 获取带透明度的列表背景色
+     * @return 带透明度的列表背景色
+     */
+    public String getListBgColorWithOpacity() {
+        return getColorWithOpacity(this.listBgColor, 1.0);
+    }
+    
+    /**
+     * 获取带透明度的列表选中行背景色
+     * @param opacityMultiplier 透明度倍数（0.0-1.0）
+     * @return 带透明度的列表选中行背景色
+     */
+    public String getListRowSelectedBgColorWithOpacity(double opacityMultiplier) {
+        return getColorWithOpacity(this.listRowSelectedBgColor, opacityMultiplier);
+    }
+    
+    /**
+     * 获取带透明度的列表悬停行背景色
+     * @param opacityMultiplier 透明度倍数（0.0-1.0）
+     * @return 带透明度的列表悬停行背景色
+     */
+    public String getListRowHoverBgColorWithOpacity(double opacityMultiplier) {
+        return getColorWithOpacity(this.listRowHoverBgColor, opacityMultiplier);
+    }
+    
+    /**
+     * 获取带透明度的列表行背景色
+     * @param opacityMultiplier 透明度倍数（0.0-1.0）
+     * @return 带透明度的列表行背景色
+     */
+    public String getListRowBgColorWithOpacity(double opacityMultiplier) {
+        return getColorWithOpacity(this.listBgColor, opacityMultiplier);
+    }
+    
+    /**
+     * 获取带透明度的面板背景色
+     * @param opacityMultiplier 透明度倍数（0.0-1.0）
+     * @return 带透明度的面板背景色
+     */
+    public String getPanelBgColorWithOpacity(double opacityMultiplier) {
+        return getColorWithOpacity(this.panelBgColor, opacityMultiplier);
+    }
+    
+    /**
+     * 获取带透明度的表头背景色（特殊处理：使用比毛玻璃透明度高0.1的透明度）
+     * @return 带透明度的表头背景色
+     */
+    public String getTableHeaderBgColorWithOpacity() {
+        if (this.panelBgColor == null || !this.panelBgColor.startsWith("#") || this.panelBgColor.length() != 7) {
+            return this.panelBgColor;
+        }
+        // 计算最终透明度（毛玻璃透明度 + 0.1）
+        double finalOpacity = Math.max(0.0, Math.min(1.0, this.glassOpacity + 0.1));
+        int alpha = (int) (finalOpacity * 255);
+        String alphaHex = String.format("%02x", alpha);
+        return this.panelBgColor + alphaHex;
+    }
 
     // 间距相关getter方法
     public double getSmallSpacing() { return smallSpacing; }
