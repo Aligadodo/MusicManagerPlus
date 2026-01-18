@@ -960,9 +960,12 @@ public class ComponentStyleManager {
             return;
         }
         
+        // 使用ThemeConfig中已有的方法获取带透明度的面板背景色
+        String bgColor = theme.getPanelBgColorWithOpacity(1.0);
+        
         region.setStyle(String.format(
                 "-fx-background-color: %s; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f;",
-                theme.getPanelBgColor(), theme.getCornerRadius(), theme.getTextPrimaryColor(), theme.getBorderColor(), theme.getBorderWidth()
+                bgColor, theme.getCornerRadius(), theme.getTextPrimaryColor(), theme.getBorderColor(), theme.getBorderWidth()
         ));
     }
     

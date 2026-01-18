@@ -115,12 +115,9 @@ public class LogView implements IAutoReloadAble {
 
     public void reload() {
         // 更新日志框样式，应用透明度效果
-        String bgColor = controller.getCurrentTheme().getPanelBgColor();
-        if (bgColor.startsWith("#") && bgColor.length() == 7) {
-            int alpha = (int) (controller.getCurrentTheme().getGlassOpacity() * 255);
-            String alphaHex = String.format("%02x", alpha);
-            bgColor = bgColor + alphaHex;
-        }
+        String bgColor = controller.getCurrentTheme().getPanelBgColorWithOpacity(1.0);
+        
+        // 只更新需要变化的部分，滚动窗格等样式已在创建时设置
         logArea.setStyle(String.format(
                 "-fx-background-color: %s; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-font-family: %s; -fx-font-size: %.1f;",
                 bgColor, controller.getCurrentTheme().getCornerRadius(), controller.getCurrentTheme().getTextPrimaryColor(), controller.getCurrentTheme().getBorderColor(),

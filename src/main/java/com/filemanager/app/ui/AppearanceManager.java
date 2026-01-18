@@ -64,9 +64,7 @@ public class AppearanceManager {
     private Tab finalPresetTab;
     private JFXTabPane tpAppearance;
     
-    // 保存示例按钮引用，用于样式更新
-    private Button largeButtonExample;
-    private Button smallButtonExample;
+    
     
     // 跟踪主题是否被修改
     private boolean isThemeModified = false;
@@ -130,11 +128,6 @@ public class AppearanceManager {
         fontTab.setContent(createFontTabContent());
         tabPane.getTabs().add(fontTab);
         
-        // 按钮设置选项卡
-        Tab buttonTab = new Tab("按钮设置");
-        buttonTab.setContent(createButtonTabContent());
-        tabPane.getTabs().add(buttonTab);
-        
         // 样式管理选项卡
         Tab styleManageTab = new Tab("样式管理");
         styleManageTab.setContent(createStyleTabContent());
@@ -177,7 +170,7 @@ public class AppearanceManager {
                 theme.setDarkBackground(currentTheme.isDarkBackground());
                 theme.setPanelBgColor(currentTheme.getPanelBgColor());
                 theme.setFontFamily(currentTheme.getFontFamily());
-                theme.setFontSize(currentTheme.getFontSize());
+
                 theme.setButtonLargeSize(currentTheme.getButtonLargeSize());
                 theme.setButtonSmallSize(currentTheme.getButtonSmallSize());
                 
@@ -936,176 +929,36 @@ public class AppearanceManager {
         fontFamilyBox.getChildren().addAll(fontFamilyLabel, fontFamilyCb);
         content.getChildren().add(fontFamilyBox);
         
-        // 字体大小
-        HBox fontSizeBox = new HBox(20);
-        fontSizeBox.setAlignment(Pos.CENTER_LEFT);
-        Label fontSizeLabel = StyleFactory.createLabel("字体大小", 14, false);
-        JFXSlider fontSizeSlider = new JFXSlider(10, 22, Math.round(currentTheme.getFontSize()));
-        fontSizeSlider.setPrefWidth(400);
-        fontSizeSlider.setMajorTickUnit(1);
-        fontSizeSlider.setMinorTickCount(0);
-        fontSizeSlider.setShowTickLabels(true);
-        fontSizeSlider.setShowTickMarks(false);
-        fontSizeSlider.setSnapToTicks(true); // 自动对齐到整数刻度
+        // 
+        // HBox fontSizeBox = new HBox(20);
+        // fontSizeBox.setAlignment(Pos.CENTER_LEFT);
+        // Label fontSizeLabel = StyleFactory.createLabel("字体大小", 14, false);
+        // JFXSlider fontSizeSlider = new JFXSlider(10, 22, Math.round(currentTheme.getFontSize()));
+        // fontSizeSlider.setPrefWidth(400);
+        // fontSizeSlider.setMajorTickUnit(1);
+        // fontSizeSlider.setMinorTickCount(0);
+        // fontSizeSlider.setShowTickLabels(true);
+        // fontSizeSlider.setShowTickMarks(false);
+        // fontSizeSlider.setSnapToTicks(true); // 自动对齐到整数刻度
         
-        Label fontSizeValue = StyleFactory.createLabel(String.format("%d", Math.round(currentTheme.getFontSize())), 14, false);
-        fontSizeValue.setMinWidth(50);
+        // Label fontSizeValue = StyleFactory.createLabel(String.format("%d", Math.round(currentTheme.getFontSize())), 14, false);
+        // fontSizeValue.setMinWidth(50);
         
-        fontSizeSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
-            int intValue = (int) Math.round(newVal.doubleValue());
-            currentTheme.setFontSize(intValue);
-            fontSizeValue.setText(String.format("%d", intValue));
-            applyAppearance();
-        });
+        // fontSizeSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
+        //     int intValue = (int) Math.round(newVal.doubleValue());
+        //     currentTheme.setFontSize(intValue);
+        //     fontSizeValue.setText(String.format("%d", intValue));
+        //     applyAppearance();
+        // });
         
-        fontSizeBox.getChildren().addAll(fontSizeLabel, fontSizeSlider, fontSizeValue);
-        content.getChildren().add(fontSizeBox);
-        
-        return content;
-    }
-    
-    /**
-     * 创建按钮设置选项卡内容
-     */
-    private Node createButtonTabContent() {
-        VBox content = new VBox(25);
-        content.setPadding(new Insets(20));
-        content.setStyle("-fx-background-color: transparent;");
-        
-        // 按钮颜色设置
-        Label buttonColorTitle = new Label("按钮颜色设置");
-        buttonColorTitle.setStyle(String.format(
-                "-fx-font-family: %s; -fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: %s;",
-                currentTheme.getFontFamily(), currentTheme.getTextPrimaryColor()
-        ));
-        content.getChildren().add(buttonColorTitle);
-        
-        // 按钮背景色
-        HBox buttonBgColorBox = new HBox(20);
-        buttonBgColorBox.setAlignment(Pos.CENTER_LEFT);
-        Label buttonBgColorLabel = StyleFactory.createLabel("按钮背景色", 14, false);
-        ColorPicker buttonBgColorPicker = new ColorPicker(Color.web(validateColor(currentTheme.getButtonBgColor(), "#3498db")));
-        buttonBgColorPicker.setOnAction(e -> {
-            Color color = buttonBgColorPicker.getValue();
-            currentTheme.setButtonBgColor(String.format("#%02X%02X%02X%02X", 
-                    (int) (color.getRed() * 255), 
-                    (int) (color.getGreen() * 255), 
-                    (int) (color.getBlue() * 255),
-                    (int) (color.getOpacity() * 255)));
-            isThemeModified = true;
-            updateButtonExamples(); // 更新示例按钮
-        });
-        buttonBgColorBox.getChildren().addAll(buttonBgColorLabel, buttonBgColorPicker);
-        content.getChildren().add(buttonBgColorBox);
-        
-        // 按钮文字颜色
-        HBox buttonTextColorBox = new HBox(20);
-        buttonTextColorBox.setAlignment(Pos.CENTER_LEFT);
-        Label buttonTextColorLabel = StyleFactory.createLabel("按钮文字颜色", 14, false);
-        ColorPicker buttonTextColorPicker = new ColorPicker(Color.web(validateColor(currentTheme.getButtonTextColor(), "#ffffff")));
-        buttonTextColorPicker.setOnAction(e -> {
-            Color color = buttonTextColorPicker.getValue();
-            currentTheme.setButtonTextColor(String.format("#%02X%02X%02X%02X", 
-                    (int) (color.getRed() * 255), 
-                    (int) (color.getGreen() * 255), 
-                    (int) (color.getBlue() * 255),
-                    (int) (color.getOpacity() * 255)));
-            isThemeModified = true;
-            updateButtonExamples(); // 更新示例按钮
-        });
-        buttonTextColorBox.getChildren().addAll(buttonTextColorLabel, buttonTextColorPicker);
-        content.getChildren().add(buttonTextColorBox);
-        
-        // 按钮边框颜色
-        HBox buttonBorderColorBox = new HBox(20);
-        buttonBorderColorBox.setAlignment(Pos.CENTER_LEFT);
-        Label buttonBorderColorLabel = StyleFactory.createLabel("按钮边框颜色", 14, false);
-        ColorPicker buttonBorderColorPicker = new ColorPicker(Color.web(validateColor(currentTheme.getButtonBorderColor(), "#2980b9")));
-        buttonBorderColorPicker.setOnAction(e -> {
-            Color color = buttonBorderColorPicker.getValue();
-            currentTheme.setButtonBorderColor(String.format("#%02X%02X%02X%02X", 
-                    (int) (color.getRed() * 255), 
-                    (int) (color.getGreen() * 255), 
-                    (int) (color.getBlue() * 255),
-                    (int) (color.getOpacity() * 255)));
-            isThemeModified = true;
-            updateButtonExamples(); // 更新示例按钮
-        });
-        buttonBorderColorBox.getChildren().addAll(buttonBorderColorLabel, buttonBorderColorPicker);
-        content.getChildren().add(buttonBorderColorBox);
-        
-        
-        // 按钮示例展示
-        Label buttonExampleTitle = new Label("按钮示例");
-        buttonExampleTitle.setStyle(String.format(
-                "-fx-font-family: %s; -fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: %s;",
-                currentTheme.getFontFamily(), currentTheme.getTextPrimaryColor()
-        ));
-        content.getChildren().add(buttonExampleTitle);
-        
-        HBox buttonExamplesBox = new HBox(30);
-        buttonExamplesBox.setAlignment(Pos.CENTER_LEFT);
-        buttonExamplesBox.setPadding(new Insets(10));
-        buttonExamplesBox.setStyle(String.format(
-                "-fx-background-color: %s; -fx-background-radius: 8; -fx-border-color: %s; -fx-border-width: 1px;",
-                currentTheme.getPanelBgColor(), currentTheme.getBorderColor()
-        ));
-        
-        // 大按钮示例
-        Button largeButtonExample = new Button("大按钮示例");
-        largeButtonExample.setPrefWidth(150);
-        largeButtonExample.setPrefHeight(Math.round(currentTheme.getButtonLargeSize()));
-        largeButtonExample.setStyle(String.format(
-                "-fx-background-color: %s; -fx-text-fill: %s; -fx-font-family: %s; -fx-font-size: 14px; -fx-background-radius: %.1f; -fx-border-color: %s; -fx-border-width: %.1f; -fx-cursor: hand;",
-                currentTheme.getButtonBgColor(), currentTheme.getButtonTextColor(), currentTheme.getFontFamily(),
-                currentTheme.getCornerRadius(), currentTheme.getButtonBorderColor(), currentTheme.getBorderWidth()
-        ));
-        buttonExamplesBox.getChildren().add(largeButtonExample);
-        
-        // 小按钮示例
-        Button smallButtonExample = new Button("小按钮示例");
-        smallButtonExample.setPrefWidth(120);
-        smallButtonExample.setPrefHeight(Math.round(currentTheme.getButtonSmallSize()));
-        smallButtonExample.setStyle(String.format(
-                "-fx-background-color: %s; -fx-text-fill: %s; -fx-font-family: %s; -fx-font-size: 12px; -fx-background-radius: %.1f; -fx-border-color: %s; -fx-border-width: %.1f; -fx-cursor: hand;",
-                currentTheme.getButtonBgColor(), currentTheme.getButtonTextColor(), currentTheme.getFontFamily(),
-                currentTheme.getCornerRadius(), currentTheme.getButtonBorderColor(), currentTheme.getBorderWidth()
-        ));
-        buttonExamplesBox.getChildren().add(smallButtonExample);
-        
-        content.getChildren().add(buttonExamplesBox);
-        
-        // 保存示例按钮引用，用于后续更新
-        this.largeButtonExample = largeButtonExample;
-        this.smallButtonExample = smallButtonExample;
+        // fontSizeBox.getChildren().addAll(fontSizeLabel, fontSizeSlider, fontSizeValue);
+        // content.getChildren().add(fontSizeBox);
         
         return content;
     }
+   
     
-    /**
-     * 更新按钮示例样式
-     */
-    private void updateButtonExamples() {
-        if (largeButtonExample != null) {
-            largeButtonExample.setPrefHeight(Math.round(currentTheme.getButtonLargeSize()));
-            largeButtonExample.setStyle(String.format(
-                    "-fx-background-color: %s; -fx-text-fill: %s; -fx-font-family: %s; -fx-font-size: 14px; -fx-background-radius: %.1f; -fx-border-color: %s; -fx-border-width: %.1f; -fx-cursor: hand;",
-                    currentTheme.getButtonBgColor(), currentTheme.getButtonTextColor(), currentTheme.getFontFamily(),
-                    currentTheme.getCornerRadius(), currentTheme.getButtonBorderColor(), currentTheme.getBorderWidth()
-            ));
-        }
-        
-        if (smallButtonExample != null) {
-            smallButtonExample.setPrefHeight(Math.round(currentTheme.getButtonSmallSize()));
-            smallButtonExample.setStyle(String.format(
-                    "-fx-background-color: %s; -fx-text-fill: %s; -fx-font-family: %s; -fx-font-size: 12px; -fx-background-radius: %.1f; -fx-border-color: %s; -fx-border-width: %.1f; -fx-cursor: hand;",
-                    currentTheme.getButtonBgColor(), currentTheme.getButtonTextColor(), currentTheme.getFontFamily(),
-                    currentTheme.getCornerRadius(), currentTheme.getButtonBorderColor(), currentTheme.getBorderWidth()
-            ));
-        }
-        
-        // 按钮示例更新完成，无需重新应用整个界面样式
-    }
+   
     
     /**
      * 创建样式管理选项卡内容
@@ -1519,9 +1372,6 @@ public class AppearanceManager {
                 currentTheme.isDarkBackground() ? "0,0,0" : "255,255,255",
                 1 - currentTheme.getGlassOpacity()
         ));
-        
-        // 刷新按钮示例样式
-        updateButtonExamples();
     }
     
     /**

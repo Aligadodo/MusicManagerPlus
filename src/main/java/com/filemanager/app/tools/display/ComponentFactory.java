@@ -182,13 +182,8 @@ public class ComponentFactory {
         logArea.setEditable(false);
         logArea.setPadding(new Insets(10));
         
-        // 添加透明度效果
-        String bgColor = theme.getPanelBgColor();
-        if (bgColor.startsWith("#") && bgColor.length() == 7) {
-            int alpha = (int) (theme.getGlassOpacity() * 255);
-            String alphaHex = String.format("%02x", alpha);
-            bgColor = bgColor + alphaHex;
-        }
+        // 使用ThemeConfig中已有的方法获取带透明度的面板背景色
+        String bgColor = theme.getPanelBgColorWithOpacity(1.0);
         
         logArea.setStyle(String.format(
                 "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f; -fx-background-radius: %.1f;\n" +
@@ -233,13 +228,8 @@ public class ComponentFactory {
         VBox panel = new VBox(theme.getMediumSpacing());
         panel.setPadding(new Insets(theme.getLargeSpacing()));
         
-        // 应用玻璃效果透明度
-        String bgColor = theme.getPanelBgColor();
-        if (bgColor.startsWith("#") && bgColor.length() == 7) {
-            int alpha = (int) (theme.getGlassOpacity() * 255);
-            String alphaHex = String.format("%02x", alpha);
-            bgColor = bgColor + alphaHex;
-        }
+        // 使用ThemeConfig中已有的方法获取带透明度的面板背景色
+        String bgColor = theme.getPanelBgColorWithOpacity(1.0);
         
         panel.setStyle(String.format(
                 "-fx-background-color: %s; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f;",
@@ -252,13 +242,8 @@ public class ComponentFactory {
         HBox panel = new HBox(theme.getMediumSpacing());
         panel.setPadding(new Insets(theme.getLargeSpacing()));
         
-        // 应用玻璃效果透明度
-        String bgColor = theme.getPanelBgColor();
-        if (bgColor.startsWith("#") && bgColor.length() == 7) {
-            int alpha = (int) (theme.getGlassOpacity() * 255);
-            String alphaHex = String.format("%02x", alpha);
-            bgColor = bgColor + alphaHex;
-        }
+        // 使用ThemeConfig中已有的方法获取带透明度的面板背景色
+        String bgColor = theme.getPanelBgColorWithOpacity(1.0);
         
         panel.setStyle(String.format(
                 "-fx-background-color: %s; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f;",
