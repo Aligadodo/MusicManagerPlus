@@ -15,6 +15,7 @@ import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
 import com.filemanager.util.LanguageUtil;
+import com.filemanager.util.file.FileExistsChecker;
 import com.google.common.collect.Lists;
 import javafx.scene.Node;
 
@@ -100,13 +101,20 @@ public class AudioConverterStrategy extends AbstractFfmpegStrategy {
         
         File targetFile = new File(param.get("parentPath"), newName);
         ExecStatus status = ExecStatus.PENDING;
-        boolean targetExists = targetFile.exists();
+        
+        // 创建文件存在检查参数
+        FileExistsChecker.FileExistsParams checkParams = new FileExistsChecker.FileExistsParams()
+                .enableCaseInsensitive()
+                .enableSimplifiedChinese()
+                .enableTrim();
+        
+        boolean targetExists = FileExistsChecker.checkFileExists(targetFile.getParentFile(), newName, checkParams);
         if (targetExists && !pOverwrite) {
             return Collections.emptyList();
         }
         if (param.containsKey("doubleCheckParentPath")) {
-            File doubleCheckTargetFile = new File(param.get("doubleCheckParentPath"), newName);
-            if (doubleCheckTargetFile.exists() && !pOverwrite) {
+            File doubleCheckParentDir = new File(param.get("doubleCheckParentPath"));
+            if (FileExistsChecker.checkFileExists(doubleCheckParentDir, newName, checkParams) && !pOverwrite) {
                 return Collections.emptyList();
             }
         }

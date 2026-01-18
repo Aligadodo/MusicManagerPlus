@@ -26,6 +26,7 @@ import org.apache.commons.lang3.exception.ExceptionUtils;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXComboBox;
 import com.filemanager.app.tools.display.StyleFactory;
+import com.filemanager.util.file.FileExistsChecker;
 
 import java.io.File;
 import java.io.IOException;
@@ -394,14 +395,20 @@ public class CueSplitterStrategy extends AbstractFfmpegStrategy {
             // [核心优化] 丰富预览信息：[01] 歌名 - 歌手 [04:20]
             String displayInfo = t.getDisplayInfo();
             File targetFile = new File(params.get("parentPath"), trackName);
+            // 创建文件存在检查参数
+            FileExistsChecker.FileExistsParams checkParams = new FileExistsChecker.FileExistsParams()
+                    .enableCaseInsensitive()
+                    .enableSimplifiedChinese()
+                    .enableTrim();
+            
             if (params.containsKey("doubleCheckParentPath")) {
-                File doubleCheckTargetFile = new File(params.get("doubleCheckParentPath"), trackName);
-                if (doubleCheckTargetFile.exists() && !pOverwrite) {
+                File doubleCheckParentDir = new File(params.get("doubleCheckParentPath"));
+                if (FileExistsChecker.checkFileExists(doubleCheckParentDir, trackName, checkParams) && !pOverwrite) {
                     continue;
                 }
             }
             // 忽略已存在的文件
-            boolean targetExists = targetFile.exists();
+            boolean targetExists = FileExistsChecker.checkFileExists(targetFile.getParentFile(), trackName, checkParams);
             if (targetExists && !pOverwrite) {
                 continue;
             }
