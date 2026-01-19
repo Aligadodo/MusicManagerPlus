@@ -1,11 +1,11 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.tool.file;
 
@@ -27,7 +27,7 @@ public class FileTypeUtil {
         String ext = "";
         int dot = file.getName().lastIndexOf('.');
         if (dot > 0) {
-            ext = file.getName().substring(dot);
+            ext = file.getName().substring(dot + 1);
         }
         return MUSIC_TYPES.contains(ext.toLowerCase());
     }
@@ -57,7 +57,7 @@ public class FileTypeUtil {
         String ext = "";
         int dot = filename.indexOf('.');
         if (dot > 0) {
-            if (dot < 4  && getLastTypeStr(filename).length() < 6 && getLastTypeStr(filename).length() > 2) {
+            if (dot < 4 && getLastTypeStr(filename).length() < 6 && getLastTypeStr(filename).length() > 2) {
                 return getLastTypeStr(filename);
             }
             ext = filename.substring(dot);
@@ -74,7 +74,7 @@ public class FileTypeUtil {
     public static String getFileNameNoneTypeStr(String filename) {
         int dot = filename.indexOf('.');
         if (dot > 0) {
-          if (dot < 4  && getLastTypeStr(filename).length() < 6 && getLastTypeStr(filename).length() > 2) {
+            if (dot < 4 && getLastTypeStr(filename).length() < 6 && getLastTypeStr(filename).length() > 2) {
                 return filename.substring(0, filename.lastIndexOf('.'));
             }
             return filename.substring(0, dot);
