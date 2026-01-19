@@ -35,7 +35,8 @@ public class FileCleanupStrategy extends IAppStrategy {
         DEDUP_FOLDERS("文件夹去重"),   // 文件夹去重
         REMOVE_EMPTY_DIRS("空目录清理"), // 空目录清理
         DIRECT_CLEANUP("直接清理"),   // 直接清理模式
-        MERGE_SAME_NAME_PARENT_CHILD("同名父子文件夹合并"); // 同名父子文件夹合并模式
+        MERGE_SAME_NAME_PARENT_CHILD("同名父子文件夹合并"), // 同名父子文件夹合并模式
+        MERGE_NESTED_FOLDERS("嵌套文件夹合并"); // 嵌套文件夹合并模式
 
         private final String desc;
 

@@ -23,6 +23,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import com.filemanager.tool.file.FolderMergeUtil;
+
 public class DuplicateAnalyzer {
     // 常见媒体类型定义，用于同类比较
     private static final Set<String> EXT_AUDIO = new HashSet<>(Arrays.asList("mp3", "flac", "wav", "aac", "m4a", "ogg", "wma", "ape", "alac", "aiff", "dsf", "dff"));
@@ -71,6 +73,9 @@ public class DuplicateAnalyzer {
         } else if (params.getMode() == FileCleanupStrategy.CleanupMode.MERGE_SAME_NAME_PARENT_CHILD) {
             // 同名父子文件夹合并模式
             return analyzeMergeSameNameFolders(file);
+        } else if (params.getMode() == FileCleanupStrategy.CleanupMode.MERGE_NESTED_FOLDERS) {
+            // 嵌套文件夹合并模式
+            return analyzeMergeNestedFolders(file);
         } else {
             // 默认是文件去重模式
             File[] files = file.listFiles();
@@ -272,6 +277,57 @@ public class DuplicateAnalyzer {
         return result;
     }
 
+    /**
+     * 嵌套文件夹合并分析
+     */
+    private List<ChangeRecord> analyzeMergeNestedFolders(File file) {
+        List<ChangeRecord> result = new ArrayList<>();
+        
+        // 确保当前文件是目录
+        if (!file.isDirectory()) {
+            return result;
+        }
+        
+        // 遍历当前目录的所有子目录
+        File[] subDirs = file.listFiles(File::isDirectory);
+        if (subDirs != null) {
+            for (File subDir : subDirs) {
+                // 递归处理子目录
+                result.addAll(analyzeMergeNestedFolders(subDir));
+                
+                // 检查当前目录是否只有一个子目录且没有其他文件
+                File[] currentFiles = file.listFiles();
+                if (currentFiles != null && currentFiles.length == 1 && currentFiles[0].isDirectory()) {
+                    File onlyChild = currentFiles[0];
+                    
+                    // 创建合并记录
+                    Map<String, String> params = new HashMap<>();
+                    params.put("operation", "merge_nested_folder"); // 标识这是嵌套文件夹合并操作
+                    params.put("childDir", onlyChild.getAbsolutePath()); // 子文件夹路径
+                    params.put("parentDir", file.getAbsolutePath()); // 父文件夹路径
+                    
+                    // 设置新名称
+                    String newName = "合并嵌套文件夹 " + onlyChild.getName();
+                    
+                    ChangeRecord record = new ChangeRecord(
+                            onlyChild.getName(),
+                            newName,
+                            onlyChild, // 使用子文件夹作为fileHandle
+                            true,
+                            file.getAbsolutePath(), // newPath设置为父文件夹路径
+                            OperationType.DELETE, // 使用DELETE OperationType
+                            params, // 使用extraParams传递额外信息
+                            ExecStatus.PENDING
+                    );
+                    
+                    result.add(record);
+                }
+            }
+        }
+        
+        return result;
+    }
+    
     /**
      * 同名父子文件夹合并
      */

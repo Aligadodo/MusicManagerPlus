@@ -505,6 +505,10 @@ public class ComponentStyleManager {
         String selectedBgColor = theme.getListRowSelectedBgColorWithOpacity(0.8); // 80%透明度
         String hoverBgColor = theme.getListRowHoverBgColorWithOpacity(0.6); // 60%透明度
         
+        // 确保数值类型正确，避免格式化错误
+        double borderWidth = theme.getBorderWidth();
+        double cornerRadius = theme.getCornerRadius();
+        
         // 设置TableView的完整样式，包括背景、边框、表头、单元格等
         tableView.setStyle(String.format(
                 "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-background-radius: %.1f; -fx-border-radius: %.1f;\n" +
@@ -559,9 +563,9 @@ public class ComponentStyleManager {
                 ".table-view .virtual-flow .scroll-bar .track {\n" +
                 "    -fx-background-color: transparent;\n" +
                 "}",
-                listBgColor, theme.getListBorderColor(), theme.getBorderWidth(), theme.getCornerRadius(), theme.getCornerRadius(),
-                headerBgColor, theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius(),
-                theme.getBorderColor(), theme.getBorderWidth(),
+                listBgColor, theme.getListBorderColor(), borderWidth, cornerRadius, cornerRadius,
+                headerBgColor, theme.getBorderColor(), borderWidth, cornerRadius,
+                theme.getBorderColor(), borderWidth,
                 theme.getTextPrimaryColor(), theme.getFontFamily(),
                 selectedBgColor,
                 hoverBgColor,
@@ -580,6 +584,10 @@ public class ComponentStyleManager {
         String selectedBgColor = theme.getListRowSelectedBgColorWithOpacity(0.8); // 80%透明度
         String hoverBgColor = theme.getListRowHoverBgColorWithOpacity(0.6); // 60%透明度
         String rowBgColor = theme.getListRowBgColorWithOpacity(0.1); // 10%透明度
+        
+        // 确保数值类型正确，避免格式化错误
+        double borderWidth = theme.getBorderWidth();
+        double cornerRadius = theme.getCornerRadius();
         
         // 设置TreeTableView的完整样式，包括背景、边框、表头、单元格等
         treeTableView.setStyle(String.format(
@@ -670,15 +678,15 @@ public class ComponentStyleManager {
                 "    -fx-shape: none;\n" +
                 "    -fx-padding: 0;\n" +
                 "}",
-                listBgColor, theme.getListBorderColor(), theme.getBorderWidth(), theme.getCornerRadius(), theme.getCornerRadius(),
-                headerBgColor, theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius(),
-                theme.getBorderColor(), theme.getBorderWidth(),
+                listBgColor, theme.getListBorderColor(), borderWidth, cornerRadius, cornerRadius,
+                headerBgColor, theme.getBorderColor(), borderWidth, cornerRadius,
+                theme.getBorderColor(), borderWidth,
                 theme.getTextPrimaryColor(), theme.getFontFamily(),
                 rowBgColor, rowBgColor,
-                selectedBgColor, theme.getBorderColor(), theme.getCornerRadius(),
+                selectedBgColor, theme.getBorderColor(), cornerRadius,
                 hoverBgColor,
-                selectedBgColor, theme.getBorderColor(), theme.getCornerRadius(),
-                selectedBgColor, theme.getBorderColor(), theme.getCornerRadius(),
+                selectedBgColor, theme.getBorderColor(), cornerRadius,
+                selectedBgColor, theme.getBorderColor(), cornerRadius,
                 theme.getTextPrimaryColor(), theme.getFontFamily(),
                 theme.getTextPrimaryColor(),
                 theme.getTextPrimaryColor(),

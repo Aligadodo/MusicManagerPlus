@@ -12,7 +12,10 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.FileVisitResult;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -33,8 +36,8 @@ public class DeleteExecutor {
         if (rec.getOpType() == OperationType.DELETE) {
             // 检查是否是合并操作
             Map<String, String> params = rec.getExtraParams();
-            if (params != null && "merge_folder".equals(params.get("operation"))) {
-                // 文件夹合并操作
+            if (params != null && ("merge_folder".equals(params.get("operation")) || "merge_nested_folder".equals(params.get("operation")))) {
+                // 文件夹合并操作（包括同名父子文件夹合并和嵌套文件夹合并）
                 String childDirPath = params.get("childDir");
                 String parentDirPath = params.get("parentDir");
                 
@@ -67,15 +70,23 @@ public class DeleteExecutor {
                                         Files.delete(subFile.toPath());
                                     }
                                 } else if (subFile.isDirectory()) {
-                                    // 如果是子目录，递归处理（创建对应目录并复制内容）
+                                    // 如果是子目录，尝试直接移动（合并覆盖）
                                     File destDir = new File(parentDir, subFile.getName());
-                                    if (!destDir.exists()) {
-                                        destDir.mkdirs();
+                                    try {
+                                        if (!destDir.exists()) {
+                                            // 目标目录不存在，直接移动整个目录
+                                            Files.move(subFile.toPath(), destDir.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                                        } else {
+                                            // 目标目录已存在，合并目录内容
+                                            mergeDirectories(subFile, destDir);
+                                            // 删除已合并的源目录
+                                            deleteDirectoryRecursively(subFile);
+                                        }
+                                    } catch (IOException e) {
+                                        // 跨盘移动或其他异常时，使用复制 fallback
+                                        mergeDirectories(subFile, destDir);
+                                        deleteDirectoryRecursively(subFile);
                                     }
-                                    
-                                    // 递归复制子目录内容
-                                    copyDirectory(subFile, destDir);
-                                    deleteDirectoryRecursively(subFile);
                                 }
                             }
                         }
@@ -196,13 +207,62 @@ public class DeleteExecutor {
         });
     }
 
+    /**
+     * 合并两个目录的内容
+     * 将sourceDir的内容移动到destDir，覆盖同名文件，合并同名目录
+     * @param sourceDir 源目录
+     * @param destDir 目标目录
+     * @throws IOException 操作异常
+     */
+    private void mergeDirectories(File sourceDir, File destDir) throws IOException {
+        if (!sourceDir.exists() || !sourceDir.isDirectory()) return;
+        if (!destDir.exists()) {
+            Files.createDirectories(destDir.toPath());
+        }
+        
+        File[] subFiles = sourceDir.listFiles();
+        if (subFiles != null) {
+            for (File subFile : subFiles) {
+                File destFile = new File(destDir, subFile.getName());
+                
+                if (subFile.isFile()) {
+                    // 移动文件，覆盖已有文件
+                    try {
+                        Files.move(subFile.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                    } catch (IOException e) {
+                        // 跨盘移动或其他异常时，使用复制 fallback
+                        Files.copy(subFile.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                        Files.delete(subFile.toPath());
+                    }
+                } else if (subFile.isDirectory()) {
+                    // 递归合并子目录
+                    mergeDirectories(subFile, destFile);
+                    // 删除已合并的源子目录
+                    deleteDirectoryRecursively(subFile);
+                }
+            }
+        }
+    }
+    
     private void copyDirectory(File source, File target) throws IOException {
-        Files.walk(source.toPath()).forEach(sourcePath -> {
-            Path targetPath = target.toPath().resolve(source.toPath().relativize(sourcePath));
-            try {
-                Files.copy(sourcePath, targetPath, StandardCopyOption.REPLACE_EXISTING);
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
+        // 使用FileVisitor来正确处理目录复制
+        Files.walkFileTree(source.toPath(), new SimpleFileVisitor<Path>() {
+            @Override
+            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+                Path targetDir = target.toPath().resolve(source.toPath().relativize(dir));
+                // 如果目标目录不存在，创建它
+                if (!Files.exists(targetDir)) {
+                    Files.createDirectories(targetDir);
+                }
+                return FileVisitResult.CONTINUE;
+            }
+            
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                Path targetPath = target.toPath().resolve(source.toPath().relativize(file));
+                // 复制文件，覆盖已有文件
+                Files.copy(file, targetPath, StandardCopyOption.REPLACE_EXISTING);
+                return FileVisitResult.CONTINUE;
             }
         });
     }

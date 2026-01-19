@@ -20,6 +20,7 @@ import com.filemanager.tool.unzip.UnarchiveFactory;
 import com.filemanager.tool.unzip.UnarchiveEngine;
 import com.filemanager.tool.unzip.UnarchiveTask;
 import com.filemanager.tool.unzip.engine.EngineType;
+import com.filemanager.tool.file.FolderMergeUtil;
 import com.google.common.collect.Lists;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXComboBox;
@@ -52,9 +53,11 @@ public class FileUnzipStrategy extends IAppStrategy {
 
     // 选项
     private final CheckBox chkSmartFolder;
+    private final CheckBox chkMergeSameName;
     private final CheckBox chkDeleteSource; // 解压成功后删除
     private final CheckBox chkOverwrite;
     private final CheckBox chkDeleteOnFail; // 解压失败后删除
+    private final CheckBox chkNestedFolderMerge; // 嵌套文件夹合并
 
     // 密码箱 UI
     private final ListView<String> lvPasswords;
@@ -68,9 +71,11 @@ public class FileUnzipStrategy extends IAppStrategy {
     private String pMode;
     private String pCustomPath;
     private boolean pSmart;
+    private boolean pMergeSameName;
     private boolean pDeleteSuccess;
     private boolean pDeleteFail;
     private boolean pOverwrite;
+    private boolean pNestedFolderMerge;
     private List<String> pPasswords;
 
     public FileUnzipStrategy() {
@@ -99,9 +104,17 @@ public class FileUnzipStrategy extends IAppStrategy {
         txtCustomPath.visibleProperty().bind(cbOutputMode.getSelectionModel().selectedItemProperty().isEqualTo("指定目录 (Custom Path)"));
 
         // 选项
-        chkSmartFolder = new CheckBox("智能目录 (防炸弹)");
+        chkSmartFolder = new CheckBox("自动解压到独立文件夹");
         chkSmartFolder.setSelected(true);
         chkSmartFolder.setTooltip(new Tooltip("始终先在独立文件夹解压，若解压后发现只有单目录则自动移出。\n防止“解压炸弹”弄乱目录。"));
+
+        chkMergeSameName = new CheckBox("同名父子文件夹合并");
+        chkMergeSameName.setSelected(true);
+        chkMergeSameName.setTooltip(new Tooltip("将具有相同名称的父子文件夹进行合并，如 '音乐/音乐/' 合并为 '音乐/'。"));
+
+        chkNestedFolderMerge = new CheckBox("嵌套文件夹合并");
+        chkNestedFolderMerge.setSelected(false);
+        chkNestedFolderMerge.setTooltip(new Tooltip("当父目录只有一个子目录文件夹且没有其他文件时，自动合并掉这些空的目录层次。"));
 
         chkDeleteSource = new CheckBox("解压成功并校验后删除源文件");
         chkDeleteSource.setSelected(false);
@@ -233,7 +246,7 @@ public class FileUnzipStrategy extends IAppStrategy {
 
         // 4. 选项配置
         VBox opts = new VBox(5);
-        opts.getChildren().addAll(chkSmartFolder, chkOverwrite, chkDeleteSource, chkDeleteOnFail);
+        opts.getChildren().addAll(chkSmartFolder, chkMergeSameName, chkNestedFolderMerge, chkOverwrite, chkDeleteSource, chkDeleteOnFail);
 
         // 移除了内部线程配置 UI，由主程序统一控制
 
@@ -248,9 +261,11 @@ public class FileUnzipStrategy extends IAppStrategy {
         pMode = cbOutputMode.getValue();
         pCustomPath = txtCustomPath.getText();
         pSmart = chkSmartFolder.isSelected();
+        pMergeSameName = chkMergeSameName.isSelected();
         pDeleteSuccess = chkDeleteSource.isSelected();
         pDeleteFail = chkDeleteOnFail.isSelected();
         pOverwrite = chkOverwrite.isSelected();
+        pNestedFolderMerge = chkNestedFolderMerge.isSelected();
         pPasswords = new ArrayList<>(lvPasswords.getItems());
     }
 
@@ -261,6 +276,7 @@ public class FileUnzipStrategy extends IAppStrategy {
         props.setProperty("zip_mode", pMode);
         props.setProperty("zip_path", pCustomPath);
         props.setProperty("zip_smart", String.valueOf(pSmart));
+        props.setProperty("zip_merge_same", String.valueOf(pMergeSameName));
         props.setProperty("zip_del_ok", String.valueOf(pDeleteSuccess));
         props.setProperty("zip_del_fail", String.valueOf(pDeleteFail));
         props.setProperty("zip_over", String.valueOf(pOverwrite));
@@ -280,12 +296,16 @@ public class FileUnzipStrategy extends IAppStrategy {
         if (props.containsKey("zip_path")) txtCustomPath.setText(props.getProperty("zip_path"));
         if (props.containsKey("zip_smart"))
             chkSmartFolder.setSelected(Boolean.parseBoolean(props.getProperty("zip_smart")));
+        if (props.containsKey("zip_merge_same"))
+            chkMergeSameName.setSelected(Boolean.parseBoolean(props.getProperty("zip_merge_same")));
         if (props.containsKey("zip_del_ok"))
             chkDeleteSource.setSelected(Boolean.parseBoolean(props.getProperty("zip_del_ok")));
         if (props.containsKey("zip_del_fail"))
             chkDeleteOnFail.setSelected(Boolean.parseBoolean(props.getProperty("zip_del_fail")));
         if (props.containsKey("zip_over"))
             chkOverwrite.setSelected(Boolean.parseBoolean(props.getProperty("zip_over")));
+        if (props.containsKey("zip_nested_merge"))
+            chkNestedFolderMerge.setSelected(Boolean.parseBoolean(props.getProperty("zip_nested_merge")));
 
         // Load passwords
         lvPasswords.getItems().clear();
@@ -329,9 +349,11 @@ public class FileUnzipStrategy extends IAppStrategy {
         params.put("engine", pEngine);
         params.put("exePath", pExePath);
         params.put("smart", String.valueOf(pSmart));
+        params.put("mergeSameName", String.valueOf(pMergeSameName));
         params.put("overwrite", String.valueOf(pOverwrite));
         params.put("deleteSuccess", String.valueOf(pDeleteSuccess));
         params.put("deleteFail", String.valueOf(pDeleteFail));
+        params.put("nestedFolderMerge", String.valueOf(pNestedFolderMerge));
 
         rec.setNewName(displayName);
         rec.setChanged(true);
@@ -356,9 +378,11 @@ public class FileUnzipStrategy extends IAppStrategy {
         String baseDestPath = rec.getExtraParams().get("baseDest");
         String engine = rec.getExtraParams().get("engine");
         boolean smart = Boolean.parseBoolean(rec.getExtraParams().get("smart"));
+        boolean mergeSameName = Boolean.parseBoolean(rec.getExtraParams().get("mergeSameName"));
         boolean deleteSuccess = Boolean.parseBoolean(rec.getExtraParams().get("deleteSuccess"));
         boolean deleteFail = Boolean.parseBoolean(rec.getExtraParams().get("deleteFail"));
         boolean overwrite = Boolean.parseBoolean(rec.getExtraParams().get("overwrite"));
+        boolean nestedFolderMerge = Boolean.parseBoolean(rec.getExtraParams().get("nestedFolderMerge"));
         String exePath = rec.getExtraParams().get("exePath");
 
         File baseDestDir = new File(baseDestPath);
@@ -441,10 +465,24 @@ public class FileUnzipStrategy extends IAppStrategy {
 
         // 4. 后置智能处理
         if (smart) {
-            optimizeSmartFolder(extractRoot, baseDestDir);
+            optimizeSmartFolder(extractRoot, baseDestDir, mergeSameName);
         }
 
-        // 5. 成功后删除源
+        // 5. 嵌套文件夹合并
+        if (nestedFolderMerge) {
+            try {
+                // 确定合并的起始目录：如果使用了智能目录，从baseDestDir开始；否则从extractRoot开始
+                File mergeRoot = smart ? baseDestDir : extractRoot;
+                int mergedCount = FolderMergeUtil.mergeNestedFolders(mergeRoot, overwrite);
+                if (mergedCount > 0) {
+                    log("嵌套文件夹合并完成，共合并了 " + mergedCount + " 个空目录层次");
+                }
+            } catch (IOException e) {
+                logError("嵌套文件夹合并失败: " + e.getMessage());
+            }
+        }
+
+        // 6. 成功后删除源
         if (deleteSuccess) {
             try {
                 Files.delete(archiveFile.toPath());
@@ -454,7 +492,7 @@ public class FileUnzipStrategy extends IAppStrategy {
 
     // --- 解压引擎实现已迁移到 com.filemanager.tool.unzip 包下 ---
 
-    private void optimizeSmartFolder(File wrapperDir, File parentDir) {
+    private void optimizeSmartFolder(File wrapperDir, File parentDir, boolean mergeSameName) {
         if (wrapperDir == null || !wrapperDir.exists() || !wrapperDir.isDirectory()) return;
 
         File[] files = wrapperDir.listFiles();
@@ -468,24 +506,21 @@ public class FileUnzipStrategy extends IAppStrategy {
 
         if (validFiles.size() == 1 && validFiles.get(0).isDirectory()) {
             File singleInnerDir = validFiles.get(0);
-            File targetDir = new File(parentDir, singleInnerDir.getName());
-
+            
             try {
-                if (targetDir.equals(wrapperDir)) {
-                    File[] innerFiles = singleInnerDir.listFiles();
-                    if (innerFiles != null) {
-                        for (File innerFile : innerFiles) {
-                            File dest = new File(wrapperDir, innerFile.getName());
-                            Files.move(innerFile.toPath(), dest.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                        }
+                if (singleInnerDir.getName().equals(parentDir.getName()) && mergeSameName) {
+                    // 同名父子文件夹，且开启了合并选项，执行合并
+                    FolderMergeUtil.mergeSameNameParentChild(parentDir, singleInnerDir, true);
+                } else {
+                    // 不同名或未开启合并选项，直接移动到父目录
+                    File targetDir = new File(parentDir, singleInnerDir.getName());
+                    if (!targetDir.exists()) {
+                        Files.move(singleInnerDir.toPath(), targetDir.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                        deleteDirectoryRecursively(wrapperDir);
                     }
-                    Files.delete(singleInnerDir.toPath());
-                } else if (!targetDir.exists()) {
-                    Files.move(singleInnerDir.toPath(), targetDir.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                    deleteDirectoryRecursively(wrapperDir);
                 }
             } catch (IOException e) {
-                logError("Smart move failed: " + e.getMessage());
+                logError("Smart folder optimization failed: " + e.getMessage());
             }
         }
     }
