@@ -82,6 +82,7 @@ public class PreviewView implements IAutoReloadAble {
     // 删除按钮
     private JFXButton btnDeleteOriginal;
     private JFXButton btnDeleteTarget;
+    private JFXButton btnExecuteSelected;
 
     public TreeTableView<ChangeRecord> getPreviewTable() {
         return previewTable;
@@ -646,6 +647,14 @@ public class PreviewView implements IAutoReloadAble {
         btnDeleteTarget.setOnMouseEntered(null);
         btnDeleteTarget.setOnMouseExited(null);
 
+        // 添加执行选中行按钮
+        btnExecuteSelected = StyleFactory.createPrimaryButton("执行选中行", () -> {
+            executeSelectedRecords();
+        });
+        // 移除悬浮效果
+        btnExecuteSelected.setOnMouseEntered(null);
+        btnExecuteSelected.setOnMouseExited(null);
+
         // 将全选按钮移动到批量操作区域
         chkSelectAll = new JFXCheckBox("全选");
         chkSelectAll.setTooltip(new Tooltip("选择所有可见行"));
@@ -668,6 +677,7 @@ public class PreviewView implements IAutoReloadAble {
         actionBox.getChildren().addAll(
                 StyleFactory.createChapter("[批量操作]  "),
                 chkSelectAll,
+                btnExecuteSelected,
                 btnDeleteOriginal,
                 btnDeleteTarget);
 
@@ -965,7 +975,17 @@ public class PreviewView implements IAutoReloadAble {
                     }
                 }
             });
-            cm.getItems().addAll(i1, i2, i3, i4);
+            
+            // 添加执行该任务菜单项
+            MenuItem i5 = new MenuItem("执行该任务");
+            i5.setOnAction(e -> {
+                ChangeRecord item = row.getItem();
+                if (item != null) {
+                    executeSingleRecord(item);
+                }
+            });
+            
+            cm.getItems().addAll(i1, i2, i3, i4, i5);
             row.contextMenuProperty().bind(javafx.beans.binding.Bindings.when(row.emptyProperty()).then((ContextMenu) null).otherwise(cm));
             // 支持双击查看详情数据
             row.setOnMouseClicked(event -> {
@@ -1155,6 +1175,192 @@ public class PreviewView implements IAutoReloadAble {
             // 运行删除任务
             new Thread(deleteTask).start();
         }
+    }
+    
+    /**
+     * 执行单个ChangeRecord
+     */
+    private void executeSingleRecord(ChangeRecord record) {
+        if (record == null || !record.isChanged() || record.getOpType() == OperationType.NONE || record.getStatus() != ExecStatus.PENDING) {
+            return;
+        }
+        
+        // 执行单个任务
+        Task<Void> task = new Task<Void>() {
+            @Override
+            protected Void call() throws Exception {
+                // 获取文件锁
+                if (!FileLockManagerUtil.lock(record.getFileHandle())) {
+                    Platform.runLater(() -> {
+                        app.logError("❌ 无法获取文件锁: " + record.getFileHandle().getAbsolutePath());
+                    });
+                    return null;
+                }
+                
+                try {
+                    // 更新状态为运行中
+                    record.setStatus(ExecStatus.RUNNING);
+                    Platform.runLater(() -> refresh());
+                    
+                    app.log("▶ 开始处理: " + record.getFileHandle().getAbsolutePath() + "，操作类型：" + record.getOpType().getName() + ",目标路径：" + record.getNewName());
+                    
+                    // 查找对应的策略
+                    IAppStrategy strategy = AppStrategyFactory.findStrategyForOp(record.getOpType(), app.getPipelineStrategies());
+                    if (strategy != null) {
+                        // 执行策略
+                        strategy.execute(record);
+                        record.setStatus(ExecStatus.SUCCESS);
+                        app.log("✅️ 成功处理: " + record.getFileHandle().getAbsolutePath() + "，操作类型：" + record.getOpType().getName() + ",目标路径：" + record.getNewName());
+                    } else {
+                        record.setStatus(ExecStatus.SKIPPED);
+                        record.setFailReason("没找到对应的执行策略");
+                        app.logError("❌ 跳过处理: " + record.getFileHandle().getAbsolutePath() + "，操作类型：" + record.getOpType().getName() + "，原因：没找到对应的执行策略");
+                    }
+                } catch (Exception e) {
+                    record.setStatus(ExecStatus.FAILED);
+                    record.setFailReason(e.getMessage());
+                    app.logError("❌ 失败处理: " + record.getFileHandle().getAbsolutePath() + "，操作类型：" + record.getOpType().getName() + ",目标路径：" + record.getNewName() + ",原因：" + e.getMessage());
+                    app.logError("❌ 失败详细原因: " + e.getMessage());
+                } finally {
+                    // 释放文件锁
+                    FileLockManagerUtil.unlock(record.getFileHandle());
+                    // 刷新表格
+                    Platform.runLater(() -> {
+                        refresh();
+                        app.updateStats();
+                    });
+                }
+                return null;
+            }
+        };
+        
+        // 运行任务
+        new Thread(task).start();
+    }
+    
+    /**
+     * 执行选中的ChangeRecord
+     */
+    private void executeSelectedRecords() {
+        TreeTableView<ChangeRecord> tableView = getPreviewTable();
+        if (tableView == null || tableView.getRoot() == null) {
+            return;
+        }
+        
+        List<ChangeRecord> selectedRecords = tableView.getRoot().getChildren().stream()
+                .map(TreeItem::getValue)
+                .filter(record -> record != null && record.isSelected() && record.isChanged() && record.getOpType() != OperationType.NONE && record.getStatus() == ExecStatus.PENDING)
+                .collect(Collectors.toList());
+        
+        if (selectedRecords.isEmpty()) {
+            return;
+        }
+        
+        // 确认执行
+        boolean confirm = FXDialogUtils.showConfirm("确认执行", "确定要执行 " + selectedRecords.size() + " 个任务吗？");
+        if (!confirm) {
+            return;
+        }
+        
+        // 执行选中的任务
+        AtomicInteger successCount = new AtomicInteger(0);
+        AtomicInteger failedCount = new AtomicInteger(0);
+        AtomicInteger skippedCount = new AtomicInteger(0);
+        AtomicInteger totalCount = new AtomicInteger(selectedRecords.size());
+        
+        Task<Void> task = new Task<Void>() {
+            @Override
+            protected Void call() throws Exception {
+                Platform.runLater(() -> {
+                    app.setRunningUI("▶ ▶ ▶ 正在执行选中的任务...");
+                    app.changeExecuteButton(false);
+                });
+                
+                for (ChangeRecord record : selectedRecords) {
+                    if (isCancelled()) {
+                        break;
+                    }
+                    
+                    // 获取文件锁
+                    if (!FileLockManagerUtil.lock(record.getFileHandle())) {
+                        Platform.runLater(() -> {
+                            app.logError("❌ 无法获取文件锁: " + record.getFileHandle().getAbsolutePath());
+                        });
+                        skippedCount.incrementAndGet();
+                        continue;
+                    }
+                    
+                    try {
+                        // 更新状态为运行中
+                        record.setStatus(ExecStatus.RUNNING);
+                        Platform.runLater(() -> refresh());
+                        
+                        app.log("▶ 开始处理: " + record.getFileHandle().getAbsolutePath() + "，操作类型：" + record.getOpType().getName() + ",目标路径：" + record.getNewName());
+                        
+                        // 查找对应的策略
+                        IAppStrategy strategy = AppStrategyFactory.findStrategyForOp(record.getOpType(), app.getPipelineStrategies());
+                        if (strategy != null) {
+                            // 执行策略
+                            strategy.execute(record);
+                            record.setStatus(ExecStatus.SUCCESS);
+                            successCount.incrementAndGet();
+                            app.log("✅️ 成功处理: " + record.getFileHandle().getAbsolutePath() + "，操作类型：" + record.getOpType().getName() + ",目标路径：" + record.getNewName());
+                        } else {
+                            record.setStatus(ExecStatus.SKIPPED);
+                            record.setFailReason("没找到对应的执行策略");
+                            skippedCount.incrementAndGet();
+                            app.logError("❌ 跳过处理: " + record.getFileHandle().getAbsolutePath() + "，操作类型：" + record.getOpType().getName() + "，原因：没找到对应的执行策略");
+                        }
+                    } catch (Exception e) {
+                        record.setStatus(ExecStatus.FAILED);
+                        record.setFailReason(e.getMessage());
+                        failedCount.incrementAndGet();
+                        app.logError("❌ 失败处理: " + record.getFileHandle().getAbsolutePath() + "，操作类型：" + record.getOpType().getName() + ",目标路径：" + record.getNewName() + ",原因：" + e.getMessage());
+                        app.logError("❌ 失败详细原因: " + e.getMessage());
+                    } finally {
+                        // 释放文件锁
+                        FileLockManagerUtil.unlock(record.getFileHandle());
+                        // 刷新表格
+                        Platform.runLater(() -> {
+                            refresh();
+                        });
+                    }
+                    
+                    // 更新进度
+                    final int processed = successCount.get() + failedCount.get() + skippedCount.get();
+                    final double progress = (double) processed / totalCount.get();
+                    Platform.runLater(() -> {
+                        app.updateRunningProgress(String.format("▶ ▶ ▶ 任务执行进度: %d/%d (%.1f%%)", processed, totalCount.get(), progress * 100));
+                    });
+                }
+                
+                return null;
+            }
+            
+            @Override
+            protected void succeeded() {
+                super.succeeded();
+                Platform.runLater(() -> {
+                    app.setRunningUI(String.format("▶ ▶ ▶ 任务执行完成: 成功 %d 个，失败 %d 个，跳过 %d 个", successCount.get(), failedCount.get(), skippedCount.get()));
+                    app.changeExecuteButton(true);
+                    app.updateStats();
+                    refresh();
+                });
+            }
+            
+            @Override
+            protected void cancelled() {
+                super.cancelled();
+                Platform.runLater(() -> {
+                    app.setRunningUI("▶ ▶ ▶ 任务已取消");
+                    app.changeExecuteButton(true);
+                    refresh();
+                });
+            }
+        };
+        
+        // 运行任务
+        new Thread(task).start();
     }
 
     // Getters
