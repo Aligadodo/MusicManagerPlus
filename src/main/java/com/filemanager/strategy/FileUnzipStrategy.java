@@ -1,27 +1,26 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.strategy;
 
 import com.filemanager.app.base.IAppStrategy;
-import com.filemanager.model.*;
 import com.filemanager.app.tools.display.StyleFactory;
+import com.filemanager.model.ChangeRecord;
+import com.filemanager.tool.file.FolderMergeUtil;
 import com.filemanager.tool.file.PathUtils;
+import com.filemanager.tool.unzip.UnarchiveEngine;
+import com.filemanager.tool.unzip.UnarchiveFactory;
+import com.filemanager.tool.unzip.UnarchiveTask;
+import com.filemanager.tool.unzip.engine.EngineType;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
-import com.filemanager.tool.unzip.UnarchiveFactory;
-import com.filemanager.tool.unzip.UnarchiveEngine;
-import com.filemanager.tool.unzip.UnarchiveTask;
-import com.filemanager.tool.unzip.engine.EngineType;
-import com.filemanager.tool.file.FolderMergeUtil;
-import com.google.common.collect.Lists;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXComboBox;
 import javafx.collections.FXCollections;
@@ -31,7 +30,8 @@ import javafx.scene.layout.*;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
@@ -157,15 +157,15 @@ public class FileUnzipStrategy extends IAppStrategy {
     private void autoDetectExternalTools() {
         // 为7-Zip和Bandizip设置默认检测路径
         List<String> paths = new ArrayList<>();
-        
+
         // 7-Zip路径
         paths.add("C:\\Program Files\\7-Zip\\7z.exe");
         paths.add("C:\\Program Files (x86)\\7-Zip\\7z.exe");
-        
+
         // Bandizip路径
         paths.add("C:\\Program Files\\Bandizip\\bc.exe");
         paths.add("C:\\Program Files\\Bandizip\\bz.exe");
-        
+
         // 尝试检测任何可用的外部引擎
         for (String p : paths) {
             if (new File(p).exists()) {
@@ -412,7 +412,7 @@ public class FileUnzipStrategy extends IAppStrategy {
                 // 根据选择的引擎创建对应的解压引擎实例
                 UnarchiveEngine unarchiveEngine;
                 EngineType engineType;
-                
+
                 if (engine.equals("Java 内置引擎")) {
                     engineType = EngineType.BUILT_IN;
                     unarchiveEngine = UnarchiveFactory.getSpecificEngine(engineType, null);
@@ -465,7 +465,7 @@ public class FileUnzipStrategy extends IAppStrategy {
 
         // 4. 后置智能处理
         if (smart) {
-            optimizeSmartFolder(extractRoot, baseDestDir, mergeSameName);
+            optimizeSmartFolder(extractRoot, baseDestDir);
         }
 
         // 5. 嵌套文件夹合并
@@ -482,7 +482,24 @@ public class FileUnzipStrategy extends IAppStrategy {
             }
         }
 
-        // 6. 成功后删除源
+        // 6. 重名文件夹合并
+        if (mergeSameName) {
+            try {
+                // 确定合并的起始目录：如果使用了智能目录，从baseDestDir开始；否则从extractRoot开始
+                File[] files = extractRoot.listFiles();
+                if (files != null) {
+                    File subDir = Arrays.stream(files).filter(file -> file.isDirectory() && file.getName().equals(extractRoot.getName())).findFirst().orElse(null);
+                    if (subDir != null) {
+                        List<File> conflictingFiles = FolderMergeUtil.mergeSameNameParentChild(extractRoot, subDir, true);
+                        log("父子文件夹合并完成，共合并了 " + conflictingFiles.size() + " 个冲突文件");
+                    }
+                }
+            } catch (IOException e) {
+                logError("嵌套文件夹合并失败: " + e.getMessage());
+            }
+        }
+
+        // 7. 成功后删除源
         if (deleteSuccess) {
             try {
                 Files.delete(archiveFile.toPath());
@@ -492,7 +509,7 @@ public class FileUnzipStrategy extends IAppStrategy {
 
     // --- 解压引擎实现已迁移到 com.filemanager.tool.unzip 包下 ---
 
-    private void optimizeSmartFolder(File wrapperDir, File parentDir, boolean mergeSameName) {
+    private void optimizeSmartFolder(File wrapperDir, File parentDir) {
         if (wrapperDir == null || !wrapperDir.exists() || !wrapperDir.isDirectory()) return;
 
         File[] files = wrapperDir.listFiles();
@@ -506,18 +523,12 @@ public class FileUnzipStrategy extends IAppStrategy {
 
         if (validFiles.size() == 1 && validFiles.get(0).isDirectory()) {
             File singleInnerDir = validFiles.get(0);
-            
             try {
-                if (singleInnerDir.getName().equals(parentDir.getName()) && mergeSameName) {
-                    // 同名父子文件夹，且开启了合并选项，执行合并
-                    FolderMergeUtil.mergeSameNameParentChild(parentDir, singleInnerDir, true);
-                } else {
-                    // 不同名或未开启合并选项，直接移动到父目录
-                    File targetDir = new File(parentDir, singleInnerDir.getName());
-                    if (!targetDir.exists()) {
-                        Files.move(singleInnerDir.toPath(), targetDir.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                        deleteDirectoryRecursively(wrapperDir);
-                    }
+                // 不同名或未开启合并选项，直接移动到父目录
+                File targetDir = new File(parentDir, singleInnerDir.getName());
+                if (!targetDir.exists()) {
+                    Files.move(singleInnerDir.toPath(), targetDir.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                    deleteDirectoryRecursively(wrapperDir);
                 }
             } catch (IOException e) {
                 logError("Smart folder optimization failed: " + e.getMessage());
