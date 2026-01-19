@@ -14,7 +14,7 @@ REM 必须指向包含 bin 和 lib 文件夹的 jre 目录
 set "SOURCE_JRE=D:\projects\pack\jre"
 
 REM 设置 FFmpeg 所在目录
-set "SOURCE_FFMPEG=D:\projects\pack\ffmpeg-tools"
+set "SOURCE_FFMPEG=D:\projects\pack\tools"
 REM ==========================================
 
 REM --- 1. 检查源环境 ---
@@ -72,20 +72,23 @@ if not exist "dist\jre\lib\rt.jar" (
     exit /b 1
 )
 
-REM 复制 FFmpeg
-if exist "%SOURCE_FFMPEG%\ffmpeg.exe" (
-    copy "%SOURCE_FFMPEG%\ffmpeg.exe" "dist\" >nul
+REM 复制 FFmpeg 工具目录
+if exist "%SOURCE_FFMPEG%" (
+    mkdir "dist\tools" 2>nul
+    echo [6/7] 正在复制 默认 工具...
+    xcopy /E /I /Q /Y "%SOURCE_FFMPEG%\*" "dist\tools\" >nul
+    echo 默认 工具复制成功！
 )
 
 REM 复制主题文件
-echo [6/7] 正在复制主题文件...
+echo [7/7] 正在复制主题文件...
 if exist "style\themes" (
     xcopy /E /I /Q /Y "style\themes" "dist\style\themes" >nul
     echo 主题文件复制成功！
 )
 
-REM --- 7. 生成启动脚本 ---
-echo [7/7] 生成启动脚本...
+REM --- 8. 生成启动脚本 ---
+echo [8/8] 生成启动脚本...
 (
     echo @echo off
     echo chcp 65001 ^>nul

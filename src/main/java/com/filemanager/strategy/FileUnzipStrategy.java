@@ -21,6 +21,7 @@ import com.filemanager.tool.unzip.engine.EngineType;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
+import com.filemanager.app.tools.display.FXDialogUtils;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXComboBox;
 import javafx.collections.FXCollections;
@@ -158,6 +159,12 @@ public class FileUnzipStrategy extends IAppStrategy {
         // 为7-Zip和Bandizip设置默认检测路径
         List<String> paths = new ArrayList<>();
 
+        // 1. 程序运行目录下的tools目录
+        String currentDir = System.getProperty("user.dir");
+        paths.add(currentDir + "\\tools\\7-Zip\\7z.exe");
+        paths.add(currentDir + "\\tools\\Bandizip\\bz.exe");
+        
+        // 2. 系统程序目录
         // 7-Zip路径
         paths.add("C:\\Program Files\\7-Zip\\7z.exe");
         paths.add("C:\\Program Files (x86)\\7-Zip\\7z.exe");
@@ -267,6 +274,18 @@ public class FileUnzipStrategy extends IAppStrategy {
         pOverwrite = chkOverwrite.isSelected();
         pNestedFolderMerge = chkNestedFolderMerge.isSelected();
         pPasswords = new ArrayList<>(lvPasswords.getItems());
+        
+        // 检查引擎选择和运行环境
+        if (!pEngine.equals("Java 内置引擎")) {
+            File exeFile = new File(pExePath);
+            if (pExePath.isEmpty() || !exeFile.exists() || !exeFile.isFile()) {
+                // 如果引擎不是Java内置引擎，且执行路径无效，显示提示
+                if (app != null) {
+                    FXDialogUtils.showToast(app.getPrimaryStage(), "请安装对应程序到正确目录下！", 
+                                           FXDialogUtils.ToastType.INFO);
+                }
+            }
+        }
     }
 
     @Override
@@ -412,6 +431,19 @@ public class FileUnzipStrategy extends IAppStrategy {
                 // 根据选择的引擎创建对应的解压引擎实例
                 UnarchiveEngine unarchiveEngine;
                 EngineType engineType;
+
+                // 检查引擎和环境
+                if (!engine.equals("Java 内置引擎")) {
+                    File exeFile = new File(exePath);
+                    if (exePath.isEmpty() || !exeFile.exists() || !exeFile.isFile()) {
+                        // 如果引擎不是Java内置引擎，且执行路径无效，显示提示并抛出异常
+                        if (app != null) {
+                            FXDialogUtils.showToast(app.getPrimaryStage(), "请安装对应程序到正确目录下！", 
+                                                   FXDialogUtils.ToastType.INFO);
+                        }
+                        throw new IOException(engine + " 未安装或路径无效，请检查配置！");
+                    }
+                }
 
                 if (engine.equals("Java 内置引擎")) {
                     engineType = EngineType.BUILT_IN;

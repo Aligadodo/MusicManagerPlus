@@ -121,7 +121,9 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
         spFfmpegThreads = new Spinner<>(1, 16, 4);
         spFfmpegThreads.setEditable(true);
 
-        txtFFmpegPath = new TextField("ffmpeg");
+        // 自动扫描FFmpeg路径
+        String ffmpegPath = findFFmpeg();
+        txtFFmpegPath = new TextField(ffmpegPath);
         txtFFmpegPath.setPromptText("Path to ffmpeg executable");
 
         chkEnableCache = new CheckBox("启用临时文件缓存(缓解IO瓶颈)");
@@ -141,6 +143,45 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
 
         txtSnapDir = new TextField();
         txtSnapDir.setPromptText("镜像存储目录路径");
+    }
+    
+    /**
+     * 自动扫描FFmpeg的安装路径
+     * 优先检查tools\ffmpeg.exe，然后检查系统环境变量
+     * @return 找到的FFmpeg路径，未找到则返回"ffmpeg"
+     */
+    private String findFFmpeg() {
+        // 1. 获取应用程序运行目录
+        String appDir = System.getProperty("user.dir");
+        
+        // 2. 检查appDir/tools/ffmpeg.exe
+        File toolsFfmpeg = new File(appDir, "tools\\ffmpeg.exe");
+        if (toolsFfmpeg.exists()) {
+            return toolsFfmpeg.getAbsolutePath();
+        }
+        
+        // 3. 检查当前目录下的ffmpeg.exe
+        File currentDirFfmpeg = new File("ffmpeg.exe");
+        if (currentDirFfmpeg.exists()) {
+            return currentDirFfmpeg.getAbsolutePath();
+        }
+        
+        // 4. 检查系统环境变量
+        try {
+            Process process = Runtime.getRuntime().exec("where ffmpeg");
+            java.util.Scanner scanner = new java.util.Scanner(process.getInputStream());
+            if (scanner.hasNextLine()) {
+                String path = scanner.nextLine().trim();
+                if (!path.isEmpty()) {
+                    return path;
+                }
+            }
+            scanner.close();
+        } catch (IOException ignored) {
+        }
+        
+        // 5. 未找到，返回默认值
+        return "ffmpeg";
     }
 
     public abstract String getDefaultDirPrefix();
