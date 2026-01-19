@@ -16,6 +16,10 @@ import com.filemanager.tool.file.PathUtils;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
+import com.filemanager.tool.unzip.UnarchiveFactory;
+import com.filemanager.tool.unzip.UnarchiveEngine;
+import com.filemanager.tool.unzip.UnarchiveTask;
+import com.filemanager.tool.unzip.engine.EngineType;
 import com.google.common.collect.Lists;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXComboBox;
@@ -25,14 +29,8 @@ import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
-import org.apache.commons.compress.archivers.ArchiveEntry;
-import org.apache.commons.compress.archivers.ArchiveInputStream;
-import org.apache.commons.compress.archivers.ArchiveStreamFactory;
-import org.apache.commons.compress.archivers.sevenz.SevenZArchiveEntry;
-import org.apache.commons.compress.archivers.sevenz.SevenZFile;
 
 import java.io.*;
-import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
@@ -78,14 +76,15 @@ public class FileUnzipStrategy extends IAppStrategy {
     public FileUnzipStrategy() {
         // 引擎选择
         cbEngine = new JFXComboBox<>(FXCollections.observableArrayList(
-                "内置引擎 (Java Commons Compress)",
-                "外部程序 (7-Zip / Bandizip 命令行)"
+                "Java 内置引擎",
+                "7-Zip 引擎",
+                "Bandizip 命令行工具"
         ));
         cbEngine.getSelectionModel().select(0);
 
         txtExePath = new TextField();
         txtExePath.setPromptText("7z.exe 或 bz.exe 路径");
-        txtExePath.visibleProperty().bind(cbEngine.getSelectionModel().selectedItemProperty().isNotEqualTo("内置引擎 (Java Commons Compress)"));
+        txtExePath.visibleProperty().bind(cbEngine.getSelectionModel().selectedItemProperty().isNotEqualTo("Java 内置引擎"));
 
         // 路径模式
         cbOutputMode = new JFXComboBox<>(FXCollections.observableArrayList(
@@ -143,12 +142,18 @@ public class FileUnzipStrategy extends IAppStrategy {
     }
 
     private void autoDetectExternalTools() {
-        String[] paths = {
-                "C:\\Program Files\\7-Zip\\7z.exe",
-                "C:\\Program Files (x86)\\7-Zip\\7z.exe",
-                "C:\\Program Files\\Bandizip\\bz.exe",
-                "C:\\Program Files\\Bandizip\\Bandizip.exe"
-        };
+        // 为7-Zip和Bandizip设置默认检测路径
+        List<String> paths = new ArrayList<>();
+        
+        // 7-Zip路径
+        paths.add("C:\\Program Files\\7-Zip\\7z.exe");
+        paths.add("C:\\Program Files (x86)\\7-Zip\\7z.exe");
+        
+        // Bandizip路径
+        paths.add("C:\\Program Files\\Bandizip\\bc.exe");
+        paths.add("C:\\Program Files\\Bandizip\\bz.exe");
+        
+        // 尝试检测任何可用的外部引擎
         for (String p : paths) {
             if (new File(p).exists()) {
                 txtExePath.setText(p);
@@ -354,6 +359,7 @@ public class FileUnzipStrategy extends IAppStrategy {
         boolean deleteSuccess = Boolean.parseBoolean(rec.getExtraParams().get("deleteSuccess"));
         boolean deleteFail = Boolean.parseBoolean(rec.getExtraParams().get("deleteFail"));
         boolean overwrite = Boolean.parseBoolean(rec.getExtraParams().get("overwrite"));
+        String exePath = rec.getExtraParams().get("exePath");
 
         File baseDestDir = new File(baseDestPath);
         if (!baseDestDir.exists()) baseDestDir.mkdirs();
@@ -379,10 +385,33 @@ public class FileUnzipStrategy extends IAppStrategy {
         // 3. 循环尝试解压
         for (String pwd : passwordsToTry) {
             try {
-                if (engine.contains("外部")) {
-                    extractWithExternalTool(archiveFile, extractRoot, rec.getExtraParams(), pwd);
+                // 根据选择的引擎创建对应的解压引擎实例
+                UnarchiveEngine unarchiveEngine;
+                EngineType engineType;
+                
+                if (engine.equals("Java 内置引擎")) {
+                    engineType = EngineType.BUILT_IN;
+                    unarchiveEngine = UnarchiveFactory.getSpecificEngine(engineType, null);
+                } else if (engine.equals("7-Zip 引擎")) {
+                    engineType = EngineType.SEVEN_ZIP;
+                    unarchiveEngine = UnarchiveFactory.getSpecificEngine(engineType, exePath);
+                } else if (engine.equals("Bandizip 命令行工具")) {
+                    engineType = EngineType.BANDIZIP;
+                    unarchiveEngine = UnarchiveFactory.getSpecificEngine(engineType, exePath);
                 } else {
-                    extractWithJava(archiveFile, extractRoot, overwrite, pwd);
+                    // 默认使用内置引擎
+                    engineType = EngineType.BUILT_IN;
+                    unarchiveEngine = UnarchiveFactory.getSpecificEngine(engineType, null);
+                }
+
+                // 创建解压任务
+                UnarchiveTask task = new UnarchiveTask(archiveFile.getAbsolutePath(), extractRoot.getAbsolutePath());
+                task.overwrite = overwrite;
+                task.password = pwd;
+
+                // 执行解压
+                if (!unarchiveEngine.extract(task)) {
+                    throw new IOException("解压引擎执行失败");
                 }
 
                 // 校验阶段：确保有文件产出
@@ -423,123 +452,7 @@ public class FileUnzipStrategy extends IAppStrategy {
         }
     }
 
-    // --- 解压引擎实现 ---
-
-    private void extractWithExternalTool(File archive, File destDir, Map<String, String> params, String pwd) throws Exception {
-        String exePath = params.get("exePath");
-        boolean overwrite = Boolean.parseBoolean(params.get("overwrite"));
-
-        if (exePath == null || exePath.isEmpty() || !new File(exePath).exists()) {
-            throw new IOException("未找到解压程序: " + exePath);
-        }
-
-        List<String> cmd = new ArrayList<>();
-        cmd.add(exePath);
-
-        // 适配参数
-        String lowerExe = exePath.toLowerCase();
-        boolean isBandizip = lowerExe.contains("bandizip") || lowerExe.contains("bz.exe");
-
-        // Bandizip 智能修复
-        if (isBandizip && !lowerExe.endsWith("bz.exe") && !lowerExe.endsWith("bc.exe")) {
-            File bz = new File(new File(exePath).getParent(), "bz.exe");
-            if (bz.exists()) {
-                cmd.set(0, bz.getAbsolutePath());
-                isBandizip = true;
-            }
-        }
-
-        cmd.add("x");
-        cmd.add(archive.getAbsolutePath());
-
-        // 路径参数适配
-        if (isBandizip) {
-            cmd.add("-o:" + destDir.getAbsolutePath());
-        } else {
-            cmd.add("-o" + destDir.getAbsolutePath()); // 7z
-        }
-
-        if (pwd != null && !pwd.isEmpty()) cmd.add("-p" + pwd);
-        cmd.add(overwrite ? "-aoa" : "-aos");
-        cmd.add("-y");
-
-        ProcessBuilder pb = new ProcessBuilder(cmd);
-        Process p = pb.start();
-
-        // 消耗流
-        new Thread(() -> {
-            try (BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream(), Charset.defaultCharset()))) {
-                while (r.readLine() != null) {
-                }
-            } catch (Exception e) {
-            }
-        }).start();
-
-        int exitCode = p.waitFor();
-        if (exitCode != 0 && exitCode != 1) {
-            throw new IOException("外部程序退出码: " + exitCode + " (可能密码错误)");
-        }
-    }
-
-    private void extractWithJava(File archive, File destDir, boolean overwrite, String pwd) throws Exception {
-        String lowerName = archive.getName().toLowerCase();
-
-        if (lowerName.endsWith(".7z")) {
-            byte[] pwdBytes = pwd == null ? null : pwd.getBytes(Charset.defaultCharset());
-            try (SevenZFile sevenZFile = pwdBytes == null ? new SevenZFile(archive) : new SevenZFile(archive, pwdBytes)) {
-                SevenZArchiveEntry entry;
-                while ((entry = sevenZFile.getNextEntry()) != null) {
-                    if (entry.isDirectory()) continue;
-                    File target = new File(destDir, entry.getName());
-                    File parent = target.getParentFile();
-                    if (!parent.exists()) parent.mkdirs();
-                    if (target.exists() && !overwrite) continue;
-
-                    try (FileOutputStream out = new FileOutputStream(target)) {
-                        byte[] content = new byte[(int) entry.getSize()];
-                        sevenZFile.read(content, 0, content.length);
-                        out.write(content);
-                    }
-                }
-            }
-            return;
-        }
-
-        if (lowerName.endsWith(".rar")) {
-            throw new IOException("内置引擎不支持 RAR，请切换外部引擎。");
-        }
-
-        try (InputStream fi = Files.newInputStream(archive.toPath());
-             InputStream bi = new BufferedInputStream(fi);
-             ArchiveInputStream in = new ArchiveStreamFactory().createArchiveInputStream(bi)) {
-
-            ArchiveEntry entry;
-            while ((entry = in.getNextEntry()) != null) {
-                if (!in.canReadEntryData(entry)) {
-                    if (pwd != null) throw new IOException("内置引擎不支持加密流，请用外部引擎。");
-                    continue;
-                }
-
-                File target = new File(destDir, entry.getName());
-                if (entry.isDirectory()) {
-                    if (!target.isDirectory() && !target.mkdirs()) throw new IOException("无法创建目录: " + target);
-                } else {
-                    File parent = target.getParentFile();
-                    if (!parent.isDirectory() && !parent.mkdirs()) throw new IOException("无法创建父目录: " + parent);
-                    if (target.exists() && !overwrite) continue;
-
-                    // [优化] 使用 64KB 缓冲区
-                    try (OutputStream o = Files.newOutputStream(target.toPath())) {
-                        byte[] buffer = new byte[64 * 1024];
-                        int n;
-                        while (-1 != (n = in.read(buffer))) {
-                            o.write(buffer, 0, n);
-                        }
-                    }
-                }
-            }
-        }
-    }
+    // --- 解压引擎实现已迁移到 com.filemanager.tool.unzip 包下 ---
 
     private void optimizeSmartFolder(File wrapperDir, File parentDir) {
         if (wrapperDir == null || !wrapperDir.exists() || !wrapperDir.isDirectory()) return;
