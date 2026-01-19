@@ -38,4 +38,9 @@ public interface IConfigManager {
      * @return 根路径线程配置映射
      */
     Map<String, Integer> getRootPathThreadConfig();
+    
+    /**
+     * 获取配置管理器实例
+     */
+    com.filemanager.app.tools.ConfigFileManager getConfigManager();
 }

@@ -201,7 +201,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
         // 3. 业务模块初始化
         this.pipelineManager = new PipelineManager(this, threadPoolManager);
         this.fileScanner = new FileScanner(this, globalSettingsView);
-        this.appearanceManager = new AppearanceManager(this, currentTheme, backgroundImageView, backgroundOverlay);
+        this.appearanceManager = new AppearanceManager(this, currentTheme, backgroundImageView, backgroundOverlay, rootContainer);
 
         // 监听源目录列表变化，自动更新根路径线程配置UI
         sourceRoots.addListener((javafx.collections.ListChangeListener.Change<? extends File> change) -> {
@@ -664,5 +664,12 @@ public class FileManagerPlusApp extends Application implements IAppController {
 
     public void applyAppearance() {
         appearanceManager.applyAppearance();
+    }
+    
+    /**
+     * 获取配置管理器实例
+     */
+    public ConfigFileManager getConfigManager() {
+        return configManager;
     }
 }

@@ -188,8 +188,9 @@ public class ComponentStyleManager {
             currentStyle = currentStyle.replaceAll(".*?-fx-font-family:[^;]*;", "");
         }
         
+        // 设置更新后的样式
         labeled.setStyle(String.format(
-                "%s -fx-text-fill: %s; -fx-font-family: %s;",
+                "%s -fx-text-fill: %s; -fx-font-family: '%s';",
                 currentStyle.trim(), theme.getTextPrimaryColor(), theme.getFontFamily()
         ));
     }
@@ -337,7 +338,7 @@ public class ComponentStyleManager {
                 "}\n" +
                 ".tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .tab-label {\n" +
                 "    -fx-text-fill: %s;\n" +
-                "    -fx-font-family: %s;\n" +
+                "    -fx-font-family: '%s';\n" +
                 "    -fx-font-size: %.1fpx;\n" +
                 "    -fx-font-weight: normal;\n" +
                 "    -fx-alignment: center;\n" +
@@ -373,7 +374,7 @@ public class ComponentStyleManager {
         // 更新所有标签页的样式
         for (Tab tab : tabPane.getTabs()) {
             tab.setStyle(String.format(
-                    "-fx-text-fill: %s; -fx-font-family: %s; -fx-font-size: %.1fpx;",
+                    "-fx-text-fill: %s; -fx-font-family: '%s'; -fx-font-size: %.1fpx;",
                     theme.getTextPrimaryColor(), theme.getFontFamily(), fontSize
             ));
         }
@@ -407,7 +408,7 @@ public class ComponentStyleManager {
         titledPane.setStyle(String.format(
                 "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f; -fx-background-radius: %.1f;\n" +
                 ".titled-pane > .title {\n" +
-                "    -fx-background-color: %s; -fx-text-fill: %s; -fx-font-family: %s; -fx-font-size: %.1fpx; -fx-font-weight: bold;\n" +
+                "    -fx-background-color: %s; -fx-text-fill: %s; -fx-font-family: '%s'; -fx-font-size: %.1fpx; -fx-font-weight: bold;\n" +
                 "    -fx-padding: 10 15 10 15; -fx-border-width: 0 0 %.1f 0; -fx-border-color: %s;\n" +
                 "}\n" +
                 ".titled-pane > .title > .arrow-button {\n" +
@@ -460,7 +461,7 @@ public class ComponentStyleManager {
                 ".list-view .list-cell {\n" +
                 "    -fx-background-color: transparent;\n" +
                 "    -fx-text-fill: %s;\n" +
-                "    -fx-font-family: %s;\n" +
+                "    -fx-font-family: '%s';\n" +
                 "    -fx-padding: 8 10;\n" +
                 "}\n" +
                 ".list-view .list-cell:filled:selected {\n" +
@@ -522,7 +523,7 @@ public class ComponentStyleManager {
                 "}\n" +
                 ".table-view .column-header .label {\n" +
                 "    -fx-text-fill: %s;\n" +
-                "    -fx-font-family: %s;\n" +
+                "    -fx-font-family: '%s';\n" +
                 "    -fx-font-weight: bold;\n" +
                 "    -fx-padding: 12 10;\n" +
                 "}\n" +
@@ -542,7 +543,7 @@ public class ComponentStyleManager {
                 "}\n" +
                 ".table-view .table-cell {\n" +
                 "    -fx-text-fill: %s;\n" +
-                "    -fx-font-family: %s;\n" +
+                "    -fx-font-family: '%s';\n" +
                 "    -fx-padding: 10 10;\n" +
                 "    -fx-border-color: transparent;\n" +
                 "}\n" +
@@ -598,7 +599,7 @@ public class ComponentStyleManager {
                 "}\n" +
                 ".tree-table-view .column-header .label {\n" +
                 "    -fx-text-fill: %s;\n" +
-                "    -fx-font-family: %s;\n" +
+                "    -fx-font-family: '%s';\n" +
                 "    -fx-font-weight: bold;\n" +
                 "    -fx-padding: 12 10;\n" +
                 "}\n" +
@@ -638,7 +639,7 @@ public class ComponentStyleManager {
                 "}\n" +
                 ".tree-table-view .tree-table-cell {\n" +
                 "    -fx-text-fill: %s;\n" +
-                "    -fx-font-family: %s;\n" +
+                "    -fx-font-family: '%s';\n" +
                 "    -fx-padding: 10 10;\n" +
                 "    -fx-border-color: transparent;\n" +
                 "    -fx-alignment: center-left;\n" +
@@ -704,7 +705,7 @@ public class ComponentStyleManager {
                 ".tree-view .tree-cell {\n" +
                 "    -fx-background-color: transparent;\n" +
                 "    -fx-text-fill: %s;\n" +
-                "    -fx-font-family: %s;\n" +
+                "    -fx-font-family: '%s';\n" +
                 "    -fx-padding: 6 10;\n" +
                 "}\n" +
                 ".tree-view .tree-cell:filled:selected {\n" +
@@ -756,7 +757,7 @@ public class ComponentStyleManager {
         // 设置TextArea的背景色、边框和字体，与createTextArea保持一致
         textArea.setStyle(String.format(
                 "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f; -fx-background-radius: %.1f;\n" +
-                "-fx-text-fill: %s; -fx-font-family: %s; -fx-font-size: %.1f;\n" +
+                "-fx-text-fill: %s; -fx-font-family: '%s'; -fx-font-size: %.1f;\n" +
                 ".text-area .scroll-pane {\n" +
                 "    -fx-background-color: transparent;\n" +
                 "}\n" +
@@ -835,7 +836,7 @@ public class ComponentStyleManager {
         }
         
         control.setStyle(String.format(
-                "%s -fx-text-fill: %s; -fx-font-family: %s; -fx-background-color: %s; -fx-border-color: %s; -fx-border-radius: %.1f; -fx-background-radius: %.1f;",
+                "%s -fx-text-fill: %s; -fx-font-family: '%s'; -fx-background-color: %s; -fx-border-color: %s; -fx-border-radius: %.1f; -fx-background-radius: %.1f;",
                 currentStyle.trim(), theme.getTextPrimaryColor(), theme.getFontFamily(), panelBgColor, theme.getBorderColor(), theme.getCornerRadius(), theme.getCornerRadius()
         ));
     }
@@ -876,7 +877,7 @@ public class ComponentStyleManager {
         }
         
         comboBox.setStyle(String.format(
-                "%s -fx-text-fill: %s; -fx-font-family: %s; -fx-background-color: %s; -fx-border-color: %s; -fx-border-radius: %.1f; -fx-background-radius: %.1f;",
+                "%s -fx-text-fill: %s; -fx-font-family: '%s'; -fx-background-color: %s; -fx-border-color: %s; -fx-border-radius: %.1f; -fx-background-radius: %.1f;",
                 currentStyle.trim(), theme.getTextPrimaryColor(), theme.getFontFamily(), panelBgColor, theme.getBorderColor(), theme.getCornerRadius(), theme.getCornerRadius()
         ));
         
@@ -907,7 +908,7 @@ public class ComponentStyleManager {
         }
         
         checkBox.setStyle(String.format(
-                "%s -fx-text-fill: %s; -fx-font-family: %s;",
+                "%s -fx-text-fill: %s; -fx-font-family: '%s';",
                 currentStyle.trim(), theme.getTextPrimaryColor(), theme.getFontFamily()
         ));
     }
@@ -927,7 +928,7 @@ public class ComponentStyleManager {
         }
         
         radioButton.setStyle(String.format(
-                "%s -fx-text-fill: %s; -fx-font-family: %s;",
+                "%s -fx-text-fill: %s; -fx-font-family: '%s';",
                 currentStyle.trim(), theme.getTextPrimaryColor(), theme.getFontFamily()
         ));
     }
@@ -947,7 +948,7 @@ public class ComponentStyleManager {
         }
         
         toggleButton.setStyle(String.format(
-                "%s -fx-text-fill: %s; -fx-font-family: %s;",
+                "%s -fx-text-fill: %s; -fx-font-family: '%s';",
                 currentStyle.trim(), theme.getTextPrimaryColor(), theme.getFontFamily()
         ));
     }

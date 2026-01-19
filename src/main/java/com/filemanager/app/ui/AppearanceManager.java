@@ -48,17 +48,20 @@ import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.FileChooser;
+import com.filemanager.app.tools.display.ComponentStyleManager;
 
 public class AppearanceManager {
     private final IAppController app;
     private final ThemeConfig currentTheme;
     private final ImageView backgroundImageView;
-    private final Region backgroundOverlay;
+    private Region backgroundOverlay;
+    private Pane rootContainer;
     private final ThemeManager themeManager;
     private final StyleTemplateManager templateManager;
     private Tab finalPresetTab;
@@ -80,6 +83,12 @@ public class AppearanceManager {
         this.backgroundOverlay = backgroundOverlay;
         this.themeManager = ThemeManager.getInstance();
         this.templateManager = StyleTemplateManager.getInstance();
+    }
+    
+    public AppearanceManager(IAppController app, ThemeConfig currentTheme,
+                           ImageView backgroundImageView, Region backgroundOverlay, Pane rootContainer) {
+        this(app, currentTheme, backgroundImageView, backgroundOverlay);
+        this.rootContainer = rootContainer;
     }
     
     /**
@@ -924,6 +933,14 @@ public class AppearanceManager {
         fontFamilyCb.setOnAction(e -> {
             currentTheme.setFontFamily(fontFamilyCb.getValue());
             applyAppearance();
+            // 自动保存配置到默认文件，确保字体设置被持久化
+            try {
+                java.io.File lastConfigFile = new java.io.File(System.getProperty("user.home"), ".fmplus_config.properties");
+                app.getConfigManager().saveConfig(lastConfigFile);
+            } catch (Exception ex) {
+                // 记录错误但不中断用户操作
+                app.logError("自动保存配置失败: " + ex.getMessage());
+            }
         });
         
         fontFamilyBox.getChildren().addAll(fontFamilyLabel, fontFamilyCb);
@@ -1372,6 +1389,15 @@ public class AppearanceManager {
                 currentTheme.isDarkBackground() ? "0,0,0" : "255,255,255",
                 1 - currentTheme.getGlassOpacity()
         ));
+        
+        // 更新所有组件的字体样式
+        if (rootContainer != null) {
+            // 使用平台线程确保UI更新
+            javafx.application.Platform.runLater(() -> {
+                // 调用ComponentStyleManager的refreshAllComponents方法更新所有组件的样式
+                ComponentStyleManager.refreshAllComponents(rootContainer);
+            });
+        }
     }
     
     /**

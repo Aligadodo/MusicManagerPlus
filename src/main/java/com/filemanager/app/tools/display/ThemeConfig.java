@@ -206,8 +206,9 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
      * @return 带透明度的颜色值（如 #ffffff80）
      */
     public String getColorWithOpacity(String color, double opacityMultiplier) {
-        if (color == null || !color.startsWith("#") || color.length() != 7) {
-            return color;
+        // 特殊处理transparent关键字
+        if (color == null || "transparent".equalsIgnoreCase(color) || !color.startsWith("#") || color.length() != 7) {
+            return "transparent";
         }
         // 计算最终透明度（毛玻璃透明度 * 倍数）
         double finalOpacity = Math.max(0.0, Math.min(1.0, this.glassOpacity * opacityMultiplier));
@@ -803,7 +804,8 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
      * 验证并格式化颜色值，确保它是有效的十六进制格式
      */
     private String validateAndFormatColor(String colorValue, String defaultValue) {
-        if (colorValue == null || colorValue.isEmpty()) {
+        // 特殊处理transparent关键字
+        if (colorValue == null || colorValue.isEmpty() || "transparent".equalsIgnoreCase(colorValue)) {
             return defaultValue;
         }
         
