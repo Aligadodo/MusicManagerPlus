@@ -91,6 +91,13 @@ public class FileUnzipStrategy extends IAppStrategy {
         txtExePath = new TextField();
         txtExePath.setPromptText("7z.exe 或 bz.exe 路径");
         txtExePath.visibleProperty().bind(cbEngine.getSelectionModel().selectedItemProperty().isNotEqualTo("Java 内置引擎"));
+        
+        // 监听引擎选择变化，自动检测对应工具路径
+        cbEngine.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue != null && !newValue.equals("Java 内置引擎")) {
+                autoDetectExternalTools(newValue);
+            }
+        });
 
         // 路径模式
         cbOutputMode = new JFXComboBox<>(FXCollections.observableArrayList(
@@ -152,34 +159,44 @@ public class FileUnzipStrategy extends IAppStrategy {
             if (sel != null) lvPasswords.getItems().remove(sel);
         });
 
-        autoDetectExternalTools();
+        // 初始检测当前选择的引擎（如果不是内置引擎）
+        String initialEngine = cbEngine.getSelectionModel().getSelectedItem();
+        if (initialEngine != null && !initialEngine.equals("Java 内置引擎")) {
+            autoDetectExternalTools(initialEngine);
+        }
     }
 
-    private void autoDetectExternalTools() {
-        // 为7-Zip和Bandizip设置默认检测路径
+    private void autoDetectExternalTools(String engineType) {
+        // 根据引擎类型设置默认检测路径
         List<String> paths = new ArrayList<>();
-
-        // 1. 程序运行目录下的tools目录
         String currentDir = System.getProperty("user.dir");
-        paths.add(currentDir + "\\tools\\7-Zip\\7z.exe");
-        paths.add(currentDir + "\\tools\\Bandizip\\bz.exe");
         
-        // 2. 系统程序目录
-        // 7-Zip路径
-        paths.add("C:\\Program Files\\7-Zip\\7z.exe");
-        paths.add("C:\\Program Files (x86)\\7-Zip\\7z.exe");
+        if ("7-Zip 引擎".equals(engineType)) {
+            // 7-Zip 引擎检测路径
+            paths.add(currentDir + "\\tools\\7z.exe");
+            paths.add(currentDir + "\\tools\\7-Zip\\7z.exe");
+            paths.add("C:\\Program Files\\7-Zip\\7z.exe");
+            paths.add("C:\\Program Files (x86)\\7-Zip\\7z.exe");
+        } else if ("Bandizip 命令行工具".equals(engineType)) {
+            // Bandizip 引擎检测路径
+            paths.add(currentDir + "\\tools\\bz.exe");
+            paths.add(currentDir + "\\tools\\bc.exe");
+            paths.add(currentDir + "\\tools\\Bandizip\\bz.exe");
+            paths.add(currentDir + "\\tools\\Bandizip\\bc.exe");
+            paths.add("C:\\Program Files\\Bandizip\\bz.exe");
+            paths.add("C:\\Program Files\\Bandizip\\bc.exe");
+        }
 
-        // Bandizip路径
-        paths.add("C:\\Program Files\\Bandizip\\bc.exe");
-        paths.add("C:\\Program Files\\Bandizip\\bz.exe");
-
-        // 尝试检测任何可用的外部引擎
+        // 尝试检测对应引擎的路径
         for (String p : paths) {
             if (new File(p).exists()) {
                 txtExePath.setText(p);
-                break;
+                return;
             }
         }
+        
+        // 如果没有检测到，清空路径
+        txtExePath.clear();
     }
 
     @Override
