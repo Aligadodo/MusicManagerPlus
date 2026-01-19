@@ -124,7 +124,7 @@ public class NewStyleManager {
                         "}\n" +
                         ".tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .tab-label {\n" +
                         "    -fx-text-fill: %s;\n" +
-                        "    -fx-font-family: %s;\n" +
+                        "    -fx-font-family: '%s';\n" +
                         "    -fx-font-size: %.1fpx;\n" +
                         "    -fx-font-weight: normal;\n" +
                         "    -fx-alignment: center;\n" +
@@ -170,7 +170,7 @@ public class NewStyleManager {
                         ".list-view .list-cell {\n" +
                         "    -fx-background-color: transparent;\n" +
                         "    -fx-text-fill: %s;\n" +
-                        "    -fx-font-family: %s;\n" +
+                        "    -fx-font-family: '%s';\n" +
                         "    -fx-padding: 8 10;\n" +
                         "}\n" +
                         ".list-view .list-cell:filled:selected {\n" +
@@ -225,7 +225,7 @@ public class NewStyleManager {
                         "}\n" +
                         ".table-view .column-header .label {\n" +
                         "    -fx-text-fill: %s;\n" +
-                        "    -fx-font-family: %s;\n" +
+                        "    -fx-font-family: '%s';\n" +
                         "    -fx-font-weight: bold;\n" +
                         "    -fx-padding: 12 10;\n" +
                         "}\n" +
@@ -245,7 +245,7 @@ public class NewStyleManager {
                         "}\n" +
                         ".table-view .table-cell {\n" +
                         "    -fx-text-fill: %s;\n" +
-                        "    -fx-font-family: %s;\n" +
+                        "    -fx-font-family: '%s';\n" +
                         "    -fx-padding: 10 10;\n" +
                         "    -fx-border-color: transparent;\n" +
                         "}\n" +
@@ -296,7 +296,7 @@ public class NewStyleManager {
                         "}\n" +
                         ".tree-table-view .column-header .label {\n" +
                         "    -fx-text-fill: %s;\n" +
-                        "    -fx-font-family: %s;\n" +
+                        "    -fx-font-family: '%s';\n" +
                         "    -fx-font-weight: bold;\n" +
                         "    -fx-padding: 12 10;\n" +
                         "}\n" +
@@ -316,7 +316,7 @@ public class NewStyleManager {
                         "}\n" +
                         ".tree-table-view .tree-table-cell {\n" +
                         "    -fx-text-fill: %s;\n" +
-                        "    -fx-font-family: %s;\n" +
+                        "    -fx-font-family: '%s';\n" +
                         "    -fx-padding: 10 10;\n" +
                         "    -fx-border-color: transparent;\n" +
                         "}\n" +
@@ -354,7 +354,7 @@ public class NewStyleManager {
                         ".tree-view .tree-cell {\n" +
                         "    -fx-background-color: transparent;\n" +
                         "    -fx-text-fill: %s;\n" +
-                        "    -fx-font-family: %s;\n" +
+                        "    -fx-font-family: '%s';\n" +
                         "    -fx-padding: 6 10;\n" +
                         "}\n" +
                         ".tree-view .tree-cell:filled:selected {\n" +
@@ -394,7 +394,7 @@ public class NewStyleManager {
                 theme -> String.format(
                         "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f; -fx-background-radius: %.1f;\n" +
                         ".titled-pane > .title {\n" +
-                        "    -fx-background-color: %s; -fx-text-fill: %s; -fx-font-family: %s; -fx-font-size: %.1fpx; -fx-font-weight: bold;\n" +
+                        "    -fx-background-color: %s; -fx-text-fill: %s; -fx-font-family: '%s'; -fx-font-size: %.1fpx; -fx-font-weight: bold;\n" +
                         "    -fx-padding: 10 15 10 15; -fx-border-width: 0 0 %.1f 0; -fx-border-color: %s;\n" +
                         "}\n" +
                         ".titled-pane > .title > .arrow-button {\n" +
@@ -424,7 +424,7 @@ public class NewStyleManager {
                 "theme-text-area",
                 theme -> String.format(
                         "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f; -fx-background-radius: %.1f;\n" +
-                        "-fx-text-fill: %s; -fx-font-family: %s; -fx-font-size: %.1f;\n" +
+                        "-fx-text-fill: %s; -fx-font-family: '%s'; -fx-font-size: %.1f;\n" +
                         ".text-area .scroll-pane {\n" +
                         "    -fx-background-color: transparent;\n" +
                         "}\n" +
@@ -464,7 +464,7 @@ public class NewStyleManager {
                 "theme-button",
                 theme -> String.format(
                         "-fx-background-color: %s; -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f; -fx-background-radius: %.1f;\n" +
-                        "-fx-font-family: %s; -fx-font-size: %.1fpx; -fx-padding: 8 16;\n" +
+                        "-fx-font-family: '%s'; -fx-font-size: %.1fpx; -fx-padding: 8 16;\n" +
                         ".button:hover {\n" +
                         "    -fx-background-color: %s;\n" +
                         "}\n" +
@@ -488,7 +488,7 @@ public class NewStyleManager {
                 "theme-text-field",
                 theme -> String.format(
                         "-fx-background-color: %s; -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f; -fx-background-radius: %.1f;\n" +
-                        "-fx-font-family: %s; -fx-font-size: %.1fpx; -fx-padding: 8 12;\n" +
+                        "-fx-font-family: '%s'; -fx-font-size: %.1fpx; -fx-padding: 8 12;\n" +
                         ".text-field:focused {\n" +
                         "    -fx-border-color: %s;\n" +
                         "    -fx-background-color: %s;\n" +

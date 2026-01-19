@@ -591,7 +591,7 @@ public class StyleFactory {
                 "}\n" +
                 ".tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .tab-label {\n" +
                 "    -fx-text-fill: %s;\n" +
-                "    -fx-font-family: %s;\n" +
+                "    -fx-font-family: '%s';\n" +
                 "    -fx-font-size: 15px;\n" +
                 "    -fx-font-weight: normal;\n" +
                 "    -fx-alignment: center;\n" +
@@ -639,7 +639,7 @@ public class StyleFactory {
         titledPane.setStyle(String.format(
                 "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f; -fx-background-radius: %.1f;\n" +
                 ".titled-pane > .title {\n" +
-                "    -fx-background-color: %s; -fx-text-fill: %s; -fx-font-family: %s; -fx-font-size: 14px; -fx-font-weight: bold;\n" +
+                "    -fx-background-color: %s; -fx-text-fill: %s; -fx-font-family: '%s'; -fx-font-size: 14px; -fx-font-weight: bold;\n" +
                 "    -fx-padding: 10 15 10 15; -fx-border-width: 0 0 %.1f 0; -fx-border-color: %s;\n" +
                 "}\n" +
                 ".titled-pane > .title > .arrow-button {\n" +

@@ -676,7 +676,7 @@ public class AppearanceManager {
         
         Label bgImagePanelTitle = new Label("选择背景图");
         bgImagePanelTitle.setStyle(String.format(
-                "-fx-font-family: %s; -fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: %s;",
+                "-fx-font-family: '%s'; -fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: %s;",
                 currentTheme.getFontFamily(), currentTheme.getTextPrimaryColor()
         ));
         bgImagePanelTitle.setPadding(new Insets(10, 0, 0, 10));
@@ -995,7 +995,7 @@ public class AppearanceManager {
         
         Label saveTitle = new Label("保存自定义模板");
         saveTitle.setStyle(String.format(
-                "-fx-font-family: %s; -fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: %s;",
+                "-fx-font-family: '%s'; -fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: %s;",
                 currentTheme.getFontFamily(), currentTheme.getTextPrimaryColor()
         ));
         
@@ -1006,7 +1006,7 @@ public class AppearanceManager {
         // 模板名称
         Label nameLabel = new Label("模板名称:");
         nameLabel.setStyle(String.format(
-                "-fx-font-family: %s; -fx-font-size: 14px; -fx-text-fill: %s;",
+                "-fx-font-family: '%s'; -fx-font-size: 14px; -fx-text-fill: %s;",
                 currentTheme.getFontFamily(), currentTheme.getTextPrimaryColor()
         ));
         TextField nameField = new TextField();
@@ -1020,7 +1020,7 @@ public class AppearanceManager {
         // 模板描述
         Label descLabel = new Label("模板描述:");
         descLabel.setStyle(String.format(
-                "-fx-font-family: %s; -fx-font-size: 14px; -fx-text-fill: %s;",
+                "-fx-font-family: '%s'; -fx-font-size: 14px; -fx-text-fill: %s;",
                 currentTheme.getFontFamily(), currentTheme.getTextPrimaryColor()
         ));
         TextField descField = new TextField();
@@ -1088,7 +1088,7 @@ public class AppearanceManager {
         
         Label manageTitle = new Label("管理模板");
         manageTitle.setStyle(String.format(
-                "-fx-font-family: %s; -fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: %s;",
+                "-fx-font-family: '%s'; -fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: %s;",
                 currentTheme.getFontFamily(), currentTheme.getTextPrimaryColor()
         ));
         
@@ -1203,7 +1203,7 @@ public class AppearanceManager {
         // 主题名称
         Label nameLabel = new Label(theme.getTemplateName());
         nameLabel.setStyle(String.format(
-                "-fx-font-family: %s; -fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #333333;",
+                "-fx-font-family: '%s'; -fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #333333;",
                 theme.getFontFamily()
         ));
         nameLabel.setAlignment(Pos.CENTER);
@@ -1212,7 +1212,7 @@ public class AppearanceManager {
         // 主题描述
         Label descLabel = new Label(theme.getTemplateDescription());
         descLabel.setStyle(String.format(
-                "-fx-font-family: %s; -fx-font-size: 12px; -fx-text-fill: #666666;",
+                "-fx-font-family: '%s'; -fx-font-size: 12px; -fx-text-fill: #666666;",
                 theme.getFontFamily()
         ));
         descLabel.setAlignment(Pos.CENTER);
@@ -1235,7 +1235,7 @@ public class AppearanceManager {
         VBox bgColorBox = new VBox(3);
         Label bgLabel = new Label("背景色");
         bgLabel.setStyle(String.format(
-                "-fx-font-family: %s; -fx-font-size: 10px; -fx-text-fill: #666666;",
+                "-fx-font-family: '%s'; -fx-font-size: 10px; -fx-text-fill: #666666;",
                 theme.getFontFamily()
         ));
         bgLabel.setAlignment(Pos.CENTER);
@@ -1251,7 +1251,7 @@ public class AppearanceManager {
         VBox panelColorBox = new VBox(3);
         Label panelLabel = new Label("面板");
         panelLabel.setStyle(String.format(
-                "-fx-font-family: %s; -fx-font-size: 10px; -fx-text-fill: #666666;",
+                "-fx-font-family: '%s'; -fx-font-size: 10px; -fx-text-fill: #666666;",
                 theme.getFontFamily()
         ));
         panelLabel.setAlignment(Pos.CENTER);
@@ -1267,7 +1267,7 @@ public class AppearanceManager {
         VBox accentColorBox = new VBox(3);
         Label accentLabel = new Label("主题色");
         accentLabel.setStyle(String.format(
-                "-fx-font-family: %s; -fx-font-size: 10px; -fx-text-fill: #666666;",
+                "-fx-font-family: '%s'; -fx-font-size: 10px; -fx-text-fill: #666666;",
                 theme.getFontFamily()
         ));
         accentLabel.setAlignment(Pos.CENTER);
@@ -1283,7 +1283,7 @@ public class AppearanceManager {
         VBox textColorBox = new VBox(3);
         Label textLabel = new Label("文本色");
         textLabel.setStyle(String.format(
-                "-fx-font-family: %s; -fx-font-size: 10px; -fx-text-fill: #666666;",
+                "-fx-font-family: '%s'; -fx-font-size: 10px; -fx-text-fill: #666666;",
                 theme.getFontFamily()
         ));
         textLabel.setAlignment(Pos.CENTER);
