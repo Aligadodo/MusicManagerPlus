@@ -187,7 +187,7 @@ public class ComponentFactory {
         
         logArea.setStyle(String.format(
                 "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f; -fx-background-radius: %.1f;\n" +
-                "-fx-text-fill: %s; -fx-font-family: %s; -fx-font-size: %.1f;\n" +
+                "-fx-text-fill: %s; -fx-font-family: '%s'; -fx-font-size: %.1f;\n" +
                 ".text-area .scroll-pane {\n" +
                 "    -fx-background-color: transparent;\n" +
                 "}\n" +
@@ -274,7 +274,7 @@ public class ComponentFactory {
         
         // 使用统一的图标按钮样式，确保图标字符可见
         String baseStyle = String.format(
-                "-fx-background-color: %s; -fx-text-fill: %s; -fx-font-family: %s; -fx-font-size: 16px; -fx-padding: 8 12; -fx-cursor: hand; -fx-background-radius: %.1f;" +
+                "-fx-background-color: %s; -fx-text-fill: %s; -fx-font-family: '%s'; -fx-font-size: 16px; -fx-padding: 8 12; -fx-cursor: hand; -fx-background-radius: %.1f;" +
                 " -fx-border-width: %.1f; -fx-border-color: %s; -fx-min-height: 30; -fx-min-width: 50; -fx-max-width: Infinity; -fx-alignment: center; -fx-content-display: center;" +
                 " -fx-faint-focus-color: transparent; -fx-focus-color: transparent; -fx-pressed-color: transparent; -fx-armed-color: transparent;",
                 theme.getBgColor(), theme.getTextPrimaryColor(), theme.getFontFamily(), theme.getCornerRadius(),
@@ -682,7 +682,7 @@ public class ComponentFactory {
         }
         
         String baseStyle = String.format(
-                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-radius: %.1f; -fx-padding: %.1f; -fx-font-size: 10px; -fx-font-family: %s; -fx-text-fill: %s;" +
+                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-radius: %.1f; -fx-padding: %.1f; -fx-font-size: 10px; -fx-font-family: '%s'; -fx-text-fill: %s;" +
                 " -fx-min-height: 22; -fx-min-width: 24.0; -fx-max-width: Infinity; -fx-cursor: hand; -fx-alignment: center; -fx-content-display: center;" +
                 " -fx-border-width: %.1f;" +
                 " -fx-faint-focus-color: transparent; -fx-focus-color: transparent; -fx-pressed-color: transparent; -fx-armed-color: transparent;",
@@ -712,7 +712,7 @@ public class ComponentFactory {
             }
             
             String hoverStyle = String.format(
-                    "-fx-background-color: %s; -fx-border-color: %s; -fx-border-radius: %.1f; -fx-padding: %.1f; -fx-font-size: 10px; -fx-font-family: %s; -fx-text-fill: %s;" +
+                    "-fx-background-color: %s; -fx-border-color: %s; -fx-border-radius: %.1f; -fx-padding: %.1f; -fx-font-size: 10px; -fx-font-family: '%s'; -fx-text-fill: %s;" +
                     " -fx-min-height: 22; -fx-min-width: 24.0; -fx-max-width: Infinity; -fx-cursor: hand; -fx-alignment: center; -fx-content-display: center;" +
                     " -fx-border-width: %.1f;" +
                     " -fx-faint-focus-color: transparent; -fx-focus-color: transparent; -fx-pressed-color: transparent; -fx-armed-color: transparent;",
@@ -739,7 +739,7 @@ public class ComponentFactory {
         column.setMinWidth(minWidth);
         column.setMaxWidth(maxWidth);
         column.setStyle(String.format(
-                "-fx-border-color: %s; -fx-border-radius: %.1f; -fx-padding: 2 6 2 6; -fx-font-size: 10px; -fx-font-family: %s; -fx-text-fill: %s;",
+                "-fx-border-color: %s; -fx-border-radius: %.1f; -fx-padding: 2 6 2 6; -fx-font-size: 10px; -fx-font-family: '%s'; -fx-text-fill: %s;",
                 theme.getBorderColor(), theme.getCornerRadius(), theme.getFontFamily(), theme.getTextPrimaryColor()
         ));
         column.setCellFactory(col -> {
@@ -812,7 +812,7 @@ public class ComponentFactory {
                 "}\n" +
                 ".tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .tab-label {\n" +
                 "    -fx-text-fill: %s;\n" +
-                "    -fx-font-family: %s;\n" +
+                "    -fx-font-family: '%s';\n" +
                 "    -fx-font-size: %.1fpx;\n" +
                 "    -fx-font-weight: normal;\n" +
                 "    -fx-alignment: center;\n" +
@@ -861,7 +861,7 @@ public class ComponentFactory {
     public static Tab createStyledTab(String text, Node content) {
         Tab tab = new Tab(text, content);
         tab.setStyle(String.format(
-                "-fx-text-fill: %s; -fx-font-family: %s; -fx-font-size: 14px;",
+                "-fx-text-fill: %s; -fx-font-family: '%s'; -fx-font-size: 14px;",
                 theme.getTextPrimaryColor(), theme.getFontFamily()
         ));
         

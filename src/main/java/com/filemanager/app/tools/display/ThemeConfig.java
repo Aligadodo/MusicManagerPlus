@@ -804,9 +804,11 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
      * 验证并格式化颜色值，确保它是有效的十六进制格式
      */
     private String validateAndFormatColor(String colorValue, String defaultValue) {
-        // 特殊处理transparent关键字
-        if (colorValue == null || colorValue.isEmpty() || "transparent".equalsIgnoreCase(colorValue)) {
-            return defaultValue;
+        // 特殊处理transparent关键字，无论是否带有#前缀
+        if (colorValue == null || colorValue.isEmpty() || 
+            "transparent".equalsIgnoreCase(colorValue) || 
+            "#transparent".equalsIgnoreCase(colorValue)) {
+            return "transparent"; // 直接返回transparent关键字
         }
         
         // 移除可能的透明度后缀
