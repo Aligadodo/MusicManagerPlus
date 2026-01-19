@@ -29,6 +29,7 @@ import javafx.concurrent.Task;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -191,6 +192,46 @@ public class PipelineManager {
         handleTaskLifecycle(task);
         new Thread(task).start();
     }
+    
+    /**
+     * 执行指定的任务列表
+     */
+    public void runPipelineExecution(List<ChangeRecord> targetRecords) {
+        if (targetRecords == null || targetRecords.isEmpty()) {
+            return;
+        }
+
+        // 过滤出待执行的任务
+        List<ChangeRecord> pendingRecords = targetRecords.stream()
+                .filter(record -> record.isChanged() && record.getOpType() != OperationType.NONE && record.getStatus() == ExecStatus.PENDING)
+                .collect(Collectors.toList());
+        
+        if (pendingRecords.isEmpty()) {
+            return;
+        }
+
+        isTaskRunning.set(true);
+
+        prepareExecutionUI();
+
+        Task<Void> task = createExecutionTask(pendingRecords);
+        setStartTaskUI("▶ ▶ ▶ 执行中...", task);
+        task.setOnSucceeded(e -> setFinishTaskUI("➡ ➡ ➡ 执行成功 ⬅ ⬅ ⬅", TaskStatus.SUCCESS));
+
+        handleTaskLifecycle(task);
+        new Thread(task).start();
+    }
+    
+    /**
+     * 执行单个任务
+     */
+    public void runPipelineExecution(ChangeRecord record) {
+        if (record == null) {
+            return;
+        }
+        
+        runPipelineExecution(Collections.singletonList(record));
+    }
 
     private long countPendingTasks() {
         return fullChangeList.stream()
@@ -213,16 +254,21 @@ public class PipelineManager {
     }
 
     private Task<Void> createExecutionTask() {
+        // 同步根路径线程配置
+        syncRootPathThreadConfig();
+        List<ChangeRecord> todos = fullChangeList.stream()
+                .filter(record -> record.isChanged()
+                        && record.getOpType() != OperationType.NONE
+                        && record.getStatus() == ExecStatus.PENDING)
+                .collect(Collectors.toList());
+        
+        return createExecutionTask(todos);
+    }
+    
+    private Task<Void> createExecutionTask(List<ChangeRecord> todos) {
         return new Task<Void>() {
             @Override
             protected Void call() throws Exception {
-                // 同步根路径线程配置
-                syncRootPathThreadConfig();
-                List<ChangeRecord> todos = fullChangeList.stream()
-                        .filter(record -> record.isChanged()
-                                && record.getOpType() != OperationType.NONE
-                                && record.getStatus() == ExecStatus.PENDING)
-                        .collect(Collectors.toList());
                 int total = todos.size();
                 AtomicInteger curr = new AtomicInteger(0);
 

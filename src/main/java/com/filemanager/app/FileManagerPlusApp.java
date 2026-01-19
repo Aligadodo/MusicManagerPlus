@@ -426,6 +426,16 @@ public class FileManagerPlusApp extends Application implements IAppController {
     public void runPipelineExecution() {
         pipelineManager.runPipelineExecution();
     }
+    
+    @Override
+    public void runPipelineExecution(com.filemanager.model.ChangeRecord record) {
+        pipelineManager.runPipelineExecution(record);
+    }
+    
+    @Override
+    public void runPipelineExecution(java.util.List<com.filemanager.model.ChangeRecord> records) {
+        pipelineManager.runPipelineExecution(records);
+    }
 
     // --- Shared Methods & Utils ---
 

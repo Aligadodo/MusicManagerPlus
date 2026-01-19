@@ -55,6 +55,18 @@ public interface IBusinessOperations {
      * 运行管道执行
      */
     void runPipelineExecution();
+    
+    /**
+     * 运行管道执行
+     * @param record 要执行的单个任务
+     */
+    void runPipelineExecution(com.filemanager.model.ChangeRecord record);
+    
+    /**
+     * 运行管道执行
+     * @param records 要执行的任务列表
+     */
+    void runPipelineExecution(java.util.List<com.filemanager.model.ChangeRecord> records);
 
     /**
      * 强制停止任务
