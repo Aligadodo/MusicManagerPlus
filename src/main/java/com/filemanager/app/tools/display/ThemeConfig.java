@@ -206,8 +206,14 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
      * @return 带透明度的颜色值（如 #ffffff80）
      */
     public String getColorWithOpacity(String color, double opacityMultiplier) {
-        // 特殊处理transparent关键字
-        if (color == null || "transparent".equalsIgnoreCase(color) || !color.startsWith("#") || color.length() != 7) {
+        // 特殊处理transparent关键字，无论是否带有#前缀或被截断为transp
+        if (color == null || 
+            "transparent".equalsIgnoreCase(color) || 
+            "#transparent".equalsIgnoreCase(color) ||
+            "transp".equalsIgnoreCase(color) ||
+            "#transp".equalsIgnoreCase(color) ||
+            !color.startsWith("#") || 
+            color.length() != 7) {
             return "transparent";
         }
         // 计算最终透明度（毛玻璃透明度 * 倍数）
@@ -266,8 +272,14 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
      * @return 带透明度的表头背景色
      */
     public String getTableHeaderBgColorWithOpacity() {
-        if (this.panelBgColor == null || !this.panelBgColor.startsWith("#") || this.panelBgColor.length() != 7) {
-            return this.panelBgColor;
+        // 特殊处理transparent关键字，无论是否带有#前缀或被截断为transp
+        if (this.panelBgColor == null || 
+            "transparent".equalsIgnoreCase(this.panelBgColor) || 
+            "#transparent".equalsIgnoreCase(this.panelBgColor) ||
+            "transp".equalsIgnoreCase(this.panelBgColor) ||
+            "#transp".equalsIgnoreCase(this.panelBgColor) ||
+            !this.panelBgColor.startsWith("#") || this.panelBgColor.length() != 7) {
+            return "transparent";
         }
         // 计算最终透明度（毛玻璃透明度 + 0.1）
         double finalOpacity = Math.max(0.0, Math.min(1.0, this.glassOpacity + 0.1));
@@ -807,7 +819,9 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
         // 特殊处理transparent关键字，无论是否带有#前缀
         if (colorValue == null || colorValue.isEmpty() || 
             "transparent".equalsIgnoreCase(colorValue) || 
-            "#transparent".equalsIgnoreCase(colorValue)) {
+            "#transparent".equalsIgnoreCase(colorValue) ||
+            "transp".equalsIgnoreCase(colorValue) ||
+            "#transp".equalsIgnoreCase(colorValue)) {
             return "transparent"; // 直接返回transparent关键字
         }
         

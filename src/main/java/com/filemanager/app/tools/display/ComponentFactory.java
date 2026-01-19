@@ -978,7 +978,8 @@ public class ComponentFactory {
         
         // 为面板背景添加透明度，实现玻璃效果
         String panelBgColor = theme.getPanelBgColor();
-        if (panelBgColor.startsWith("#")) {
+        // 特殊处理transparent关键字，无论是否带有#前缀或被截断为transp
+        if (panelBgColor != null && !"transparent".equalsIgnoreCase(panelBgColor) && !"#transparent".equalsIgnoreCase(panelBgColor) && !"transp".equalsIgnoreCase(panelBgColor) && !"#transp".equalsIgnoreCase(panelBgColor) && panelBgColor.startsWith("#")) {
             // 将十六进制颜色转换为带透明度的RGBA颜色
             int alpha = (int) (theme.getGlassOpacity() * 255);
             String alphaHex = String.format("%02x", alpha);
