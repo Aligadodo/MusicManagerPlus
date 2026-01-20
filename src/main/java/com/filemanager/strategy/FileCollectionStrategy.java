@@ -421,19 +421,13 @@ public class FileCollectionStrategy extends IAppStrategy {
                 
                 if (!alreadyAdded) {
                     processedFiles++;
-                    // 创建变更记录
-                    ChangeRecord changeRecord = new ChangeRecord(
-                            record.getOriginalName(),
-                            record.getNewName(),
-                            record.getFileHandle(),
-                            true,
-                            targetDirPath.resolve(record.getFileHandle().getName()).toString(),
-                            OperationType.COLLECT,
-                            new HashMap<>(),
-                            ExecStatus.PENDING
-                    );
+                    // 直接修改原有的记录状态，而不是创建新的记录
+                    record.setChanged(true);
+                    record.setNewPath(targetDirPath.resolve(record.getFileHandle().getName()).toString());
+                    record.setOpType(OperationType.COLLECT);
+                    record.setStatus(ExecStatus.PENDING);
                     
-                    changeRecords.add(changeRecord);
+                    changeRecords.add(record);
                 }
             }
         }
@@ -556,19 +550,13 @@ public class FileCollectionStrategy extends IAppStrategy {
         for (ChangeRecord record : nonCollectionRecords) {
             for (File collectionDir : existingCollections) {
                 if (shouldAddToExistingCollection(record.getFileHandle(), collectionDir)) {
-                    // 创建添加到现有集合的变更记录
-                    ChangeRecord changeRecord = new ChangeRecord(
-                            record.getOriginalName(),
-                            record.getNewName(),
-                            record.getFileHandle(),
-                            true,
-                            collectionDir.toPath().resolve(record.getFileHandle().getName()).toString(),
-                            OperationType.COLLECT,
-                            new HashMap<>(),
-                            ExecStatus.PENDING
-                    );
+                    // 直接修改原有的记录状态，而不是创建新的记录
+                    record.setChanged(true);
+                    record.setNewPath(collectionDir.toPath().resolve(record.getFileHandle().getName()).toString());
+                    record.setOpType(OperationType.COLLECT);
+                    record.setStatus(ExecStatus.PENDING);
                     
-                    changeRecords.add(changeRecord);
+                    changeRecords.add(record);
                     break; // 一个文件只添加到一个集合
                 }
             }
