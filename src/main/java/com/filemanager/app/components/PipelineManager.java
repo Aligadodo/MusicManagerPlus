@@ -32,6 +32,8 @@ import java.util.HashMap;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -47,6 +49,7 @@ public class PipelineManager {
     private List<ChangeRecord> fullChangeList;
     private Task<?> currentTask;
     private MultiThreadTaskEstimator threadTaskEstimator;
+    private final AtomicLong fileSequenceGenerator = new AtomicLong(0);
 
     public PipelineManager(IAppController app, ThreadPoolManager threadPoolManager) {
         this.app = app;
@@ -110,7 +113,12 @@ public class PipelineManager {
                 if (isCancelled()) return null;
                 app.setRunningUI("▶ ▶ ▶ 扫描完成，共 " + initialFiles.size() + " 个文件。");
                 List<ChangeRecord> currentRecords = initialFiles.stream()
-                        .map(f -> new ChangeRecord(f.getName(), f.getName(), f, false, f.getAbsolutePath(), OperationType.NONE))
+                        .map(f -> {
+                            ChangeRecord record = new ChangeRecord(f.getName(), f.getName(), f, false, f.getAbsolutePath(), OperationType.NONE);
+                            // 为每个记录分配唯一id
+                            record.setId(fileSequenceGenerator.incrementAndGet());
+                            return record;
+                        })
                         .collect(Collectors.toList());
 
                 int total = currentRecords.size();
@@ -129,7 +137,13 @@ public class PipelineManager {
                         for (int i = 0; i < app.getPipelineStrategies().size(); i++) {
                             IAppStrategy strategy = app.getPipelineStrategies().get(i);
                             List<ChangeRecord> newRecordAfter = strategy.analyzeWithPreCheck(rec, currentRecords, app.getSourceRoots());
-                            newRecords.addAll(newRecordAfter);
+                            // 为新记录分配唯一id
+                            newRecordAfter.forEach(newRecord -> {
+                                if (newRecord.getId() == 0) {
+                                    newRecord.setId(fileSequenceGenerator.incrementAndGet());
+                                }
+                                newRecords.add(newRecord);
+                            });
                         }
                     } catch (Exception e) {
                         rec.setStatus(ExecStatus.ANALYZE_FAILED);
@@ -146,7 +160,16 @@ public class PipelineManager {
                 });
 
                 if (!newRecords.isEmpty()) {
-                    List<ChangeRecord> union = new ArrayList<>(newRecords);
+                    // 过滤掉重复的记录（通过id）
+                    Set<Long> existingIds = new HashSet<>();
+                    List<ChangeRecord> uniqueNewRecords = newRecords.stream()
+                            .filter(record -> {
+                                long id = record.getId();
+                                return id != 0 && existingIds.add(id);
+                            })
+                            .collect(Collectors.toList());
+                    
+                    List<ChangeRecord> union = new ArrayList<>(uniqueNewRecords);
                     union.addAll(currentRecords);
                     return union;
                 }

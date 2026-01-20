@@ -40,6 +40,8 @@ public class ChangeRecord {
     private boolean isDeleteOrMove = false;
     // 选择状态
     private boolean selected = false;
+    // 唯一标识符
+    private long id;
 
     // 链式处理中的中间状态文件（如果不为空，说明这是上一步产生的临时状态）
     private File intermediateFile;
@@ -63,6 +65,10 @@ public class ChangeRecord {
         this.extraParams = params;
         this.status = status;
     }
+
+    // 手动添加id的getter和setter方法
+    public long getId() { return this.id; }
+    public void setId(long id) { this.id = id; }
     
 
     // 获取当前应该处理的“源”文件（可能是原始文件，也可能是链式处理中上一步生成的文件）

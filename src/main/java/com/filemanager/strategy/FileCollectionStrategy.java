@@ -309,16 +309,19 @@ public class FileCollectionStrategy extends IAppStrategy {
         
         // 检查是否已经处理过这个父目录
         if (parentDirClusters.containsKey(parentDir)) {
+            app.log("ℹ️ 文件归类策略：跳过，父目录已处理 " + parentDir.getAbsolutePath());
             return Collections.emptyList();
         }
         
         // 检查当前文件是否已经在合集文件夹中
         if (pSkipCollections && isInCollectionFolder(currentFile)) {
+            app.log("ℹ️ 文件归类策略：跳过，文件已在合集文件夹中 " + currentFile.getAbsolutePath());
             return Collections.emptyList();
         }
         
         // 检查当前文件是否本身就是合集文件夹
         if (isCollectionFolder(currentFile)) {
+            app.log("ℹ️ 文件归类策略：跳过，文件本身是合集文件夹 " + currentFile.getAbsolutePath());
             return Collections.emptyList();
         }
         
@@ -334,15 +337,24 @@ public class FileCollectionStrategy extends IAppStrategy {
                 })
                 .collect(Collectors.toList());
         
-        // 如果目录下的文件数量不足2个，跳过
+        app.log("📁 文件归类策略：在目录 " + parentDir.getAbsolutePath() + " 中找到 " + dirRecords.size() + " 个符合条件的文件");
+        
+        // 如果目录下的文件数量不足2个，但有现有集合，则只执行添加到现有集合的逻辑
         if (dirRecords.size() < 2) {
+            // 仍然尝试将文件添加到现有集合中
+            app.log("📁 文件归类策略：文件数量不足2个，尝试添加到现有集合中");
+            List<ChangeRecord> changes = addFilesToExistingCollections(inputRecords, rootDirs, parentDir);
+            
             // 标记此目录已处理
             parentDirClusters.put(parentDir, Collections.emptyMap());
+            
+            app.log("📁 文件归类策略：处理完成，已标记目录为已处理 " + parentDir.getAbsolutePath());
             return Collections.emptyList();
         }
         
         // 检查目录中是否大部分文件已经属于同一合集，如果是则不再执行合并
         if (isMostlySingleCollection(dirRecords)) {
+            app.log("📁 文件归类策略：目录中大部分文件已经属于同一合集，跳过处理 " + parentDir.getAbsolutePath());
             // 标记此目录已处理
             parentDirClusters.put(parentDir, Collections.emptyMap());
             return Collections.emptyList();
@@ -350,26 +362,46 @@ public class FileCollectionStrategy extends IAppStrategy {
         
         // 检查父目录是否已经是合集文件夹
         if (isCollectionFolder(parentDir)) {
+            app.log("📁 文件归类策略：父目录已经是合集文件夹，跳过处理 " + parentDir.getAbsolutePath());
             // 标记此目录已处理
             parentDirClusters.put(parentDir, Collections.emptyMap());
             return Collections.emptyList();
         }
         
         // 对目录下的文件进行聚类
+        app.log("📁 文件归类策略：开始对目录 " + parentDir.getAbsolutePath() + " 下的文件进行聚类");
         Map<String, List<ChangeRecord>> clusters = clusterSimilarRecords(dirRecords);
+        
+        app.log("📁 文件归类策略：聚类完成，共生成 " + clusters.size() + " 个集群");
         
         // 标记此目录已处理
         parentDirClusters.put(parentDir, clusters);
         
         // 生成变更记录
         List<ChangeRecord> changeRecords = new ArrayList<>();
+        
+        // 1. 首先尝试将文件添加到现有集合中
+        app.log("📁 文件归类策略：尝试将文件添加到现有集合中");
+        List<ChangeRecord> existingCollectionChanges = addFilesToExistingCollections(inputRecords, rootDirs, parentDir);
+        changeRecords.addAll(existingCollectionChanges);
+        app.log("📁 文件归类策略：成功将 " + existingCollectionChanges.size() + " 个文件添加到现有集合中");
+        
+        // 2. 然后处理新的集合创建
+        app.log("📁 文件归类策略：开始处理新的集合创建");
+        int validClusters = 0;
+        int processedFiles = 0;
+        
         for (Map.Entry<String, List<ChangeRecord>> entry : clusters.entrySet()) {
             List<ChangeRecord> clusterRecords = entry.getValue();
             
             // 应用约束条件检查
             if (!isClusterValid(clusterRecords)) {
+                app.log("⚠️ 文件归类策略：集群无效，跳过处理 " + entry.getKey());
                 continue;
             }
+            
+            validClusters++;
+            app.log("📁 文件归类策略：处理集群 " + entry.getKey() + "，包含 " + clusterRecords.size() + " 个文件");
             
             // 提取合集名称
             List<File> clusterFiles = clusterRecords.stream()
@@ -379,26 +411,36 @@ public class FileCollectionStrategy extends IAppStrategy {
             
             // 创建目标合集文件夹路径
             Path targetDirPath = parentDir.toPath().resolve(collectionName + pCollectionSuffix);
+            app.log("📁 文件归类策略：为集群创建合集文件夹 " + targetDirPath.getFileName());
             
             // 为集群中的每个文件生成变更记录
             for (ChangeRecord record : clusterRecords) {
-                // 创建变更记录
-                ChangeRecord changeRecord = new ChangeRecord(
-                        record.getOriginalName(),
-                        record.getNewName(),
-                        record.getFileHandle(),
-                        true,
-                        targetDirPath.resolve(record.getFileHandle().getName()).toString(),
-                        OperationType.COLLECT,
-                        new HashMap<>(),
-                        ExecStatus.PENDING
-                );
+                // 检查该文件是否已经在现有集合中（避免重复处理）
+                boolean alreadyAdded = existingCollectionChanges.stream()
+                        .anyMatch(change -> change.getOriginalName().equals(record.getOriginalName()));
                 
-                changeRecords.add(changeRecord);
+                if (!alreadyAdded) {
+                    processedFiles++;
+                    // 创建变更记录
+                    ChangeRecord changeRecord = new ChangeRecord(
+                            record.getOriginalName(),
+                            record.getNewName(),
+                            record.getFileHandle(),
+                            true,
+                            targetDirPath.resolve(record.getFileHandle().getName()).toString(),
+                            OperationType.COLLECT,
+                            new HashMap<>(),
+                            ExecStatus.PENDING
+                    );
+                    
+                    changeRecords.add(changeRecord);
+                }
             }
         }
         
-        return changeRecords;
+        app.log("📁 文件归类策略：处理完成，共生成 " + validClusters + " 个有效集群，处理了 " + processedFiles + " 个文件");
+        
+        return Collections.emptyList();
     }
     
     /**
@@ -465,6 +507,74 @@ public class FileCollectionStrategy extends IAppStrategy {
                name.endsWith("系列") ||
                name.endsWith("Collection") ||
                name.endsWith("Series");
+    }
+    
+    /**
+     * 检查文件是否应该被添加到现有集合中
+     */
+    private boolean shouldAddToExistingCollection(File file, File collectionDir) {
+        // 检查文件是否与集合名称相似
+        String fileName = file.getName();
+        String collectionName = collectionDir.getName().replace(pCollectionSuffix, "");
+        
+        // 使用calculateSimilarity方法检查相似度
+        double similarity = calculateSimilarity(fileName, collectionName);
+        
+        // 如果相似度高于阈值，应该添加到现有集合
+        return similarity >= pThreshold * 0.9; // 使用略微降低的阈值
+    }
+    
+    /**
+     * 为目录中的现有集合添加新文件
+     */
+    private List<ChangeRecord> addFilesToExistingCollections(List<ChangeRecord> inputRecords, List<File> rootDirs, File parentDir) {
+        List<ChangeRecord> changeRecords = new ArrayList<>();
+        
+        // 获取父目录下的所有现有集合文件夹
+        List<File> existingCollections = Arrays.stream(parentDir.listFiles(File::isDirectory))
+                .filter(this::isCollectionFolder)
+                .collect(Collectors.toList());
+        
+        // 如果没有现有集合，直接返回
+        if (existingCollections.isEmpty()) {
+            return changeRecords;
+        }
+        
+        // 获取父目录下的所有非集合文件
+        List<ChangeRecord> nonCollectionRecords = inputRecords.stream()
+                .filter(record -> {
+                    File recordFile = record.getFileHandle();
+                    File recordParentDir = recordFile.getParentFile();
+                    return recordParentDir != null && recordParentDir.equals(parentDir) && 
+                           !isCollectionFolder(recordFile) &&
+                           !isInCollectionFolder(recordFile) &&
+                           isFileTypeMatch(recordFile);
+                })
+                .collect(Collectors.toList());
+        
+        // 为每个非集合文件检查是否应该添加到现有集合
+        for (ChangeRecord record : nonCollectionRecords) {
+            for (File collectionDir : existingCollections) {
+                if (shouldAddToExistingCollection(record.getFileHandle(), collectionDir)) {
+                    // 创建添加到现有集合的变更记录
+                    ChangeRecord changeRecord = new ChangeRecord(
+                            record.getOriginalName(),
+                            record.getNewName(),
+                            record.getFileHandle(),
+                            true,
+                            collectionDir.toPath().resolve(record.getFileHandle().getName()).toString(),
+                            OperationType.COLLECT,
+                            new HashMap<>(),
+                            ExecStatus.PENDING
+                    );
+                    
+                    changeRecords.add(changeRecord);
+                    break; // 一个文件只添加到一个集合
+                }
+            }
+        }
+        
+        return changeRecords;
     }
     
     /**
@@ -616,17 +726,62 @@ public class FileCollectionStrategy extends IAppStrategy {
      * 计算两个字符串的相似度 (基于 Levenshtein 距离)
      */
     private double calculateSimilarity(String s1, String s2) {
+        // 使用更通用的策略处理各种类型的序号和特殊符号
+        String processed1 = processSpecialSymbolsAndNumbers(s1);
+        String processed2 = processSpecialSymbolsAndNumbers(s2);
+        
+        // 计算基本相似度
+        double baseSimilarity = calculateBasicSimilarity(processed1, processed2);
+        
+        // 额外检查：如果文件名包含相同的标题和不同的数字序号，提高相似度
+        if (hasSameTitleDifferentNumber(s1, s2)) {
+            // 增加相似度权重，确保序号的文件能被识别为系列
+            baseSimilarity = Math.max(baseSimilarity, 0.9);
+        }
+        
+        return baseSimilarity;
+    }
+    
+    /**
+     * 处理特殊符号和序号，使用更通用的策略
+     */
+    private String processSpecialSymbolsAndNumbers(String input) {
+        String result = input;
+        
+        // 1. 处理各种类型的序号
+        // 阿拉伯数字（如 1, 2, 3, 01, 02, 03 等）
+        result = result.replaceAll("\\b\\d+\\b", "__NUMBER__");
+        
+        // 2. 处理中文序号
+        // 中文数字（如 一, 二, 三, 十, 百 等）
+        result = result.replaceAll("[一二三四五六七八九十百千万壹贰叁肆伍陆柒捌玖拾佰仟]", "__CHINESE_NUM__");
+        
+        // 3. 处理特殊符号序号
+        // 圆形序号（如 ①, ②, ③ 等）
+        result = result.replaceAll("[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳]", "__CIRCLE_NUM__");
+        
+        // 4. 处理其他常见的序号格式
+        // 字母序号（如 A, B, C, a, b, c 等）
+        result = result.replaceAll("\\b[A-Za-z]\\b", "__LETTER__");
+        
+        // 5. 处理括号和特殊符号
+        // 去除无意义的括号和特殊符号
+        result = result.replaceAll("[\\[\\]\\(\\)\\{\\}\\<>\\《\\》\\【\\】]", "");
+        
+        return result;
+    }
+    
+    /**
+     * 计算基本相似度，不包含特殊情况的处理
+     */
+    private double calculateBasicSimilarity(String s1, String s2) {
         // 优化：改进噪音字符过滤，保留更多有意义的信息
         // 保留中文序号和括号内容，只去除真正的噪音字符
-        String regex = "[\\s\\[\\]\\.\\,\\!\\?\\;\\:\\'\\\"\\`\\~\\|\\=\\+\\\\\\/\\#\\$\\%\\^\\&\\*\\_]";
-        
-        // 特别处理中文序号（①, ②, ③等），将它们替换为统一标记以便比较
-        String processed1 = s1.replaceAll("[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳]", "__NUMBER__");
-        String processed2 = s2.replaceAll("[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳]", "__NUMBER__");
+        String regex = "[\\s\\[\\]\\.\\,\\!\\?\\;\\:\\'\"\\`\\~\\|\\=\\+\\\\\\/\\#\\$\\%\\^\\&\\*\\_]";
         
         // 去除噪音字符
-        String str1 = processed1.replaceAll(regex, "");
-        String str2 = processed2.replaceAll(regex, "");
+        String str1 = s1.replaceAll(regex, "");
+        String str2 = s2.replaceAll(regex, "");
         
         // 如果处理后的字符串为空，使用原始字符串
         if (str1.isEmpty() || str2.isEmpty()) {
@@ -638,11 +793,6 @@ public class FileCollectionStrategy extends IAppStrategy {
         int distance = getLevenshteinDistance(str1, str2);
         int maxLen = Math.max(str1.length(), str2.length());
         double baseSimilarity = (maxLen == 0) ? 1.0 : 1.0 - ((double) distance / maxLen);
-        
-        // 额外检查：如果文件名包含相同的标题和不同的数字序号，提高相似度
-        if (hasSameTitleDifferentNumber(s1, s2)) {
-            baseSimilarity = Math.max(baseSimilarity, 0.9);
-        }
         
         return baseSimilarity;
     }
@@ -671,19 +821,33 @@ public class FileCollectionStrategy extends IAppStrategy {
      * 提取文件名中的标题部分（去除序号和格式信息）
      */
     private String extractTitle(String fileName) {
-        // 去除结尾的序号和格式信息
-        String title = fileName.replaceAll("[\\\\d]+[\\\\s\\\\-]*$|[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳][\\\\s\\\\-]*$|[\\\\[\\\\(].*[\\\\]\\\\)][\\\\s\\\\-]*$", "");
-        // 去除噪音字符
-        title = title.replaceAll("[\\\\s\\\\[\\\\]\\\\.\\\\,\\\\!\\\\?\\\\;\\\\:\\\\'\\\\\"\\\\`\\\\~\\\\|\\\\=\\\\+\\\\\\\\\\\\\\/\\\\#\\\\$\\\\%\\\\^\\\\&\\\\*\\\\_]", "");
+        // 提取文件名中的标题部分（去除序号和格式信息）
+        String title = fileName;
+        
+        // 1. 去除阿拉伯数字序号
+        title = title.replaceAll("\\b\\d+\\b", "");
+        
+        // 2. 去除中文数字序号
+        title = title.replaceAll("[一二三四五六七八九十百千万壹贰叁肆伍陆柒捌玖拾佰仟]", "");
+        
+        // 3. 去除圆形序号
+        title = title.replaceAll("[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳]", "");
+        
+        // 4. 去除字母序号
+        title = title.replaceAll("\\b[A-Za-z]\\b", "");
+        
+        // 5. 去除括号和噪音字符
+        title = title.replaceAll("[\\s\\[\\]\\(\\)\\{\\}\\<>\\《\\》\\【\\】\\.\\,\\!\\?\\;\\:\'\"\\`\\~\\|\\=\\+\\\\\\/\\#\\$\\%\\^\\&\\*\\_]", "");
+        
         return title;
     }
     
     /**
-     * 提取文件名中的数字部分
+     * 提取文件名中的序号部分（支持多种类型）
      */
     private String extractNumber(String fileName) {
-        // 提取数字序号
-            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("([\\\\d]+|[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳])");
+        // 提取各种类型的序号
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("(\\b\\d+\\b|[一二三四五六七八九十百千万壹贰叁肆伍陆柒捌玖拾佰仟]|[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳]|\\b[A-Za-z]\\b)");
         java.util.regex.Matcher matcher = pattern.matcher(fileName);
         if (matcher.find()) {
             return matcher.group(1);
@@ -735,8 +899,8 @@ public class FileCollectionStrategy extends IAppStrategy {
                 String firstFileName = fileNames.get(0);
                 
                 // 去除特殊字符和噪音
-                String regex = "[\\\\s\\\\[\\\\]《》\\\\-\\\\(\\\\)\\\\{\\\\}\\-.\\,\\!\\?\\;\\:\\'\\\"\\`\\~\\|\\=\\+\\\\\\\\\\/\\#\\$\\%\\^\\&\\*\\_]";
-            String cleanName = firstFileName.replaceAll(regex, " ").trim();
+                String regex = "[\\s\\[\\]《》\\-\\(\\)\\{\\}\\-.\\,\\!\\?\\;\\:\'\"\\`\\~\\|\\=\\+\\\\\\/\\#\\$\\%\\^\\&\\*\\_]";
+                String cleanName = firstFileName.replaceAll(regex, " ").trim();
                 
                 // 尝试提取空格前的部分（通常是系列名或作者名）
                 if (cleanName.contains(" ")) {
@@ -770,7 +934,10 @@ public class FileCollectionStrategy extends IAppStrategy {
         List<String> processedNames = new ArrayList<>();
         for (String name : fileNames) {
             // 去除序号和版本信息
-            String processed = name.replaceAll("[\\\\d]+[\\\\s\\\\-]*$|[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳][\\\\s\\\\-]*$|[\\\\[\\\\(].*[\\\\]\\\\)][\\\\s\\\\-]*$", "");
+            String processed = name.replaceAll("\\b\\d+\\b", "");
+            processed = processed.replaceAll("[一二三四五六七八九十百千万壹贰叁肆伍陆柒捌玖拾佰仟]", "");
+            processed = processed.replaceAll("[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳]", "");
+            processed = processed.replaceAll("\\b[A-Za-z]\\b", "");
             processedNames.add(processed);
         }
         
@@ -841,7 +1008,7 @@ public class FileCollectionStrategy extends IAppStrategy {
             String cleaned = name.replaceAll("\\[\\w+\\]$|", "").trim();
             
             // 清理末尾的特殊字符（使用更安全的正则表达式）
-            cleaned = cleaned.replaceAll("[\\s\\-\\_\\.\\,\\!\\?\\;\\:\\'\\\"\\`\\~\\|\\=\\+\\\\\\/\\#\\$\\%\\^\\&\\*\\(\\)\\{\\}\\>\\<\\《\\》]+$", "");
+            cleaned = cleaned.replaceAll("[\\s\\-\\_\\.\\,\\!\\?\\;\\:\'\"\\`\\~\\|\\=\\+\\\\\\/\\#\\$\\%\\^\\&\\*\\(\\)\\{\\}\\>\\<\\《\\》]+$", "");
             
             return cleaned;
         } catch (Exception e) {

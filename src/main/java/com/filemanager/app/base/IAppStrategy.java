@@ -79,7 +79,13 @@ public abstract class IAppStrategy implements IAutoReloadAble{
         return analyze(currentRecord, inputRecords, rootDirs);
     }
 
-    // 核心分析逻辑
+    /**
+     * 分析当前记录与输入记录，返回变更记录列表
+     * @param currentRecord 当前记录
+     * @param inputRecords 输入记录列表 [扫描范围内的全量文件]
+     * @param rootDirs 根目录列表
+     * @return 新增记录列表 [如果只是对已有文件进行操作，而不是生成新的文件，返回空列表即可]
+     */
     public abstract List<ChangeRecord> analyze(ChangeRecord currentRecord, List<ChangeRecord> inputRecords, List<File> rootDirs);
 
     // 核心执行逻辑
