@@ -15,6 +15,7 @@ public enum OperationType {
     ALBUM_RENAME("专辑重命名", "根据元数据对整个专辑文件夹进行重命名"),
     CUE_RENAME("CUE重命名", "修改CUE索引文件中的文件名"),
     MOVE("移动", "将文件移动到新的目录结构中"),
+    COLLECT("归类", "基于文件名相似度将文件/文件夹归类到合集文件夹中"),
     CONVERT("转换", "转换文件编码或多媒体格式（如FLAC转MP3）"),
     SCRAPER("刮削", "从互联网获取并更新文件的元数据信息"),
     SPLIT("分割", "将整轨文件（如APE/FLAC）按CUE索引切分为单曲"),
