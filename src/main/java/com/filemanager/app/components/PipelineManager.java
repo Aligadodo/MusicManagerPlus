@@ -1,11 +1,11 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.app.components;
 
@@ -46,10 +46,10 @@ public class PipelineManager {
     private final AtomicLong lastRefresh;
     private final AtomicBoolean isTaskRunning;
     private final Map<String, MultiThreadTaskEstimator> localEstimatorMap = new HashMap<>();
+    private final AtomicLong fileSequenceGenerator = new AtomicLong(0);
     private List<ChangeRecord> fullChangeList;
     private Task<?> currentTask;
     private MultiThreadTaskEstimator threadTaskEstimator;
-    private final AtomicLong fileSequenceGenerator = new AtomicLong(0);
 
     public PipelineManager(IAppController app, ThreadPoolManager threadPoolManager) {
         this.app = app;
@@ -126,14 +126,14 @@ public class PipelineManager {
                 threadTaskEstimator = new MultiThreadTaskEstimator(total, Math.max(Math.min(50, total / 20), 1));
                 threadTaskEstimator.start();
                 ConcurrentLinkedDeque<ChangeRecord> newRecords = new ConcurrentLinkedDeque<>();
-                    // 过滤掉重复的记录（通过id）
-                    Set<Long> existingIds = new HashSet<>();
-                    
-                    // 先添加currentRecords中的id到existingIds，确保不与新记录重复
-                    for (ChangeRecord record : currentRecords) {
-                        existingIds.add(record.getId());
-                    }
-                    
+                // 过滤掉重复的记录（通过id）
+                Set<Long> existingIds = new HashSet<>();
+
+                // 先添加currentRecords中的id到existingIds，确保不与新记录重复
+                for (ChangeRecord record : currentRecords) {
+                    existingIds.add(record.getId());
+                }
+
                 currentRecords.parallelStream().forEach(rec -> {
                     try {
                         int curr = processed.incrementAndGet();
@@ -170,7 +170,7 @@ public class PipelineManager {
                 });
 
                 if (!newRecords.isEmpty()) {
-                     currentRecords.addAll(newRecords);
+                    currentRecords.addAll(newRecords);
                 }
                 return currentRecords;
             }
@@ -214,7 +214,7 @@ public class PipelineManager {
         handleTaskLifecycle(task);
         new Thread(task).start();
     }
-    
+
     /**
      * 执行指定的任务列表
      */
@@ -227,7 +227,7 @@ public class PipelineManager {
         List<ChangeRecord> pendingRecords = targetRecords.stream()
                 .filter(record -> record.isChanged() && record.getOpType() != OperationType.NONE && record.getStatus() == ExecStatus.PENDING)
                 .collect(Collectors.toList());
-        
+
         if (pendingRecords.isEmpty()) {
             return;
         }
@@ -243,7 +243,7 @@ public class PipelineManager {
         handleTaskLifecycle(task);
         new Thread(task).start();
     }
-    
+
     /**
      * 执行单个任务
      */
@@ -251,7 +251,7 @@ public class PipelineManager {
         if (record == null) {
             return;
         }
-        
+
         runPipelineExecution(Collections.singletonList(record));
     }
 
@@ -283,10 +283,10 @@ public class PipelineManager {
                         && record.getOpType() != OperationType.NONE
                         && record.getStatus() == ExecStatus.PENDING)
                 .collect(Collectors.toList());
-        
+
         return createExecutionTask(todos);
     }
-    
+
     private Task<Void> createExecutionTask(List<ChangeRecord> todos) {
         return new Task<Void>() {
             @Override
