@@ -126,7 +126,14 @@ public class PipelineManager {
                 threadTaskEstimator = new MultiThreadTaskEstimator(total, Math.max(Math.min(50, total / 20), 1));
                 threadTaskEstimator.start();
                 ConcurrentLinkedDeque<ChangeRecord> newRecords = new ConcurrentLinkedDeque<>();
-
+                    // 过滤掉重复的记录（通过id）
+                    Set<Long> existingIds = new HashSet<>();
+                    
+                    // 先添加currentRecords中的id到existingIds，确保不与新记录重复
+                    for (ChangeRecord record : currentRecords) {
+                        existingIds.add(record.getId());
+                    }
+                    
                 currentRecords.parallelStream().forEach(rec -> {
                     try {
                         int curr = processed.incrementAndGet();
@@ -138,7 +145,10 @@ public class PipelineManager {
                             IAppStrategy strategy = app.getPipelineStrategies().get(i);
                             List<ChangeRecord> newRecordAfter = strategy.analyzeWithPreCheck(rec, currentRecords, app.getSourceRoots());
                             // 为新记录分配唯一id
-                            newRecordAfter.forEach(newRecord -> {
+                            newRecordAfter.stream().filter(record -> {
+                                long id = record.getId();
+                                return id == 0 || !existingIds.contains(id);
+                            }).forEach(newRecord -> {
                                 if (newRecord.getId() == 0) {
                                     newRecord.setId(fileSequenceGenerator.incrementAndGet());
                                 }
@@ -160,18 +170,7 @@ public class PipelineManager {
                 });
 
                 if (!newRecords.isEmpty()) {
-                    // 过滤掉重复的记录（通过id）
-                    Set<Long> existingIds = new HashSet<>();
-                    List<ChangeRecord> uniqueNewRecords = newRecords.stream()
-                            .filter(record -> {
-                                long id = record.getId();
-                                return id != 0 && existingIds.add(id);
-                            })
-                            .collect(Collectors.toList());
-                    
-                    List<ChangeRecord> union = new ArrayList<>(uniqueNewRecords);
-                    union.addAll(currentRecords);
-                    return union;
+                     currentRecords.addAll(newRecords);
                 }
                 return currentRecords;
             }

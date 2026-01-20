@@ -26,7 +26,6 @@ import javafx.scene.control.TitledPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.layout.HBox;
 import javafx.geometry.Insets;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -39,12 +38,46 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
+ * 合集命名风格枚举
+ */
+enum CollectionNamingStyle {
+    DEFAULT("默认风格", "基于最长公共前缀"),
+    REMOVE_DIFFERENCES("去除差异词", "去除文件名中的差异部分"),
+    PRESERVE_EXTENSIONS("保留扩展名", "保留文件类型等限定词"),
+    SEQUENCE_INFO("序列信息", "包含最大序列数和当前数量");
+    
+    private final String name;
+    private final String description;
+    
+    CollectionNamingStyle(String name, String description) {
+        this.name = name;
+        this.description = description;
+    }
+    
+    public String getName() {
+        return name;
+    }
+    
+    public String getDescription() {
+        return description;
+    }
+    
+    @Override
+    public String toString() {
+        return name;
+    }
+}
+
+/**
  * 文件归类策略：基于文件名相似度将文件/文件夹归类到合集文件夹中
  */
 public class FileCollectionStrategy extends IAppStrategy {
     private final Slider slSimilarityThreshold;
     private final TextField txtCollectionSuffix;
     private final JFXComboBox<ScanTarget> cbTargetType;
+    private final JFXComboBox<CollectionNamingStyle> cbNamingStyle;
+    private final CheckBox chkPreserveFileTypes;
+    private final CheckBox chkAddSequenceInfo;
     private final Spinner<Integer> spMinFiles;
     private final Spinner<Integer> spMinFileNameLength;
     private final TextField txtMustContainKeywords;
@@ -57,6 +90,9 @@ public class FileCollectionStrategy extends IAppStrategy {
     private double pThreshold;
     private String pCollectionSuffix;
     private ScanTarget pTargetType;
+    private CollectionNamingStyle pNamingStyle;
+    private boolean pPreserveFileTypes;
+    private boolean pAddSequenceInfo;
     private int pMinFiles;
     private int pMinFileNameLength;
     private List<String> pMustContainKeywords;
@@ -83,6 +119,18 @@ public class FileCollectionStrategy extends IAppStrategy {
         // 目标类型选择
         cbTargetType = new JFXComboBox<>(FXCollections.observableArrayList(ScanTarget.values()));
         cbTargetType.setValue(ScanTarget.FOLDERS_ONLY); // 默认只对文件夹生效
+        
+        // 命名风格选择
+        cbNamingStyle = new JFXComboBox<>(FXCollections.observableArrayList(CollectionNamingStyle.values()));
+        cbNamingStyle.setValue(CollectionNamingStyle.DEFAULT); // 默认使用默认风格
+        
+        // 保留文件类型
+        chkPreserveFileTypes = new CheckBox("保留文件类型等限定词");
+        chkPreserveFileTypes.setSelected(true); // 默认开启
+        
+        // 添加序列信息
+        chkAddSequenceInfo = new CheckBox("添加序列信息【最大数-当前数】");
+        chkAddSequenceInfo.setSelected(true); // 默认开启
         
         // 系列文件最少数量
         spMinFiles = new Spinner<>(2, 50, 2);
@@ -144,7 +192,10 @@ public class FileCollectionStrategy extends IAppStrategy {
         basicBox.getChildren().addAll(
                 StyleFactory.createParamPairLine("相似度阈值 (0.0-1.0):", slSimilarityThreshold),
                 StyleFactory.createParamPairLine("合集文件夹格式:", txtCollectionSuffix),
-                StyleFactory.createParamPairLine("目标类型:", cbTargetType)
+                StyleFactory.createParamPairLine("目标类型:", cbTargetType),
+                StyleFactory.createParamPairLine("命名风格:", cbNamingStyle),
+                chkPreserveFileTypes,
+                chkAddSequenceInfo
         );
         TitledPane basicPane = new TitledPane("基础设置", basicBox);
         basicPane.setCollapsible(false);
@@ -193,6 +244,9 @@ public class FileCollectionStrategy extends IAppStrategy {
         pThreshold = slSimilarityThreshold.getValue();
         pCollectionSuffix = txtCollectionSuffix.getText();
         pTargetType = cbTargetType.getValue();
+        pNamingStyle = cbNamingStyle.getValue();
+        pPreserveFileTypes = chkPreserveFileTypes.isSelected();
+        pAddSequenceInfo = chkAddSequenceInfo.isSelected();
         pMinFiles = spMinFiles.getValue();
         pMinFileNameLength = spMinFileNameLength.getValue();
         
@@ -249,6 +303,9 @@ public class FileCollectionStrategy extends IAppStrategy {
         props.setProperty("fcs_threshold", String.valueOf(slSimilarityThreshold.getValue()));
         props.setProperty("fcs_suffix", txtCollectionSuffix.getText());
         props.setProperty("fcs_target_type", cbTargetType.getValue().name());
+        props.setProperty("fcs_naming_style", cbNamingStyle.getValue().name());
+        props.setProperty("fcs_preserve_file_types", String.valueOf(chkPreserveFileTypes.isSelected()));
+        props.setProperty("fcs_add_sequence_info", String.valueOf(chkAddSequenceInfo.isSelected()));
         props.setProperty("fcs_min_files", String.valueOf(spMinFiles.getValue()));
         props.setProperty("fcs_min_filename_length", String.valueOf(spMinFileNameLength.getValue()));
         props.setProperty("fcs_must_contain", txtMustContainKeywords.getText());
@@ -268,6 +325,15 @@ public class FileCollectionStrategy extends IAppStrategy {
         }
         if (props.containsKey("fcs_target_type")) {
             cbTargetType.setValue(ScanTarget.valueOf(props.getProperty("fcs_target_type")));
+        }
+        if (props.containsKey("fcs_naming_style")) {
+            cbNamingStyle.setValue(CollectionNamingStyle.valueOf(props.getProperty("fcs_naming_style")));
+        }
+        if (props.containsKey("fcs_preserve_file_types")) {
+            chkPreserveFileTypes.setSelected(Boolean.parseBoolean(props.getProperty("fcs_preserve_file_types")));
+        }
+        if (props.containsKey("fcs_add_sequence_info")) {
+            chkAddSequenceInfo.setSelected(Boolean.parseBoolean(props.getProperty("fcs_add_sequence_info")));
         }
         if (props.containsKey("fcs_min_files")) {
             spMinFiles.getValueFactory().setValue(Integer.parseInt(props.getProperty("fcs_min_files")));
@@ -349,7 +415,7 @@ public class FileCollectionStrategy extends IAppStrategy {
             parentDirClusters.put(parentDir, Collections.emptyMap());
             
             app.log("📁 文件归类策略：处理完成，已标记目录为已处理 " + parentDir.getAbsolutePath());
-            return Collections.emptyList();
+            return changes;
         }
         
         // 检查目录中是否大部分文件已经属于同一合集，如果是则不再执行合并
@@ -434,7 +500,7 @@ public class FileCollectionStrategy extends IAppStrategy {
         
         app.log("📁 文件归类策略：处理完成，共生成 " + validClusters + " 个有效集群，处理了 " + processedFiles + " 个文件");
         
-        return Collections.emptyList();
+        return changeRecords;
     }
     
     /**
@@ -873,6 +939,34 @@ public class FileCollectionStrategy extends IAppStrategy {
                 .map(File::getName)
                 .collect(Collectors.toList());
         
+        // 根据选择的命名风格生成合集名称
+        String collectionName;
+        switch (pNamingStyle) {
+            case REMOVE_DIFFERENCES:
+                collectionName = extractNameByRemovingDifferences(fileNames);
+                break;
+            case PRESERVE_EXTENSIONS:
+                collectionName = extractNameWithExtensions(fileNames);
+                break;
+            case SEQUENCE_INFO:
+                collectionName = extractNameWithSequenceInfo(fileNames);
+                break;
+            default:
+                // 默认风格：基于最长公共前缀
+                collectionName = extractNameByCommonPrefix(fileNames);
+                break;
+        }
+        
+        // 清理合集名称
+        collectionName = cleanCollectionName(collectionName);
+        
+        return collectionName;
+    }
+    
+    /**
+     * 基于最长公共前缀提取合集名称（默认风格）
+     */
+    private String extractNameByCommonPrefix(List<String> fileNames) {
         // 找出最长公共前缀
         String commonPrefix = findLongestCommonPrefix(fileNames);
         
@@ -908,6 +1002,211 @@ public class FileCollectionStrategy extends IAppStrategy {
         }
         
         return commonPrefix;
+    }
+    
+    /**
+     * 通过去除差异词提取合集名称
+     */
+    private String extractNameByRemovingDifferences(List<String> fileNames) {
+        if (fileNames.isEmpty()) {
+            return "未命名";
+        }
+        
+        // 1. 提取所有文件名的共同部分，去除差异部分
+        // 首先处理每个文件名，去除序号和差异词
+        List<String> processedNames = new ArrayList<>();
+        for (String fileName : fileNames) {
+            // 去除序号（如 ①、②、01、02 等）
+            String processed = removeSequences(fileName);
+            // 去除括号中的内容（可能是差异词）
+            processed = removeBracketedContent(processed);
+            processedNames.add(processed);
+        }
+        
+        // 找出最长公共前缀
+        String commonPrefix = findLongestCommonPrefix(processedNames);
+        
+        // 2. 如果公共前缀太短，尝试从第一个文件名中提取基础部分
+        if (commonPrefix.length() < 5) {
+            // 从第一个文件名中提取基础部分
+            String firstFileName = fileNames.get(0);
+            commonPrefix = extractBasePart(firstFileName);
+        }
+        
+        // 3. 保留文件类型等限定词
+        if (pPreserveFileTypes) {
+            String fileType = extractFileType(fileNames.get(0));
+            if (!fileType.isEmpty()) {
+                commonPrefix += " " + fileType;
+            }
+        }
+        
+        return commonPrefix;
+    }
+    
+    /**
+     * 提取包含文件类型等限定词的合集名称
+     */
+    private String extractNameWithExtensions(List<String> fileNames) {
+        if (fileNames.isEmpty()) {
+            return "未命名";
+        }
+        
+        // 1. 提取基础名称
+        String baseName = extractNameByCommonPrefix(fileNames);
+        
+        // 2. 提取并保留文件类型等限定词
+        String fileType = extractFileType(fileNames.get(0));
+        if (!fileType.isEmpty()) {
+            baseName += " " + fileType;
+        }
+        
+        return baseName;
+    }
+    
+    /**
+     * 提取包含序列信息的合集名称
+     */
+    private String extractNameWithSequenceInfo(List<String> fileNames) {
+        if (fileNames.isEmpty()) {
+            return "未命名";
+        }
+        
+        // 1. 提取基础名称
+        String baseName = extractNameByRemovingDifferences(fileNames);
+        
+        // 2. 提取序列信息
+        if (pAddSequenceInfo) {
+            int maxSequence = findMaxSequence(fileNames);
+            int currentCount = fileNames.size();
+            if (maxSequence > 0) {
+                baseName += " 【" + maxSequence + "-" + currentCount + "】";
+            }
+        }
+        
+        return baseName;
+    }
+    
+    /**
+     * 去除文件名中的序号
+     */
+    private String removeSequences(String fileName) {
+        String result = fileName;
+        // 去除阿拉伯数字序号（如 1, 2, 3, 01, 02 等）
+        result = result.replaceAll("\\b\\d+\\b", "");
+        // 去除中文数字序号（如一, 二, 三 等）
+        result = result.replaceAll("[一二三四五六七八九十百千万壹贰叁肆伍陆柒捌玖拾佰仟]", "");
+        // 去除圆形序号（如①, ②, ③ 等）
+        result = result.replaceAll("[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳]", "");
+        // 去除字母序号（如 A, B, C 等）
+        result = result.replaceAll("\\b[A-Za-z]\\b", "");
+        return result;
+    }
+    
+    /**
+     * 去除括号中的内容
+     */
+    private String removeBracketedContent(String text) {
+        // 去除各种括号中的内容
+        String result = text;
+        result = result.replaceAll("\\[[^\\]]*\\]", ""); // []
+        result = result.replaceAll("\\([^\\)]*\\)", ""); // ()
+        result = result.replaceAll("\\{[^\\}]*\\}", ""); // {}
+        result = result.replaceAll("《[^》]*》", ""); // 《》
+        result = result.replaceAll("<[^>]*>", ""); // <>
+        return result;
+    }
+    
+    /**
+     * 提取文件名的基础部分
+     */
+    private String extractBasePart(String fileName) {
+        // 去除序号
+        String basePart = removeSequences(fileName);
+        // 去除括号中的内容
+        basePart = removeBracketedContent(basePart);
+        // 去除特殊字符
+        basePart = basePart.replaceAll("[\\s\\[\\]\\.\\,\\!\\?\\;\\:\'\"\\`\\~\\|\\=\\+\\\\\\/\\#\\$\\%\\^\\&\\*\\_]", " ");
+        // 清理空格
+        basePart = basePart.trim();
+        // 取前几个词作为基础部分
+        if (basePart.contains(" ")) {
+            String[] parts = basePart.split(" ");
+            if (parts.length > 1) {
+                return parts[0] + " " + parts[1];
+            }
+            return parts[0];
+        }
+        return basePart;
+    }
+    
+    /**
+     * 提取文件类型等限定词
+     */
+    private String extractFileType(String fileName) {
+        // 提取括号中的文件类型信息
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("\\(([^)]+)\\)");
+        java.util.regex.Matcher matcher = pattern.matcher(fileName);
+        if (matcher.find()) {
+            String content = matcher.group(1);
+            // 检查是否是文件类型
+            if (content.matches("[A-Z]+") || content.matches("[a-zA-Z0-9]+")) {
+                return "(" + content + ")";
+            }
+        }
+        return "";
+    }
+    
+    /**
+     * 查找文件名中的最大序列数
+     */
+    private int findMaxSequence(List<String> fileNames) {
+        int maxSequence = 0;
+        
+        for (String fileName : fileNames) {
+            // 查找阿拉伯数字
+            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("\\b(\\d+)\\b");
+            java.util.regex.Matcher matcher = pattern.matcher(fileName);
+            while (matcher.find()) {
+                int sequence = Integer.parseInt(matcher.group(1));
+                if (sequence > maxSequence) {
+                    maxSequence = sequence;
+                }
+            }
+            
+            // 查找圆形数字
+            int circleNum = extractCircleNumber(fileName);
+            if (circleNum > maxSequence) {
+                maxSequence = circleNum;
+            }
+        }
+        
+        return maxSequence;
+    }
+    
+    /**
+     * 提取圆形数字
+     */
+    private int extractCircleNumber(String text) {
+        // 圆形数字映射
+        Map<Character, Integer> circleNums = new HashMap<>();
+        circleNums.put('①', 1);
+        circleNums.put('②', 2);
+        circleNums.put('③', 3);
+        circleNums.put('④', 4);
+        circleNums.put('⑤', 5);
+        circleNums.put('⑥', 6);
+        circleNums.put('⑦', 7);
+        circleNums.put('⑧', 8);
+        circleNums.put('⑨', 9);
+        circleNums.put('⑩', 10);
+        
+        for (char c : text.toCharArray()) {
+            if (circleNums.containsKey(c)) {
+                return circleNums.get(c);
+            }
+        }
+        return 0;
     }
     
     /**
