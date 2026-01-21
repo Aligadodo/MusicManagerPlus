@@ -12,6 +12,10 @@ package com.filemanager.strategy;
 import com.filemanager.app.base.IAppStrategy;
 import com.filemanager.app.tools.display.StyleFactory;
 import com.filemanager.model.ChangeRecord;
+import com.filemanager.strategy.collection.CollectionDeterminationAlgorithm;
+import com.filemanager.strategy.collection.FileClusteringAlgorithm;
+import com.filemanager.strategy.collection.FilenameNormalizer;
+import com.filemanager.strategy.collection.TextSimilarityCalculator;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
@@ -38,44 +42,12 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * 合集命名风格枚举
- */
-enum CollectionNamingStyle {
-    DEFAULT("默认风格", "基于最长公共前缀"),
-    REMOVE_DIFFERENCES("去除差异词", "去除文件名中的差异部分"),
-    PRESERVE_EXTENSIONS("保留扩展名", "保留文件类型等限定词"),
-    SEQUENCE_INFO("序列信息", "包含最大序列数和当前数量");
-    
-    private final String name;
-    private final String description;
-    
-    CollectionNamingStyle(String name, String description) {
-        this.name = name;
-        this.description = description;
-    }
-    
-    public String getName() {
-        return name;
-    }
-    
-    public String getDescription() {
-        return description;
-    }
-    
-    @Override
-    public String toString() {
-        return name;
-    }
-}
-
-/**
  * 文件归类策略：基于文件名相似度将文件/文件夹归类到合集文件夹中
  */
 public class FileCollectionStrategy extends IAppStrategy {
     private final Slider slSimilarityThreshold;
     private final TextField txtCollectionSuffix;
     private final JFXComboBox<ScanTarget> cbTargetType;
-    private final JFXComboBox<CollectionNamingStyle> cbNamingStyle;
     private final CheckBox chkPreserveFileTypes;
     private final CheckBox chkAddSequenceInfo;
     private final CheckBox chkSmartMode;
@@ -92,7 +64,6 @@ public class FileCollectionStrategy extends IAppStrategy {
     private double pThreshold;
     private String pCollectionSuffix;
     private ScanTarget pTargetType;
-    private CollectionNamingStyle pNamingStyle;
     private boolean pPreserveFileTypes;
     private boolean pAddSequenceInfo;
     private boolean pSmartMode;
@@ -104,6 +75,12 @@ public class FileCollectionStrategy extends IAppStrategy {
     private double pMaxCollectionRatio;
     private double pRecognitionStrictness;
     private boolean pAutoAddToExistingCollections;
+    
+    // 模块化组件
+    private FilenameNormalizer filenameNormalizer;
+    private TextSimilarityCalculator similarityCalculator;
+    private FileClusteringAlgorithm clusteringAlgorithm;
+    private CollectionDeterminationAlgorithm determinationAlgorithm;
     
     // 内部使用：记录已处理的父目录和对应的文件集群
     private final Map<File, Map<String, List<ChangeRecord>>> parentDirClusters = Collections.synchronizedMap(new HashMap<>());
@@ -123,10 +100,6 @@ public class FileCollectionStrategy extends IAppStrategy {
         // 目标类型选择
         cbTargetType = new JFXComboBox<>(FXCollections.observableArrayList(ScanTarget.values()));
         cbTargetType.setValue(ScanTarget.FOLDERS_ONLY); // 默认只对文件夹生效
-        
-        // 命名风格选择
-        cbNamingStyle = new JFXComboBox<>(FXCollections.observableArrayList(CollectionNamingStyle.values()));
-        cbNamingStyle.setValue(CollectionNamingStyle.DEFAULT); // 默认使用默认风格
         
         // 保留文件类型
         chkPreserveFileTypes = new CheckBox("保留文件类型等限定词");
@@ -205,7 +178,6 @@ public class FileCollectionStrategy extends IAppStrategy {
                 StyleFactory.createParamPairLine("相似度阈值 (0.0-1.0):", slSimilarityThreshold),
                 StyleFactory.createParamPairLine("合集文件夹格式:", txtCollectionSuffix),
                 StyleFactory.createParamPairLine("目标类型:", cbTargetType),
-                StyleFactory.createParamPairLine("命名风格:", cbNamingStyle),
                 chkPreserveFileTypes,
                 chkAddSequenceInfo,
                 chkSmartMode
@@ -258,7 +230,6 @@ public class FileCollectionStrategy extends IAppStrategy {
         pThreshold = slSimilarityThreshold.getValue();
         pCollectionSuffix = txtCollectionSuffix.getText();
         pTargetType = cbTargetType.getValue();
-        pNamingStyle = cbNamingStyle.getValue();
         pPreserveFileTypes = chkPreserveFileTypes.isSelected();
         pAddSequenceInfo = chkAddSequenceInfo.isSelected();
         pSmartMode = chkSmartMode.isSelected();
@@ -294,8 +265,44 @@ public class FileCollectionStrategy extends IAppStrategy {
             pMaxCollectionRatio = 1.0;
         }
         
+        // 初始化模块化组件
+        initializeComponents();
+        
         // 清空处理记录和集群信息
         parentDirClusters.clear();
+    }
+    
+    /**
+     * 初始化模块化组件
+     */
+    private void initializeComponents() {
+        filenameNormalizer = FilenameNormalizer.builder()
+                .preserveTags(pPreserveFileTypes)
+                .preserveSequences(!pAddSequenceInfo)
+                .build();
+        
+        similarityCalculator = TextSimilarityCalculator.builder()
+                .similarityThreshold(pThreshold)
+                .build();
+        
+        clusteringAlgorithm = FileClusteringAlgorithm.builder()
+                .normalizer(filenameNormalizer)
+                .similarityCalculator(similarityCalculator)
+                .similarityThreshold(pThreshold)
+                .minClusterSize(pMinFiles)
+                .build();
+        
+        determinationAlgorithm = CollectionDeterminationAlgorithm.builder()
+                .minFiles(pMinFiles)
+                .minFileNameLength(pMinFileNameLength)
+                .mustContainKeywords(pMustContainKeywords)
+                .mustNotContainKeywords(pMustNotContainKeywords)
+                .maxCollectionRatio(pMaxCollectionRatio)
+                .recognitionStrictness(pRecognitionStrictness)
+                .skipCollections(pSkipCollections)
+                .build();
+        
+        determinationAlgorithm.setCollectionSuffix(pCollectionSuffix);
     }
     
     /**
@@ -319,7 +326,6 @@ public class FileCollectionStrategy extends IAppStrategy {
         props.setProperty("fcs_threshold", String.valueOf(slSimilarityThreshold.getValue()));
         props.setProperty("fcs_suffix", txtCollectionSuffix.getText());
         props.setProperty("fcs_target_type", cbTargetType.getValue().name());
-        props.setProperty("fcs_naming_style", cbNamingStyle.getValue().name());
         props.setProperty("fcs_preserve_file_types", String.valueOf(chkPreserveFileTypes.isSelected()));
         props.setProperty("fcs_add_sequence_info", String.valueOf(chkAddSequenceInfo.isSelected()));
         props.setProperty("fcs_smart_mode", String.valueOf(chkSmartMode.isSelected()));
@@ -343,9 +349,6 @@ public class FileCollectionStrategy extends IAppStrategy {
         }
         if (props.containsKey("fcs_target_type")) {
             cbTargetType.setValue(ScanTarget.valueOf(props.getProperty("fcs_target_type")));
-        }
-        if (props.containsKey("fcs_naming_style")) {
-            cbNamingStyle.setValue(CollectionNamingStyle.valueOf(props.getProperty("fcs_naming_style")));
         }
         if (props.containsKey("fcs_preserve_file_types")) {
             chkPreserveFileTypes.setSelected(Boolean.parseBoolean(props.getProperty("fcs_preserve_file_types")));
@@ -467,9 +470,26 @@ public class FileCollectionStrategy extends IAppStrategy {
         
         // 对目录下的文件进行聚类
         app.log("📁 文件归类策略：开始对目录 " + parentDir.getAbsolutePath() + " 下的文件进行聚类");
-        Map<String, List<ChangeRecord>> clusters = clusterSimilarRecords(dirRecords);
         
-        app.log("📁 文件归类策略：聚类完成，共生成 " + clusters.size() + " 个集群");
+        List<File> files = dirRecords.stream()
+                .map(ChangeRecord::getFileHandle)
+                .collect(Collectors.toList());
+        
+        Map<String, List<File>> fileClusters = clusteringAlgorithm.clusterFiles(files);
+        
+        // 转换为ChangeRecord集群
+        Map<String, List<ChangeRecord>> clusters = new HashMap<>();
+        for (Map.Entry<String, List<File>> entry : fileClusters.entrySet()) {
+            List<ChangeRecord> clusterRecords = dirRecords.stream()
+                    .filter(record -> entry.getValue().contains(record.getFileHandle()))
+                    .collect(Collectors.toList());
+            clusters.put(entry.getKey(), clusterRecords);
+        }
+        
+        // 验证集群
+        Map<String, List<ChangeRecord>> validClusters = determinationAlgorithm.filterValidChangeRecordClusters(clusters);
+        
+        app.log("📁 文件归类策略：聚类完成，共生成 " + clusters.size() + " 个集群，其中有效集群 " + validClusters.size() + " 个");
         
         // 标记此目录已处理
         parentDirClusters.put(parentDir, clusters);
@@ -490,26 +510,19 @@ public class FileCollectionStrategy extends IAppStrategy {
         
         // 2. 然后处理新的集合创建
         app.log("📁 文件归类策略：开始处理新的集合创建");
-        int validClusters = 0;
         int processedFiles = 0;
         
-        for (Map.Entry<String, List<ChangeRecord>> entry : clusters.entrySet()) {
+        for (Map.Entry<String, List<ChangeRecord>> entry : validClusters.entrySet()) {
             List<ChangeRecord> clusterRecords = entry.getValue();
             
-            // 应用约束条件检查
-            if (!isClusterValid(clusterRecords)) {
-                app.log("⚠️ 文件归类策略：集群无效，跳过处理 " + entry.getKey());
-                continue;
-            }
-            
-            validClusters++;
+            processedFiles += clusterRecords.size();
             app.log("📁 文件归类策略：处理集群 " + entry.getKey() + "，包含 " + clusterRecords.size() + " 个文件");
             
             // 提取合集名称
             List<File> clusterFiles = clusterRecords.stream()
                     .map(ChangeRecord::getFileHandle)
                     .collect(Collectors.toList());
-            String collectionName = extractCollectionName(clusterFiles);
+            String collectionName = entry.getKey();
             
             // 创建目标合集文件夹路径
             Path targetDirPath = parentDir.toPath().resolve(collectionName + pCollectionSuffix);
@@ -522,7 +535,6 @@ public class FileCollectionStrategy extends IAppStrategy {
                         .anyMatch(change -> change.getOriginalName().equals(record.getOriginalName()));
                 
                 if (!alreadyAdded) {
-                    processedFiles++;
                     // 直接修改原有的记录状态，而不是创建新的记录
                     record.setChanged(true);
                     record.setNewPath(targetDirPath.resolve(record.getFileHandle().getName()).toString());
@@ -538,14 +550,13 @@ public class FileCollectionStrategy extends IAppStrategy {
                     params.put("merge_strategy", "创建新合集");
                     params.put("collection_name", collectionName);
                     params.put("collection_suffix", pCollectionSuffix);
-                    params.put("naming_style", pNamingStyle.getName());
                     params.put("cluster_size", String.valueOf(clusterRecords.size()));
                     params.put("threshold_used", String.valueOf(pThreshold));
                     
                     // 计算与合集名称的相似度
                     String fileName = record.getFileHandle().getName();
-                    double similarity = calculateSimilarity(fileName, collectionName);
-                    double difference = calculateDifference(fileName, collectionName);
+                    double similarity = similarityCalculator.calculateSimilarity(fileName, collectionName);
+                    double difference = 1.0 - similarity;
                     params.put("similarity_to_collection", String.format("%.3f", similarity));
                     params.put("difference_to_collection", String.format("%.3f", difference));
                     
@@ -554,7 +565,7 @@ public class FileCollectionStrategy extends IAppStrategy {
             }
         }
         
-        app.log("📁 文件归类策略：处理完成，共生成 " + validClusters + " 个有效集群，处理了 " + processedFiles + " 个文件");
+        app.log("📁 文件归类策略：处理完成，共生成 " + validClusters.size() + " 个有效集群，处理了 " + processedFiles + " 个文件");
         
         return changeRecords;
     }
@@ -576,189 +587,60 @@ public class FileCollectionStrategy extends IAppStrategy {
      * 检查文件是否已经在合集文件夹中
      */
     private boolean isInCollectionFolder(File file) {
-        File parentDir = file.getParentFile();
-        if (parentDir == null) {
-            return false;
-        }
-        
-        String parentName = parentDir.getName();
-        // 检查父目录名称是否包含合集关键词或用户配置的合集文件夹格式
-        boolean isCollection = parentName.contains(pCollectionSuffix) || 
-                              parentName.contains("合集") || 
-                              parentName.contains("系列") || 
-                              parentName.contains("Collection") || 
-                              parentName.contains("Series") ||
-                              parentName.endsWith("合集") ||
-                              parentName.endsWith("系列") ||
-                              parentName.endsWith("Collection") ||
-                              parentName.endsWith("Series");
-        
-        // 检查父目录是否已经是由本策略生成的合集文件夹
-        if (parentName.contains(pCollectionSuffix) && parentName.length() > pCollectionSuffix.length()) {
-            // 检查父目录名称是否包含明显的截断痕迹
-            if (parentName.endsWith("- " + pCollectionSuffix) || parentName.endsWith(". " + pCollectionSuffix)) {
-                return true;
-            }
-        }
-        
-        return isCollection;
+        return determinationAlgorithm.isInCollectionFolder(file);
     }
     
     /**
      * 检查文件是否本身就是合集文件夹
      */
     private boolean isCollectionFolder(File file) {
-        if (!file.isDirectory()) {
-            return false;
-        }
-        
-        String name = file.getName();
-        
-        // 1. 首先检查目录名称是否包含合集关键词或用户配置的合集文件夹格式
-        boolean hasCollectionKeyword = name.contains(pCollectionSuffix) || 
-                                       name.contains("合集") || 
-                                       name.contains("系列") || 
-                                       name.contains("Collection") || 
-                                       name.contains("Series") ||
-                                       name.endsWith("合集") ||
-                                       name.endsWith("系列") ||
-                                       name.endsWith("Collection") ||
-                                       name.endsWith("Series");
-        
-        // 2. 如果目录名称包含合集关键词，进一步检查目录内部的文件
-        if (hasCollectionKeyword) {
-            // 获取目录下的文件
-            File[] files = file.listFiles();
-            if (files == null || files.length == 0) {
-                // 空目录不认为是合集文件夹
-                return false;
-            }
-            
-            // 检查目录下的文件是否符合配置的条件
-            int validFileCount = 0;
-            for (File f : files) {
-                // 只考虑符合目标类型的文件
-                if (isFileTypeMatch(f)) {
-                    // 检查文件名是否达到最短长度要求
-                    if (f.getName().length() >= pMinFileNameLength) {
-                        // 检查文件名是否包含必须的关键词
-                        boolean hasRequiredKeyword = pMustContainKeywords.isEmpty();
-                        if (!hasRequiredKeyword) {
-                            for (String keyword : pMustContainKeywords) {
-                                if (f.getName().toLowerCase().contains(keyword.toLowerCase())) {
-                                    hasRequiredKeyword = true;
-                                    break;
-                                }
-                            }
-                        }
-                        
-                        // 检查文件名是否不包含禁止的关键词
-                        boolean hasForbiddenKeyword = false;
-                        if (!pMustNotContainKeywords.isEmpty()) {
-                            for (String keyword : pMustNotContainKeywords) {
-                                if (f.getName().toLowerCase().contains(keyword.toLowerCase())) {
-                                    hasForbiddenKeyword = true;
-                                    break;
-                                }
-                            }
-                        }
-                        
-                        if (hasRequiredKeyword && !hasForbiddenKeyword) {
-                            validFileCount++;
-                        }
-                    }
-                }
-            }
-            
-            // 只有当目录下有足够数量的有效文件时，才认为是合集文件夹
-            return validFileCount >= pMinFiles;
-        }
-        
-        return false;
+        return determinationAlgorithm.isCollectionFolder(file);
     }
     
     /**
      * 检查文件是否应该被添加到现有集合中
      */
     private boolean shouldAddToExistingCollection(File file, File collectionDir, ChangeRecord record) {
-        // 1. 检查文件是否符合目标类型
-        if (!isFileTypeMatch(file)) {
+        if (!determinationAlgorithm.isValidFile(file)) {
             return false;
         }
         
-        // 2. 检查文件名是否达到最短长度要求
-        if (file.getName().length() < pMinFileNameLength) {
-            return false;
-        }
-        
-        // 3. 检查文件名是否包含必须的关键词
-        boolean hasRequiredKeyword = pMustContainKeywords.isEmpty();
-        if (!hasRequiredKeyword) {
-            for (String keyword : pMustContainKeywords) {
-                if (file.getName().toLowerCase().contains(keyword.toLowerCase())) {
-                    hasRequiredKeyword = true;
-                    break;
-                }
-            }
-        }
-        if (!hasRequiredKeyword) {
-            return false;
-        }
-        
-        // 4. 检查文件名是否不包含禁止的关键词
-        boolean hasForbiddenKeyword = false;
-        if (!pMustNotContainKeywords.isEmpty()) {
-            for (String keyword : pMustNotContainKeywords) {
-                if (file.getName().toLowerCase().contains(keyword.toLowerCase())) {
-                    hasForbiddenKeyword = true;
-                    break;
-                }
-            }
-        }
-        if (hasForbiddenKeyword) {
-            return false;
-        }
-        
-        // 5. 检查文件是否与集合名称相似
         String fileName = file.getName();
         String collectionName = collectionDir.getName().replace(pCollectionSuffix, "");
         
-        // 使用calculateSimilarity方法检查相似度
-        double similarity = calculateSimilarity(fileName, collectionName);
-        double difference = calculateDifference(fileName, collectionName);
+        if (!determinationAlgorithm.shouldAddToExistingCollection(file, collectionDir, collectionName)) {
+            return false;
+        }
         
-        // 6. 检查集合目录下的文件是否与当前文件相似
+        double similarity = similarityCalculator.calculateSimilarity(fileName, collectionName);
+        
         File[] collectionFiles = collectionDir.listFiles();
         double avgSimilarity = 0;
         int count = 0;
         if (collectionFiles != null && collectionFiles.length > 0) {
-            // 计算当前文件与集合中文件的平均相似度
             double totalSimilarity = 0;
             for (File collectionFile : collectionFiles) {
                 if (isFileTypeMatch(collectionFile)) {
-                    totalSimilarity += calculateSimilarity(fileName, collectionFile.getName());
+                    totalSimilarity += similarityCalculator.calculateSimilarity(fileName, collectionFile.getName());
                     count++;
                 }
             }
             if (count > 0) {
                 avgSimilarity = totalSimilarity / count;
-                // 如果平均相似度低于阈值，不应该添加到现有集合
                 if (avgSimilarity < pThreshold * 0.8) {
                     return false;
                 }
             }
         }
         
-        // 7. 如果相似度高于阈值，应该添加到现有集合
-        if (similarity >= pThreshold * 0.9) { // 使用略微降低的阈值
-            // 添加合并命中的具体策略和相似度信息到extraParams
+        if (similarity >= pThreshold * 0.9) {
             Map<String, String> params = record.getExtraParams();
             if (params == null) {
                 params = new HashMap<>();
                 record.setExtraParams(params);
             }
             params.put("similarity", String.format("%.3f", similarity));
-            params.put("difference", String.format("%.3f", difference));
+            params.put("difference", String.format("%.3f", 1.0 - similarity));
             params.put("avg_similarity_with_collection", String.format("%.3f", avgSimilarity));
             params.put("collection_name", collectionDir.getName());
             params.put("merge_strategy", "添加到现有集合");
@@ -825,140 +707,22 @@ public class FileCollectionStrategy extends IAppStrategy {
             return false;
         }
         
-        // 对文件进行聚类
-        Map<String, List<ChangeRecord>> clusters = clusterSimilarRecords(records);
+        List<File> files = records.stream()
+                .map(ChangeRecord::getFileHandle)
+                .collect(Collectors.toList());
         
-        // 找出最大的集群
+        Map<String, List<File>> clusters = clusteringAlgorithm.clusterFiles(files);
+        
         int maxClusterSize = 0;
-        for (List<ChangeRecord> cluster : clusters.values()) {
+        for (List<File> cluster : clusters.values()) {
             if (cluster.size() > maxClusterSize) {
                 maxClusterSize = cluster.size();
             }
         }
         
-        // 计算最大集群占比
         double ratio = (double) maxClusterSize / records.size();
-        
-        // 如果最大集群占比超过配置的阈值，则认为大部分文件已经属于同一合集
         return ratio >= pMaxCollectionRatio;
     }
-    
-    /**
-     * 检查集群是否符合所有约束条件
-     */
-    private boolean isClusterValid(List<ChangeRecord> cluster) {
-        // 1. 检查集群中的文件数量是否达到最小值
-        if (cluster.size() < pMinFiles) {
-            return false;
-        }
-        
-        // 提取所有文件名
-        List<String> fileNames = cluster.stream()
-                .map(record -> record.getFileHandle().getName())
-                .collect(Collectors.toList());
-        
-        // 2. 检查集群中的所有文件名是否都达到最短长度要求
-        for (String fileName : fileNames) {
-            if (fileName.length() < pMinFileNameLength) {
-                return false;
-            }
-        }
-        
-        // 3. 检查集群中是否包含必须的关键词
-        if (!pMustContainKeywords.isEmpty()) {
-            boolean hasRequiredKeyword = false;
-            for (String keyword : pMustContainKeywords) {
-                for (String fileName : fileNames) {
-                    if (fileName.toLowerCase().contains(keyword.toLowerCase())) {
-                        hasRequiredKeyword = true;
-                        break;
-                    }
-                }
-                if (hasRequiredKeyword) {
-                    break;
-                }
-            }
-            if (!hasRequiredKeyword) {
-                return false;
-            }
-        }
-        
-        // 4. 检查集群中是否包含禁止的关键词
-        if (!pMustNotContainKeywords.isEmpty()) {
-            for (String keyword : pMustNotContainKeywords) {
-                for (String fileName : fileNames) {
-                    if (fileName.toLowerCase().contains(keyword.toLowerCase())) {
-                        return false;
-                    }
-                }
-            }
-        }
-        
-        return true;
-    }
-    
-    /**
-     * 对相似的记录进行聚类
-     */
-    private Map<String, List<ChangeRecord>> clusterSimilarRecords(List<ChangeRecord> records) {
-        Map<String, List<ChangeRecord>> clusters = new HashMap<>();
-        Set<ChangeRecord> processed = new HashSet<>();
-        
-        for (ChangeRecord record1 : records) {
-            if (processed.contains(record1)) {
-                continue;
-            }
-            
-            List<ChangeRecord> cluster = new ArrayList<>();
-            cluster.add(record1);
-            processed.add(record1);
-            
-            String name1 = record1.getFileHandle().getName();
-            
-            for (ChangeRecord record2 : records) {
-                if (record1.equals(record2) || processed.contains(record2)) {
-                    continue;
-                }
-                
-                String name2 = record2.getFileHandle().getName();
-                double similarity = calculateSimilarity(name1, name2);
-                double difference = calculateDifference(name1, name2);
-                
-                // 基于相似度和差异度的双重判断
-                if (similarity >= pThreshold && difference <= (1.0 - pThreshold)) {
-                    // 添加相似度和差异度信息到extraParams
-                    Map<String, String> params1 = record1.getExtraParams();
-                    if (params1 == null) {
-                        params1 = new HashMap<>();
-                        record1.setExtraParams(params1);
-                    }
-                    params1.put("similarity", String.format("%.3f", similarity));
-                    params1.put("difference", String.format("%.3f", difference));
-                    params1.put("clustering_strategy", "基于相似度阈值" + pThreshold);
-                    
-                    Map<String, String> params2 = record2.getExtraParams();
-                    if (params2 == null) {
-                        params2 = new HashMap<>();
-                        record2.setExtraParams(params2);
-                    }
-                    params2.put("similarity", String.format("%.3f", similarity));
-                    params2.put("difference", String.format("%.3f", difference));
-                    params2.put("clustering_strategy", "基于相似度阈值" + pThreshold);
-                    
-                    cluster.add(record2);
-                    processed.add(record2);
-                }
-            }
-            
-            if (cluster.size() > 0) {
-                // 使用第一个记录的名称作为集群键
-                clusters.put(cluster.get(0).getOriginalName(), cluster);
-            }
-        }
-        
-        return clusters;
-    }
-    
     @Override
     public void execute(ChangeRecord rec) throws Exception {
         if (rec.getOpType() != OperationType.COLLECT) {
@@ -1288,385 +1052,6 @@ public class FileCollectionStrategy extends IAppStrategy {
             }
         }
         return dp[s1.length()][s2.length()];
-    }
-    
-    /**
-     * 提取合集名称：找出多个文件名的最长公共前缀
-     */
-    private String extractCollectionName(List<File> similarFiles) {
-        if (similarFiles.isEmpty()) {
-            return "未命名";
-        }
-        
-        // 获取所有文件名
-        List<String> fileNames = similarFiles.stream()
-                .map(File::getName)
-                .collect(Collectors.toList());
-        
-        // 根据选择的命名风格生成合集名称
-        String collectionName;
-        switch (pNamingStyle) {
-            case REMOVE_DIFFERENCES:
-                collectionName = extractNameByRemovingDifferences(fileNames);
-                break;
-            case PRESERVE_EXTENSIONS:
-                collectionName = extractNameWithExtensions(fileNames);
-                break;
-            case SEQUENCE_INFO:
-                collectionName = extractNameWithSequenceInfo(fileNames);
-                break;
-            default:
-                // 默认风格：基于最长公共前缀
-                collectionName = extractNameByCommonPrefix(fileNames);
-                break;
-        }
-        
-        // 清理合集名称
-        collectionName = cleanCollectionName(collectionName);
-        
-        return collectionName;
-    }
-    
-    /**
-     * 基于最长公共前缀提取合集名称（默认风格）
-     */
-    private String extractNameByCommonPrefix(List<String> fileNames) {
-        // 找出最长公共前缀
-        String commonPrefix = findLongestCommonPrefix(fileNames);
-        
-        // 优化：避免生成太短的合集名称，确保包含有意义的信息
-        if (commonPrefix.length() < 5) {
-            // 使用更智能的方法提取合集名称
-            String collectionName = extractSmartCollectionName(fileNames);
-            
-            // 如果提取失败，使用原始的处理方式
-            if (collectionName.length() < 5) {
-                // 简单处理：取第一个文件名的前几个字符作为基础
-                String firstFileName = fileNames.get(0);
-                
-                // 去除特殊字符和噪音
-                String regex = "[\\s\\[\\]《》\\-\\(\\)\\{\\}\\-.\\,\\!\\?\\;\\:\'\"\\`\\~\\|\\=\\+\\\\\\/\\#\\$\\%\\^\\&\\*\\_]";
-                String cleanName = firstFileName.replaceAll(regex, " ").trim();
-                
-                // 尝试提取空格前的部分（通常是系列名或作者名）
-                if (cleanName.contains(" ")) {
-                    // 取更多部分，而不仅仅是第一个空格前的内容
-                    String[] parts = cleanName.split(" ");
-                    if (parts.length > 1) {
-                        return parts[0] + " " + parts[1];
-                    }
-                    return parts[0];
-                }
-                
-                // 如果没有空格，取更长的部分
-                return cleanName.substring(0, Math.min(cleanName.length(), 15));
-            }
-            
-            return collectionName;
-        }
-        
-        return commonPrefix;
-    }
-    
-    /**
-     * 通过去除差异词提取合集名称
-     */
-    private String extractNameByRemovingDifferences(List<String> fileNames) {
-        if (fileNames.isEmpty()) {
-            return "未命名";
-        }
-        
-        // 1. 提取所有文件名的共同部分，去除差异部分
-        // 首先处理每个文件名，去除序号和差异词
-        List<String> processedNames = new ArrayList<>();
-        for (String fileName : fileNames) {
-            // 去除序号（如 ①、②、01、02 等）
-            String processed = removeSequences(fileName);
-            // 去除括号中的内容（可能是差异词）
-            processed = removeBracketedContent(processed);
-            processedNames.add(processed);
-        }
-        
-        // 找出最长公共前缀
-        String commonPrefix = findLongestCommonPrefix(processedNames);
-        
-        // 2. 如果公共前缀太短，尝试从第一个文件名中提取基础部分
-        if (commonPrefix.length() < 5) {
-            // 从第一个文件名中提取基础部分
-            String firstFileName = fileNames.get(0);
-            commonPrefix = extractBasePart(firstFileName);
-        }
-        
-        // 3. 保留文件类型等限定词
-        if (pPreserveFileTypes) {
-            String fileType = extractFileType(fileNames.get(0));
-            if (!fileType.isEmpty()) {
-                commonPrefix += " " + fileType;
-            }
-        }
-        
-        return commonPrefix;
-    }
-    
-    /**
-     * 提取包含文件类型等限定词的合集名称
-     */
-    private String extractNameWithExtensions(List<String> fileNames) {
-        if (fileNames.isEmpty()) {
-            return "未命名";
-        }
-        
-        // 1. 提取基础名称
-        String baseName = extractNameByCommonPrefix(fileNames);
-        
-        // 2. 提取并保留文件类型等限定词
-        String fileType = extractFileType(fileNames.get(0));
-        if (!fileType.isEmpty()) {
-            baseName += " " + fileType;
-        }
-        
-        return baseName;
-    }
-    
-    /**
-     * 提取包含序列信息的合集名称
-     */
-    private String extractNameWithSequenceInfo(List<String> fileNames) {
-        if (fileNames.isEmpty()) {
-            return "未命名";
-        }
-        
-        // 1. 提取基础名称
-        String baseName = extractNameByRemovingDifferences(fileNames);
-        
-        // 2. 提取序列信息
-        if (pAddSequenceInfo) {
-            int maxSequence = findMaxSequence(fileNames);
-            int currentCount = fileNames.size();
-            if (maxSequence > 0) {
-                baseName += " 【" + maxSequence + "-" + currentCount + "】";
-            }
-        }
-        
-        return baseName;
-    }
-    
-    /**
-     * 去除文件名中的序号
-     */
-    private String removeSequences(String fileName) {
-        String result = fileName;
-        // 去除阿拉伯数字序号（如 1, 2, 3, 01, 02 等）
-        result = result.replaceAll("\\b\\d+\\b", "");
-        // 去除中文数字序号（如一, 二, 三 等）
-        result = result.replaceAll("[一二三四五六七八九十百千万壹贰叁肆伍陆柒捌玖拾佰仟]", "");
-        // 去除圆形序号（如①, ②, ③ 等）
-        result = result.replaceAll("[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳]", "");
-        // 去除字母序号（如 A, B, C 等）
-        result = result.replaceAll("\\b[A-Za-z]\\b", "");
-        return result;
-    }
-    
-    /**
-     * 去除括号中的内容
-     */
-    private String removeBracketedContent(String text) {
-        // 去除各种括号中的内容
-        String result = text;
-        result = result.replaceAll("\\[[^\\]]*\\]", ""); // []
-        result = result.replaceAll("\\([^\\)]*\\)", ""); // ()
-        result = result.replaceAll("\\{[^\\}]*\\}", ""); // {}
-        result = result.replaceAll("《[^》]*》", ""); // 《》
-        result = result.replaceAll("<[^>]*>", ""); // <>
-        return result;
-    }
-    
-    /**
-     * 提取文件名的基础部分
-     */
-    private String extractBasePart(String fileName) {
-        // 去除序号
-        String basePart = removeSequences(fileName);
-        // 去除括号中的内容
-        basePart = removeBracketedContent(basePart);
-        // 去除特殊字符
-        basePart = basePart.replaceAll("[\\s\\[\\]\\.\\,\\!\\?\\;\\:\'\"\\`\\~\\|\\=\\+\\\\\\/\\#\\$\\%\\^\\&\\*\\_]", " ");
-        // 清理空格
-        basePart = basePart.trim();
-        // 取前几个词作为基础部分
-        if (basePart.contains(" ")) {
-            String[] parts = basePart.split(" ");
-            if (parts.length > 1) {
-                return parts[0] + " " + parts[1];
-            }
-            return parts[0];
-        }
-        return basePart;
-    }
-    
-    /**
-     * 提取文件类型等限定词
-     */
-    private String extractFileType(String fileName) {
-        // 提取括号中的文件类型信息
-        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("\\(([^)]+)\\)");
-        java.util.regex.Matcher matcher = pattern.matcher(fileName);
-        if (matcher.find()) {
-            String content = matcher.group(1);
-            // 检查是否是文件类型
-            if (content.matches("[A-Z]+") || content.matches("[a-zA-Z0-9]+")) {
-                return "(" + content + ")";
-            }
-        }
-        return "";
-    }
-    
-    /**
-     * 查找文件名中的最大序列数
-     */
-    private int findMaxSequence(List<String> fileNames) {
-        int maxSequence = 0;
-        
-        for (String fileName : fileNames) {
-            // 查找阿拉伯数字
-            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("\\b(\\d+)\\b");
-            java.util.regex.Matcher matcher = pattern.matcher(fileName);
-            while (matcher.find()) {
-                int sequence = Integer.parseInt(matcher.group(1));
-                if (sequence > maxSequence) {
-                    maxSequence = sequence;
-                }
-            }
-            
-            // 查找圆形数字
-            int circleNum = extractCircleNumber(fileName);
-            if (circleNum > maxSequence) {
-                maxSequence = circleNum;
-            }
-        }
-        
-        return maxSequence;
-    }
-    
-    /**
-     * 提取圆形数字
-     */
-    private int extractCircleNumber(String text) {
-        // 圆形数字映射
-        Map<Character, Integer> circleNums = new HashMap<>();
-        circleNums.put('①', 1);
-        circleNums.put('②', 2);
-        circleNums.put('③', 3);
-        circleNums.put('④', 4);
-        circleNums.put('⑤', 5);
-        circleNums.put('⑥', 6);
-        circleNums.put('⑦', 7);
-        circleNums.put('⑧', 8);
-        circleNums.put('⑨', 9);
-        circleNums.put('⑩', 10);
-        
-        for (char c : text.toCharArray()) {
-            if (circleNums.containsKey(c)) {
-                return circleNums.get(c);
-            }
-        }
-        return 0;
-    }
-    
-    /**
-     * 智能提取合集名称，避免截断过多内容
-     */
-    private String extractSmartCollectionName(List<String> fileNames) {
-        if (fileNames.isEmpty()) {
-            return "";
-        }
-        
-        // 提取所有文件名的公共部分，忽略序号和版本信息
-        List<String> processedNames = new ArrayList<>();
-        for (String name : fileNames) {
-            // 去除序号和版本信息
-            String processed = name.replaceAll("\\b\\d+\\b", "");
-            processed = processed.replaceAll("[一二三四五六七八九十百千万壹贰叁肆伍陆柒捌玖拾佰仟]", "");
-            processed = processed.replaceAll("[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳]", "");
-            processed = processed.replaceAll("\\b[A-Za-z]\\b", "");
-            processedNames.add(processed);
-        }
-        
-        // 找出最长公共前缀
-        String commonPrefix = findLongestCommonPrefix(processedNames);
-        
-        // 如果公共前缀仍然太短，尝试提取标题
-        if (commonPrefix.length() < 5) {
-            // 尝试从第一个文件名中提取标题
-            String firstFileName = fileNames.get(0);
-            
-            // 提取《》之间的内容作为标题
-            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("《([^》]+)》");
-            java.util.regex.Matcher matcher = pattern.matcher(firstFileName);
-            if (matcher.find()) {
-                return matcher.group(1);
-            }
-            
-            // 提取()之间的内容作为标题
-            pattern = java.util.regex.Pattern.compile("\\(([^)]+)\\)");
-            matcher = pattern.matcher(firstFileName);
-            if (matcher.find()) {
-                return matcher.group(1);
-            }
-        }
-        
-        return commonPrefix;
-    }
-    
-    /**
-     * 找出多个字符串的最长公共前缀
-     */
-    private String findLongestCommonPrefix(List<String> strings) {
-        if (strings == null || strings.isEmpty()) {
-            return "";
-        }
-        
-        // 取第一个字符串作为基准
-        String prefix = strings.get(0);
-        
-        // 遍历所有字符串，逐步缩短前缀直到找到所有字符串都包含的公共前缀
-        for (String str : strings) {
-            // 如果当前前缀比字符串长，缩短前缀
-            while (str.length() < prefix.length() || !str.startsWith(prefix)) {
-                prefix = prefix.substring(0, prefix.length() - 1);
-                
-                // 如果前缀为空，直接返回
-                if (prefix.isEmpty()) {
-                    return "";
-                }
-            }
-        }
-        
-        // 清理公共前缀末尾的特殊字符和文件格式信息
-        return cleanCollectionName(prefix);
-    }
-    
-    /**
-     * 清理合集名称，去除末尾的特殊字符和文件格式信息
-     */
-    private String cleanCollectionName(String name) {
-        if (name == null || name.isEmpty()) {
-            return "";
-        }
-        
-        try {
-            // 去除末尾的文件格式信息（如 [WAV], (FLAC) 等）
-            String cleaned = name.replaceAll("\\[\\w+\\]$|", "").trim();
-            
-            // 清理末尾的特殊字符（使用更安全的正则表达式）
-            cleaned = cleaned.replaceAll("[\\s\\-\\_\\.\\,\\!\\?\\;\\:\'\"\\`\\~\\|\\=\\+\\\\\\/\\#\\$\\%\\^\\&\\*\\(\\)\\{\\}\\>\\<\\《\\》]+$", "");
-            
-            return cleaned;
-        } catch (Exception e) {
-            // 如果正则表达式处理失败，返回原始名称的简化版本
-            logError("清理合集名称失败: " + e.getMessage());
-            return name.replaceAll("[^\\w\\u4e00-\\u9fa5]", "").trim();
-        }
     }
     
     @Override
