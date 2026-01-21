@@ -108,10 +108,10 @@ public class FileCollectionStrategy extends IAppStrategy {
     
     public FileCollectionStrategy() {
         // 相似度阈值滑块 (0.0 - 1.0)
-        slSimilarityThreshold = new Slider(0.0, 1.0, 0.5);
+        slSimilarityThreshold = new Slider(0.0, 1.0, 0.9);
         slSimilarityThreshold.setShowTickMarks(true);
         slSimilarityThreshold.setShowTickLabels(true);
-        slSimilarityThreshold.setMajorTickUnit(0.1);
+        slSimilarityThreshold.setMajorTickUnit(0.05);
         slSimilarityThreshold.setMinorTickCount(9);
         
         // 合集文件夹格式
@@ -166,10 +166,10 @@ public class FileCollectionStrategy extends IAppStrategy {
         spMaxCollectionRatio.setMaxWidth(80);
         
         // 合集识别严格程度 (0.0-1.0，值越高识别越严格)
-        slRecognitionStrictness = new Slider(0.0, 1.0, 0.5);
+        slRecognitionStrictness = new Slider(0.0, 1.0, 0.9);
         slRecognitionStrictness.setShowTickMarks(true);
         slRecognitionStrictness.setShowTickLabels(true);
-        slRecognitionStrictness.setMajorTickUnit(0.1);
+        slRecognitionStrictness.setMajorTickUnit(0.05);
         slRecognitionStrictness.setMinorTickCount(9);
     }
     

@@ -1031,7 +1031,18 @@ public class PreviewView implements IAutoReloadAble {
 
                 // 构建筛选条件
                 Predicate<ChangeRecord> hideUnchangedPredicate = r -> !h || r.isChanged() || r.getStatus() == ExecStatus.FAILED;
-                Predicate<ChangeRecord> searchPredicate = r -> s.isEmpty() || r.getOriginalName().toLowerCase().contains(s);
+                Predicate<ChangeRecord> searchPredicate = r -> {
+                    if (s.isEmpty()) return true;
+                    // 检查原始文件名
+                    if (r.getOriginalName() != null && r.getOriginalName().toLowerCase().contains(s)) return true;
+                    // 检查目标文件名
+                    if (r.getNewName() != null && r.getNewName().toLowerCase().contains(s)) return true;
+                    // 检查目标文件路径
+                    if (r.getNewPath() != null && r.getNewPath().toLowerCase().contains(s)) return true;
+                    // 检查错误信息
+                    if (r.getFailReason() != null && r.getFailReason().toLowerCase().contains(s)) return true;
+                    return false;
+                };
                 Predicate<ChangeRecord> statusPredicate = r -> {
                     if ("全部".equals(st)) return true;
                     if ("执行中".equals(st)) return r.getStatus() == ExecStatus.RUNNING;
