@@ -86,6 +86,7 @@ public class FileCollectionStrategy extends IAppStrategy {
     private final CheckBox chkSkipCollections;
     private final Spinner<Integer> spMaxCollectionRatio;
     private final Slider slRecognitionStrictness;
+    private final CheckBox chkAutoAddToExistingCollections;
     
     // 配置参数
     private double pThreshold;
@@ -102,6 +103,7 @@ public class FileCollectionStrategy extends IAppStrategy {
     private boolean pSkipCollections;
     private double pMaxCollectionRatio;
     private double pRecognitionStrictness;
+    private boolean pAutoAddToExistingCollections;
     
     // 内部使用：记录已处理的父目录和对应的文件集群
     private final Map<File, Map<String, List<ChangeRecord>>> parentDirClusters = Collections.synchronizedMap(new HashMap<>());
@@ -171,6 +173,10 @@ public class FileCollectionStrategy extends IAppStrategy {
         slRecognitionStrictness.setShowTickLabels(true);
         slRecognitionStrictness.setMajorTickUnit(0.05);
         slRecognitionStrictness.setMinorTickCount(9);
+        
+        // 自动添加到已有合集
+        chkAutoAddToExistingCollections = new CheckBox("自动添加到已有合集");
+        chkAutoAddToExistingCollections.setSelected(false); // 默认关闭，避免暗中决策
     }
     
     @Override
@@ -229,6 +235,7 @@ public class FileCollectionStrategy extends IAppStrategy {
         VBox advancedBox = new VBox(10);
         advancedBox.getChildren().addAll(
                 chkSkipCollections,
+                chkAutoAddToExistingCollections,
                 StyleFactory.createParamPairLine("最大合集比例 (%):", spMaxCollectionRatio),
                 StyleFactory.createParamPairLine("合集识别严格程度 (0.0-1.0):", slRecognitionStrictness)
         );
@@ -266,6 +273,7 @@ public class FileCollectionStrategy extends IAppStrategy {
         pSkipCollections = chkSkipCollections.isSelected();
         pMaxCollectionRatio = spMaxCollectionRatio.getValue() / 100.0;
         pRecognitionStrictness = slRecognitionStrictness.getValue();
+        pAutoAddToExistingCollections = chkAutoAddToExistingCollections.isSelected();
         
         // 参数验证和默认值设置
         if (pCollectionSuffix == null || pCollectionSuffix.trim().isEmpty()) {
@@ -322,6 +330,7 @@ public class FileCollectionStrategy extends IAppStrategy {
         props.setProperty("fcs_skip_collections", String.valueOf(chkSkipCollections.isSelected()));
         props.setProperty("fcs_max_collection_ratio", String.valueOf(spMaxCollectionRatio.getValue()));
         props.setProperty("fcs_recognition_strictness", String.valueOf(slRecognitionStrictness.getValue()));
+        props.setProperty("fcs_auto_add_to_existing", String.valueOf(chkAutoAddToExistingCollections.isSelected()));
     }
     
     @Override
@@ -367,6 +376,9 @@ public class FileCollectionStrategy extends IAppStrategy {
         }
         if (props.containsKey("fcs_recognition_strictness")) {
             slRecognitionStrictness.setValue(Double.parseDouble(props.getProperty("fcs_recognition_strictness")));
+        }
+        if (props.containsKey("fcs_auto_add_to_existing")) {
+            chkAutoAddToExistingCollections.setSelected(Boolean.parseBoolean(props.getProperty("fcs_auto_add_to_existing")));
         }
     }
     
@@ -419,15 +431,22 @@ public class FileCollectionStrategy extends IAppStrategy {
         
         // 如果目录下的文件数量不足2个，但有现有集合，则只执行添加到现有集合的逻辑
         if (dirRecords.size() < 2) {
-            // 仍然尝试将文件添加到现有集合中
-            app.log("📁 文件归类策略：文件数量不足2个，尝试添加到现有集合中");
-            List<ChangeRecord> changes = addFilesToExistingCollections(inputRecords, rootDirs, parentDir);
-            
-            // 标记此目录已处理
-            parentDirClusters.put(parentDir, Collections.emptyMap());
-            
-            app.log("📁 文件归类策略：处理完成，已标记目录为已处理 " + parentDir.getAbsolutePath());
-            return changes;
+            // 只有当启用了自动添加到已有合集选项时，才尝试添加到现有集合中
+            if (pAutoAddToExistingCollections) {
+                app.log("📁 文件归类策略：文件数量不足2个，尝试添加到现有集合中");
+                List<ChangeRecord> changes = addFilesToExistingCollections(inputRecords, rootDirs, parentDir);
+                
+                // 标记此目录已处理
+                parentDirClusters.put(parentDir, Collections.emptyMap());
+                
+                app.log("📁 文件归类策略：处理完成，已标记目录为已处理 " + parentDir.getAbsolutePath());
+                return changes;
+            } else {
+                app.log("📁 文件归类策略：文件数量不足2个，且未启用自动添加到已有合集选项，跳过处理");
+                // 标记此目录已处理
+                parentDirClusters.put(parentDir, Collections.emptyMap());
+                return Collections.emptyList();
+            }
         }
         
         // 检查目录中是否大部分文件已经属于同一合集，如果是则不再执行合并
@@ -459,10 +478,15 @@ public class FileCollectionStrategy extends IAppStrategy {
         List<ChangeRecord> changeRecords = new ArrayList<>();
         
         // 1. 首先尝试将文件添加到现有集合中
-        app.log("📁 文件归类策略：尝试将文件添加到现有集合中");
-        List<ChangeRecord> existingCollectionChanges = addFilesToExistingCollections(inputRecords, rootDirs, parentDir);
-        changeRecords.addAll(existingCollectionChanges);
-        app.log("📁 文件归类策略：成功将 " + existingCollectionChanges.size() + " 个文件添加到现有集合中");
+        List<ChangeRecord> existingCollectionChanges = Collections.emptyList();
+        if (pAutoAddToExistingCollections) {
+            app.log("📁 文件归类策略：尝试将文件添加到现有集合中");
+            existingCollectionChanges = addFilesToExistingCollections(inputRecords, rootDirs, parentDir);
+            changeRecords.addAll(existingCollectionChanges);
+            app.log("📁 文件归类策略：成功将 " + existingCollectionChanges.size() + " 个文件添加到现有集合中");
+        } else {
+            app.log("📁 文件归类策略：未启用自动添加到已有合集选项，跳过此步骤");
+        }
         
         // 2. 然后处理新的集合创建
         app.log("📁 文件归类策略：开始处理新的集合创建");
@@ -504,6 +528,26 @@ public class FileCollectionStrategy extends IAppStrategy {
                     record.setNewPath(targetDirPath.resolve(record.getFileHandle().getName()).toString());
                     record.setOpType(OperationType.COLLECT);
                     record.setStatus(ExecStatus.PENDING);
+                    
+                    // 添加合并命中的具体策略和相似度信息到extraParams
+                    Map<String, String> params = record.getExtraParams();
+                    if (params == null) {
+                        params = new HashMap<>();
+                        record.setExtraParams(params);
+                    }
+                    params.put("merge_strategy", "创建新合集");
+                    params.put("collection_name", collectionName);
+                    params.put("collection_suffix", pCollectionSuffix);
+                    params.put("naming_style", pNamingStyle.getName());
+                    params.put("cluster_size", String.valueOf(clusterRecords.size()));
+                    params.put("threshold_used", String.valueOf(pThreshold));
+                    
+                    // 计算与合集名称的相似度
+                    String fileName = record.getFileHandle().getName();
+                    double similarity = calculateSimilarity(fileName, collectionName);
+                    double difference = calculateDifference(fileName, collectionName);
+                    params.put("similarity_to_collection", String.format("%.3f", similarity));
+                    params.put("difference_to_collection", String.format("%.3f", difference));
                     
                     changeRecords.add(record);
                 }
@@ -569,31 +613,161 @@ public class FileCollectionStrategy extends IAppStrategy {
         }
         
         String name = file.getName();
-        // 检查目录名称是否包含合集关键词或用户配置的合集文件夹格式
-        return name.contains(pCollectionSuffix) || 
-               name.contains("合集") || 
-               name.contains("系列") || 
-               name.contains("Collection") || 
-               name.contains("Series") ||
-               name.endsWith("合集") ||
-               name.endsWith("系列") ||
-               name.endsWith("Collection") ||
-               name.endsWith("Series");
+        
+        // 1. 首先检查目录名称是否包含合集关键词或用户配置的合集文件夹格式
+        boolean hasCollectionKeyword = name.contains(pCollectionSuffix) || 
+                                       name.contains("合集") || 
+                                       name.contains("系列") || 
+                                       name.contains("Collection") || 
+                                       name.contains("Series") ||
+                                       name.endsWith("合集") ||
+                                       name.endsWith("系列") ||
+                                       name.endsWith("Collection") ||
+                                       name.endsWith("Series");
+        
+        // 2. 如果目录名称包含合集关键词，进一步检查目录内部的文件
+        if (hasCollectionKeyword) {
+            // 获取目录下的文件
+            File[] files = file.listFiles();
+            if (files == null || files.length == 0) {
+                // 空目录不认为是合集文件夹
+                return false;
+            }
+            
+            // 检查目录下的文件是否符合配置的条件
+            int validFileCount = 0;
+            for (File f : files) {
+                // 只考虑符合目标类型的文件
+                if (isFileTypeMatch(f)) {
+                    // 检查文件名是否达到最短长度要求
+                    if (f.getName().length() >= pMinFileNameLength) {
+                        // 检查文件名是否包含必须的关键词
+                        boolean hasRequiredKeyword = pMustContainKeywords.isEmpty();
+                        if (!hasRequiredKeyword) {
+                            for (String keyword : pMustContainKeywords) {
+                                if (f.getName().toLowerCase().contains(keyword.toLowerCase())) {
+                                    hasRequiredKeyword = true;
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        // 检查文件名是否不包含禁止的关键词
+                        boolean hasForbiddenKeyword = false;
+                        if (!pMustNotContainKeywords.isEmpty()) {
+                            for (String keyword : pMustNotContainKeywords) {
+                                if (f.getName().toLowerCase().contains(keyword.toLowerCase())) {
+                                    hasForbiddenKeyword = true;
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        if (hasRequiredKeyword && !hasForbiddenKeyword) {
+                            validFileCount++;
+                        }
+                    }
+                }
+            }
+            
+            // 只有当目录下有足够数量的有效文件时，才认为是合集文件夹
+            return validFileCount >= pMinFiles;
+        }
+        
+        return false;
     }
     
     /**
      * 检查文件是否应该被添加到现有集合中
      */
-    private boolean shouldAddToExistingCollection(File file, File collectionDir) {
-        // 检查文件是否与集合名称相似
+    private boolean shouldAddToExistingCollection(File file, File collectionDir, ChangeRecord record) {
+        // 1. 检查文件是否符合目标类型
+        if (!isFileTypeMatch(file)) {
+            return false;
+        }
+        
+        // 2. 检查文件名是否达到最短长度要求
+        if (file.getName().length() < pMinFileNameLength) {
+            return false;
+        }
+        
+        // 3. 检查文件名是否包含必须的关键词
+        boolean hasRequiredKeyword = pMustContainKeywords.isEmpty();
+        if (!hasRequiredKeyword) {
+            for (String keyword : pMustContainKeywords) {
+                if (file.getName().toLowerCase().contains(keyword.toLowerCase())) {
+                    hasRequiredKeyword = true;
+                    break;
+                }
+            }
+        }
+        if (!hasRequiredKeyword) {
+            return false;
+        }
+        
+        // 4. 检查文件名是否不包含禁止的关键词
+        boolean hasForbiddenKeyword = false;
+        if (!pMustNotContainKeywords.isEmpty()) {
+            for (String keyword : pMustNotContainKeywords) {
+                if (file.getName().toLowerCase().contains(keyword.toLowerCase())) {
+                    hasForbiddenKeyword = true;
+                    break;
+                }
+            }
+        }
+        if (hasForbiddenKeyword) {
+            return false;
+        }
+        
+        // 5. 检查文件是否与集合名称相似
         String fileName = file.getName();
         String collectionName = collectionDir.getName().replace(pCollectionSuffix, "");
         
         // 使用calculateSimilarity方法检查相似度
         double similarity = calculateSimilarity(fileName, collectionName);
+        double difference = calculateDifference(fileName, collectionName);
         
-        // 如果相似度高于阈值，应该添加到现有集合
-        return similarity >= pThreshold * 0.9; // 使用略微降低的阈值
+        // 6. 检查集合目录下的文件是否与当前文件相似
+        File[] collectionFiles = collectionDir.listFiles();
+        double avgSimilarity = 0;
+        int count = 0;
+        if (collectionFiles != null && collectionFiles.length > 0) {
+            // 计算当前文件与集合中文件的平均相似度
+            double totalSimilarity = 0;
+            for (File collectionFile : collectionFiles) {
+                if (isFileTypeMatch(collectionFile)) {
+                    totalSimilarity += calculateSimilarity(fileName, collectionFile.getName());
+                    count++;
+                }
+            }
+            if (count > 0) {
+                avgSimilarity = totalSimilarity / count;
+                // 如果平均相似度低于阈值，不应该添加到现有集合
+                if (avgSimilarity < pThreshold * 0.8) {
+                    return false;
+                }
+            }
+        }
+        
+        // 7. 如果相似度高于阈值，应该添加到现有集合
+        if (similarity >= pThreshold * 0.9) { // 使用略微降低的阈值
+            // 添加合并命中的具体策略和相似度信息到extraParams
+            Map<String, String> params = record.getExtraParams();
+            if (params == null) {
+                params = new HashMap<>();
+                record.setExtraParams(params);
+            }
+            params.put("similarity", String.format("%.3f", similarity));
+            params.put("difference", String.format("%.3f", difference));
+            params.put("avg_similarity_with_collection", String.format("%.3f", avgSimilarity));
+            params.put("collection_name", collectionDir.getName());
+            params.put("merge_strategy", "添加到现有集合");
+            params.put("threshold_used", String.format("%.3f", pThreshold * 0.9));
+            
+            return true;
+        }
+        
+        return false;
     }
     
     /**
@@ -627,7 +801,7 @@ public class FileCollectionStrategy extends IAppStrategy {
         // 为每个非集合文件检查是否应该添加到现有集合
         for (ChangeRecord record : nonCollectionRecords) {
             for (File collectionDir : existingCollections) {
-                if (shouldAddToExistingCollection(record.getFileHandle(), collectionDir)) {
+                if (shouldAddToExistingCollection(record.getFileHandle(), collectionDir, record)) {
                     // 直接修改原有的记录状态，而不是创建新的记录
                     record.setChanged(true);
                     record.setNewPath(collectionDir.toPath().resolve(record.getFileHandle().getName()).toString());
@@ -748,8 +922,29 @@ public class FileCollectionStrategy extends IAppStrategy {
                 
                 String name2 = record2.getFileHandle().getName();
                 double similarity = calculateSimilarity(name1, name2);
+                double difference = calculateDifference(name1, name2);
                 
-                if (similarity >= pThreshold) {
+                // 基于相似度和差异度的双重判断
+                if (similarity >= pThreshold && difference <= (1.0 - pThreshold)) {
+                    // 添加相似度和差异度信息到extraParams
+                    Map<String, String> params1 = record1.getExtraParams();
+                    if (params1 == null) {
+                        params1 = new HashMap<>();
+                        record1.setExtraParams(params1);
+                    }
+                    params1.put("similarity", String.format("%.3f", similarity));
+                    params1.put("difference", String.format("%.3f", difference));
+                    params1.put("clustering_strategy", "基于相似度阈值" + pThreshold);
+                    
+                    Map<String, String> params2 = record2.getExtraParams();
+                    if (params2 == null) {
+                        params2 = new HashMap<>();
+                        record2.setExtraParams(params2);
+                    }
+                    params2.put("similarity", String.format("%.3f", similarity));
+                    params2.put("difference", String.format("%.3f", difference));
+                    params2.put("clustering_strategy", "基于相似度阈值" + pThreshold);
+                    
                     cluster.add(record2);
                     processed.add(record2);
                 }
@@ -789,7 +984,7 @@ public class FileCollectionStrategy extends IAppStrategy {
     }
     
     /**
-     * 计算两个字符串的相似度 (基于 Levenshtein 距离)
+     * 计算两个字符串的相似度 (基于 Levenshtein 距离，返回0-1范畴的值)
      */
     private double calculateSimilarity(String s1, String s2) {
         // 使用更通用的策略处理各种类型的序号和特殊符号
@@ -815,7 +1010,18 @@ public class FileCollectionStrategy extends IAppStrategy {
             baseSimilarity = Math.max(baseSimilarity, 0.88);
         }
         
-        return baseSimilarity;
+        // 根据识别严格程度调整相似度阈值
+        baseSimilarity *= pRecognitionStrictness;
+        
+        return Math.max(0.0, Math.min(1.0, baseSimilarity));
+    }
+    
+    /**
+     * 计算两个字符串的差异度 (基于 Levenshtein 距离，返回0-1范畴的值，值越大差异越大)
+     */
+    private double calculateDifference(String s1, String s2) {
+        double similarity = calculateSimilarity(s1, s2);
+        return 1.0 - similarity;
     }
     
     /**
