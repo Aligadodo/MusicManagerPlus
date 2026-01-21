@@ -25,6 +25,7 @@ import com.filemanager.type.TaskStatus;
 import com.filemanager.util.file.FileLockManagerUtil;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -157,9 +158,9 @@ public class PipelineManager {
                         }
                     } catch (Exception e) {
                         rec.setStatus(ExecStatus.ANALYZE_FAILED);
-                        rec.setFailReason(e.getMessage());
+                        rec.setFailReason(ExceptionUtils.getStackTrace(e));
                         app.logError("❌ 分析失败: " + rec.getFileHandle().getAbsolutePath() + ",原因" + e.getMessage());
-                        app.logError("❌ 失败详细原因:" + e.getMessage());
+                        app.logError("❌ 失败详细原因:" + ExceptionUtils.getStackTrace(e));
                     } finally {
                         threadTaskEstimator.oneCompleted();
                         if (System.currentTimeMillis() - lastRefresh.get() > 1000) {
@@ -451,9 +452,9 @@ public class PipelineManager {
             }
         } catch (Exception e) {
             rec.setStatus(ExecStatus.FAILED);
-            rec.setFailReason(e.getMessage());
+            rec.setFailReason(ExceptionUtils.getStackTrace(e));
             app.logError("❌ 失败处理: " + rec.getFileHandle().getAbsolutePath() + "，操作类型：" + rec.getOpType().getName() + ",目标路径：" + rec.getNewName() + ",原因" + e.getMessage());
-            app.logError("❌ 失败详细原因:" + e.getMessage());
+            app.logError("❌ 失败详细原因:" + ExceptionUtils.getStackTrace(e));
         } finally {
             completeSingleTask(rec, curr, total, localEstimatorMap, finalRootPath);
         }
