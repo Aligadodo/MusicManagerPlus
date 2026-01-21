@@ -78,6 +78,7 @@ public class FileCollectionStrategy extends IAppStrategy {
     private final JFXComboBox<CollectionNamingStyle> cbNamingStyle;
     private final CheckBox chkPreserveFileTypes;
     private final CheckBox chkAddSequenceInfo;
+    private final CheckBox chkSmartMode;
     private final Spinner<Integer> spMinFiles;
     private final Spinner<Integer> spMinFileNameLength;
     private final TextField txtMustContainKeywords;
@@ -93,6 +94,7 @@ public class FileCollectionStrategy extends IAppStrategy {
     private CollectionNamingStyle pNamingStyle;
     private boolean pPreserveFileTypes;
     private boolean pAddSequenceInfo;
+    private boolean pSmartMode;
     private int pMinFiles;
     private int pMinFileNameLength;
     private List<String> pMustContainKeywords;
@@ -130,7 +132,11 @@ public class FileCollectionStrategy extends IAppStrategy {
         
         // 添加序列信息
         chkAddSequenceInfo = new CheckBox("添加序列信息【最大数-当前数】");
-        chkAddSequenceInfo.setSelected(true); // 默认开启
+        chkAddSequenceInfo.setSelected(true);
+        
+        // 智能模式
+        chkSmartMode = new CheckBox("智能模式：自动调整参数以适应不同命名风格");
+        chkSmartMode.setSelected(false); // 默认开启
         
         // 系列文件最少数量
         spMinFiles = new Spinner<>(2, 50, 2);
@@ -195,7 +201,8 @@ public class FileCollectionStrategy extends IAppStrategy {
                 StyleFactory.createParamPairLine("目标类型:", cbTargetType),
                 StyleFactory.createParamPairLine("命名风格:", cbNamingStyle),
                 chkPreserveFileTypes,
-                chkAddSequenceInfo
+                chkAddSequenceInfo,
+                chkSmartMode
         );
         TitledPane basicPane = new TitledPane("基础设置", basicBox);
         basicPane.setCollapsible(false);
@@ -247,6 +254,7 @@ public class FileCollectionStrategy extends IAppStrategy {
         pNamingStyle = cbNamingStyle.getValue();
         pPreserveFileTypes = chkPreserveFileTypes.isSelected();
         pAddSequenceInfo = chkAddSequenceInfo.isSelected();
+        pSmartMode = chkSmartMode.isSelected();
         pMinFiles = spMinFiles.getValue();
         pMinFileNameLength = spMinFileNameLength.getValue();
         
@@ -306,6 +314,7 @@ public class FileCollectionStrategy extends IAppStrategy {
         props.setProperty("fcs_naming_style", cbNamingStyle.getValue().name());
         props.setProperty("fcs_preserve_file_types", String.valueOf(chkPreserveFileTypes.isSelected()));
         props.setProperty("fcs_add_sequence_info", String.valueOf(chkAddSequenceInfo.isSelected()));
+        props.setProperty("fcs_smart_mode", String.valueOf(chkSmartMode.isSelected()));
         props.setProperty("fcs_min_files", String.valueOf(spMinFiles.getValue()));
         props.setProperty("fcs_min_filename_length", String.valueOf(spMinFileNameLength.getValue()));
         props.setProperty("fcs_must_contain", txtMustContainKeywords.getText());
@@ -334,6 +343,9 @@ public class FileCollectionStrategy extends IAppStrategy {
         }
         if (props.containsKey("fcs_add_sequence_info")) {
             chkAddSequenceInfo.setSelected(Boolean.parseBoolean(props.getProperty("fcs_add_sequence_info")));
+        }
+        if (props.containsKey("fcs_smart_mode")) {
+            chkSmartMode.setSelected(Boolean.parseBoolean(props.getProperty("fcs_smart_mode")));
         }
         if (props.containsKey("fcs_min_files")) {
             spMinFiles.getValueFactory().setValue(Integer.parseInt(props.getProperty("fcs_min_files")));
@@ -793,7 +805,148 @@ public class FileCollectionStrategy extends IAppStrategy {
             baseSimilarity = Math.max(baseSimilarity, 0.9);
         }
         
+        // 额外检查：如果两个文件名包含相同的核心关键词，提高相似度
+        if (hasCommonCoreKeywords(s1, s2)) {
+            baseSimilarity = Math.max(baseSimilarity, 0.85);
+        }
+        
+        // 智能模式：如果两个文件名包含相同的艺术家和专辑信息，提高相似度
+        if (pSmartMode && hasSameArtistAlbumInfo(s1, s2)) {
+            baseSimilarity = Math.max(baseSimilarity, 0.88);
+        }
+        
         return baseSimilarity;
+    }
+    
+    /**
+     * 检查两个文件名是否包含相同的艺术家和专辑信息
+     */
+    private boolean hasSameArtistAlbumInfo(String s1, String s2) {
+        // 提取艺术家和专辑信息
+        String artist1 = extractArtist(s1);
+        String album1 = extractAlbum(s1);
+        String artist2 = extractArtist(s2);
+        String album2 = extractAlbum(s2);
+        
+        // 如果艺术家相同且专辑名称相似，则认为是同一系列
+        if (!artist1.isEmpty() && !artist2.isEmpty() && artist1.equals(artist2)) {
+            if (!album1.isEmpty() && !album2.isEmpty()) {
+                // 计算专辑名称的相似度
+                double albumSimilarity = calculateBasicSimilarity(album1, album2);
+                return albumSimilarity >= 0.7;
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * 提取文件名中的艺术家信息
+     */
+    private String extractArtist(String fileName) {
+        // 简单实现：尝试从文件名中提取艺术家信息
+        // 假设文件名格式为 "艺术家 - 专辑" 或 "艺术家《专辑》"
+        String artist = "";
+        
+        // 尝试匹配 "艺术家 - 专辑" 格式
+        java.util.regex.Pattern pattern1 = java.util.regex.Pattern.compile("^(.*?)\\s*-\\s*");
+        java.util.regex.Matcher matcher1 = pattern1.matcher(fileName);
+        if (matcher1.find()) {
+            artist = matcher1.group(1).trim();
+        }
+        
+        // 尝试匹配 "艺术家《专辑》" 格式
+        if (artist.isEmpty()) {
+            java.util.regex.Pattern pattern2 = java.util.regex.Pattern.compile("^(.*?)《");
+            java.util.regex.Matcher matcher2 = pattern2.matcher(fileName);
+            if (matcher2.find()) {
+                artist = matcher2.group(1).trim();
+            }
+        }
+        
+        // 去除可能的前缀
+        artist = artist.replaceAll("(?i)^DTS-", "").trim();
+        
+        return artist;
+    }
+    
+    /**
+     * 提取文件名中的专辑信息
+     */
+    private String extractAlbum(String fileName) {
+        // 简单实现：尝试从文件名中提取专辑信息
+        // 假设文件名格式为 "艺术家 - 专辑" 或 "艺术家《专辑》"
+        String album = "";
+        
+        // 尝试匹配 "艺术家 - 专辑" 格式
+        java.util.regex.Pattern pattern1 = java.util.regex.Pattern.compile("\\s*-\\s*(.*?)(\\s*\\(|\\s*\\[|\\s*CD|\\s*VOL|$)");
+        java.util.regex.Matcher matcher1 = pattern1.matcher(fileName);
+        if (matcher1.find()) {
+            album = matcher1.group(1).trim();
+        }
+        
+        // 尝试匹配 "艺术家《专辑》" 格式
+        if (album.isEmpty()) {
+            java.util.regex.Pattern pattern2 = java.util.regex.Pattern.compile("《(.*?)》");
+            java.util.regex.Matcher matcher2 = pattern2.matcher(fileName);
+            if (matcher2.find()) {
+                album = matcher2.group(1).trim();
+            }
+        }
+        
+        return album;
+    }
+    
+    /**
+     * 检查两个文件名是否包含相同的核心关键词
+     */
+    private boolean hasCommonCoreKeywords(String s1, String s2) {
+        // 提取核心关键词
+        List<String> keywords1 = extractCoreKeywords(s1);
+        List<String> keywords2 = extractCoreKeywords(s2);
+        
+        // 计算共同关键词数量
+        int commonCount = 0;
+        for (String keyword : keywords1) {
+            if (keywords2.contains(keyword)) {
+                commonCount++;
+            }
+        }
+        
+        // 如果有至少两个共同关键词，或者共同关键词占总关键词的比例较高，则认为是同一系列
+        int totalKeywords = Math.max(keywords1.size(), keywords2.size());
+        return commonCount >= 2 || (totalKeywords > 0 && (double) commonCount / totalKeywords >= 0.5);
+    }
+    
+    /**
+     * 提取文件名中的核心关键词
+     */
+    private List<String> extractCoreKeywords(String fileName) {
+        List<String> keywords = new ArrayList<>();
+        
+        // 去除常见前缀/后缀
+        String processed = fileName.replaceAll("(?i)^DTS-", "");
+        processed = processed.replaceAll("(?i)(CD|VOL|DISC)\\s*\\d+", "");
+        processed = processed.replaceAll("(?i)(2CD|3CD|4CD)", "");
+        
+        // 去除括号和特殊字符
+        processed = processed.replaceAll("[\\[\\]\\(\\)\\{\\}\\<>\\《\\》\\【\\】\\.\\,\\!\\?\\;\\:\'\"\\`\\~\\|\\=\\+\\\\\\/\\#\\$\\%\\^\\&\\*\\_]", " ");
+        
+        // 去除数字
+        processed = processed.replaceAll("\\b\\d+\\b", "");
+        
+        // 分割成单词
+        String[] parts = processed.split("\\s+");
+        
+        // 过滤短词和无意义的词
+        for (String part : parts) {
+            String trimmed = part.trim();
+            if (trimmed.length() >= 2) { // 至少2个字符
+                keywords.add(trimmed);
+            }
+        }
+        
+        return keywords;
     }
     
     /**
@@ -875,22 +1028,27 @@ public class FileCollectionStrategy extends IAppStrategy {
      * 提取文件名中的标题部分（去除序号和格式信息）
      */
     private String extractTitle(String fileName) {
-        // 提取文件名中的标题部分（去除序号和格式信息）
+        // 提取文件名中的标题部分，去除序号和格式信息
         String title = fileName;
         
-        // 1. 去除阿拉伯数字序号
+        // 1. 去除常见的系列标识前缀/后缀
+        title = title.replaceAll("(?i)^DTS-|", ""); // 去除DTS前缀
+        title = title.replaceAll("(?i)(CD|VOL|DISC)\\s*\\d+", ""); // 去除CD、VOL、DISC等标识
+        title = title.replaceAll("(?i)(2CD|3CD|4CD)", ""); // 去除多CD标识
+        
+        // 2. 去除阿拉伯数字序号
         title = title.replaceAll("\\b\\d+\\b", "");
         
-        // 2. 去除中文数字序号
+        // 3. 去除中文数字序号
         title = title.replaceAll("[一二三四五六七八九十百千万壹贰叁肆伍陆柒捌玖拾佰仟]", "");
         
-        // 3. 去除圆形序号
+        // 4. 去除圆形序号
         title = title.replaceAll("[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳]", "");
         
-        // 4. 去除字母序号
+        // 5. 去除字母序号
         title = title.replaceAll("\\b[A-Za-z]\\b", "");
         
-        // 5. 去除括号和噪音字符
+        // 6. 去除括号和噪音字符
         title = title.replaceAll("[\\s\\[\\]\\(\\)\\{\\}\\<>\\《\\》\\【\\】\\.\\,\\!\\?\\;\\:\'\"\\`\\~\\|\\=\\+\\\\\\/\\#\\$\\%\\^\\&\\*\\_]", "");
         
         return title;
