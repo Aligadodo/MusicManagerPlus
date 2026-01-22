@@ -108,6 +108,12 @@ public class PipelineManager {
                 app.getAutoRun().setSelected(false);
             }
         }
+        
+        // 重置任务时间戳
+        if (app instanceof com.filemanager.app.FileManagerPlusApp) {
+            ((com.filemanager.app.FileManagerPlusApp) app).resetTaskTimestamps();
+        }
+        
         isTaskRunning.set(true);
         fullChangeList.clear();
         app.switchView(app.getPreviewView().getViewNode());
@@ -245,6 +251,11 @@ public class PipelineManager {
         if (!confirmExecution(count)) {
             return;
         }
+        
+        // 重置任务时间戳
+        if (app instanceof com.filemanager.app.FileManagerPlusApp) {
+            ((com.filemanager.app.FileManagerPlusApp) app).resetTaskTimestamps();
+        }
 
         isTaskRunning.set(true);
 
@@ -273,6 +284,11 @@ public class PipelineManager {
 
         if (pendingRecords.isEmpty()) {
             return;
+        }
+        
+        // 重置任务时间戳
+        if (app instanceof com.filemanager.app.FileManagerPlusApp) {
+            ((com.filemanager.app.FileManagerPlusApp) app).resetTaskTimestamps();
         }
 
         isTaskRunning.set(true);
@@ -407,7 +423,7 @@ public class PipelineManager {
 
                     // 更新任务进度（每次循环都更新）
                     long completed = threadTaskEstimator.getCompletedTasks();
-                    Platform.runLater(() -> updateProgress(completed, total));
+                    updateProgress(completed, total);
 
                     // 适当Sleep，避免反复刷数据
                     // 定期更新根路径进度UI和文本信息
@@ -422,7 +438,7 @@ public class PipelineManager {
                 }
                 
                 // 确保进度条显示100%
-                Platform.runLater(() -> updateProgress(total, total));
+                updateProgress(total, total);
 
                 // 关闭所有线程池
                 threadPoolManager.shutdownAll();
@@ -573,6 +589,12 @@ public class PipelineManager {
         app.updateProgressStatus(status);
         app.updateRunningProgress(msg);
         app.refreshPreviewTableFilter();
+        
+        // 固化任务结束时间
+        if (app instanceof com.filemanager.app.FileManagerPlusApp) {
+            ((com.filemanager.app.FileManagerPlusApp) app).setTaskEndTimestamp(System.currentTimeMillis());
+        }
+        
         app.updateStats();
         if (TaskStatus.CANCELED == status) {
             app.getPreviewView().getMainProgressBar().progressProperty().unbind();
@@ -581,6 +603,11 @@ public class PipelineManager {
         if (TaskStatus.SUCCESS == status) {
             app.getPreviewView().getMainProgressBar().progressProperty().unbind();
             app.getPreviewView().getMainProgressBar().progressProperty().set(1.0);
+            
+            // 强制更新所有根路径进度条到100%
+            Platform.runLater(() -> {
+                app.getPreviewView().updateRootPathProgress();
+            });
         }
         // 设置进度条为颜色
         ProgressBarDisplay.updateProgressStatus(app.getPreviewView().getMainProgressBar(), status);

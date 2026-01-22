@@ -105,10 +105,24 @@ public class FileManagerPlusApp extends Application implements IAppController {
     }
 
     private long taskStartTimStamp = System.currentTimeMillis();
+    private Long taskEndTimestamp = null;
 
     @Override
     public long getTaskStartTimStamp() {
         return taskStartTimStamp;
+    }
+    
+    public Long getTaskEndTimestamp() {
+        return taskEndTimestamp;
+    }
+    
+    public void setTaskEndTimestamp(Long taskEndTimestamp) {
+        this.taskEndTimestamp = taskEndTimestamp;
+    }
+    
+    public void resetTaskTimestamps() {
+        this.taskStartTimStamp = System.currentTimeMillis();
+        this.taskEndTimestamp = null;
     }
 
     private List<IAppStrategy> strategyPrototypes;
