@@ -400,6 +400,16 @@ public class FileManagerPlusApp extends Application implements IAppController {
         return globalSettingsView.getSpRecursionDepth();
     }
 
+    @Override
+    public Spinner<Integer> getSpMinRecursionDepth() {
+        return globalSettingsView.getSpMinRecursionDepth();
+    }
+
+    @Override
+    public Spinner<Integer> getSpMaxRecursionDepth() {
+        return globalSettingsView.getSpMaxRecursionDepth();
+    }
+
 
     @Override
     public Spinner<Integer> getSpPreviewThreads() {

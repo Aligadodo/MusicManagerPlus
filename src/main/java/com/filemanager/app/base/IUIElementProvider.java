@@ -32,6 +32,18 @@ public interface IUIElementProvider {
     Spinner<Integer> getSpRecursionDepth();
 
     /**
+     * 获取最小递归深度选择器
+     * @return 最小递归深度选择器
+     */
+    Spinner<Integer> getSpMinRecursionDepth();
+
+    /**
+     * 获取最大递归深度选择器
+     * @return 最大递归深度选择器
+     */
+    Spinner<Integer> getSpMaxRecursionDepth();
+
+    /**
      * 获取预览线程数选择器
      * @return 预览线程数选择器
      */

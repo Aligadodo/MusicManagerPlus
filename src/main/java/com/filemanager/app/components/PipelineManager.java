@@ -90,10 +90,24 @@ public class PipelineManager {
         }
 
         // 从GlobalSettingsView获取参数
-        int minDepth = "当前目录".equals(app.getCbRecursionMode().getValue()) ? 0 :
-                ("全部文件".equals(app.getCbRecursionMode().getValue()) ? 0 : app.getSpRecursionDepth().getValue());
-        int maxDepth = "当前目录".equals(app.getCbRecursionMode().getValue()) ? 1 :
-                ("全部文件".equals(app.getCbRecursionMode().getValue()) ? Integer.MAX_VALUE : app.getSpRecursionDepth().getValue());
+        int minDepth, maxDepth;
+        String recursionMode = app.getCbRecursionMode().getValue();
+        if ("当前目录".equals(recursionMode)) {
+            minDepth = 0;
+            maxDepth = 1;
+        } else if ("全部文件".equals(recursionMode)) {
+            minDepth = 0;
+            maxDepth = Integer.MAX_VALUE;
+        } else if ("指定目录层级".equals(recursionMode)) {
+            minDepth = app.getSpRecursionDepth().getValue();
+            maxDepth = app.getSpRecursionDepth().getValue();
+        } else if ("目录层级范围".equals(recursionMode)) {
+            minDepth = app.getSpMinRecursionDepth().getValue();
+            maxDepth = app.getSpMaxRecursionDepth().getValue();
+        } else {
+            minDepth = 0;
+            maxDepth = Integer.MAX_VALUE;
+        }
         // 应用预览数量限制
         PreviewView previewView = app.getPreviewView();
         int limit = previewView.getGlobalPreviewLimit();
@@ -344,6 +358,7 @@ public class PipelineManager {
                         if (exceedLimit) {
                             rec.setFailReason("已超出执行限制，忽略接下来的操作！！！");
                             rec.setStatus(ExecStatus.SKIPPED);
+                            threadTaskEstimator.oneCompleted();
                             continue;
                         }
 
@@ -362,14 +377,24 @@ public class PipelineManager {
                                 finalRootPath, globalExecutedCount, executedCountByRootPath));
                     }
 
+                    // 更新任务进度（每次循环都更新）
+                    long completed = threadTaskEstimator.getCompletedTasks();
+                    Platform.runLater(() -> updateProgress(completed, total));
+
                     // 适当Sleep，避免反复刷数据
-                    // 定期更新根路径进度UI
+                    // 定期更新根路径进度UI和文本信息
                     if (System.currentTimeMillis() - lastRefresh.get() > 1000) {
                         lastRefresh.set(System.currentTimeMillis());
+                        app.setRunningUI("▶ ▶ ▶ 执行任务进度: " + threadTaskEstimator.getDisplayInfo());
+                        app.refreshPreviewTableFilter();
+                        // 更新根路径进度UI
                         app.getPreviewView().updateRootPathProgress();
                     }
                     Thread.sleep(100);
                 }
+                
+                // 确保进度条显示100%
+                Platform.runLater(() -> updateProgress(total, total));
 
                 // 关闭所有线程池
                 threadPoolManager.shutdownAll();
@@ -470,6 +495,7 @@ public class PipelineManager {
         }
         // 文件解锁
         FileLockManagerUtil.unlock(rec.getFileHandle());
+        
         if (System.currentTimeMillis() - lastRefresh.get() > 1000) {
             lastRefresh.set(System.currentTimeMillis());
             app.setRunningUI("▶ ▶ ▶ 执行任务进度: " + threadTaskEstimator.getDisplayInfo());
@@ -495,6 +521,11 @@ public class PipelineManager {
         if (task != null) {
             app.getPreviewView().getMainProgressBar().progressProperty().bind(task.progressProperty());
         }
+        
+        // 禁用线程池模式下拉框
+        Platform.runLater(() -> {
+            app.getPreviewView().getCbThreadPoolMode().setDisable(true);
+        });
     }
 
     /**
@@ -526,6 +557,11 @@ public class PipelineManager {
         // 设置进度条为颜色
         ProgressBarDisplay.updateProgressStatus(app.getPreviewView().getMainProgressBar(), status);
         currentTask = null;
+        
+        // 启用线程池模式下拉框
+        Platform.runLater(() -> {
+            app.getPreviewView().getCbThreadPoolMode().setDisable(false);
+        });
     }
 
     private void handleTaskLifecycle(Task<?> t) {

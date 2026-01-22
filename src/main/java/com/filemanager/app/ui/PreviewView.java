@@ -88,6 +88,10 @@ public class PreviewView implements IAutoReloadAble {
     public TreeTableView<ChangeRecord> getPreviewTable() {
         return previewTable;
     }
+    
+    public JFXComboBox<String> getCbThreadPoolMode() {
+        return cbThreadPoolMode;
+    }
     private JFXComboBox<Integer> numberDisplay;
     private JFXComboBox<String> cbThreadPoolMode; // 线程池模式选择：共享或根路径独立
     // 数量上限配置UI
@@ -192,12 +196,24 @@ public class PreviewView implements IAutoReloadAble {
         cbThreadPoolMode.getSelectionModel().select(0); // 默认使用全局统一配置
         cbThreadPoolMode.setTooltip(new Tooltip("选择线程池模式：全局统一配置或根路径独立配置"));
         cbThreadPoolMode.valueProperty().addListener((o, oldVal, newVal) -> {
+            // 检查任务是否正在运行
+            if (app.getTaskRunningStatus().get()) {
+                // 任务正在运行，显示提示并恢复原来的选择
+                FXDialogUtils.showToast(app.getPrimaryStage(), "任务执行中，无法切换线程池模式！", FXDialogUtils.ToastType.INFO);
+                cbThreadPoolMode.getSelectionModel().select(oldVal);
+                return;
+            }
+            
             // 调用App的方法切换线程池模式
             boolean success = app.setThreadPoolMode(newVal);
             if (success) {
                 // 线程池模式切换成功，更新根路径配置区域的可见性
                 boolean isRootPathMode = ThreadPoolManager.MODE_ROOT_PATH.equals(newVal);
                 rootPathThreadConfigBox.setDisable(!isRootPathMode);
+                
+                // 切换为根目录模式时，禁用主的预览线程、运行线程数设置
+                spPreviewThreads.setDisable(isRootPathMode);
+                spExecutionThreads.setDisable(isRootPathMode);
 
                 // 控制局部参数配置面板的显示
                 if (isRootPathMode) {
@@ -260,6 +276,9 @@ public class PreviewView implements IAutoReloadAble {
         rootPathThreadConfigBox = new VBox(10);
         rootPathThreadConfigBox.setPadding(new Insets(5));
         rootPathThreadConfigBox.setAlignment(Pos.CENTER_LEFT);
+        
+        // 初始设置线程池模式下拉框的可用性
+        cbThreadPoolMode.setDisable(app.getTaskRunningStatus().get());
     }
 
     /**
@@ -410,6 +429,7 @@ public class PreviewView implements IAutoReloadAble {
             unlimitedPreview.selectedProperty().addListener((obs, oldVal, newVal) -> {
                 previewLimitSpinner.setDisable(newVal);
             });
+            previewLimitSpinner.setDisable(unlimitedPreview.isSelected());
             HBox previewLimit = new HBox(10);
             previewLimit.setAlignment(Pos.CENTER_LEFT);
             previewLimit.setFillHeight(false);
@@ -433,6 +453,7 @@ public class PreviewView implements IAutoReloadAble {
             unlimitedExecution.selectedProperty().addListener((obs, oldVal, newVal) -> {
                 executionLimitSpinner.setDisable(newVal);
             });
+            executionLimitSpinner.setDisable(unlimitedExecution.isSelected());
             HBox executionLimit = new HBox(10);
             executionLimit.setAlignment(Pos.CENTER_LEFT);
             executionLimit.setFillHeight(false);
