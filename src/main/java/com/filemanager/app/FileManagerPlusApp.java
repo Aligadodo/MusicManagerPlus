@@ -265,7 +265,9 @@ public class FileManagerPlusApp extends Application implements IAppController {
         loadItem.setOnAction(e -> loadConfigAction());
         MenuItem saveItem = new MenuItem("保存配置...");
         saveItem.setOnAction(e -> saveConfigAction());
-        fileMenu.getItems().addAll(loadItem, saveItem);
+        MenuItem resetItem = new MenuItem("重置配置");
+        resetItem.setOnAction(e -> resetConfigAction());
+        fileMenu.getItems().addAll(loadItem, saveItem, resetItem);
         menuBar.getMenus().add(fileMenu);
         
         // 应用菜单样式
@@ -675,6 +677,24 @@ public class FileManagerPlusApp extends Application implements IAppController {
         FileChooser fc = new FileChooser();
         File f = fc.showOpenDialog(primaryStage);
         if (f != null) configManager.loadConfig(f);
+    }
+    
+    @Override
+    public void resetConfigAction() {
+        // 重置配置管理器
+        configManager.resetConfig();
+        
+        // 重新初始化流程
+        pipelineManager.resetPipeline();
+        
+        // 重新加载全局设置
+        globalSettingsView.resetSettings();
+        
+        // 刷新界面组件
+        getAutoReloadNodes().forEach(node -> node.reload());
+        
+        // 应用外观
+        applyAppearance();
     }
 
     @Override

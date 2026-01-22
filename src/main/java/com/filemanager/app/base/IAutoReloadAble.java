@@ -17,6 +17,11 @@ public interface IAutoReloadAble {
 
     public abstract void loadConfig(Properties props);
     
+    // 重置配置
+    default void resetConfig() {
+        // 默认实现为空，子类可选择性覆盖
+    }
+    
     // 样式重新加载
     public abstract void reload();
 }

@@ -27,6 +27,11 @@ public interface IConfigManager {
     void loadConfigAction();
     
     /**
+     * 重置配置操作
+     */
+    void resetConfigAction();
+    
+    /**
      * 设置线程池模式
      * @param newVal 新的线程池模式
      * @return 是否设置成功

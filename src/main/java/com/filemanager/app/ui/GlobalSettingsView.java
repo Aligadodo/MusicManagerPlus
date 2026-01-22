@@ -99,13 +99,36 @@ public class GlobalSettingsView implements IAutoReloadAble {
         
         // 初始化文件扫描过滤配置
         scanFilterList = FXCollections.observableArrayList(
+                // 功能相关过滤
                 "*Convert*",
                 "*Split*",
                 "*System*",
                 "*trash*",
                 "*Temp*",
                 "*Cache*",
-                "*Log*"
+                "*Log*",
+                
+                // Windows系统路径
+                "*\\Windows\\*",
+                "*\\Program Files\\*",
+                "*\\Program Files (x86)\\*",
+                "*\\ProgramData\\*",
+                "*\\AppData\\*",
+                "*\\Local Settings\\*",
+                "*\\Application Data\\*",
+                
+                // 系统特殊目录
+                "*\\Recycle Bin\\*",
+                "*\\System Volume Information\\*",
+                
+                // 隐藏文件和临时文件
+                "*\\.*",  // 隐藏文件和目录
+                "*\\~*",  // 临时文件和备份
+                "*\\Thumbs.db",  // 缩略图缓存
+                
+                // 临时文件目录
+                "*\\Temp\\*",
+                "*\\TMP\\*"
         );
         scanFilterListView = StyleFactory.createListView();
         scanFilterListView.setPrefHeight(150);
@@ -469,5 +492,49 @@ public class GlobalSettingsView implements IAutoReloadAble {
         
         // 递归更新所有子组件样式
         StyleFactory.refreshAllComponents(viewNode);
+    }
+    
+    @Override
+    public void resetConfig() {
+        // 重置过滤规则为默认值
+        scanFilterList.clear();
+        scanFilterList.addAll(
+                "*Convert*",
+                "*Split*",
+                "*System*",
+                "*trash*",
+                "*Temp*",
+                "*Cache*",
+                "*Log*",
+                "*\\Windows\\*",
+                "*\\Program Files\\*",
+                "*\\Program Files (x86)\\*",
+                "*\\ProgramData\\*",
+                "*\\AppData\\*",
+                "*\\Local Settings\\*",
+                "*\\Application Data\\*",
+                "*\\Recycle Bin\\*",
+                "*\\System Volume Information\\*",
+                "*\\.*",
+                "*\\~*",
+                "*\\Thumbs.db",
+                "*\\Temp\\*",
+                "*\\TMP\\*"
+        );
+        
+        // 重置扫描模式为默认值
+        cbRecursionMode.getSelectionModel().selectFirst();
+        
+        // 重置扫描层级为默认值
+        spRecursionDepth.getValueFactory().setValue(1);
+        spMinRecursionDepth.getValueFactory().setValue(0);
+        spMaxRecursionDepth.getValueFactory().setValue(2);
+        
+        // 重置输入框
+        scanFilterInput.setText("");
+    }
+    
+    public void resetSettings() {
+        resetConfig();
     }
 }

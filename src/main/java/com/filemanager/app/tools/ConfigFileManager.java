@@ -71,9 +71,41 @@ public class ConfigFileManager {
             app.logError("配置加载失败: " + ExceptionUtils.getStackTrace(e));
         }
     }
+    
+    public void resetConfig() {
+        try {
+            // 1. 清空配置属性
+            props.clear();
+            
+            // 2. 重置全局组件配置
+            app.getAutoReloadNodes().forEach(node -> {
+                try {
+                    node.resetConfig();
+                } catch (Exception e) {
+                    app.logError("配置重置失败: " + ExceptionUtils.getStackTrace(e));
+                }
+            });
+            
+            // 3. 重置流水线
+            resetPipeline();
+            
+            // 4. 应用默认外观
+            app.applyAppearance();
+            
+            app.log("配置已重置为默认值");
+        } catch (Exception e) {
+            app.logError("配置重置失败: " + ExceptionUtils.getStackTrace(e));
+        }
+    }
 
     // --- Internal: Pipeline Serialization ---
 
+    private void resetPipeline() {
+        // 清空流水线配置
+        app.getPipelineStrategies().clear();
+        app.log("流水线已重置");
+    }
+    
     private void savePipeline() {
         ObservableList<IAppStrategy> strategies = app.getPipelineStrategies();
         props.setProperty("pipeline.size", String.valueOf(strategies.size()));

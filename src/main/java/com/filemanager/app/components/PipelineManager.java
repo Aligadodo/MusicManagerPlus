@@ -59,6 +59,34 @@ public class PipelineManager {
         this.isTaskRunning = app.getTaskRunningStatus();
         this.fullChangeList = new ArrayList<>();
     }
+    
+    public void resetPipeline() {
+        // 清空策略流水线
+        app.getPipelineStrategies().clear();
+        
+        // 重置状态
+        isTaskRunning.set(false);
+        
+        // 清空变更列表
+        if (fullChangeList != null) {
+            fullChangeList.clear();
+        }
+        
+        // 取消当前任务
+        if (currentTask != null && currentTask.isRunning()) {
+            currentTask.cancel(true);
+        }
+        currentTask = null;
+        
+        // 清空估算器
+        localEstimatorMap.clear();
+        threadTaskEstimator = null;
+        
+        // 重置文件序列号生成器
+        fileSequenceGenerator.set(0);
+        
+        app.log("流水线已重置");
+    }
 
     public void runPipelineAnalysis() {
         if (app.getSourceRoots().isEmpty()) {
