@@ -588,8 +588,6 @@ public class PipelineManager {
         isTaskRunning.set(false);
         app.updateProgressStatus(status);
         app.updateRunningProgress(msg);
-        app.refreshPreviewTableFilter();
-        
         // 固化任务结束时间
         if (app instanceof com.filemanager.app.FileManagerPlusApp) {
             ((com.filemanager.app.FileManagerPlusApp) app).setTaskEndTimestamp(System.currentTimeMillis());
@@ -612,6 +610,11 @@ public class PipelineManager {
         // 设置进度条为颜色
         ProgressBarDisplay.updateProgressStatus(app.getPreviewView().getMainProgressBar(), status);
         currentTask = null;
+        
+        // 强制刷新预览列表，确保显示最新状态
+        Platform.runLater(() -> {
+            app.refreshPreviewTableFilter();
+        });
         
         // 启用线程池模式下拉框
         Platform.runLater(() -> {
