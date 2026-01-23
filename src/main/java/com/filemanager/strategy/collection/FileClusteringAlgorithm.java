@@ -118,13 +118,110 @@ public class FileClusteringAlgorithm {
             return "未命名";
         }
         
+        // 提取最长公共前缀
         String longestCommonPrefix = findLongestCommonPrefix(filenames);
         
         if (longestCommonPrefix.length() >= 5) {
-            return longestCommonPrefix.trim();
+            // 尝试修复不完整的括号
+            String fixedPrefix = fixIncompleteBrackets(longestCommonPrefix);
+            return fixedPrefix.trim();
         }
         
         return extractMostFrequentWords(filenames);
+    }
+    
+    /**
+     * 从文件名列表中提取艺术家信息
+     */
+    private String extractArtistFromFilenames(List<String> filenames) {
+        for (String filename : filenames) {
+            String artist = extractArtist(filename);
+            if (!artist.isEmpty()) {
+                return artist;
+            }
+        }
+        return "";
+    }
+    
+    /**
+     * 从文件名中提取艺术家信息
+     */
+    private String extractArtist(String filename) {
+        // 简单实现：尝试从文件名中提取艺术家信息
+        // 假设文件名格式为 "艺术家 - 专辑" 或 "艺术家《专辑》"
+        
+        // 尝试匹配 "艺术家 - 专辑" 格式
+        java.util.regex.Pattern pattern1 = java.util.regex.Pattern.compile("^(.+?)\\s*-\\s*");
+        java.util.regex.Matcher matcher1 = pattern1.matcher(filename);
+        if (matcher1.find()) {
+            return matcher1.group(1).trim().replaceAll("[\\[\\]\\(\\)\\{\\}\\<>\\《\\》\\【\\】]", "");
+        }
+        
+        // 尝试匹配 "[艺术家]" 格式
+        java.util.regex.Pattern pattern2 = java.util.regex.Pattern.compile("^\\[(.+?)\\]");
+        java.util.regex.Matcher matcher2 = pattern2.matcher(filename);
+        if (matcher2.find()) {
+            return matcher2.group(1).trim();
+        }
+        
+        return "";
+    }
+    
+    /**
+     * 从文件名列表中提取文件类型信息
+     */
+    private String extractFileTypesFromFilenames(List<String> filenames) {
+        Set<String> fileTypes = new HashSet<>();
+        
+        for (String filename : filenames) {
+            String fileType = extractFileType(filename);
+            if (!fileType.isEmpty()) {
+                fileTypes.add(fileType);
+            }
+        }
+        
+        return String.join("\\", fileTypes);
+    }
+    
+    /**
+     * 从文件名中提取文件类型信息
+     */
+    private String extractFileType(String filename) {
+        // 简单实现：尝试从文件名中提取文件类型信息
+        // 假设文件类型在括号中，如 "(FLAC)" 或 "(MP3)"
+        
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("\\((.+?)\\)$");
+        java.util.regex.Matcher matcher = pattern.matcher(filename);
+        if (matcher.find()) {
+            String type = matcher.group(1).trim();
+            // 去除常见的格式信息，只保留核心文件类型
+            type = type.replaceAll("CUE$", "");
+            type = type.replaceAll("+", "\\");
+            return type;
+        }
+        
+        return "";
+    }
+    
+    /**
+     * 修复不完整的括号
+     */
+    private String fixIncompleteBrackets(String input) {
+        // 检查并修复常见的括号组合
+        if (input.endsWith("[")) {
+            return input.substring(0, input.length() - 1);
+        } else if (input.endsWith("(")) {
+            return input.substring(0, input.length() - 1);
+        } else if (input.endsWith("{") || input.endsWith("<")) {
+            return input.substring(0, input.length() - 1);
+        }
+        
+        // 检查中文括号
+        if (input.endsWith("【") || input.endsWith("《")) {
+            return input.substring(0, input.length() - 1);
+        }
+        
+        return input;
     }
     
     private String findLongestCommonPrefix(List<String> strings) {

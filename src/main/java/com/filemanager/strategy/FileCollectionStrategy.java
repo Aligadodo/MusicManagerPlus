@@ -750,7 +750,7 @@ public class FileCollectionStrategy extends IAppStrategy {
     /**
      * 计算两个字符串的相似度 (基于 Levenshtein 距离，返回0-1范畴的值)
      */
-    private double calculateSimilarity(String s1, String s2) {
+    protected double calculateSimilarity(String s1, String s2) {
         // 使用更通用的策略处理各种类型的序号和特殊符号
         String processed1 = processSpecialSymbolsAndNumbers(s1);
         String processed2 = processSpecialSymbolsAndNumbers(s2);
@@ -891,7 +891,7 @@ public class FileCollectionStrategy extends IAppStrategy {
     /**
      * 提取文件名中的核心关键词
      */
-    private List<String> extractCoreKeywords(String fileName) {
+    protected List<String> extractCoreKeywords(String fileName) {
         List<String> keywords = new ArrayList<>();
         
         // 去除常见前缀/后缀
@@ -922,7 +922,7 @@ public class FileCollectionStrategy extends IAppStrategy {
     /**
      * 处理特殊符号和序号，使用更通用的策略
      */
-    private String processSpecialSymbolsAndNumbers(String input) {
+    protected String processSpecialSymbolsAndNumbers(String input) {
         String result = input;
         
         // 1. 处理各种类型的序号
@@ -977,8 +977,9 @@ public class FileCollectionStrategy extends IAppStrategy {
     /**
      * 检查两个文件名是否包含相同的标题和不同的数字序号
      */
-    private boolean hasSameTitleDifferentNumber(String s1, String s2) {
-        // 提取标题部分（去除序号和格式信息）
+    protected boolean hasSameTitleDifferentNumber(String s1, String s2) {
+        
+        // 通用处理：提取标题部分（去除序号和格式信息）
         String title1 = extractTitle(s1);
         String title2 = extractTitle(s2);
         
@@ -1002,7 +1003,7 @@ public class FileCollectionStrategy extends IAppStrategy {
         String title = fileName;
         
         // 1. 去除常见的系列标识前缀/后缀
-        title = title.replaceAll("(?i)^DTS-|", ""); // 去除DTS前缀
+        title = title.replaceAll("(?i)^DTS-", ""); // 去除DTS前缀
         title = title.replaceAll("(?i)(CD|VOL|DISC)\\s*\\d+", ""); // 去除CD、VOL、DISC等标识
         title = title.replaceAll("(?i)(2CD|3CD|4CD)", ""); // 去除多CD标识
         
@@ -1018,8 +1019,11 @@ public class FileCollectionStrategy extends IAppStrategy {
         // 5. 去除字母序号
         title = title.replaceAll("\\b[A-Za-z]\\b", "");
         
-        // 6. 去除括号和噪音字符
-        title = title.replaceAll("[\\s\\[\\]\\(\\)\\{\\}\\<>\\《\\》\\【\\】\\.\\,\\!\\?\\;\\:\'\"\\`\\~\\|\\=\\+\\\\\\/\\#\\$\\%\\^\\&\\*\\_]", "");
+        // 6. 只去除噪音字符，保留括号内容
+        title = title.replaceAll("[\\s\\.\\,\\!\\?\\;\\:\'\"\\`\\~\\|\\=\\+\\\\\\/\\#\\$\\%\\^\\&\\*\\_]", "");
+        
+        // 7. 提取核心标题部分，去除具体的歌曲名称
+
         
         return title;
     }
