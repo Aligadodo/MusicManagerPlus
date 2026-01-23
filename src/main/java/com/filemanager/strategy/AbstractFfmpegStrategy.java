@@ -199,8 +199,6 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
 
     @Override
     public Node getConfigNode() {
-
-
         // 1. FFmpeg路径
         JFXButton btnPickFFmpeg = StyleFactory.createIconButton("浏览", "", () -> {
             FileChooser fc = new FileChooser();
@@ -209,8 +207,6 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
         });
 
         // 2. 缓存设置
-        Node lblCache = StyleFactory.createParamLabel("缓存目录:");
-        lblCache.disableProperty().bind(chkEnableCache.selectedProperty().not());
         txtCacheDir.disableProperty().bind(chkEnableCache.selectedProperty().not());
         JFXButton btnPickCache = StyleFactory.createActionButton("选择路径", "", () -> {
             DirectoryChooser dc = new DirectoryChooser();
@@ -220,8 +216,6 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
         btnPickCache.disableProperty().bind(chkEnableCache.selectedProperty().not());
 
         // 3. 镜像路径设置
-        Node snapCacheLabel = StyleFactory.createParamLabel("镜像目录:");
-        snapCacheLabel.disableProperty().bind(chkEnableSnap.selectedProperty().not());
         txtSnapDir.disableProperty().bind(chkEnableSnap.selectedProperty().not());
         JFXButton btnPickSnap = StyleFactory.createActionButton("选择路径", "", () -> {
             DirectoryChooser dc = new DirectoryChooser();
@@ -229,7 +223,6 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
             if (f != null) txtSnapDir.setText(f.getAbsolutePath());
         });
         btnPickSnap.disableProperty().bind(chkEnableSnap.selectedProperty().not());
-
 
         return StyleFactory.createVBoxPanel(
                 StyleFactory.createChapter("输出格式设置"),
@@ -243,12 +236,13 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
                 StyleFactory.createParamPairLine("声道数:", cbChannels),
                 StyleFactory.createSeparator(),
                 StyleFactory.createChapter("文件处理选项"),
-                StyleFactory.createVBoxPanel(chkOverwrite, chkForceFilenameMeta),
+                chkOverwrite,
+                chkForceFilenameMeta,
                 chkAutoFormatFilename,
                 chkEnableSnap,
-                StyleFactory.createHBox(snapCacheLabel, txtSnapDir, btnPickSnap),
+                StyleFactory.createParamPairLine("镜像目录:", txtSnapDir, btnPickSnap),
                 chkEnableCache,
-                StyleFactory.createHBox(lblCache, txtCacheDir, btnPickCache),
+                StyleFactory.createParamPairLine("缓存目录:", txtCacheDir, btnPickCache),
                 chkEnableTempSuffix
         );
     }
