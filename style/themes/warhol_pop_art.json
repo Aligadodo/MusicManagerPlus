@@ -9,7 +9,7 @@
   "textSecondaryColor": "#545a5e",
   "textTertiaryColor": "#8a8f93",
   "textDisabledColor": "#b0b5b9",
-  "glassOpacity": 0.6,
+  "glassOpacity": 0.90,
   "isDarkBackground": false,
   "cornerRadius": 12.0,
   "borderColor": "#ff6b6b",

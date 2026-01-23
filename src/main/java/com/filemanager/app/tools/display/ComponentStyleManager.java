@@ -188,10 +188,14 @@ public class ComponentStyleManager {
             currentStyle = currentStyle.replaceAll(".*?-fx-font-family:[^;]*;", "");
         }
         
-        // 设置更新后的样式
+        // 设置更新后的样式，确保不会保留*号前缀
+        String trimmedStyle = currentStyle.trim();
+        if (trimmedStyle.startsWith("*")) {
+            trimmedStyle = trimmedStyle.substring(1).trim();
+        }
         labeled.setStyle(String.format(
                 "%s -fx-text-fill: %s; -fx-font-family: '%s';",
-                currentStyle.trim(), theme.getTextPrimaryColor(), theme.getFontFamily()
+                trimmedStyle, theme.getTextPrimaryColor(), theme.getFontFamily()
         ));
     }
 
@@ -311,32 +315,66 @@ public class ComponentStyleManager {
             panelHoverColor = panelHoverColor + alphaHex;
         }
         
-        tabPane.setStyle(String.format(
-                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-tab-min-height: %.1f; -fx-tab-max-height: %.1f; -fx-tab-min-width: %.1f; -fx-tab-max-width: %.1f; -fx-text-fill: %s;\n" +
+        // 拆分CSS样式为多个部分，提高可维护性
+        StringBuilder styleBuilder = new StringBuilder();
+        
+        // 1. 基础样式
+        styleBuilder.append(String.format(
+                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-tab-min-height: %.1f; -fx-tab-max-height: %.1f; -fx-tab-min-width: %.1f; -fx-tab-max-width: %.1f; -fx-text-fill: %s;\n",
+                panelBgColor, theme.getBorderColor(), theme.getBorderWidth(),
+                tabHeight, tabHeight, tabMinWidth, tabMaxWidth, theme.getTextPrimaryColor()
+        ));
+        
+        // 2. 表头区域样式
+        styleBuilder.append(
                 ".tab-pane > .tab-header-area {\n" +
                 "    -fx-background-color: transparent;\n" +
                 "    -fx-padding: 0 10 0 10;\n" +
-                "}\n" +
+                "}\n"
+        );
+        
+        // 3. 表头背景样式
+        styleBuilder.append(String.format(
                 ".tab-pane > .tab-header-area > .tab-header-background {\n" +
                 "    -fx-background-color: %s;\n" +
                 "    -fx-border-color: %s;\n" +
                 "    -fx-border-width: 0 0 %.1f 0;\n" +
-                "}\n" +
+                "}\n",
+                panelBgColor, theme.getBorderColor(), theme.getBorderWidth()
+        ));
+        
+        // 4. 标签基础样式
+        styleBuilder.append(String.format(
                 ".tab-pane > .tab-header-area > .headers-region > .tab {\n" +
                 "    -fx-background-color: %s;\n" +
                 "    -fx-border-color: %s;\n" +
                 "    -fx-border-width: %.1f %.1f 0 %.1f;\n" +
                 "    -fx-border-radius: %.1f %.1f 0 0;\n" +
                 "    -fx-cursor: hand;\n" +
-                "}\n" +
+                "}\n",
+                bgColor, theme.getBorderColor(), theme.getBorderWidth(), theme.getBorderWidth(), theme.getBorderWidth(), theme.getCornerRadius(), theme.getCornerRadius()
+        ));
+        
+        // 5. 悬停标签样式
+        styleBuilder.append(String.format(
                 ".tab-pane > .tab-header-area > .headers-region > .tab:hover {\n" +
                 "    -fx-background-color: %s;\n" +
-                "}\n" +
+                "}\n",
+                panelHoverColor
+        ));
+        
+        // 6. 选中标签样式
+        styleBuilder.append(String.format(
                 ".tab-pane > .tab-header-area > .headers-region > .tab:selected {\n" +
                 "    -fx-background-color: %s;\n" +
                 "    -fx-border-color: %s %s %s %s;\n" +
                 "    -fx-border-width: %.1f %.1f 0 %.1f;\n" +
-                "}\n" +
+                "}\n",
+                panelBgColor, theme.getAccentColor(), theme.getAccentColor(), theme.getPanelBgColor(), theme.getAccentColor(), theme.getBorderWidth(), theme.getBorderWidth(), theme.getBorderWidth()
+        ));
+        
+        // 7. 标签文本样式
+        styleBuilder.append(String.format(
                 ".tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .tab-label {\n" +
                 "    -fx-text-fill: %s;\n" +
                 "    -fx-font-family: '%s';\n" +
@@ -344,33 +382,42 @@ public class ComponentStyleManager {
                 "    -fx-font-weight: normal;\n" +
                 "    -fx-alignment: center;\n" +
                 "    -fx-padding: 5 10;\n" +
-                "}\n" +
+                "}\n",
+                theme.getTextSecondaryColor(), theme.getFontFamily(), fontSize
+        ));
+        
+        // 8. 悬停标签的文本样式
+        styleBuilder.append(String.format(
                 ".tab-pane > .tab-header-area > .headers-region > .tab:hover > .tab-container > .tab-label {\n" +
                 "    -fx-text-fill: %s;\n" +
                 "    -fx-font-weight: 500;\n" +
-                "}\n" +
+                "}\n",
+                theme.getTextPrimaryColor()
+        ));
+        
+        // 9. 选中标签的文本样式
+        styleBuilder.append(String.format(
                 ".tab-pane > .tab-header-area > .headers-region > .tab:selected > .tab-container > .tab-label {\n" +
                 "    -fx-text-fill: %s;\n" +
                 "    -fx-font-weight: bold;\n" +
                 "    -fx-padding: 5 10;\n" +
-                "}\n" +
+                "}\n",
+                theme.getAccentColor()
+        ));
+        
+        // 10. 内容区域样式
+        styleBuilder.append(String.format(
                 ".tab-pane > .tab-content-area {\n" +
                 "    -fx-background-color: %s;\n" +
                 "    -fx-border-color: %s;\n" +
                 "    -fx-border-width: %.1f;\n" +
                 "    -fx-border-radius: 0 %.1f %.1f %.1f;\n" +
                 "}",
-                panelBgColor, theme.getBorderColor(), theme.getBorderWidth(),
-                tabHeight, tabHeight, tabMinWidth, tabMaxWidth, theme.getTextPrimaryColor(),
-                panelBgColor, theme.getBorderColor(), theme.getBorderWidth(),
-                bgColor, theme.getBorderColor(), theme.getBorderWidth(), theme.getBorderWidth(), theme.getBorderWidth(), theme.getCornerRadius(), theme.getCornerRadius(),
-                panelHoverColor,
-                panelBgColor, theme.getAccentColor(), theme.getAccentColor(), theme.getPanelBgColor(), theme.getAccentColor(), theme.getBorderWidth(), theme.getBorderWidth(), theme.getBorderWidth(),
-                theme.getTextSecondaryColor(), theme.getFontFamily(), fontSize,
-                theme.getTextPrimaryColor(),
-                theme.getAccentColor(),
                 panelBgColor, theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius(), theme.getCornerRadius(), theme.getCornerRadius()
         ));
+        
+        // 设置TabPane的样式
+        tabPane.setStyle(styleBuilder.toString());
         
         // 更新所有标签页的样式
         for (Tab tab : tabPane.getTabs()) {
@@ -456,26 +503,49 @@ public class ComponentStyleManager {
         String selectedBgColor = theme.getListRowSelectedBgColorWithOpacity(0.6); // 60%透明度
         String hoverBgColor = theme.getListRowHoverBgColorWithOpacity(0.5); // 50%透明度
         
-        // 设置ListView的背景色、边框和内部元素样式
-        listView.setStyle(String.format(
-                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-background-radius: %.1f; -fx-border-radius: %.1f;\n" +
+        // 拆分CSS样式为多个部分，提高可维护性
+        StringBuilder styleBuilder = new StringBuilder();
+        
+        // 1. 基础样式
+        styleBuilder.append(String.format(
+                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-background-radius: %.1f; -fx-border-radius: %.1f;\n",
+                listBgColor, theme.getListBorderColor(), theme.getBorderWidth(), theme.getCornerRadius(), theme.getCornerRadius()
+        ));
+        
+        // 2. 单元格基础样式
+        styleBuilder.append(String.format(
                 ".list-view .list-cell {\n" +
                 "    -fx-background-color: transparent;\n" +
                 "    -fx-text-fill: %s;\n" +
                 "    -fx-font-family: '%s';\n" +
                 "    -fx-padding: 8 10;\n" +
-                "}\n" +
+                "}\n",
+                theme.getTextPrimaryColor(), theme.getFontFamily()
+        ));
+        
+        // 3. 选中单元格样式
+        styleBuilder.append(String.format(
                 ".list-view .list-cell:filled:selected {\n" +
                 "    -fx-background-color: %s;\n" +
                 "    -fx-text-fill: %s;\n" +
                 "    -fx-border-color: %s;\n" +
                 "    -fx-border-width: 2;\n" +
                 "    -fx-border-radius: %.1f;\n" +
-                "}\n" +
+                "}\n",
+                selectedBgColor, theme.getListRowSelectedTextColor(), theme.getBorderColor(), theme.getCornerRadius()
+        ));
+        
+        // 4. 悬停单元格样式
+        styleBuilder.append(String.format(
                 ".list-view .list-cell:filled:hover {\n" +
                 "    -fx-background-color: %s;\n" +
                 "    -fx-text-fill: %s;\n" +
-                "}\n" +
+                "}\n",
+                theme.getListRowHoverBgColor(), theme.getTextPrimaryColor()
+        ));
+        
+        // 5. 滚动条样式
+        styleBuilder.append(String.format(
                 ".list-view .virtual-flow .scroll-bar:vertical,\n" +
                 ".list-view .virtual-flow .scroll-bar:horizontal {\n" +
                 "    -fx-background-color: transparent;\n" +
@@ -487,12 +557,11 @@ public class ComponentStyleManager {
                 ".list-view .virtual-flow .scroll-bar .track {\n" +
                 "    -fx-background-color: transparent;\n" +
                 "}",
-                listBgColor, theme.getListBorderColor(), theme.getBorderWidth(), theme.getCornerRadius(), theme.getCornerRadius(),
-                theme.getTextPrimaryColor(), theme.getFontFamily(),
-                selectedBgColor, theme.getListRowSelectedTextColor(), theme.getBorderColor(), theme.getCornerRadius(),
-                theme.getListRowHoverBgColor(), theme.getTextPrimaryColor(),
                 theme.getTextTertiaryColor()
         ));
+        
+        // 设置ListView的样式
+        listView.setStyle(styleBuilder.toString());
     }
 
     /**
@@ -509,29 +578,56 @@ public class ComponentStyleManager {
         double borderWidth = theme.getBorderWidth();
         double cornerRadius = theme.getCornerRadius();
         
-        // 设置TableView的完整样式，包括背景、边框、表头、单元格等
-        tableView.setStyle(String.format(
-                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-background-radius: %.1f; -fx-border-radius: %.1f;\n" +
+        // 拆分CSS样式为多个部分，提高可维护性
+        StringBuilder styleBuilder = new StringBuilder();
+        
+        // 1. 基础样式
+        styleBuilder.append(String.format(
+                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-background-radius: %.1f; -fx-border-radius: %.1f;\n",
+                listBgColor, theme.getListBorderColor(), borderWidth, cornerRadius, cornerRadius
+        ));
+        
+        // 2. 表头背景样式
+        styleBuilder.append(String.format(
                 ".table-view .column-header-background {\n" +
                 "    -fx-background-color: %s;\n" +
                 "    -fx-border-color: %s;\n" +
                 "    -fx-border-width: 0 0 %.1f 0;\n" +
                 "    -fx-background-radius: %.1f %.1f 0 0;\n" +
-                "}\n" +
+                "}\n",
+                headerBgColor, theme.getBorderColor(), borderWidth, cornerRadius, cornerRadius
+        ));
+        
+        // 3. 表头填充样式
+        styleBuilder.append(
                 ".table-view .column-header-background .filler {\n" +
                 "    -fx-background-color: transparent;\n" +
-                "}\n" +
+                "}\n"
+        );
+        
+        // 4. 列头样式
+        styleBuilder.append(String.format(
                 ".table-view .column-header {\n" +
                 "    -fx-background-color: transparent;\n" +
                 "    -fx-border-color: %s;\n" +
                 "    -fx-border-width: 0 %.1f 0 0;\n" +
-                "}\n" +
+                "}\n",
+                theme.getBorderColor(), borderWidth
+        ));
+        
+        // 5. 列头标签样式
+        styleBuilder.append(String.format(
                 ".table-view .column-header .label {\n" +
                 "    -fx-text-fill: %s;\n" +
                 "    -fx-font-family: '%s';\n" +
                 "    -fx-font-weight: bold;\n" +
                 "    -fx-padding: 12 10;\n" +
-                "}\n" +
+                "}\n",
+                theme.getTextPrimaryColor(), theme.getFontFamily()
+        ));
+        
+        // 6. 行单元格样式
+        styleBuilder.append(
                 ".table-view .table-row-cell {\n" +
                 "    -fx-background-color: transparent;\n" +
                 "    -fx-border-color: transparent;\n" +
@@ -539,19 +635,38 @@ public class ComponentStyleManager {
                 "}\n" +
                 ".table-view .table-row-cell:filled {\n" +
                 "    -fx-background-color: transparent;\n" +
-                "}\n" +
+                "}\n"
+        );
+        
+        // 7. 选中行样式
+        styleBuilder.append(String.format(
                 ".table-view .table-row-cell:filled:selected {\n" +
                 "    -fx-background-color: %s;\n" +
-                "}\n" +
+                "}\n",
+                selectedBgColor
+        ));
+        
+        // 8. 悬停行样式
+        styleBuilder.append(String.format(
                 ".table-view .table-row-cell:filled:hover {\n" +
                 "    -fx-background-color: %s;\n" +
-                "}\n" +
+                "}\n",
+                hoverBgColor
+        ));
+        
+        // 9. 单元格样式
+        styleBuilder.append(String.format(
                 ".table-view .table-cell {\n" +
                 "    -fx-text-fill: %s;\n" +
                 "    -fx-font-family: '%s';\n" +
                 "    -fx-padding: 10 10;\n" +
                 "    -fx-border-color: transparent;\n" +
-                "}\n" +
+                "}\n",
+                theme.getTextPrimaryColor(), theme.getFontFamily()
+        ));
+        
+        // 10. 滚动条样式
+        styleBuilder.append(String.format(
                 ".table-view .virtual-flow .scroll-bar:vertical,\n" +
                 ".table-view .virtual-flow .scroll-bar:horizontal {\n" +
                 "    -fx-background-color: transparent;\n" +
@@ -563,15 +678,11 @@ public class ComponentStyleManager {
                 ".table-view .virtual-flow .scroll-bar .track {\n" +
                 "    -fx-background-color: transparent;\n" +
                 "}",
-                listBgColor, theme.getListBorderColor(), borderWidth, cornerRadius, cornerRadius,
-                headerBgColor, theme.getBorderColor(), borderWidth, cornerRadius,
-                theme.getBorderColor(), borderWidth,
-                theme.getTextPrimaryColor(), theme.getFontFamily(),
-                selectedBgColor,
-                hoverBgColor,
-                theme.getTextPrimaryColor(), theme.getFontFamily(),
                 theme.getTextTertiaryColor()
         ));
+        
+        // 设置TableView的样式
+        tableView.setStyle(styleBuilder.toString());
     }
 
     /**
@@ -583,7 +694,6 @@ public class ComponentStyleManager {
         String headerBgColor = theme.getTableHeaderBgColorWithOpacity(); // 特殊处理：使用比毛玻璃透明度高0.1的透明度
         String selectedBgColor = theme.getListRowSelectedBgColorWithOpacity(0.8); // 80%透明度
         String hoverBgColor = theme.getListRowHoverBgColorWithOpacity(0.6); // 60%透明度
-        String rowBgColor = theme.getListRowBgColorWithOpacity(0.1); // 10%透明度
         
         // 确保数值类型正确，避免格式化错误
         double borderWidth = theme.getBorderWidth();
@@ -682,7 +792,6 @@ public class ComponentStyleManager {
                 headerBgColor, theme.getBorderColor(), borderWidth, cornerRadius,
                 theme.getBorderColor(), borderWidth,
                 theme.getTextPrimaryColor(), theme.getFontFamily(),
-                rowBgColor, rowBgColor,
                 selectedBgColor, theme.getBorderColor(), cornerRadius,
                 hoverBgColor,
                 selectedBgColor, theme.getBorderColor(), cornerRadius,
@@ -845,9 +954,14 @@ public class ComponentStyleManager {
             panelBgColor = panelBgColor + alphaHex;
         }
         
+        // 设置更新后的样式，确保不会保留*号前缀
+        String trimmedStyle = currentStyle.trim();
+        if (trimmedStyle.startsWith("*")) {
+            trimmedStyle = trimmedStyle.substring(1).trim();
+        }
         control.setStyle(String.format(
                 "%s -fx-text-fill: %s; -fx-font-family: '%s'; -fx-background-color: %s; -fx-border-color: %s; -fx-border-radius: %.1f; -fx-background-radius: %.1f;",
-                currentStyle.trim(), theme.getTextPrimaryColor(), theme.getFontFamily(), panelBgColor, theme.getBorderColor(), theme.getCornerRadius(), theme.getCornerRadius()
+                trimmedStyle, theme.getTextPrimaryColor(), theme.getFontFamily(), panelBgColor, theme.getBorderColor(), theme.getCornerRadius(), theme.getCornerRadius()
         ));
     }
     
