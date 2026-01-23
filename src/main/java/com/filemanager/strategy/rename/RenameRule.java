@@ -7,7 +7,7 @@
  * Mail: chrse1997@163.com 
  * Date: 2026-01-12 
  */
-package com.filemanager.rule.rename;
+package com.filemanager.strategy.rename;
 
 import com.filemanager.model.RuleCondition;
 import com.filemanager.tool.file.FileTypeUtil;

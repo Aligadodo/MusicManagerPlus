@@ -7,7 +7,7 @@
  * Mail: chrse1997@163.com 
  * Date: 2026-01-12 
  */
-package com.filemanager.rule;
+package com.filemanager.tool.backup.rule;
 
 import com.github.houbb.opencc4j.util.ZhConverterUtil;
 

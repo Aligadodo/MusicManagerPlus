@@ -11,7 +11,8 @@ package com.filemanager.tool.backup;
 
 import com.github.houbb.opencc4j.util.ZhConverterUtil;
 import org.apache.commons.lang3.StringUtils;
-import com.filemanager.rule.Rule;
+
+import com.filemanager.tool.backup.rule.Rule;
 import com.filemanager.util.FileUtil;
 
 import java.io.File;

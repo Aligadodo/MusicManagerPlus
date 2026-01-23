@@ -9,7 +9,7 @@
  */
 package com.filemanager.tool.backup;
 
-import com.filemanager.rule.FileClassifyRule;
+import com.filemanager.tool.backup.rule.FileClassifyRule;
 import com.filemanager.util.FileUtil;
 
 import java.io.File;

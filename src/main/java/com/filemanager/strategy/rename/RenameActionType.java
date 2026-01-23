@@ -7,7 +7,7 @@
  * Mail: chrse1997@163.com 
  * Date: 2026-01-12 
  */
-package com.filemanager.rule.rename;
+package com.filemanager.strategy.rename;
 
 public enum RenameActionType {
     REPLACE_TEXT("文本替换"), REPLACE_REGEX("正则替换"), PREPEND("前缀添加"), APPEND("后缀添加"),

@@ -7,7 +7,7 @@
  * Mail: chrse1997@163.com 
  * Date: 2026-01-12 
  */
-package com.filemanager.rule.rename;
+package com.filemanager.strategy.rename;
 
 public enum RenameMode {
     ONLY_FILENAME("仅文件名"), ONLY_EXTENSION("仅扩展名"), ALL("全部内容");

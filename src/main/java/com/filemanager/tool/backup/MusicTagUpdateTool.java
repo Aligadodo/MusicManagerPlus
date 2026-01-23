@@ -11,6 +11,8 @@ package com.filemanager.tool.backup;
 
 import com.filemanager.model.FileStatisticInfo;
 import com.filemanager.model.MusicInfo;
+import com.filemanager.tool.backup.rule.Rule;
+
 import org.apache.commons.io.FileExistsException;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -22,7 +24,7 @@ import org.jaudiotagger.tag.FieldKey;
 import org.jaudiotagger.tag.Tag;
 import org.jaudiotagger.tag.wav.WavInfoTag;
 import org.jaudiotagger.tag.wav.WavTag;
-import com.filemanager.rule.Rule;
+
 import com.filemanager.util.FileUtil;
 
 import java.io.File;

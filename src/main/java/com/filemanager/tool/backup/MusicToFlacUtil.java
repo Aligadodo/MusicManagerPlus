@@ -9,7 +9,7 @@
  */
 package com.filemanager.tool.backup;
 
-import com.filemanager.rule.Rule;
+import com.filemanager.tool.backup.rule.Rule;
 import com.filemanager.util.FileUtil;
 import ws.schild.jave.Encoder;
 import ws.schild.jave.MultimediaObject;
