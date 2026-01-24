@@ -10,6 +10,7 @@
 package com.filemanager.strategy;
 
 import com.filemanager.app.base.IAppStrategy;
+import com.filemanager.app.tools.display.FXDialogUtils;
 import com.filemanager.app.tools.display.StyleFactory;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.tool.file.FolderMergeUtil;
@@ -21,7 +22,6 @@ import com.filemanager.tool.unzip.engine.EngineType;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
-import com.filemanager.app.tools.display.FXDialogUtils;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXComboBox;
 import javafx.collections.FXCollections;
@@ -91,7 +91,7 @@ public class FileUnzipStrategy extends IAppStrategy {
         txtExePath = new TextField();
         txtExePath.setPromptText("7z.exe 或 bz.exe 路径");
         txtExePath.visibleProperty().bind(cbEngine.getSelectionModel().selectedItemProperty().isNotEqualTo("Java 内置引擎"));
-        
+
         // 监听引擎选择变化，自动检测对应工具路径
         cbEngine.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue != null && !newValue.equals("Java 内置引擎")) {
@@ -170,7 +170,7 @@ public class FileUnzipStrategy extends IAppStrategy {
         // 根据引擎类型设置默认检测路径
         List<String> paths = new ArrayList<>();
         String currentDir = System.getProperty("user.dir");
-        
+
         if ("7-Zip 引擎".equals(engineType)) {
             // 7-Zip 引擎检测路径
             paths.add(currentDir + "\\tools\\7z.exe");
@@ -194,7 +194,7 @@ public class FileUnzipStrategy extends IAppStrategy {
                 return;
             }
         }
-        
+
         // 如果没有检测到，清空路径
         txtExePath.clear();
     }
@@ -291,15 +291,15 @@ public class FileUnzipStrategy extends IAppStrategy {
         pOverwrite = chkOverwrite.isSelected();
         pNestedFolderMerge = chkNestedFolderMerge.isSelected();
         pPasswords = new ArrayList<>(lvPasswords.getItems());
-        
+
         // 检查引擎选择和运行环境
         if (!pEngine.equals("Java 内置引擎")) {
             File exeFile = new File(pExePath);
             if (pExePath.isEmpty() || !exeFile.exists() || !exeFile.isFile()) {
                 // 如果引擎不是Java内置引擎，且执行路径无效，显示提示
                 if (app != null) {
-                    FXDialogUtils.showToast(app.getPrimaryStage(), "请安装对应程序到正确目录下！", 
-                                           FXDialogUtils.ToastType.INFO);
+                    FXDialogUtils.showToast(app.getPrimaryStage(), "请安装对应程序到正确目录下！",
+                            FXDialogUtils.ToastType.INFO);
                 }
             }
         }
@@ -455,8 +455,8 @@ public class FileUnzipStrategy extends IAppStrategy {
                     if (exePath.isEmpty() || !exeFile.exists() || !exeFile.isFile()) {
                         // 如果引擎不是Java内置引擎，且执行路径无效，显示提示并抛出异常
                         if (app != null) {
-                            FXDialogUtils.showToast(app.getPrimaryStage(), "请安装对应程序到正确目录下！", 
-                                                   FXDialogUtils.ToastType.INFO);
+                            FXDialogUtils.showToast(app.getPrimaryStage(), "请安装对应程序到正确目录下！",
+                                    FXDialogUtils.ToastType.INFO);
                         }
                         throw new IOException(engine + " 未安装或路径无效，请检查配置！");
                     }

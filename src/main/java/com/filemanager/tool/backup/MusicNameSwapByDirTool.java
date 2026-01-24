@@ -1,19 +1,19 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.tool.backup;
 
 import com.filemanager.model.FileStatisticInfo;
+import com.filemanager.util.FileUtil;
 import org.apache.commons.io.FileExistsException;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
-import com.filemanager.util.FileUtil;
 
 import java.io.File;
 import java.io.IOException;
@@ -41,7 +41,7 @@ public class MusicNameSwapByDirTool {
         List<File> dirs = new ArrayList<>();
         dirs.add(new File(rootDir));
         FileUtil.listFiles(0, new File(rootDir), new ArrayList<>(), dirs);
-        System.out.println(String.format("dir has  %d dirs ", dirs.size()));
+        System.out.printf("dir has  %d dirs %n", dirs.size());
         dirs.forEach(
                 dir -> {
                     if (dir.listFiles() == null) {

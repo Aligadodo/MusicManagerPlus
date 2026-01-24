@@ -1,11 +1,11 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.tool.backup;
 
@@ -35,7 +35,7 @@ public class MusicToWavUtil {
 
     public static void main(String[] args) throws InterruptedException {
         System.out.println("begin !");
-        syncDir( "K:\\音乐存档（WAV格式）\\","K:\\音乐存档（DSD格式）");
+        syncDir("K:\\音乐存档（WAV格式）\\", "K:\\音乐存档（DSD格式）");
 //        renameFiles("L:\\", rules);
         System.out.println("done !");
     }
@@ -50,7 +50,7 @@ public class MusicToWavUtil {
             throwable.printStackTrace();
         });
         AtomicLong countRunning = new AtomicLong();
-        for (String rootDir:rootDirs) {
+        for (String rootDir : rootDirs) {
             System.out.println();
             System.out.println();
             System.out.println();
@@ -60,7 +60,7 @@ public class MusicToWavUtil {
             List<File> files = new ArrayList<>();
             List<File> dirs = new ArrayList<>();
             FileUtil.listFiles(0, new File(rootDir), files, dirs);
-            System.out.println(String.format("dir has %d files and %d dirs ", files.size(), dirs.size()));
+            System.out.printf("dir has %d files and %d dirs %n", files.size(), dirs.size());
 
 
             files.forEach(
@@ -72,12 +72,12 @@ public class MusicToWavUtil {
                                     countRunning.incrementAndGet();
                                     System.out.println(file.getName() + " process begin ");
                                     Rule rule2 = rulesOfCopy.stream().filter(fileTransRule -> fileTransRule.isApply(file)).findFirst().orElse(null);
-                                    if(rule2==null){
+                                    if (rule2 == null) {
                                         return;
                                     }
-                                    File destDirectory = new File(file.getParentFile().getPath().replace("K:\\",destDir)+File.separator);
-                                    if(rule2 != null){
-                                        System.out.println("copy from  "+file.getName() + " to "+ destDirectory.getPath());
+                                    File destDirectory = new File(file.getParentFile().getPath().replace("K:\\", destDir) + File.separator);
+                                    if (rule2 != null) {
+                                        System.out.println("copy from  " + file.getName() + " to " + destDirectory.getPath());
                                         try {
                                             FileUtil.transferTo(file, destDirectory, true);
                                             return;
@@ -86,7 +86,7 @@ public class MusicToWavUtil {
                                         }
                                     }
                                     System.out.println(file.getName() + " process done ");
-                                } catch (Throwable e ) {
+                                } catch (Throwable e) {
                                     System.out.println(file.getName() + " process fail " + e.getMessage());
                                 } finally {
                                     countRunning.decrementAndGet();
@@ -103,7 +103,7 @@ public class MusicToWavUtil {
             System.out.println();
         }
 
-        while (countRunning.get()>0){
+        while (countRunning.get() > 0) {
             System.out.println("wait finish...");
             Thread.sleep(1000);
         }
@@ -117,10 +117,8 @@ public class MusicToWavUtil {
      * @param source 源音频文件
      * @param target 输出的音频文件
      */
-    public static void audioConvert2Mp3(File source, File target)
-    {
-        try
-        {
+    public static void audioConvert2Mp3(File source, File target) {
+        try {
             AudioAttributes audio = new AudioAttributes();
             audio.setCodec("libmp3lame");
             audio.setBitRate(128000);
@@ -131,10 +129,8 @@ public class MusicToWavUtil {
             attrs.setAudioAttributes(audio);
             Encoder encoder = new Encoder();
             encoder.encode(new MultimediaObject(source), target, attrs);
-        }
-        catch(Exception ex)
-        {
-            System.out.println("ERROR "+ex.getMessage());
+        } catch (Exception ex) {
+            System.out.println("ERROR " + ex.getMessage());
         }
     }
 }

@@ -4,12 +4,14 @@ import com.filemanager.strategy.collection.CollectionDeterminationAlgorithm;
 import com.filemanager.strategy.collection.FileClusteringAlgorithm;
 import com.filemanager.strategy.collection.FilenameNormalizer;
 import com.filemanager.strategy.collection.TextSimilarityCalculator;
-
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 文件归类策略测试类
@@ -43,7 +45,7 @@ public class FileCollectionStrategyTest {
                 .skipCollections(true)
                 .build();
         determinationAlgorithm.setCollectionSuffix("【合集】");
-        
+
         // 创建临时测试目录
         testDir = new File(System.getProperty("java.io.tmpdir"), "test_file_collection");
         testDir.mkdirs();
@@ -105,25 +107,25 @@ public class FileCollectionStrategyTest {
     public void testFileClustering() {
         // 模拟文件系统结构
         List<File> testFiles = createTestFiles();
-        
+
         // 测试文件聚类
         Map<String, List<File>> clusters = clusteringAlgorithm.clusterFiles(testFiles);
         System.out.println("文件聚类测试: 共生成 " + clusters.size() + " 个集群");
-        
+
         // 验证聚类结果
         int guzhengClusterSize = 0;
-        
+
         for (Map.Entry<String, List<File>> entry : clusters.entrySet()) {
             System.out.println("集群: " + entry.getKey() + "，包含 " + entry.getValue().size() + " 个文件");
             for (File file : entry.getValue()) {
                 System.out.println("  - " + file.getName());
             }
-            
+
             if (entry.getKey().contains("古筝")) {
                 guzhengClusterSize = entry.getValue().size();
             }
         }
-        
+
         System.out.println("测试结果: 古筝天地系列应该被聚类到一起 -> " + (guzhengClusterSize > 1));
     }
 
@@ -142,76 +144,76 @@ public class FileCollectionStrategyTest {
      */
     private List<File> createTestFiles() {
         List<File> testFiles = new ArrayList<>();
-        
+
         // 古筝天地系列
         String[] guzhengFiles = {
-            "张平福《古筝天地①月圆花好》",
-            "张平福《古筝天地②草原之夜》",
-            "张平福《古筝天地③王昭君》",
-            "张平福《古筝天地④何日君再来》",
-            "张平福《古筝天地⑤晚风》"
+                "张平福《古筝天地①月圆花好》",
+                "张平福《古筝天地②草原之夜》",
+                "张平福《古筝天地③王昭君》",
+                "张平福《古筝天地④何日君再来》",
+                "张平福《古筝天地⑤晚风》"
         };
-        
+
         // SAX系列
         String[] saxFiles = {
-            "张平福《难忘SAX-午夜香吻》",
-            "【南方唱片】[张平福]《午夜香吻 难忘 Unforgettable SAX》"
+                "张平福《难忘SAX-午夜香吻》",
+                "【南方唱片】[张平福]《午夜香吻 难忘 Unforgettable SAX》"
         };
-        
+
         // 双吉他系列
         String[] guitarFiles = {
-            "张平福《名典音乐系列·双吉他》",
-            "华人音乐大师（张平福）《双吉他 新时代乐难忘旋律》"
+                "张平福《名典音乐系列·双吉他》",
+                "华人音乐大师（张平福）《双吉他 新时代乐难忘旋律》"
         };
-        
+
         // 新年系列
         String[] newYearFiles = {
-            "张平福《华乐迎春贺岁》CD1",
-            "张平福《华乐迎春贺岁》CD2",
-            "张平福 -《传统华乐贺新春》CD1",
-            "张平福 -《传统华乐贺新春》CD2"
+                "张平福《华乐迎春贺岁》CD1",
+                "张平福《华乐迎春贺岁》CD2",
+                "张平福 -《传统华乐贺新春》CD1",
+                "张平福 -《传统华乐贺新春》CD2"
         };
-        
+
         // 创建测试文件
         for (String fileName : guzhengFiles) {
             File file = new File(testDir, fileName);
             file.mkdirs();
             testFiles.add(file);
         }
-        
+
         for (String fileName : saxFiles) {
             File file = new File(testDir, fileName);
             file.mkdirs();
             testFiles.add(file);
         }
-        
+
         for (String fileName : guitarFiles) {
             File file = new File(testDir, fileName);
             file.mkdirs();
             testFiles.add(file);
         }
-        
+
         for (String fileName : newYearFiles) {
             File file = new File(testDir, fileName);
             file.mkdirs();
             testFiles.add(file);
         }
-        
+
         return testFiles;
     }
-    
+
     // 辅助方法：检查两个字符串是否有相同的标题和不同的数字
     private boolean hasSameTitleDifferentNumber(String s1, String s2) {
         // 简单实现：检查是否有相同的前缀和不同的数字部分
         String normalized1 = normalizer.normalize(s1);
         String normalized2 = normalizer.normalize(s2);
-        
+
         int minLength = Math.min(normalized1.length(), normalized2.length());
         int i = 0;
         while (i < minLength && normalized1.charAt(i) == normalized2.charAt(i)) {
             i++;
         }
-        
+
         // 检查剩余部分是否包含数字
         boolean hasNumber1 = false;
         boolean hasNumber2 = false;
@@ -227,23 +229,23 @@ public class FileCollectionStrategyTest {
                 break;
             }
         }
-        
+
         return i > 0 && hasNumber1 && hasNumber2;
     }
-    
+
     // 辅助方法：提取核心关键词
     private List<String> extractCoreKeywords(String fileName) {
         // 简单实现：分割文件名，提取可能的关键词
         List<String> keywords = new ArrayList<>();
         String processed = normalizer.normalize(fileName);
         String[] parts = processed.split("\\s+");
-        
+
         for (String part : parts) {
             if (part.length() > 1 && !part.matches("\\d+")) {
                 keywords.add(part);
             }
         }
-        
+
         return keywords;
     }
 }

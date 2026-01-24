@@ -1,20 +1,19 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.tool.backup;
 
+import com.filemanager.tool.backup.rule.Rule;
+import com.filemanager.util.FileUtil;
 import com.github.houbb.opencc4j.util.ZhConverterUtil;
 import org.apache.commons.io.FileExistsException;
 import org.apache.commons.io.FileUtils;
-
-import com.filemanager.tool.backup.rule.Rule;
-import com.filemanager.util.FileUtil;
 
 import java.io.File;
 import java.io.IOException;
@@ -49,7 +48,7 @@ public class NovelRenameTool {
         List<File> files = new ArrayList<>();
         List<File> dirs = new ArrayList<>();
         FileUtil.listFiles(0, new File(rootDir), files, dirs);
-        System.out.println(String.format("dir has %d files and %d dirs ", files.size(), dirs.size()));
+        System.out.printf("dir has %d files and %d dirs %n", files.size(), dirs.size());
         ExecutorService executorService = Executors.newFixedThreadPool(1);
         AtomicLong count = new AtomicLong();
         files.forEach(
@@ -90,34 +89,34 @@ public class NovelRenameTool {
         filename = filename.substring(0, filename.lastIndexOf('.'));
         String original = filename;
         filename = ZhConverterUtil.toSimple(filename);
-        if(filename.indexOf("《")>2){
-            filename=filename.substring(filename.indexOf("《"));
+        if (filename.indexOf("《") > 2) {
+            filename = filename.substring(filename.indexOf("《"));
         }
-        filename = filename.replaceAll("[（(【\\[]?[.0-9A-Za-z]{4,}com[]）)】]?","");
-        filename = filename.replaceAll("[（(【\\[]?[.0-9A-Za-z]{4,}org[]）)】]?","");
-        filename = filename.replaceAll("[（(【\\[].*版本[]）)】]","");
-        filename = filename.replaceAll("[（(【\\[].*版[]）)】]","");
-        filename = filename.replaceAll("[（(【\\[].*网址.*[]）)】]","");
-        filename = filename.replaceAll("[（(【\\[].*搜书吧.*[]）)】]","");
-        filename = filename.replaceAll("搜书吧网址","");
-        filename = filename.replaceAll("搜书吧","");
-        filename = filename.replaceAll("[（(【\\[].*全本.*[]）)】]","");
-        filename = filename.replaceAll("[（(【\\[].*校对.*[]）)】]","");
-        filename = filename.replaceAll("[（(【\\[].*[0-9]{1,3}.*[\\\\-_].*[0-9]{2,4}.*[]）)】]","");
-        filename = filename.replaceAll("[0-9]{1,3}[_-].*[0-9]{2,4}.*$","");
-        if(filename.indexOf("作者")>3){
+        filename = filename.replaceAll("[（(【\\[]?[.0-9A-Za-z]{4,}com[]）)】]?", "");
+        filename = filename.replaceAll("[（(【\\[]?[.0-9A-Za-z]{4,}org[]）)】]?", "");
+        filename = filename.replaceAll("[（(【\\[].*版本[]）)】]", "");
+        filename = filename.replaceAll("[（(【\\[].*版[]）)】]", "");
+        filename = filename.replaceAll("[（(【\\[].*网址.*[]）)】]", "");
+        filename = filename.replaceAll("[（(【\\[].*搜书吧.*[]）)】]", "");
+        filename = filename.replaceAll("搜书吧网址", "");
+        filename = filename.replaceAll("搜书吧", "");
+        filename = filename.replaceAll("[（(【\\[].*全本.*[]）)】]", "");
+        filename = filename.replaceAll("[（(【\\[].*校对.*[]）)】]", "");
+        filename = filename.replaceAll("[（(【\\[].*[0-9]{1,3}.*[\\\\-_].*[0-9]{2,4}.*[]）)】]", "");
+        filename = filename.replaceAll("[0-9]{1,3}[_-].*[0-9]{2,4}.*$", "");
+        if (filename.indexOf("作者") > 3) {
             filename = filename.substring(0, filename.indexOf("作者"));
         }
         filename = filename.trim();
-        while (filename.endsWith("-")){
-            filename=filename.substring(0,filename.length()-1);
+        while (filename.endsWith("-")) {
+            filename = filename.substring(0, filename.length() - 1);
             filename = filename.trim();
         }
-        filename = filename.replaceAll("《","");
-        filename = filename.replaceAll("》","");
-        if(filename.length()>3||(original.length()-filename.length()<4)) {
+        filename = filename.replaceAll("《", "");
+        filename = filename.replaceAll("》", "");
+        if (filename.length() > 3 || (original.length() - filename.length() < 4)) {
             return filename;
-        }else{
+        } else {
             return original;
         }
     }

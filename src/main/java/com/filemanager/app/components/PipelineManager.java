@@ -28,13 +28,7 @@ import javafx.concurrent.Task;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -59,32 +53,32 @@ public class PipelineManager {
         this.isTaskRunning = app.getTaskRunningStatus();
         this.fullChangeList = new ArrayList<>();
     }
-    
+
     public void resetPipeline() {
         // 清空策略流水线
         app.getPipelineStrategies().clear();
-        
+
         // 重置状态
         isTaskRunning.set(false);
-        
+
         // 清空变更列表
         if (fullChangeList != null) {
             fullChangeList.clear();
         }
-        
+
         // 取消当前任务
         if (currentTask != null && currentTask.isRunning()) {
             currentTask.cancel(true);
         }
         currentTask = null;
-        
+
         // 清空估算器
         localEstimatorMap.clear();
         threadTaskEstimator = null;
-        
+
         // 重置文件序列号生成器
         fileSequenceGenerator.set(0);
-        
+
         app.log("流水线已重置");
     }
 
@@ -108,12 +102,12 @@ public class PipelineManager {
                 app.getAutoRun().setSelected(false);
             }
         }
-        
+
         // 重置任务时间戳
         if (app instanceof com.filemanager.app.FileManagerPlusApp) {
             ((com.filemanager.app.FileManagerPlusApp) app).resetTaskTimestamps();
         }
-        
+
         isTaskRunning.set(true);
         fullChangeList.clear();
         app.switchView(app.getPreviewView().getViewNode());
@@ -251,7 +245,7 @@ public class PipelineManager {
         if (!confirmExecution(count)) {
             return;
         }
-        
+
         // 重置任务时间戳
         if (app instanceof com.filemanager.app.FileManagerPlusApp) {
             ((com.filemanager.app.FileManagerPlusApp) app).resetTaskTimestamps();
@@ -285,7 +279,7 @@ public class PipelineManager {
         if (pendingRecords.isEmpty()) {
             return;
         }
-        
+
         // 重置任务时间戳
         if (app instanceof com.filemanager.app.FileManagerPlusApp) {
             ((com.filemanager.app.FileManagerPlusApp) app).resetTaskTimestamps();
@@ -436,7 +430,7 @@ public class PipelineManager {
                     }
                     Thread.sleep(100);
                 }
-                
+
                 // 确保进度条显示100%
                 updateProgress(total, total);
 
@@ -539,7 +533,7 @@ public class PipelineManager {
         }
         // 文件解锁
         FileLockManagerUtil.unlock(rec.getFileHandle());
-        
+
         if (System.currentTimeMillis() - lastRefresh.get() > 1000) {
             lastRefresh.set(System.currentTimeMillis());
             app.setRunningUI("▶ ▶ ▶ 执行任务进度: " + threadTaskEstimator.getDisplayInfo());
@@ -565,7 +559,7 @@ public class PipelineManager {
         if (task != null) {
             app.getPreviewView().getMainProgressBar().progressProperty().bind(task.progressProperty());
         }
-        
+
         // 禁用线程池模式下拉框
         Platform.runLater(() -> {
             app.getPreviewView().getCbThreadPoolMode().setDisable(true);
@@ -592,7 +586,7 @@ public class PipelineManager {
         if (app instanceof com.filemanager.app.FileManagerPlusApp) {
             ((com.filemanager.app.FileManagerPlusApp) app).setTaskEndTimestamp(System.currentTimeMillis());
         }
-        
+
         app.updateStats();
         if (TaskStatus.CANCELED == status) {
             app.getPreviewView().getMainProgressBar().progressProperty().unbind();
@@ -601,7 +595,7 @@ public class PipelineManager {
         if (TaskStatus.SUCCESS == status) {
             app.getPreviewView().getMainProgressBar().progressProperty().unbind();
             app.getPreviewView().getMainProgressBar().progressProperty().set(1.0);
-            
+
             // 强制更新所有根路径进度条到100%
             Platform.runLater(() -> {
                 app.getPreviewView().updateRootPathProgress();
@@ -610,12 +604,12 @@ public class PipelineManager {
         // 设置进度条为颜色
         ProgressBarDisplay.updateProgressStatus(app.getPreviewView().getMainProgressBar(), status);
         currentTask = null;
-        
+
         // 强制刷新预览列表，确保显示最新状态
         Platform.runLater(() -> {
             app.refreshPreviewTableFilter();
         });
-        
+
         // 启用线程池模式下拉框
         Platform.runLater(() -> {
             app.getPreviewView().getCbThreadPoolMode().setDisable(false);

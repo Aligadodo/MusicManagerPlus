@@ -1,11 +1,11 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.tool.backup;
 
@@ -37,7 +37,7 @@ public class MusicToFlacUtil {
 
     public static void main(String[] args) throws InterruptedException {
         System.out.println("begin !");
-        syncDir("H:\\音乐存档（转flac格式）\\", "Q:\\音乐存档（DSD格式）" );
+        syncDir("H:\\音乐存档（转flac格式）\\", "Q:\\音乐存档（DSD格式）");
 //        renameFiles("L:\\", rules);
         System.out.println("done !");
     }
@@ -52,7 +52,7 @@ public class MusicToFlacUtil {
             throwable.printStackTrace();
         });
         AtomicLong countRunning = new AtomicLong();
-        for (String rootDir:rootDirs) {
+        for (String rootDir : rootDirs) {
             System.out.println();
             System.out.println();
             System.out.println();
@@ -62,7 +62,7 @@ public class MusicToFlacUtil {
             List<File> files = new ArrayList<>();
             List<File> dirs = new ArrayList<>();
             FileUtil.listFiles(0, new File(rootDir), files, dirs);
-            System.out.println(String.format("dir has %d files and %d dirs ", files.size(), dirs.size()));
+            System.out.printf("dir has %d files and %d dirs %n", files.size(), dirs.size());
 
 
             files.forEach(
@@ -75,17 +75,17 @@ public class MusicToFlacUtil {
                                     System.out.println(file.getName() + " process begin ");
                                     Rule rule = rulesOfTrans.stream().filter(fileTransRule -> fileTransRule.isApply(file)).findFirst().orElse(null);
                                     Rule rule2 = rulesOfCopy.stream().filter(fileTransRule -> fileTransRule.isApply(file)).findFirst().orElse(null);
-                                    if(rule2==null&&rule==null){
+                                    if (rule2 == null && rule == null) {
                                         return;
                                     }
-                                    File destDirectory = new File(file.getParentFile().getPath().replace("H:\\",destDir)+File.separator);
-                                    File destFile = new File(file.getParentFile().getPath().replace("H:\\",destDir)
-                                            +File.separator+file.getName().substring(0,file.getName().lastIndexOf('.'))+".mp3");
-                                    if(destFile.exists()){
+                                    File destDirectory = new File(file.getParentFile().getPath().replace("H:\\", destDir) + File.separator);
+                                    File destFile = new File(file.getParentFile().getPath().replace("H:\\", destDir)
+                                            + File.separator + file.getName().substring(0, file.getName().lastIndexOf('.')) + ".mp3");
+                                    if (destFile.exists()) {
                                         return;
                                     }
-                                    if(rule != null){
-                                        System.out.println("trans from  "+file.getName() + " to "+ destFile.getPath());
+                                    if (rule != null) {
+                                        System.out.println("trans from  " + file.getName() + " to " + destFile.getPath());
                                         try {
                                             audioConvert2Mp3(file, destFile);
                                             return;
@@ -93,8 +93,8 @@ public class MusicToFlacUtil {
                                             //
                                         }
                                     }
-                                    if(rule2 != null){
-                                        System.out.println("copy from  "+file.getName() + " to "+ destDirectory.getPath());
+                                    if (rule2 != null) {
+                                        System.out.println("copy from  " + file.getName() + " to " + destDirectory.getPath());
                                         try {
                                             FileUtil.copyTo(file, destDirectory, true);
                                             return;
@@ -103,7 +103,7 @@ public class MusicToFlacUtil {
                                         }
                                     }
                                     System.out.println(file.getName() + " process done ");
-                                } catch (Throwable e ) {
+                                } catch (Throwable e) {
                                     System.out.println(file.getName() + " process fail " + e.getMessage());
                                 } finally {
                                     countRunning.decrementAndGet();
@@ -120,7 +120,7 @@ public class MusicToFlacUtil {
             System.out.println();
         }
 
-        while (countRunning.get()>0){
+        while (countRunning.get() > 0) {
             System.out.println("wait finish...");
             Thread.sleep(1000);
         }
@@ -134,10 +134,8 @@ public class MusicToFlacUtil {
      * @param source 源音频文件
      * @param target 输出的音频文件
      */
-    public static void audioConvert2Mp3(File source, File target)
-    {
-        try
-        {
+    public static void audioConvert2Mp3(File source, File target) {
+        try {
             AudioAttributes audio = new AudioAttributes();
             audio.setCodec("libmp3lame");
             audio.setBitRate(128000);
@@ -148,10 +146,8 @@ public class MusicToFlacUtil {
             attrs.setAudioAttributes(audio);
             Encoder encoder = new Encoder();
             encoder.encode(new MultimediaObject(source), target, attrs);
-        }
-        catch(Exception ex)
-        {
-            System.out.println("ERROR "+ex.getMessage());
+        } catch (Exception ex) {
+            System.out.println("ERROR " + ex.getMessage());
         }
     }
 }

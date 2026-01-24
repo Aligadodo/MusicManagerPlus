@@ -1,11 +1,11 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.tool.file;
 
@@ -17,7 +17,8 @@ public class PathUtils {
     /**
      * 将原始路径映射到新的根路径下
      * * @param originalPathStr 原始路径，例如 "D:\\catch\\data"
-     * @param newRootStr      新的根路径，例如 "C:\\mock"
+     *
+     * @param newRootStr 新的根路径，例如 "C:\\mock"
      * @return 转换后的路径，例如 "C:\\mock\\D\\catch\\data"
      */
     public static String mapToNewRoot(String originalPathStr, String newRootStr) {
@@ -27,7 +28,7 @@ public class PathUtils {
 
         // 2. 提取根部（Windows下通常是盘符 D:\）
         Path root = originalPath.getRoot();
-        
+
         // 3. 处理盘符：将 "D:\" 转换为 "D"
         // 这里的 replace 是为了兼容 Windows 的冒号和路径分隔符
         String driveName = root.toString()
@@ -57,7 +58,7 @@ public class PathUtils {
         String newRoot = "C:\\mock";
 
         String result = mapToNewRoot(oldPath, newRoot);
-        
+
         System.out.println("原始路径: " + oldPath);
         System.out.println("转换后路径: " + result);
     }

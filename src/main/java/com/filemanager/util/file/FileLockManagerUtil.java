@@ -1,11 +1,11 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.util.file;
 
@@ -23,6 +23,7 @@ public class FileLockManagerUtil {
 
     /**
      * 尝试对文件加锁
+     *
      * @param file 文件
      * @return 如果加锁成功返回 true；如果文件已被锁，返回 false
      */
@@ -33,6 +34,7 @@ public class FileLockManagerUtil {
 
     /**
      * 释放文件锁
+     *
      * @param file 文件路径
      * @return 如果解锁成功返回 true；如果文件本来就没有锁，返回 false
      */
@@ -42,6 +44,7 @@ public class FileLockManagerUtil {
 
     /**
      * 检查文件是否已被锁
+     *
      * @param file 文件路径
      * @return 是否已被锁
      */

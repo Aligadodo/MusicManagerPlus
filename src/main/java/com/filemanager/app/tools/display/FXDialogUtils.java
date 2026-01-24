@@ -1,11 +1,11 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.app.tools.display;
 
@@ -23,7 +23,7 @@ import java.util.Optional;
 
 public class FXDialogUtils {
 
-    public enum ToastType { INFO, SUCCESS, ERROR }
+    public enum ToastType {INFO, SUCCESS, ERROR}
 
     public static void showToast(Stage owner, String msg, ToastType type) {
         final Stage toastStage = new Stage();
@@ -43,9 +43,15 @@ public class FXDialogUtils {
         StackPane.setAlignment(label, Pos.CENTER); // 确保 Label 在 StackPane 中居中
 
         switch (type) {
-            case SUCCESS: root.getStyleClass().add("toast-success"); break;
-            case ERROR:   root.getStyleClass().add("toast-error");   break;
-            default:      root.getStyleClass().add("toast-info");    break;
+            case SUCCESS:
+                root.getStyleClass().add("toast-success");
+                break;
+            case ERROR:
+                root.getStyleClass().add("toast-error");
+                break;
+            default:
+                root.getStyleClass().add("toast-info");
+                break;
         }
 
         Scene scene = new Scene(root);
@@ -62,14 +68,14 @@ public class FXDialogUtils {
         // 3. 动态定位逻辑
         // 必须先 show，JavaFX 才会计算 root 的 PrefWidth/Height
         toastStage.show();
-        
+
         // 再次强制刷新布局以获取准确宽高
         root.applyCss();
         root.layout();
 
         double x = owner.getX() + (owner.getWidth() - toastStage.getWidth()) / 2;
         double y = owner.getY() + (owner.getHeight() * 0.8) - (toastStage.getHeight() / 2);
-        
+
         toastStage.setX(x);
         toastStage.setY(y);
 
@@ -77,7 +83,7 @@ public class FXDialogUtils {
         FadeTransition fadeIn = new FadeTransition(Duration.millis(300), root);
         fadeIn.setFromValue(0.0);
         fadeIn.setToValue(1.0);
-        
+
         final FadeTransition fadeOut = new FadeTransition(Duration.millis(500), root);
         fadeOut.setFromValue(1.0);
         fadeOut.setToValue(0.0);

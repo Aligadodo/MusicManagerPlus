@@ -10,7 +10,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.jaudiotagger.audio.AudioFile;
 import org.jaudiotagger.audio.AudioFileIO;
 import org.jaudiotagger.audio.AudioHeader;
-import java.text.DecimalFormat;
 
 import java.io.File;
 import java.io.IOException;
@@ -18,12 +17,11 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.DecimalFormat;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
-import com.filemanager.tool.file.FolderMergeUtil;
 
 public class DuplicateAnalyzer {
     // 常见媒体类型定义，用于同类比较
@@ -122,13 +120,13 @@ public class DuplicateAnalyzer {
                 // 检查是否是音频文件组
                 String ext = getExt(group.get(0).getName());
                 boolean isAudioGroup = EXT_AUDIO.contains(ext);
-                
+
                 List<File> filesToProcess = new ArrayList<>(group);
-                
+
                 if (isAudioGroup && params.isAudioSpecial()) {
                     // 音频文件特殊处理：按持续时间二次分组，仅对时间一致的文件去重
                     Map<Long, List<File>> durationGroups = new HashMap<>();
-                    
+
                     for (File f : group) {
                         Map<String, Long> metadata = getAudioMetadata(f);
                         if (metadata != null) {
@@ -140,11 +138,11 @@ public class DuplicateAnalyzer {
                             durationGroups.computeIfAbsent(-1L, k -> new ArrayList<>()).add(f);
                         }
                     }
-                    
+
                     // 对每个持续时间组进行处理
                     for (List<File> durationGroup : durationGroups.values()) {
                         if (durationGroup.size() < 2) continue;
-                        
+
                         // 音频文件特殊选择逻辑：优先保留高质量文件
                         File keeper = Collections.max(durationGroup, (f1, f2) -> {
                             // 1. 优先后缀匹配
@@ -155,11 +153,11 @@ public class DuplicateAnalyzer {
                                     return k1 ? 1 : -1;
                                 }
                             }
-                            
+
                             // 2. 优先比较码率（音频质量）
                             Map<String, Long> meta1 = getAudioMetadata(f1);
                             Map<String, Long> meta2 = getAudioMetadata(f2);
-                            
+
                             if (meta1 != null && meta2 != null) {
                                 long bitrate1 = meta1.getOrDefault("bitrate", 0L);
                                 long bitrate2 = meta2.getOrDefault("bitrate", 0L);
@@ -167,7 +165,7 @@ public class DuplicateAnalyzer {
                                     return Long.compare(bitrate1, bitrate2);
                                 }
                             }
-                            
+
                             // 3. 体积优先
                             if (params.isKeepLargest()) {
                                 int sizeCmp = Long.compare(f1.length(), f2.length());
@@ -175,14 +173,14 @@ public class DuplicateAnalyzer {
                                     return sizeCmp;
                                 }
                             }
-                            
+
                             // 4. 变更时间优先
                             if (params.isKeepEarliest()) {
                                 int timeCmp = Long.compare(f2.lastModified(), f1.lastModified());
                                 if (timeCmp != 0) {
                                     return timeCmp;
                                 }
-                                
+
                                 try {
                                     java.nio.file.attribute.BasicFileAttributes attributes = Files.readAttributes(Paths.get(f1.getPath()), java.nio.file.attribute.BasicFileAttributes.class);
                                     java.nio.file.attribute.BasicFileAttributes attributes2 = Files.readAttributes(Paths.get(f2.getPath()), java.nio.file.attribute.BasicFileAttributes.class);
@@ -196,17 +194,17 @@ public class DuplicateAnalyzer {
                                     throw new RuntimeException(e);
                                 }
                             }
-                            
+
                             // 5. 默认：名字短的优先 (通常不带 (1) 的是原件)
                             int lenCmp = Integer.compare(f2.getName().length(), f1.getName().length());
                             if (lenCmp != 0) {
                                 return lenCmp;
                             }
-                            
+
                             // 6. 默认：名字排序靠前的优先 (通常是大写)
                             return StringUtils.compare(f2.getName(), f1.getName(), true);
                         });
-                        
+
                         // 标记要删除的文件
                         for (File f : durationGroup) {
                             if (f == keeper) continue;
@@ -282,33 +280,33 @@ public class DuplicateAnalyzer {
      */
     private List<ChangeRecord> analyzeMergeNestedFolders(File file) {
         List<ChangeRecord> result = new ArrayList<>();
-        
+
         // 确保当前文件是目录
         if (!file.isDirectory()) {
             return result;
         }
-        
+
         // 遍历当前目录的所有子目录
         File[] subDirs = file.listFiles(File::isDirectory);
         if (subDirs != null) {
             for (File subDir : subDirs) {
                 // 递归处理子目录
                 result.addAll(analyzeMergeNestedFolders(subDir));
-                
+
                 // 检查当前目录是否只有一个子目录且没有其他文件
                 File[] currentFiles = file.listFiles();
                 if (currentFiles != null && currentFiles.length == 1 && currentFiles[0].isDirectory()) {
                     File onlyChild = currentFiles[0];
-                    
+
                     // 创建合并记录
                     Map<String, String> params = new HashMap<>();
                     params.put("operation", "merge_nested_folder"); // 标识这是嵌套文件夹合并操作
                     params.put("childDir", onlyChild.getAbsolutePath()); // 子文件夹路径
                     params.put("parentDir", file.getAbsolutePath()); // 父文件夹路径
-                    
+
                     // 设置新名称
                     String newName = "合并嵌套文件夹 " + onlyChild.getName();
-                    
+
                     ChangeRecord record = new ChangeRecord(
                             onlyChild.getName(),
                             newName,
@@ -319,40 +317,40 @@ public class DuplicateAnalyzer {
                             params, // 使用extraParams传递额外信息
                             ExecStatus.PENDING
                     );
-                    
+
                     result.add(record);
                 }
             }
         }
-        
+
         return result;
     }
-    
+
     /**
      * 同名父子文件夹合并
      */
     private List<ChangeRecord> analyzeMergeSameNameFolders(File file) {
         List<ChangeRecord> result = new ArrayList<>();
-        
+
         // 确保当前文件是目录
         if (!file.isDirectory()) {
             return result;
         }
-        
+
         // 获取当前目录的名称
         String currentDirName = file.getName();
-        
+
         // 遍历当前目录的所有子文件/目录
         File[] files = file.listFiles();
         if (files == null) {
             return result;
         }
-        
+
         // 检查是否存在与当前目录同名的子目录
         for (File child : files) {
             if (child.isDirectory() && child.getName().equals(currentDirName)) {
                 // 找到同名子目录，需要合并
-                
+
                 // 检查是否有冲突文件
                 List<String> conflictingFiles = new ArrayList<>();
                 File[] subFiles = child.listFiles();
@@ -366,25 +364,25 @@ public class DuplicateAnalyzer {
                         }
                     }
                 }
-                
+
                 // 创建合并记录
                 Map<String, String> params = new HashMap<>();
                 params.put("operation", "merge_folder"); // 标识这是文件夹合并操作
                 params.put("childDir", child.getAbsolutePath()); // 子文件夹路径
                 params.put("parentDir", file.getAbsolutePath()); // 父文件夹路径
-                
+
                 // 记录冲突文件
                 if (!conflictingFiles.isEmpty()) {
                     params.put("conflictingFiles", String.join(",", conflictingFiles));
                     params.put("conflictCount", String.valueOf(conflictingFiles.size()));
                 }
-                
+
                 // 设置新名称，包含冲突信息
                 String newName = "合并文件夹 " + child.getName();
                 if (!conflictingFiles.isEmpty()) {
                     newName += " (发现 " + conflictingFiles.size() + " 个重名文件)";
                 }
-                
+
                 ChangeRecord record = new ChangeRecord(
                         child.getName(),
                         newName,
@@ -395,17 +393,17 @@ public class DuplicateAnalyzer {
                         params, // 使用extraParams传递额外信息
                         ExecStatus.PENDING
                 );
-                
+
                 result.add(record);
-                
+
                 // 停止遍历，因为一个目录最多只有一个同名子目录
                 break;
             }
         }
-        
+
         return result;
     }
-    
+
     /**
      * 文件夹去重 (内容一致性检查)
      */
@@ -465,15 +463,16 @@ public class DuplicateAnalyzer {
         if (EXT_IMAGE.contains(ext)) return "IMAGE";
         return "OTHER_" + ext;
     }
-    
+
     /**
      * 对文件名进行预处理
+     *
      * @param filename 原始文件名
      * @return 预处理后的文件名
      */
     private String preprocessFilename(String filename) {
         String processed = filename;
-        
+
         // 繁简中文转换
         if (params.isPreprocessSimplified()) {
             try {
@@ -484,19 +483,20 @@ public class DuplicateAnalyzer {
                 e.printStackTrace();
             }
         }
-        
+
         // 大小写转换（优先级：大写优先于小写）
         if (params.isPreprocessUpper()) {
             processed = processed.toUpperCase();
         } else if (params.isPreprocessLower()) {
             processed = processed.toLowerCase();
         }
-        
+
         return processed;
     }
-    
+
     /**
      * 获取音频文件的元数据
+     *
      * @param file 音频文件
      * @return 包含持续时间（毫秒）和码率（kbps）的Map，无法读取时返回null
      */
@@ -504,13 +504,13 @@ public class DuplicateAnalyzer {
         try {
             AudioFile audioFile = AudioFileIO.read(file);
             AudioHeader audioHeader = audioFile.getAudioHeader();
-            
+
             Map<String, Long> metadata = new HashMap<>();
             // 获取持续时间（毫秒）
             metadata.put("duration", audioHeader.getTrackLength() * 1000L);
             // 获取码率（kbps）
             metadata.put("bitrate", audioHeader.getBitRateAsNumber());
-            
+
             return metadata;
         } catch (Exception e) {
             // 忽略无法读取的音频文件

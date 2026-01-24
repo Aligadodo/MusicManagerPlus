@@ -1,11 +1,11 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-13 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-13
  */
 package com.filemanager.app.tools.display;
 
@@ -14,6 +14,7 @@ import com.alibaba.fastjson.serializer.SerializerFeature;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -26,26 +27,27 @@ import java.util.Map;
  * 样式模板管理器
  * 负责管理样式模板的保存、加载、选择和删除功能
  * 支持自定义扩展样式模板，存储在运行时的style目录下
+ *
  * @author hrcao
  */
 public class StyleTemplateManager {
     private static final StyleTemplateManager INSTANCE = new StyleTemplateManager();
     private static final String STYLE_DIR = "style";
     private static final String TEMPLATE_SUFFIX = ".style.template";
-    
-    private Map<String, ThemeConfig> templateMap;
+
+    private final Map<String, ThemeConfig> templateMap;
     private ThemeConfig currentTemplate;
-    
+
     private StyleTemplateManager() {
         templateMap = new HashMap<>();
         initStyleDir();
         loadAllTemplates();
     }
-    
+
     public static StyleTemplateManager getInstance() {
         return INSTANCE;
     }
-    
+
     /**
      * 初始化样式目录
      */
@@ -55,20 +57,20 @@ public class StyleTemplateManager {
             styleDir.mkdir();
         }
     }
-    
+
     /**
      * 加载所有样式模板
      */
     public void loadAllTemplates() {
         templateMap.clear();
-        
+
         // 添加内置模板
         loadBuiltInTemplates();
-        
+
         // 加载自定义模板
         loadCustomTemplates();
     }
-    
+
     /**
      * 加载内置样式模板
      */
@@ -78,7 +80,7 @@ public class StyleTemplateManager {
         defaultTheme.setTemplateName("默认主题");
         defaultTheme.setTemplateDescription("默认的界面样式模板，提供简洁清晰的外观");
         templateMap.put(defaultTheme.getTemplateName(), defaultTheme);
-        
+
         // 深色主题
         ThemeConfig darkTheme = new ThemeConfig();
         darkTheme.setTemplateName("深色主题");
@@ -95,7 +97,7 @@ public class StyleTemplateManager {
         darkTheme.setBorderColor("#546e7a");
         darkTheme.setDarkBackground(true);
         templateMap.put(darkTheme.getTemplateName(), darkTheme);
-        
+
         // 明亮主题
         ThemeConfig lightTheme = new ThemeConfig();
         lightTheme.setTemplateName("明亮主题");
@@ -111,7 +113,7 @@ public class StyleTemplateManager {
         lightTheme.setButtonSecondaryBorderColor("#ced4da");
         lightTheme.setBorderColor("#ced4da");
         templateMap.put(lightTheme.getTemplateName(), lightTheme);
-        
+
         // 高对比度主题
         ThemeConfig highContrastTheme = new ThemeConfig();
         highContrastTheme.setTemplateName("高对比度主题");
@@ -129,19 +131,19 @@ public class StyleTemplateManager {
         highContrastTheme.setBorderColor("#000000");
         templateMap.put(highContrastTheme.getTemplateName(), highContrastTheme);
     }
-    
+
     /**
      * 加载自定义样式模板
      */
     private void loadCustomTemplates() {
         // 加载style目录下的.style.template文件
         loadTemplatesFromDirectory(STYLE_DIR, TEMPLATE_SUFFIX);
-        
+
         // 加载style/themes目录下的.json文件
         String themesDir = STYLE_DIR + File.separator + "themes";
         loadTemplatesFromDirectory(themesDir, ".json");
     }
-    
+
     /**
      * 从指定目录加载指定后缀的样式模板文件
      */
@@ -150,15 +152,15 @@ public class StyleTemplateManager {
         if (!dir.exists() || !dir.isDirectory()) {
             return;
         }
-        
+
         File[] files = dir.listFiles((d, name) -> name.toLowerCase().endsWith(suffix));
         if (files == null) {
             return;
         }
-        
+
         for (File file : files) {
             try {
-                String content = new String(Files.readAllBytes(file.toPath()), "UTF-8");
+                String content = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
                 ThemeConfig template = JSON.parseObject(content, ThemeConfig.class);
                 if (template != null) {
                     // 如果模板没有名称，使用文件名作为名称
@@ -173,9 +175,10 @@ public class StyleTemplateManager {
             }
         }
     }
-    
+
     /**
      * 保存样式模板到文件
+     *
      * @param template 样式模板
      * @return 是否保存成功
      */
@@ -183,13 +186,13 @@ public class StyleTemplateManager {
         if (template == null || template.getTemplateName() == null) {
             return false;
         }
-        
+
         try {
             String templateName = template.getTemplateName();
             Path filePath = Paths.get(STYLE_DIR, templateName + TEMPLATE_SUFFIX);
             String json = JSON.toJSONString(template, SerializerFeature.PrettyFormat);
-            Files.write(filePath, json.getBytes("UTF-8"));
-            
+            Files.write(filePath, json.getBytes(StandardCharsets.UTF_8));
+
             // 更新模板映射
             templateMap.put(templateName, template);
             return true;
@@ -198,9 +201,10 @@ public class StyleTemplateManager {
             return false;
         }
     }
-    
+
     /**
      * 删除样式模板
+     *
      * @param templateName 模板名称
      * @return 是否删除成功
      */
@@ -209,13 +213,13 @@ public class StyleTemplateManager {
         if (isBuiltInTemplate(templateName)) {
             return false;
         }
-        
+
         try {
             Path filePath = Paths.get(STYLE_DIR, templateName + TEMPLATE_SUFFIX);
             if (Files.exists(filePath)) {
                 Files.delete(filePath);
             }
-            
+
             // 从映射中移除
             templateMap.remove(templateName);
             return true;
@@ -224,60 +228,67 @@ public class StyleTemplateManager {
             return false;
         }
     }
-    
+
     /**
      * 检查是否为内置模板
+     *
      * @param templateName 模板名称
      * @return 是否为内置模板
      */
     private boolean isBuiltInTemplate(String templateName) {
         return "默认主题".equals(templateName) || "深色主题".equals(templateName) ||
-               "明亮主题".equals(templateName) || "高对比度主题".equals(templateName);
+                "明亮主题".equals(templateName) || "高对比度主题".equals(templateName);
     }
-    
+
     /**
      * 获取所有样式模板名称
+     *
      * @return 模板名称列表
      */
     public List<String> getAllTemplateNames() {
         return new ArrayList<>(templateMap.keySet());
     }
-    
+
     /**
      * 获取所有样式模板
+     *
      * @return 样式模板列表
      */
     public List<ThemeConfig> getAllTemplates() {
         return new ArrayList<>(templateMap.values());
     }
-    
+
     /**
      * 根据名称获取样式模板
+     *
      * @param templateName 模板名称
      * @return 样式模板
      */
     public ThemeConfig getTemplate(String templateName) {
         return templateMap.get(templateName);
     }
-    
+
     /**
      * 设置当前样式模板
+     *
      * @param templateName 模板名称
      */
     public void setCurrentTemplate(String templateName) {
         currentTemplate = templateMap.get(templateName);
     }
-    
+
     /**
      * 设置当前样式模板
+     *
      * @param template 样式模板
      */
     public void setCurrentTemplate(ThemeConfig template) {
         currentTemplate = template;
     }
-    
+
     /**
      * 获取当前样式模板
+     *
      * @return 当前样式模板
      */
     public ThemeConfig getCurrentTemplate() {
@@ -286,15 +297,16 @@ public class StyleTemplateManager {
         }
         return currentTemplate;
     }
-    
+
     /**
      * 更新样式模板
+     *
      * @param template 样式模板
      */
     public void updateTemplate(ThemeConfig template) {
         if (template != null && template.getTemplateName() != null) {
             templateMap.put(template.getTemplateName(), template);
-            
+
             // 如果是当前模板，更新当前模板
             if (currentTemplate != null && template.getTemplateName().equals(currentTemplate.getTemplateName())) {
                 currentTemplate = template;

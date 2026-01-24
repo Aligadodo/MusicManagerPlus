@@ -1,11 +1,11 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.tool.backup;
 
@@ -27,8 +27,9 @@ public class FileDelTool {
 
     private static final String music_types = "mp3";
     private static final List<Rule> rules = new ArrayList<>();
+
     static {
-        rules.add(new Rule("-",music_types).maxFileSize(5000));
+        rules.add(new Rule("-", music_types).maxFileSize(5000));
     }
 
     public static void main(String[] args) {
@@ -40,18 +41,18 @@ public class FileDelTool {
         System.out.println("done !");
     }
 
-    public static void scanFiles(String rootDir,List<Rule> rules){
+    public static void scanFiles(String rootDir, List<Rule> rules) {
         List<File> files = new ArrayList<>();
         List<File> dirs = new ArrayList<>();
         FileUtil.listFiles(0, new File(rootDir), files, dirs);
-        System.out.println(String.format("dir has %d files and %d dirs ", files.size(), dirs.size()));
+        System.out.printf("dir has %d files and %d dirs %n", files.size(), dirs.size());
         ExecutorService executorService = Executors.newFixedThreadPool(12);
         AtomicLong count = new AtomicLong();
         files.forEach(
                 file -> {
                     Rule rule = rules.stream().filter(fileTransRule -> fileTransRule.isApply(file)).findFirst().orElse(null);
-                    if(rule != null){
-                        System.out.println("del "+file.getName());
+                    if (rule != null) {
+                        System.out.println("del " + file.getName());
                         try {
                             FileUtil.delete(file);
                         } catch (Exception e) {
@@ -63,12 +64,12 @@ public class FileDelTool {
         dirs.stream().sorted(Collections.reverseOrder()).forEach(
                 dir -> {
                     File[] filesCheck = dir.listFiles();
-                    if (filesCheck==null||filesCheck.length == 0) {
+                    if (filesCheck == null || filesCheck.length == 0) {
                         try {
                             FileUtil.delete(dir);
 
                         } catch (Exception e) {
-                            e.printStackTrace() ;
+                            e.printStackTrace();
                         }
                     }
                 }
@@ -76,9 +77,6 @@ public class FileDelTool {
 
 
     }
-
-
-
 
 
 }

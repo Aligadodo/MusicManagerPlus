@@ -1,16 +1,17 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.util.file;
 
 import java.io.*;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -24,7 +25,7 @@ public class FileRegexReplaceUtil {
     // $ 表示行的结束
     private static final String REGEX_PATTERN = "^FILE\\s+.*?WAVE$";
     private static final Pattern PATTERN = Pattern.compile(REGEX_PATTERN);
-    
+
     /**
      * 判断文件是否包含满足特定正则表达式模式的行。
      *
@@ -32,7 +33,7 @@ public class FileRegexReplaceUtil {
      * @return 如果找到匹配的行则返回 true，否则返回 false
      * @throws IOException 如果在读取文件时发生 I/O 错误
      */
-    public static boolean hasMatchingLine(String filePath){
+    public static boolean hasMatchingLine(String filePath) {
         try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
             String currentLine;
             while ((currentLine = reader.readLine()) != null) {
@@ -41,7 +42,7 @@ public class FileRegexReplaceUtil {
                     return true;
                 }
             }
-        }catch (Exception e){
+        } catch (Exception e) {
             System.out.println("File read error : " + e.getMessage());
             return false;
         }
@@ -49,12 +50,11 @@ public class FileRegexReplaceUtil {
     }
 
 
-
     /**
      * 自动检测编码，读取文件并替换内容，统一以 UTF-8 编码写回。
      *
      * @param filePath 要操作的文件路径
-     * @param newLine 要替换成的新行内容
+     * @param newLine  要替换成的新行内容
      * @throws IOException 如果在读取或写入文件时发生 I/O 错误
      */
     public static void replaceWithAutoCharset(String filePath, String newLine) throws IOException {
@@ -94,7 +94,7 @@ public class FileRegexReplaceUtil {
                     BufferedWriter writer = new BufferedWriter(
                             new OutputStreamWriter(
                                     new FileOutputStream(filePath),
-                                    "UTF-8"
+                                    StandardCharsets.UTF_8
                             )
                     )
             ) {
@@ -114,7 +114,7 @@ public class FileRegexReplaceUtil {
      * 读取文本文件内容，并将满足正则表达式的行替换为新的内容。
      *
      * @param filePath 要操作的文件路径
-     * @param newLine 要替换成的新行内容
+     * @param newLine  要替换成的新行内容
      * @throws IOException 如果在读取或写入文件时发生 I/O 错误
      */
     public static void replaceMatchingLineInFile(String filePath, String newLine) throws IOException {
@@ -126,7 +126,7 @@ public class FileRegexReplaceUtil {
             String currentLine;
             while ((currentLine = reader.readLine()) != null) {
                 String trimmedLine = currentLine.trim();
-                
+
                 // 检查当前行是否满足正则模式
                 if (PATTERN.matcher(trimmedLine).matches()) {
                     fileContent.add(newLine); // 添加新的行内容
@@ -169,11 +169,11 @@ public class FileRegexReplaceUtil {
                 System.out.println("❌ 文件不包含满足模式的行。");
                 return; // 如果不存在，则停止替换操作
             }
-            
+
             // 步骤 2: 执行替换操作
             System.out.println("\n--- 执行替换操作 ---");
             replaceMatchingLineInFile(FILE_PATH, NEW_LINE);
-            
+
         } catch (IOException e) {
             System.err.println("❌ 发生 I/O 错误: " + e.getMessage());
             e.printStackTrace();

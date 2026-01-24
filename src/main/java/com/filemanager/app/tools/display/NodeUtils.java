@@ -1,17 +1,15 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.app.tools.display;
 
 import javafx.scene.Node;
-import javafx.scene.Parent;
-import javafx.scene.layout.Pane;
 import javafx.scene.layout.Pane;
 import lombok.var;
 
@@ -38,7 +36,7 @@ public class NodeUtils {
     public static void moveLeft(Pane p, Node node) {
         var children = p.getChildren();
         int currentIndex = children.indexOf(node);
-        
+
         if (currentIndex > 0) {
             // 与前一个元素交换位置
             Collections.swap(children, currentIndex, currentIndex - 1);
@@ -60,7 +58,7 @@ public class NodeUtils {
     public static void moveRight(Pane p, Node node) {
         var children = p.getChildren();
         int currentIndex = children.indexOf(node);
-        
+
         if (currentIndex >= 0 && currentIndex < children.size() - 1) {
             // 与后一个元素交换位置
             Collections.swap(children, currentIndex, currentIndex + 1);

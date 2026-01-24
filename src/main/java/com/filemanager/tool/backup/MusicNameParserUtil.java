@@ -1,11 +1,11 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.tool.backup;
 
@@ -24,6 +24,7 @@ public class MusicNameParserUtil {
     public static Map<String, File> existingDirMapping = new HashMap<>();
     public static final Pattern eng = Pattern.compile("[0-9a-zA-Z\\s]*");
     public static final String full_music_types = "mp3,flac,wav,aiff,ape,dfd,dsf,iso";
+
     static {
         scanArtistDirs("X:\\0 - 中文歌手");
         scanArtistDirs("X:\\0 - 欧美歌手");
@@ -32,16 +33,16 @@ public class MusicNameParserUtil {
         scanArtistDirs("X:\\1 - 乐团乐队");
         scanArtistDirs("X:\\1 - 80年代老歌手");
 
-        System.out.println(String.format("find %d dirs ", existingDirMapping.size()));
+        System.out.printf("find %d dirs %n", existingDirMapping.size());
     }
 
-    public static boolean isMusicFile(String filename){
+    public static boolean isMusicFile(String filename) {
         return StringUtils.endsWithAny(filename.toLowerCase(), full_music_types.split(","));
     }
 
 
     private static void scanArtistDirs(String dir) {
-        if(new File(dir).listFiles()==null){
+        if (new File(dir).listFiles() == null) {
             return;
         }
         Arrays.stream(Objects.requireNonNull(new File(dir).listFiles())).forEach(i -> {

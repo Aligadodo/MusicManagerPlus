@@ -1,11 +1,11 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.tool.backup;
 
@@ -14,7 +14,10 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
 
 public class SrtFileCopyUtil {
     private static final String music_types = "mp3,flac,wav";
@@ -37,21 +40,21 @@ public class SrtFileCopyUtil {
                 files.add(i);
             }
         });
-        System.out.println(String.format("dir has %d files and %d dirs ", files.size(), dirs.size()));
+        System.out.printf("dir has %d files and %d dirs %n", files.size(), dirs.size());
 
         dirs.forEach(dir -> {
-            if(dir.listFiles()==null){
+            if (dir.listFiles() == null) {
                 return;
             }
-            List<File> subFiles =Arrays.asList(Objects.requireNonNull(dir.listFiles()));
-            File srt = subFiles.stream().filter(file -> file.isDirectory() && StringUtils.containsAnyIgnoreCase(file.getName(), "字幕","SRT.")).findFirst().orElse(null);
-            File av = subFiles.stream().filter(file -> file.isDirectory() && StringUtils.containsAnyIgnoreCase(file.getName(), "watermark","video")).findFirst().orElse(null);
-            if(srt==null||av==null){
+            List<File> subFiles = Arrays.asList(Objects.requireNonNull(dir.listFiles()));
+            File srt = subFiles.stream().filter(file -> file.isDirectory() && StringUtils.containsAnyIgnoreCase(file.getName(), "字幕", "SRT.")).findFirst().orElse(null);
+            File av = subFiles.stream().filter(file -> file.isDirectory() && StringUtils.containsAnyIgnoreCase(file.getName(), "watermark", "video")).findFirst().orElse(null);
+            if (srt == null || av == null) {
                 return;
             }
             try {
                 FileUtils.copyDirectory(srt, av);
-                int i=0;
+                int i = 0;
             } catch (IOException e) {
                 //throw new RuntimeException(e);
             }

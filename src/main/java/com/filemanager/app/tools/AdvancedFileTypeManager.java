@@ -1,25 +1,27 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.app.tools;
 
+import com.filemanager.app.tools.display.StyleFactory;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
-import javafx.scene.control.*;
+import javafx.scene.control.CheckBoxTreeItem;
+import javafx.scene.control.TextField;
+import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeView;
 import javafx.scene.control.cell.CheckBoxTreeCell;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 
 import java.io.File;
 import java.util.*;
-
-import com.filemanager.app.tools.display.StyleFactory;
 
 /**
  * 高级文件类型管理器
@@ -105,7 +107,7 @@ public class AdvancedFileTypeManager {
                 if ("[FILE]".equals(ext)) {
                     // 文件夹特殊处理，不做子节点，直接由 categoryItem 控制逻辑
                     categoryItem.setValue("除文件夹");
-                }else if ("[DIR]".equals(ext)) {
+                } else if ("[DIR]".equals(ext)) {
                     // 文件夹特殊处理，不做子节点，直接由 categoryItem 控制逻辑
                     categoryItem.setValue("文件夹");
                 } else {
@@ -213,18 +215,18 @@ public class AdvancedFileTypeManager {
         StyleFactory.applyTextInputControlStyle(customInputCallback);
         // 更新占位符文本
         customInputCallback.setPromptText("请输入要扫描的文件类型尾缀如: jpg;mepg;");
-        
+
         // 创建TreeView并应用主题样式
         StyleFactory.applyTreeViewStyle(treeView);
         // 移除硬编码的高度限制，让TreeView能够自动扩展
-        
+
         VBox layout = StyleFactory.createVBoxPanel();
         layout.getChildren().addAll(customInputCallback, treeView);
         VBox.setVgrow(treeView, Priority.ALWAYS);
-        
+
         // 应用主题样式到整个面板
         StyleFactory.setBasicStyle(layout);
-        
+
         return layout;
     }
 
@@ -238,10 +240,10 @@ public class AdvancedFileTypeManager {
         if (rootItem.isSelected()) return true;
 
         // 2. 文件夹判断
-        if (isFolderSelected.get()&&file.isDirectory()) {
+        if (isFolderSelected.get() && file.isDirectory()) {
             return true;
         }
-        if (isFileSelected.get()&&!file.isDirectory()) {
+        if (isFileSelected.get() && !file.isDirectory()) {
             return true;
         }
 
@@ -255,7 +257,7 @@ public class AdvancedFileTypeManager {
             if (activeExtensions.contains(ext)) return true;
 
             // 检查 用户自定义输入
-            if (customExtensions.contains(ext)) return true;
+            return customExtensions.contains(ext);
         }
 
         return false;

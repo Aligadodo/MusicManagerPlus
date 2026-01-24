@@ -1,7 +1,7 @@
 package com.filemanager.model;
 
-import com.jfoenix.controls.JFXComboBox;
 import com.filemanager.strategy.FileCleanupStrategy;
+import com.jfoenix.controls.JFXComboBox;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.TextField;
 
@@ -59,15 +59,15 @@ public class CleanupParams {
         pKeepLargest = chkKeepLargest.isSelected();
         pKeepEarliest = chkKeepEarliest.isSelected();
         pKeepExt = txtKeepExt.getText();
-        
+
         // 捕获预处理参数
         pPreprocessLower = chkPreprocessLower.isSelected();
         pPreprocessUpper = chkPreprocessUpper.isSelected();
         pPreprocessSimplified = chkPreprocessSimplified.isSelected();
-        
+
         // 捕获文件大小范围参数
         pSizeRange = cbSizeRange.getValue();
-        
+
         // 捕获音频特殊处理参数
         pAudioSpecial = chkAudioSpecial.isSelected();
     }
@@ -79,15 +79,15 @@ public class CleanupParams {
         props.setProperty("clean_keepLarge", String.valueOf(pKeepLargest));
         props.setProperty("clean_keepEarly", String.valueOf(pKeepEarliest));
         props.setProperty("clean_keepExt", pKeepExt);
-        
+
         // 保存预处理参数
         props.setProperty("clean_preprocessLower", String.valueOf(pPreprocessLower));
         props.setProperty("clean_preprocessUpper", String.valueOf(pPreprocessUpper));
         props.setProperty("clean_preprocessSimplified", String.valueOf(pPreprocessSimplified));
-        
+
         // 保存文件大小范围参数
         props.setProperty("clean_sizeRange", pSizeRange.name());
-        
+
         // 保存音频特殊处理参数
         props.setProperty("clean_audioSpecial", String.valueOf(pAudioSpecial));
     }
@@ -103,7 +103,7 @@ public class CleanupParams {
         if (props.containsKey("clean_keepEarly"))
             uiConfig.getChkKeepEarliest().setSelected(Boolean.parseBoolean(props.getProperty("clean_keepEarly")));
         if (props.containsKey("clean_keepExt")) uiConfig.getTxtKeepExt().setText(props.getProperty("clean_keepExt"));
-        
+
         // 加载预处理参数
         if (props.containsKey("clean_preprocessLower"))
             uiConfig.getChkPreprocessLower().setSelected(Boolean.parseBoolean(props.getProperty("clean_preprocessLower")));
@@ -111,11 +111,11 @@ public class CleanupParams {
             uiConfig.getChkPreprocessUpper().setSelected(Boolean.parseBoolean(props.getProperty("clean_preprocessUpper")));
         if (props.containsKey("clean_preprocessSimplified"))
             uiConfig.getChkPreprocessSimplified().setSelected(Boolean.parseBoolean(props.getProperty("clean_preprocessSimplified")));
-        
+
         // 加载文件大小范围参数
         if (props.containsKey("clean_sizeRange"))
             uiConfig.getCbSizeRange().getSelectionModel().select(FileCleanupStrategy.FileSizeRange.valueOf(props.getProperty("clean_sizeRange")));
-        
+
         // 加载音频特殊处理参数
         if (props.containsKey("clean_audioSpecial"))
             uiConfig.getChkAudioSpecial().setSelected(Boolean.parseBoolean(props.getProperty("clean_audioSpecial")));

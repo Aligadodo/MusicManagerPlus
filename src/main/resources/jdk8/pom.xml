@@ -168,7 +168,8 @@
                         <configuration>
                             <transformers>
                                 <!-- 自动设置 Main-Class，这样双击Jar就能运行 -->
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>com.filemanager.Launcher</mainClass>
                                 </transformer>
                             </transformers>

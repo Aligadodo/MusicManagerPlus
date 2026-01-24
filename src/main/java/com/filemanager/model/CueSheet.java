@@ -1,11 +1,11 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.model;
 
@@ -46,16 +46,24 @@ public class CueSheet {
     public String albumFileName;
     public Set<String> allFiles = new LinkedHashSet<>();
     public List<CueTrack> tracks = new ArrayList<>();
-    
+
     // 添加getter方法
-    public List<CueTrack> getTracks() { return tracks; }
-    public String getAlbumFileName() { return albumFileName; }
-    public String getAlbumTitle() { return albumTitle; }
+    public List<CueTrack> getTracks() {
+        return tracks;
+    }
+
+    public String getAlbumFileName() {
+        return albumFileName;
+    }
+
+    public String getAlbumTitle() {
+        return albumTitle;
+    }
 
     public int getCountFiles() {
         return allFiles.size();
     }
-    
+
     public String getAlbumPerformer() {
         return albumPerformer;
     }
@@ -75,49 +83,119 @@ public class CueSheet {
         public String displayInfo;
         public String durationStr;
         public CueSheet cueSheet;
-        
+
         // 手动添加的getter和setter方法
-        public int getNumber() { return number; }
-        public void setNumber(int number) { this.number = number; }
-        
-        public String getTitle() { return title; }
-        public void setTitle(String title) { this.title = title; }
-        
-        public String getFileName() { return fileName; }
-        public void setFileName(String fileName) { this.fileName = fileName; }
-        
-        public String getPerformer() { return performer; }
-        public void setPerformer(String performer) { this.performer = performer; }
-        
-        public long getLastEndTimeMs() { return lastEndTimeMs; }
-        public void setLastEndTimeMs(long lastEndTimeMs) { this.lastEndTimeMs = lastEndTimeMs; }
-        
-        public long getSoundStartTimeMs() { return soundStartTimeMs; }
-        public void setSoundStartTimeMs(long soundStartTimeMs) { this.soundStartTimeMs = soundStartTimeMs; }
-        
-        public long getSoundEndTimeMs() { return soundEndTimeMs; }
-        public void setSoundEndTimeMs(long soundEndTimeMs) { this.soundEndTimeMs = soundEndTimeMs; }
-        
-        public long getDuration() { return duration; }
-        public void setDuration(long duration) { this.duration = duration; }
-        
-        public String getRawLastEndTime() { return rawLastEndTime; }
-        public void setRawLastEndTime(String rawLastEndTime) { this.rawLastEndTime = rawLastEndTime; }
-        
-        public String getRawStartTime() { return rawStartTime; }
-        public void setRawStartTime(String rawStartTime) { this.rawStartTime = rawStartTime; }
-        
-        public String getRawEndTime() { return rawEndTime; }
-        public void setRawEndTime(String rawEndTime) { this.rawEndTime = rawEndTime; }
-        
-        public String getDisplayInfo() { return displayInfo; }
-        public void setDisplayInfo(String displayInfo) { this.displayInfo = displayInfo; }
-        
-        public String getDurationStr() { return durationStr; }
-        public void setDurationStr(String durationStr) { this.durationStr = durationStr; }
-        
-        public CueSheet getCueSheet() { return cueSheet; }
-        public void setCueSheet(CueSheet cueSheet) { this.cueSheet = cueSheet; }
+        public int getNumber() {
+            return number;
+        }
+
+        public void setNumber(int number) {
+            this.number = number;
+        }
+
+        public String getTitle() {
+            return title;
+        }
+
+        public void setTitle(String title) {
+            this.title = title;
+        }
+
+        public String getFileName() {
+            return fileName;
+        }
+
+        public void setFileName(String fileName) {
+            this.fileName = fileName;
+        }
+
+        public String getPerformer() {
+            return performer;
+        }
+
+        public void setPerformer(String performer) {
+            this.performer = performer;
+        }
+
+        public long getLastEndTimeMs() {
+            return lastEndTimeMs;
+        }
+
+        public void setLastEndTimeMs(long lastEndTimeMs) {
+            this.lastEndTimeMs = lastEndTimeMs;
+        }
+
+        public long getSoundStartTimeMs() {
+            return soundStartTimeMs;
+        }
+
+        public void setSoundStartTimeMs(long soundStartTimeMs) {
+            this.soundStartTimeMs = soundStartTimeMs;
+        }
+
+        public long getSoundEndTimeMs() {
+            return soundEndTimeMs;
+        }
+
+        public void setSoundEndTimeMs(long soundEndTimeMs) {
+            this.soundEndTimeMs = soundEndTimeMs;
+        }
+
+        public long getDuration() {
+            return duration;
+        }
+
+        public void setDuration(long duration) {
+            this.duration = duration;
+        }
+
+        public String getRawLastEndTime() {
+            return rawLastEndTime;
+        }
+
+        public void setRawLastEndTime(String rawLastEndTime) {
+            this.rawLastEndTime = rawLastEndTime;
+        }
+
+        public String getRawStartTime() {
+            return rawStartTime;
+        }
+
+        public void setRawStartTime(String rawStartTime) {
+            this.rawStartTime = rawStartTime;
+        }
+
+        public String getRawEndTime() {
+            return rawEndTime;
+        }
+
+        public void setRawEndTime(String rawEndTime) {
+            this.rawEndTime = rawEndTime;
+        }
+
+        public String getDisplayInfo() {
+            return displayInfo;
+        }
+
+        public void setDisplayInfo(String displayInfo) {
+            this.displayInfo = displayInfo;
+        }
+
+        public String getDurationStr() {
+            return durationStr;
+        }
+
+        public void setDurationStr(String durationStr) {
+            this.durationStr = durationStr;
+        }
+
+        public CueSheet getCueSheet() {
+            return cueSheet;
+        }
+
+        public void setCueSheet(CueSheet cueSheet) {
+            this.cueSheet = cueSheet;
+        }
 
         public String getFormatedFileName() {
             if (StringUtils.isNotBlank(fileName)) {
@@ -129,7 +207,7 @@ public class CueSheet {
             }
         }
 
-        public String getFormatedTrackName(String format){
+        public String getFormatedTrackName(String format) {
             String trackTitle = this.getTitle();
             String safeTitle = trackTitle.replaceAll("[\\\\/:*?\"<>|]", "_");
             return String.format("%02d - %s.%s", this.getNumber(), safeTitle, format);

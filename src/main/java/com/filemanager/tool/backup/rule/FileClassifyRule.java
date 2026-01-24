@@ -1,17 +1,17 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.tool.backup.rule;
 
 import java.io.File;
 
-public class FileClassifyRule extends Rule{
+public class FileClassifyRule extends Rule {
     public File destPath;
 
     public FileClassifyRule(String keywords, String filetypes, long minFileSize, String destPath) {
@@ -37,7 +37,7 @@ public class FileClassifyRule extends Rule{
 
     public File getDestPath(File file) {
         String fileName = file.getName();
-        String fileType = fileName.substring(fileName.lastIndexOf('.')+1);
-        return new File(destPath.getPath()+"\\"+fileType.toLowerCase());
+        String fileType = fileName.substring(fileName.lastIndexOf('.') + 1);
+        return new File(destPath.getPath() + "\\" + fileType.toLowerCase());
     }
 }

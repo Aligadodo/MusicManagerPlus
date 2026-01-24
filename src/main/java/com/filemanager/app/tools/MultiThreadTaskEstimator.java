@@ -1,11 +1,11 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.app.tools;
 
@@ -20,11 +20,11 @@ public class MultiThreadTaskEstimator {
     // 总任务数
     private final long totalTasks;
     // 已完成任务数
-    private final AtomicLong startTasks= new AtomicLong(0);
+    private final AtomicLong startTasks = new AtomicLong(0);
     // 已完成任务数
-    private final AtomicLong completedTasks= new AtomicLong(0);
+    private final AtomicLong completedTasks = new AtomicLong(0);
     // 已失败任务数
-    private final AtomicLong failedTasks= new AtomicLong(0);
+    private final AtomicLong failedTasks = new AtomicLong(0);
 
 
     // 滑动窗口：用于存储最近完成任务的时间戳，计算近期吞吐量
@@ -175,14 +175,14 @@ public class MultiThreadTaskEstimator {
         }
         return Math.min(1.0, (double) completedTasks.get() / totalTasks);
     }
-    
+
     /**
      * 获取总任务数
      */
     public long getTotalTasks() {
         return totalTasks;
     }
-    
+
     public String getDisplayInfo() {
         return " 总共：" + totalTasks
                 + " 已处理:" + completedTasks.get()

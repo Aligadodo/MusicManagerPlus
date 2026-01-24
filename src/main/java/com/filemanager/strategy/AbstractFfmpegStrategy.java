@@ -1,18 +1,18 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.strategy;
 
 import com.filemanager.app.base.IAppStrategy;
-import com.filemanager.app.tools.display.PathSelectionComponent;
 import com.filemanager.app.tools.display.StyleFactory;
 import com.filemanager.model.ChangeRecord;
+import com.filemanager.strategy.base.PathSelectionComponent;
 import com.filemanager.tool.file.PathUtils;
 import com.filemanager.type.ScanTarget;
 import com.filemanager.util.MetadataHelper;
@@ -84,8 +84,8 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
         // 创建路径选择组件
         Map<String, Object> defaults = new HashMap<>();
         defaults.put("outputDirMode", "子目录");
-        defaults.put("path", "Convert - WAV");
-        pathSelection = new PathSelectionComponent("ffmpeg",defaults);
+        defaults.put("path", getDefaultDirPrefix() + " - WAV");
+        pathSelection = new PathSelectionComponent("ffmpeg", defaults);
 
         cbSampleRate = new JFXComboBox<>(FXCollections.observableArrayList("保持原样 (Original)", "44100", "48000", "88200", "96000", "192000"));
         cbSampleRate.getSelectionModel().select(1);
@@ -136,28 +136,29 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
         txtSnapDir = new TextField();
         txtSnapDir.setPromptText("镜像存储目录路径");
     }
-    
+
     /**
      * 自动扫描FFmpeg的安装路径
      * 优先检查tools\ffmpeg.exe，然后检查系统环境变量
+     *
      * @return 找到的FFmpeg路径，未找到则返回"ffmpeg"
      */
     private String findFFmpeg() {
         // 1. 获取应用程序运行目录
         String appDir = System.getProperty("user.dir");
-        
+
         // 2. 检查appDir/tools/ffmpeg.exe
         File toolsFfmpeg = new File(appDir, "tools\\ffmpeg.exe");
         if (toolsFfmpeg.exists()) {
             return toolsFfmpeg.getAbsolutePath();
         }
-        
+
         // 3. 检查当前目录下的ffmpeg.exe
         File currentDirFfmpeg = new File("ffmpeg.exe");
         if (currentDirFfmpeg.exists()) {
             return currentDirFfmpeg.getAbsolutePath();
         }
-        
+
         // 4. 检查系统环境变量
         try {
             Process process = Runtime.getRuntime().exec("where ffmpeg");
@@ -171,7 +172,7 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
             scanner.close();
         } catch (IOException ignored) {
         }
-        
+
         // 5. 未找到，返回默认值
         return "ffmpeg";
     }
@@ -313,7 +314,7 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
         props.setProperty("ac_sampleRate", cbSampleRate.getValue());
         props.setProperty("ac_channels", cbChannels.getValue());
         props.setProperty("ac_autoFormatFilename", String.valueOf(chkAutoFormatFilename.isSelected()));
-        
+
         // 保存路径选择组件配置
         pathSelection.saveConfig(props);
     }
@@ -362,7 +363,7 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
         if (props.containsKey("ac_autoFormatFilename")) {
             chkAutoFormatFilename.setSelected(Boolean.parseBoolean(props.getProperty("ac_autoFormatFilename")));
         }
-        
+
         // 加载路径选择组件配置
         pathSelection.loadConfig(props);
     }
@@ -488,7 +489,7 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
         if (pUseCache && (pCacheDir == null || pCacheDir.trim().isEmpty() || !new File(pCacheDir).isDirectory())) {
             pUseCache = false;
         }
-        
+
         // 使用pathSelection组件计算输出路径
         File tempFile = new File(parentDir, tempName);
         String outputPath = pathSelection.getOutputPath(tempFile);
@@ -557,7 +558,7 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
         } else if (pUseTempSuffix) {
             params.put("stagingPath", new File(parentPath, tempName + ".temp").getAbsolutePath());
         }
-        
+
         // 添加自动格式化目标文件名的参数
         params.put("autoFormatFilename", String.valueOf(pAutoFormatFilename));
         return params;

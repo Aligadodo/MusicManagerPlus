@@ -11,7 +11,9 @@ import java.util.List;
  * @author 28667
  */
 public class SevenZipEngine extends AbstractUnarchiveEngine {
-    public SevenZipEngine(String path) { this.executablePath = path; }
+    public SevenZipEngine(String path) {
+        this.executablePath = path;
+    }
 
     @Override
     protected List<String> buildCommand(UnarchiveTask task) {
@@ -51,13 +53,17 @@ public class SevenZipEngine extends AbstractUnarchiveEngine {
                     String num = trimmed.substring(startIdx + 1, percentIdx);
                     listener.onProgress(Integer.parseInt(num));
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
         }
     }
 
     @Override
     public boolean isAvailable() {
-        try { return new ProcessBuilder(executablePath, "-h").start().waitFor() == 0; }
-        catch (Exception e) { return false; }
+        try {
+            return new ProcessBuilder(executablePath, "-h").start().waitFor() == 0;
+        } catch (Exception e) {
+            return false;
+        }
     }
 }

@@ -1,18 +1,18 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.tool.backup;
 
 import com.filemanager.model.FileStatisticInfo;
 import com.filemanager.model.MusicInfo;
 import com.filemanager.tool.backup.rule.Rule;
-
+import com.filemanager.util.FileUtil;
 import org.apache.commons.io.FileExistsException;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -22,11 +22,10 @@ import org.jaudiotagger.audio.exceptions.CannotReadException;
 import org.jaudiotagger.tag.FieldKey;
 import org.jaudiotagger.tag.Tag;
 
-import com.filemanager.util.FileUtil;
-
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
@@ -60,7 +59,7 @@ public class MusicRenameTool {
         List<File> files = new ArrayList<>();
         List<File> dirs = new ArrayList<>();
         FileUtil.listFiles(0, new File(rootDir), files, dirs);
-        System.out.println(String.format("dir has %d files and %d dirs ", files.size(), dirs.size()));
+        System.out.printf("dir has %d files and %d dirs %n", files.size(), dirs.size());
         ExecutorService executorService = Executors.newFixedThreadPool(1);
         AtomicLong count = new AtomicLong();
         files.forEach(
@@ -82,7 +81,7 @@ public class MusicRenameTool {
             MusicInfo musicInfo = queryMusicFileTag(file);
             FileStatisticInfo fileStatisticInfo = FileStatisticInfo.create(file);
             String songName = MusicNameParserUtil.getFormatedMusicName(musicInfo, fileStatisticInfo);
-            if (songName.contains("??")||songName.contains("�")) {
+            if (songName.contains("??") || songName.contains("�")) {
                 return;
             }
             FileUtil.renameFile(file, songName);
@@ -110,7 +109,7 @@ public class MusicRenameTool {
         try {
             AudioFile mp3File = AudioFileIO.read(file);
             Tag fileTags = mp3File.getTag();
-            if(fileTags!=null){
+            if (fileTags != null) {
                 musicInfo.artist = fileTags.getFirst(FieldKey.ARTIST);// 歌手名
                 musicInfo.album = fileTags.getFirst(FieldKey.ALBUM);// 專輯名
                 musicInfo.songName = fileTags.getFirst(FieldKey.TITLE);// 歌名
@@ -123,10 +122,10 @@ public class MusicRenameTool {
         } catch (Exception e) {
             // ignore
         }
-        if(StringUtils.isAllBlank(musicInfo.artist)){
+        if (StringUtils.isAllBlank(musicInfo.artist)) {
             musicInfo.artist = MusicNameParserUtil.getDirNameFromMusicFile(file);
         }
-        if(musicInfo.artist!=null&&musicInfo.artist.contains(".")){
+        if (musicInfo.artist != null && musicInfo.artist.contains(".")) {
             musicInfo.artist = null;
         }
         return musicInfo;
@@ -159,9 +158,6 @@ public class MusicRenameTool {
             // ignore
         }
     }
-
-
-
 
 
 }

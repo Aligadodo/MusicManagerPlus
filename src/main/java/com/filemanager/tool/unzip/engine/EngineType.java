@@ -7,24 +7,24 @@ package com.filemanager.tool.unzip.engine;
 public enum EngineType {
 
     SEVEN_ZIP(
-        "7-Zip 引擎", 
-        "tools/7-Zip/7z.exe", 
-        "最推荐。支持 .7z, .rar, .zip, .tar, .gz 等几乎所有格式。支持极速多线程解压和加密压缩包。",
-        "https://www.7-zip.org/"
+            "7-Zip 引擎",
+            "tools/7-Zip/7z.exe",
+            "最推荐。支持 .7z, .rar, .zip, .tar, .gz 等几乎所有格式。支持极速多线程解压和加密压缩包。",
+            "https://www.7-zip.org/"
     ),
 
     BANDIZIP(
-        "Bandizip 命令行工具", 
-        "tools/Bandizip/bc.exe", 
-        "性能卓越。对国产软件生成的压缩包（如乱码处理）兼容性好。支持主流压缩格式。",
-        "https://www.bandisoft.com/bandizip/"
+            "Bandizip 命令行工具",
+            "tools/Bandizip/bc.exe",
+            "性能卓越。对国产软件生成的压缩包（如乱码处理）兼容性好。支持主流压缩格式。",
+            "https://www.bandisoft.com/bandizip/"
     ),
 
     BUILT_IN(
-        "Java 内置引擎", 
-        "无需外部依赖", 
-        "基于 Apache Commons Compress。支持 .zip, .tar, .gz 等基础格式。不支持加密文件和 RAR5。",
-        "N/A"
+            "Java 内置引擎",
+            "无需外部依赖",
+            "基于 Apache Commons Compress。支持 .zip, .tar, .gz 等基础格式。不支持加密文件和 RAR5。",
+            "N/A"
     );
 
     private final String name;           // 中文友好名称

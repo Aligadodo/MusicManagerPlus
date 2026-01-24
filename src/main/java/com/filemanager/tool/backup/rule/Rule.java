@@ -1,11 +1,11 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.tool.backup.rule;
 
@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 
 public class Rule {
     public Set<String> keywords = new HashSet<>();
-    public Set<String> filetypes= new HashSet<>();
+    public Set<String> filetypes = new HashSet<>();
     public Pattern regex;
     public long minFileSize;
     public long maxFileSize = Long.MAX_VALUE;
@@ -35,11 +35,11 @@ public class Rule {
     }
 
     public Rule(String pattern) {
-        this.regex = pattern==null?null: Pattern.compile(pattern);
+        this.regex = pattern == null ? null : Pattern.compile(pattern);
     }
 
-    private Set<String> getKeywords(String str){
-        Set<String> originalKeywords = str==null?new HashSet<>(): Arrays.stream(str.split(",")).collect(Collectors.toSet());
+    private Set<String> getKeywords(String str) {
+        Set<String> originalKeywords = str == null ? new HashSet<>() : Arrays.stream(str.split(",")).collect(Collectors.toSet());
         Set<String> keywords = new HashSet<>();
         originalKeywords.stream().forEach(i -> {
             keywords.add(ZhConverterUtil.toSimple(i.toUpperCase()));
@@ -48,49 +48,46 @@ public class Rule {
     }
 
 
-    public boolean isApply(File file){
-        String fileName  = ZhConverterUtil.toSimple(file.getName().toUpperCase());
-        if(fileName.indexOf('.') == -1){
+    public boolean isApply(File file) {
+        String fileName = ZhConverterUtil.toSimple(file.getName().toUpperCase());
+        if (fileName.indexOf('.') == -1) {
             return false;
         }
         String nameOnly = fileName.substring(0, fileName.lastIndexOf('.'));
         String fileType = fileName.substring(fileName.lastIndexOf('.'));
 
-        if(!keywords.isEmpty()){
+        if (!keywords.isEmpty()) {
             boolean match = keywords.stream().anyMatch(nameOnly::contains);
-            if(reverse&&match){
+            if (reverse && match) {
                 return false;
             }
-            if(!reverse&&!match){
+            if (!reverse && !match) {
                 return false;
             }
         }
 
-        if(regex!=null){
+        if (regex != null) {
             boolean match = regex.matcher(nameOnly).matches();
-            if(reverse&&match){
+            if (reverse && match) {
                 return false;
             }
-            if(!reverse&&!match){
+            if (!reverse && !match) {
                 return false;
             }
         }
 
-        if(!filetypes.isEmpty()){
-            if(filetypes.stream().noneMatch(fileType::contains)){
+        if (!filetypes.isEmpty()) {
+            if (filetypes.stream().noneMatch(fileType::contains)) {
                 return false;
             }
         }
         long fileSizeBytes = file.length();
         // 转换为KB
         float fileSizeKB = fileSizeBytes / 1024f;
-        if(fileSizeKB < minFileSize){
+        if (fileSizeKB < minFileSize) {
             return false;
         }
-        if(fileSizeKB > maxFileSize){
-            return false;
-        }
-        return true;
+        return !(fileSizeKB > maxFileSize);
     }
 
     public Rule keywords(Set<String> keywords) {
@@ -139,7 +136,7 @@ public class Rule {
         return this;
     }
 
-    public void execute(){
+    public void execute() {
 
     }
 }

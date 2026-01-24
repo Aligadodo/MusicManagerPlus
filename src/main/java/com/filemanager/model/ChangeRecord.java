@@ -1,11 +1,11 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.model;
 
@@ -67,9 +67,14 @@ public class ChangeRecord {
     }
 
     // 手动添加id的getter和setter方法
-    public long getId() { return this.id; }
-    public void setId(long id) { this.id = id; }
-    
+    public long getId() {
+        return this.id;
+    }
+
+    public void setId(long id) {
+        this.id = id;
+    }
+
 
     // 获取当前应该处理的“源”文件（可能是原始文件，也可能是链式处理中上一步生成的文件）
     public File getCurrentSource() {
@@ -77,30 +82,107 @@ public class ChangeRecord {
     }
 
     // 手动添加常用的getter和setter方法，确保其他类能够访问这些属性
-    public String getOriginalName() { return this.originalName; }
-    public void setOriginalName(String originalName) { this.originalName = originalName; }
-    public String getNewName() { return this.newName; }
-    public void setNewName(String newName) { this.newName = newName; }
-    public File getFileHandle() { return this.fileHandle; }
-    public void setFileHandle(File fileHandle) { this.fileHandle = fileHandle; }
-    public boolean isChanged() { return this.changed; }
-    public void setChanged(boolean changed) { this.changed = changed; }
-    public String getNewPath() { return this.newPath; }
-    public void setNewPath(String newPath) { this.newPath = newPath; }
-    public OperationType getOpType() { return this.opType; }
-    public void setOpType(OperationType opType) { this.opType = opType; }
-    public Map<String, String> getExtraParams() { return this.extraParams; }
-    public void setExtraParams(Map<String, String> extraParams) { this.extraParams = extraParams; }
-    public ExecStatus getStatus() { return this.status; }
-    public void setStatus(ExecStatus status) { this.status = status; }
-    public String getFailReason() { return this.failReason; }
-    public void setFailReason(String failReason) { this.failReason = failReason; }
-    public boolean isCreate() { return this.isCreate; }
-    public void setCreate(boolean create) { this.isCreate = create; }
-    public boolean isDeleteOrMove() { return this.isDeleteOrMove; }
-    public void setDeleteOrMove(boolean deleteOrMove) { this.isDeleteOrMove = deleteOrMove; }
-    public File getIntermediateFile() { return this.intermediateFile; }
-    public void setIntermediateFile(File intermediateFile) { this.intermediateFile = intermediateFile; }
-    public boolean isSelected() { return this.selected; }
-    public void setSelected(boolean selected) { this.selected = selected; }
+    public String getOriginalName() {
+        return this.originalName;
+    }
+
+    public void setOriginalName(String originalName) {
+        this.originalName = originalName;
+    }
+
+    public String getNewName() {
+        return this.newName;
+    }
+
+    public void setNewName(String newName) {
+        this.newName = newName;
+    }
+
+    public File getFileHandle() {
+        return this.fileHandle;
+    }
+
+    public void setFileHandle(File fileHandle) {
+        this.fileHandle = fileHandle;
+    }
+
+    public boolean isChanged() {
+        return this.changed;
+    }
+
+    public void setChanged(boolean changed) {
+        this.changed = changed;
+    }
+
+    public String getNewPath() {
+        return this.newPath;
+    }
+
+    public void setNewPath(String newPath) {
+        this.newPath = newPath;
+    }
+
+    public OperationType getOpType() {
+        return this.opType;
+    }
+
+    public void setOpType(OperationType opType) {
+        this.opType = opType;
+    }
+
+    public Map<String, String> getExtraParams() {
+        return this.extraParams;
+    }
+
+    public void setExtraParams(Map<String, String> extraParams) {
+        this.extraParams = extraParams;
+    }
+
+    public ExecStatus getStatus() {
+        return this.status;
+    }
+
+    public void setStatus(ExecStatus status) {
+        this.status = status;
+    }
+
+    public String getFailReason() {
+        return this.failReason;
+    }
+
+    public void setFailReason(String failReason) {
+        this.failReason = failReason;
+    }
+
+    public boolean isCreate() {
+        return this.isCreate;
+    }
+
+    public void setCreate(boolean create) {
+        this.isCreate = create;
+    }
+
+    public boolean isDeleteOrMove() {
+        return this.isDeleteOrMove;
+    }
+
+    public void setDeleteOrMove(boolean deleteOrMove) {
+        this.isDeleteOrMove = deleteOrMove;
+    }
+
+    public File getIntermediateFile() {
+        return this.intermediateFile;
+    }
+
+    public void setIntermediateFile(File intermediateFile) {
+        this.intermediateFile = intermediateFile;
+    }
+
+    public boolean isSelected() {
+        return this.selected;
+    }
+
+    public void setSelected(boolean selected) {
+        this.selected = selected;
+    }
 }

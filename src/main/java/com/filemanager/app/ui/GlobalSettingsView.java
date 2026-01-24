@@ -1,42 +1,36 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.app.ui;
-
-import java.io.File;
-import java.util.Properties;
-import java.util.stream.Collectors;
 
 import com.filemanager.app.base.IAppController;
 import com.filemanager.app.base.IAutoReloadAble;
 import com.filemanager.app.tools.AdvancedFileTypeManager;
-import com.filemanager.app.tools.display.StyleFactory;
 import com.filemanager.app.tools.display.AutoShrinkLabel;
+import com.filemanager.app.tools.display.StyleFactory;
 import com.jfoenix.controls.JFXComboBox;
 import com.jfoenix.controls.JFXTextField;
-
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.geometry.Insets;
 import javafx.scene.Node;
-import javafx.scene.control.Spinner;
+import javafx.scene.control.*;
+import javafx.scene.input.KeyCode;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.control.Label;
-import javafx.scene.control.Button;
-import javafx.scene.control.ListView;
-import javafx.scene.control.ListCell;
-import javafx.scene.input.KeyCode;
-import javafx.geometry.Insets;
-import javafx.scene.control.TitledPane;
 import javafx.scene.text.Font;
 import lombok.Getter;
+
+import java.io.File;
+import java.util.Properties;
+import java.util.stream.Collectors;
 
 @Getter
 public class GlobalSettingsView implements IAutoReloadAble {
@@ -61,26 +55,26 @@ public class GlobalSettingsView implements IAutoReloadAble {
     private Spinner<Integer> spMinRecursionDepth;
     private Spinner<Integer> spMaxRecursionDepth;
     private HBox recursionDepthRangeBox;
-    
+
     private void initControls() {
         cbRecursionMode = new JFXComboBox<>(FXCollections.observableArrayList("当前目录", "全部文件", "指定目录层级", "目录层级范围"));
         cbRecursionMode.getSelectionModel().select(1);
 
         spRecursionDepth = new Spinner<>(1, 20, 2);
         spRecursionDepth.setEditable(true);
-        
+
         // Initialize directory level range controls
         spMinRecursionDepth = new Spinner<>(0, 20, 0);
         spMinRecursionDepth.setEditable(true);
         spMaxRecursionDepth = new Spinner<>(1, 20, 2);
         spMaxRecursionDepth.setEditable(true);
-        
+
         recursionDepthRangeBox = new HBox(10);
         recursionDepthRangeBox.getChildren().addAll(
                 StyleFactory.createParamPairLine("最小层级:", spMinRecursionDepth),
                 StyleFactory.createParamPairLine("最大层级:", spMaxRecursionDepth)
         );
-        
+
         // Set visibility based on selected mode
         cbRecursionMode.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
             boolean showSingleDepth = "指定目录层级".equals(newVal);
@@ -90,13 +84,13 @@ public class GlobalSettingsView implements IAutoReloadAble {
             recursionDepthRangeBox.setVisible(showRangeDepth);
             recursionDepthRangeBox.setManaged(showRangeDepth);
         });
-        
+
         // Initialize visibility
         spRecursionDepth.setVisible(false);
         spRecursionDepth.setManaged(false);
         recursionDepthRangeBox.setVisible(false);
         recursionDepthRangeBox.setManaged(false);
-        
+
         // 初始化文件扫描过滤配置
         scanFilterList = FXCollections.observableArrayList(
                 // 功能相关过滤
@@ -107,7 +101,7 @@ public class GlobalSettingsView implements IAutoReloadAble {
                 "*Temp*",
                 "*Cache*",
                 "*Log*",
-                
+
                 // Windows系统路径
                 "*\\Windows\\*",
                 "*\\Program Files\\*",
@@ -116,16 +110,16 @@ public class GlobalSettingsView implements IAutoReloadAble {
                 "*\\AppData\\*",
                 "*\\Local Settings\\*",
                 "*\\Application Data\\*",
-                
+
                 // 系统特殊目录
                 "*\\Recycle Bin\\*",
                 "*\\System Volume Information\\*",
-                
+
                 // 隐藏文件和临时文件
                 "*\\.*",  // 隐藏文件和目录
                 "*\\~*",  // 临时文件和备份
                 "*\\Thumbs.db",  // 缩略图缓存
-                
+
                 // 临时文件目录
                 "*\\Temp\\*",
                 "*\\TMP\\*"
@@ -155,17 +149,17 @@ public class GlobalSettingsView implements IAutoReloadAble {
                     Button upBtn = new Button("↑");
                     Button downBtn = new Button("↓");
                     Button deleteBtn = new Button("×");
-                    
+
                     // 设置小按钮样式
                     String smallButtonStyle = "-fx-min-width: 20; -fx-min-height: 20; -fx-font-size: 10; -fx-padding: 0;";
                     upBtn.setStyle(smallButtonStyle);
                     downBtn.setStyle(smallButtonStyle);
                     deleteBtn.setStyle(smallButtonStyle + " -fx-text-fill: #e74c3c;");
-                    
+
                     upBtn.setOnAction(e -> moveFilterRule(getIndex(), -1));
                     downBtn.setOnAction(e -> moveFilterRule(getIndex(), 1));
                     deleteBtn.setOnAction(e -> scanFilterList.remove(item));
-                    
+
                     actions.getChildren().addAll(upBtn, downBtn, deleteBtn);
 
                     pane.setCenter(ruleLabel);
@@ -188,7 +182,7 @@ public class GlobalSettingsView implements IAutoReloadAble {
                 }
             }
         });
-        
+
         scanFilterInput = new JFXTextField();
         scanFilterInput.setPromptText("输入过滤规则（如：*Convert*），按回车添加");
         scanFilterInput.setPrefWidth(300);
@@ -206,21 +200,21 @@ public class GlobalSettingsView implements IAutoReloadAble {
     private void buildUI() {
         viewNode = StyleFactory.createVBoxPanel();
         viewNode.setSpacing(15);
-        
+
         // 将扫描模式和层级合并到一行显示
         VBox scanSettingsBox = new VBox(10);
         scanSettingsBox.setPadding(new Insets(10));
-        
+
         // 调整扫描层级Spinner的宽度
         spRecursionDepth.setPrefWidth(60);
         spMinRecursionDepth.setPrefWidth(60);
         spMaxRecursionDepth.setPrefWidth(60);
-        
+
         HBox scanModeBox = new HBox(10);
         scanModeBox.getChildren().addAll(
                 StyleFactory.createParamPairLine("扫描模式:", cbRecursionMode)
         );
-        
+
         // 扫描层级参数行
         HBox singleDepthBox = new HBox(10);
         AutoShrinkLabel recursionDepthLabel = StyleFactory.createParamLabel("扫描层级:");
@@ -228,7 +222,7 @@ public class GlobalSettingsView implements IAutoReloadAble {
                 recursionDepthLabel,
                 spRecursionDepth
         );
-        
+
         // 绑定扫描层级行的可见性
         cbRecursionMode.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
             boolean showSingleDepth = "指定目录层级".equals(newVal);
@@ -240,7 +234,7 @@ public class GlobalSettingsView implements IAutoReloadAble {
             recursionDepthRangeBox.setVisible(showRangeDepth);
             recursionDepthRangeBox.setManaged(showRangeDepth);
         });
-        
+
         // 初始化可见性
         spRecursionDepth.setVisible(false);
         spRecursionDepth.setManaged(false);
@@ -248,50 +242,50 @@ public class GlobalSettingsView implements IAutoReloadAble {
         recursionDepthLabel.setManaged(false);
         recursionDepthRangeBox.setVisible(false);
         recursionDepthRangeBox.setManaged(false);
-        
+
         scanSettingsBox.getChildren().addAll(
                 scanModeBox,
                 singleDepthBox,
                 recursionDepthRangeBox
         );
-        
+
         // 文件扫描过滤配置
         VBox scanFilterBox = new VBox(8);
         scanFilterBox.setPadding(new Insets(10));
-        
+
         HBox scanFilterInputBox = new HBox(10);
         scanFilterInputBox.getChildren().addAll(
                 scanFilterInput
         );
-        
+
         scanFilterBox.getChildren().addAll(
                 scanFilterInputBox,
                 scanFilterListView
         );
-        
+
         // 创建折叠框
         TitledPane globalFilterPane = new TitledPane("全局过滤", scanFilterBox);
         TitledPane globalScanPane = new TitledPane("扫描模式", scanSettingsBox);
         TitledPane fileTypePane = new TitledPane("文件类型", fileTypeManager.getView());
-        
+
         // 设置折叠框样式
         applyTitledPaneStyle(globalScanPane);
         applyTitledPaneStyle(fileTypePane);
         applyTitledPaneStyle(globalFilterPane);
-        
+
         // 实现只能同时打开一个折叠框的功能
         setupTitledPaneInteraction(globalScanPane, fileTypePane, globalFilterPane);
-        
+
         // 默认打开全局筛选折叠框
         globalScanPane.setExpanded(true);
-        
+
         viewNode.getChildren().addAll(
                 globalScanPane,
                 fileTypePane,
                 globalFilterPane
         );
     }
-    
+
     /**
      * 应用折叠框样式
      */
@@ -304,7 +298,7 @@ public class GlobalSettingsView implements IAutoReloadAble {
         pane.setAnimated(true);
         pane.setCollapsible(true);
     }
-    
+
     /**
      * 设置折叠框交互，确保只能同时打开一个
      */
@@ -322,7 +316,7 @@ public class GlobalSettingsView implements IAutoReloadAble {
             });
         }
     }
-    
+
     private Button createRemoveButton() {
         Button removeBtn = new Button("删除选中");
         removeBtn.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 4; -fx-cursor: hand; -fx-padding: 5 10; -fx-border-width: 1; -fx-border-color: #c0392b; -fx-min-height: 28; -fx-min-width: 80;");
@@ -334,11 +328,12 @@ public class GlobalSettingsView implements IAutoReloadAble {
         });
         return removeBtn;
     }
-    
+
     /**
      * 移动过滤规则的位置
+     *
      * @param currentIndex 当前索引
-     * @param direction 方向：-1 上移，1 下移
+     * @param direction    方向：-1 上移，1 下移
      */
     private void moveFilterRule(int currentIndex, int direction) {
         int newIndex = currentIndex + direction;
@@ -348,7 +343,7 @@ public class GlobalSettingsView implements IAutoReloadAble {
             scanFilterListView.getSelectionModel().select(newIndex);
         }
     }
-    
+
     /**
      * 如果setting目录不存在则创建
      */
@@ -368,9 +363,10 @@ public class GlobalSettingsView implements IAutoReloadAble {
     public boolean isFileIncluded(File file) {
         return fileTypeManager.accept(file) && !isFileFiltered(file);
     }
-    
+
     /**
      * 判断文件是否被过滤规则匹配
+     *
      * @param file 文件
      * @return true表示被过滤，false表示不过滤
      */
@@ -383,11 +379,12 @@ public class GlobalSettingsView implements IAutoReloadAble {
         }
         return false;
     }
-    
+
     /**
      * 检查文件完整路径是否匹配过滤规则
+     *
      * @param fullPath 文件完整路径
-     * @param filter 过滤规则（支持通配符）
+     * @param filter   过滤规则（支持通配符）
      * @return true表示匹配
      */
     private boolean matchesFilter(String fullPath, String filter) {
@@ -413,15 +410,15 @@ public class GlobalSettingsView implements IAutoReloadAble {
     public Spinner<Integer> getSpRecursionDepth() {
         return spRecursionDepth;
     }
-    
+
     public Spinner<Integer> getSpMinRecursionDepth() {
         return spMinRecursionDepth;
     }
-    
+
     public Spinner<Integer> getSpMaxRecursionDepth() {
         return spMaxRecursionDepth;
     }
-    
+
     public ObservableList<String> getScanFilterList() {
         return scanFilterList;
     }
@@ -446,7 +443,7 @@ public class GlobalSettingsView implements IAutoReloadAble {
         } else {
             props.remove("filter.global.sources");
         }
-        
+
         // 保存文件扫描过滤规则
         String filters = String.join("||", scanFilterList);
         props.setProperty("filter.scan.rules", filters);
@@ -472,7 +469,7 @@ public class GlobalSettingsView implements IAutoReloadAble {
                 if (f.exists()) app.getSourceRoots().add(f);
             }
         }
-        
+
         // 加载文件扫描过滤规则
         String filters = props.getProperty("filter.scan.rules");
         if (filters != null && !filters.isEmpty()) {
@@ -484,16 +481,16 @@ public class GlobalSettingsView implements IAutoReloadAble {
             }
         }
     }
-    
+
     @Override
     public void reload() {
         // 更新视图节点的基本样式
         StyleFactory.setBasicStyle(viewNode);
-        
+
         // 递归更新所有子组件样式
         StyleFactory.refreshAllComponents(viewNode);
     }
-    
+
     @Override
     public void resetConfig() {
         // 重置过滤规则为默认值
@@ -521,19 +518,19 @@ public class GlobalSettingsView implements IAutoReloadAble {
                 "*\\Temp\\*",
                 "*\\TMP\\*"
         );
-        
+
         // 重置扫描模式为默认值
         cbRecursionMode.getSelectionModel().selectFirst();
-        
+
         // 重置扫描层级为默认值
         spRecursionDepth.getValueFactory().setValue(1);
         spMinRecursionDepth.getValueFactory().setValue(0);
         spMaxRecursionDepth.getValueFactory().setValue(2);
-        
+
         // 重置输入框
         scanFilterInput.setText("");
     }
-    
+
     public void resetSettings() {
         resetConfig();
     }

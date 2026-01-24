@@ -22,8 +22,6 @@ import com.filemanager.model.ChangeRecord;
 import com.filemanager.tool.ThreadPoolManager;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import com.filemanager.util.file.FileSizeFormatUtil;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXCheckBox;
@@ -31,6 +29,8 @@ import com.jfoenix.controls.JFXComboBox;
 import com.jfoenix.controls.JFXTextField;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -88,10 +88,11 @@ public class PreviewView implements IAutoReloadAble {
     public TreeTableView<ChangeRecord> getPreviewTable() {
         return previewTable;
     }
-    
+
     public JFXComboBox<String> getCbThreadPoolMode() {
         return cbThreadPoolMode;
     }
+
     private JFXComboBox<Integer> numberDisplay;
     private JFXComboBox<String> cbThreadPoolMode; // 线程池模式选择：共享或根路径独立
     // 数量上限配置UI
@@ -207,14 +208,14 @@ public class PreviewView implements IAutoReloadAble {
                 cbThreadPoolMode.getSelectionModel().select(oldVal);
                 return;
             }
-            
+
             // 调用App的方法切换线程池模式
             boolean success = app.setThreadPoolMode(newVal);
             if (success) {
                 // 线程池模式切换成功，更新根路径配置区域的可见性
                 boolean isRootPathMode = ThreadPoolManager.MODE_ROOT_PATH.equals(newVal);
                 rootPathThreadConfigBox.setDisable(!isRootPathMode);
-                
+
                 // 切换为根目录模式时，禁用主的预览线程、运行线程数设置
                 spPreviewThreads.setDisable(isRootPathMode);
                 spExecutionThreads.setDisable(isRootPathMode);
@@ -280,7 +281,7 @@ public class PreviewView implements IAutoReloadAble {
         rootPathThreadConfigBox = new VBox(10);
         rootPathThreadConfigBox.setPadding(new Insets(5));
         rootPathThreadConfigBox.setAlignment(Pos.CENTER_LEFT);
-        
+
         // 初始设置线程池模式下拉框的可用性
         cbThreadPoolMode.setDisable(app.getTaskRunningStatus().get());
     }
@@ -590,7 +591,7 @@ public class PreviewView implements IAutoReloadAble {
         HBox allParamsRow = new HBox(15);
         allParamsRow.setAlignment(Pos.CENTER_LEFT);
         allParamsRow.setFillHeight(false);
-        
+
         allParamsRow.getChildren().addAll(
                 StyleFactory.createParamPairLine("预览线程数:", spPreviewThreads),
                 StyleFactory.createParamPairLine("执行线程数:", spExecutionThreads),
@@ -600,7 +601,7 @@ public class PreviewView implements IAutoReloadAble {
                 StyleFactory.createParamPairLine("执行数量:", spGlobalExecutionLimit),
                 chkUnlimitedExecution
         );
-        
+
         globalParamsBox.getChildren().addAll(
                 allParamsRow
         );
@@ -722,8 +723,8 @@ public class PreviewView implements IAutoReloadAble {
         VBox.setVgrow(previewTable, Priority.ALWAYS);
 
         HBox status = StyleFactory.createHBoxPanel(StyleFactory.createChapter("[运行状态]  "), runningLabel);
-        HBox status2 =StyleFactory.createHBoxPanel(StyleFactory.createChapter("[统计信息]  "), statsLabel);
-        viewNode.getChildren().addAll( configPane, progressBox,status, status2, filterBox, actionBox, previewTable);
+        HBox status2 = StyleFactory.createHBoxPanel(StyleFactory.createChapter("[统计信息]  "), statsLabel);
+        viewNode.getChildren().addAll(configPane, progressBox, status, status2, filterBox, actionBox, previewTable);
     }
 
     public void updateRunningProgress(String msg) {
@@ -763,12 +764,12 @@ public class PreviewView implements IAutoReloadAble {
                     long totalCount = app.getFullChangeList().stream()
                             .filter(record -> record.getOriginalName().startsWith(rootPath))
                             .count();
-                    
+
                     long completedCount = app.getFullChangeList().stream()
-                            .filter(record -> record.getOriginalName().startsWith(rootPath) && 
+                            .filter(record -> record.getOriginalName().startsWith(rootPath) &&
                                     (record.getStatus() == ExecStatus.SUCCESS || record.getStatus() == ExecStatus.FAILED))
                             .count();
-                    
+
                     if (totalCount > 0) {
                         double progress = (double) completedCount / totalCount;
                         progressBar.setProgress(progress);
@@ -801,6 +802,7 @@ public class PreviewView implements IAutoReloadAble {
         selectionColumn.setGraphic(headerCheckBox);
         selectionColumn.setCellFactory(column -> new TreeTableCell<ChangeRecord, Boolean>() {
             private final CheckBox checkBox = new CheckBox();
+
             {
                 checkBox.setStyle("-fx-padding: 0;");
                 checkBox.selectedProperty().addListener((obs, oldVal, newVal) -> {
@@ -813,6 +815,7 @@ public class PreviewView implements IAutoReloadAble {
                     }
                 });
             }
+
             @Override
             protected void updateItem(Boolean item, boolean empty) {
                 super.updateItem(item, empty);
@@ -1015,7 +1018,7 @@ public class PreviewView implements IAutoReloadAble {
                     }
                 }
             });
-            
+
             // 添加执行该任务菜单项
             MenuItem i5 = new MenuItem("执行该任务");
             i5.setOnAction(e -> {
@@ -1024,7 +1027,7 @@ public class PreviewView implements IAutoReloadAble {
                     executeSingleRecord(item);
                 }
             });
-            
+
             cm.getItems().addAll(i1, i2, i3, i4, i5);
             row.contextMenuProperty().bind(javafx.beans.binding.Bindings.when(row.emptyProperty()).then((ContextMenu) null).otherwise(cm));
             // 支持双击查看详情数据
@@ -1079,8 +1082,7 @@ public class PreviewView implements IAutoReloadAble {
                     // 检查目标文件路径
                     if (r.getNewPath() != null && r.getNewPath().toLowerCase().contains(s)) return true;
                     // 检查错误信息
-                    if (r.getFailReason() != null && r.getFailReason().toLowerCase().contains(s)) return true;
-                    return false;
+                    return r.getFailReason() != null && r.getFailReason().toLowerCase().contains(s);
                 };
                 Predicate<ChangeRecord> statusPredicate = r -> {
                     if ("全部".equals(st)) return true;
@@ -1158,7 +1160,7 @@ public class PreviewView implements IAutoReloadAble {
                 c = fullChangeList.stream().filter(ChangeRecord::isChanged).count(),
                 s = fullChangeList.stream().filter(r -> r.getStatus() == ExecStatus.SUCCESS).count(),
                 f = fullChangeList.stream().filter(r -> r.getStatus() == ExecStatus.FAILED).count();
-        
+
         // 计算执行时间
         String duration;
         if (app instanceof com.filemanager.app.FileManagerPlusApp) {
@@ -1175,12 +1177,13 @@ public class PreviewView implements IAutoReloadAble {
             // 任务进行中，实时计算
             duration = MultiThreadTaskEstimator.formatDuration(System.currentTimeMillis() - startT);
         }
-        
+
         this.updateStatsDisplay(t, c, s, f, duration);
     }
 
     /**
      * 删除选中的文件
+     *
      * @param deleteOriginal 是否删除原始文件（true）还是目标文件（false）
      */
     private void deleteSelectedFiles(boolean deleteOriginal) {
@@ -1245,7 +1248,7 @@ public class PreviewView implements IAutoReloadAble {
             new Thread(deleteTask).start();
         }
     }
-    
+
     /**
      * 执行单个ChangeRecord
      */
@@ -1253,11 +1256,11 @@ public class PreviewView implements IAutoReloadAble {
         if (record == null || !record.isChanged() || record.getOpType() == OperationType.NONE || record.getStatus() != ExecStatus.PENDING) {
             return;
         }
-        
+
         // 调用IAppController的方法执行单个任务
         app.runPipelineExecution(record);
     }
-    
+
     /**
      * 执行选中的ChangeRecord
      */
@@ -1266,26 +1269,26 @@ public class PreviewView implements IAutoReloadAble {
         if (tableView == null || tableView.getRoot() == null) {
             return;
         }
-        
+
         List<ChangeRecord> selectedRecords = tableView.getRoot().getChildren().stream()
                 .map(TreeItem::getValue)
                 .filter(record -> record != null && record.isSelected() && record.isChanged() && record.getOpType() != OperationType.NONE && record.getStatus() == ExecStatus.PENDING)
                 .collect(Collectors.toList());
-        
+
         if (selectedRecords.isEmpty()) {
             return;
         }
-        
+
         // 确认执行
         boolean confirm = FXDialogUtils.showConfirm("确认执行", "确定要执行 " + selectedRecords.size() + " 个任务吗？");
         if (!confirm) {
             return;
         }
-        
+
         // 调用IAppController的方法执行选中的任务
         app.runPipelineExecution(selectedRecords);
     }
-    
+
 
     // Getters
     public Node getViewNode() {

@@ -1,11 +1,11 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.tool;
 
@@ -17,29 +17,29 @@ import java.util.concurrent.TimeUnit;
  * 线程池管理器，负责创建和管理线程池
  */
 public class ThreadPoolManager {
-    
+
     // 全局线程池模式
     public static final String MODE_GLOBAL = "全局统一配置";
     // 根路径独立线程池模式
     public static final String MODE_ROOT_PATH = "根路径独立配置";
-    
+
     // 当前线程池模式
     private String currentMode;
-    
+
     // 全局线程池
     private RetryableThreadPool globalExecutor;
-    
+
     // 根路径线程池映射
-    private Map<String, RetryableThreadPool> rootPathExecutors;
-    
+    private final Map<String, RetryableThreadPool> rootPathExecutors;
+
     // 全局线程数配置
     private int globalPreviewThreads;
     private int globalExecutionThreads;
-    
+
     // 根路径线程数配置
-    private Map<String, Integer> rootPathPreviewThreads;
-    private Map<String, Integer> rootPathExecutionThreads;
-    
+    private final Map<String, Integer> rootPathPreviewThreads;
+    private final Map<String, Integer> rootPathExecutionThreads;
+
     /**
      * 构造函数
      */
@@ -51,9 +51,10 @@ public class ThreadPoolManager {
         this.globalPreviewThreads = 5; // 默认预览线程数
         this.globalExecutionThreads = 5; // 默认执行线程数
     }
-    
+
     /**
      * 获取或创建预览线程池
+     *
      * @param rootPath 根路径
      * @return 线程池
      */
@@ -70,9 +71,10 @@ public class ThreadPoolManager {
             });
         }
     }
-    
+
     /**
      * 获取或创建执行线程池
+     *
      * @param rootPath 根路径
      * @return 线程池
      */
@@ -89,9 +91,10 @@ public class ThreadPoolManager {
             });
         }
     }
-    
+
     /**
      * 设置全局预览线程数
+     *
      * @param threads 线程数
      */
     public void setGlobalPreviewThreads(int threads) {
@@ -101,9 +104,10 @@ public class ThreadPoolManager {
             globalExecutor.setMaximumPoolSize(threads);
         }
     }
-    
+
     /**
      * 设置全局执行线程数
+     *
      * @param threads 线程数
      */
     public void setGlobalExecutionThreads(int threads) {
@@ -113,11 +117,12 @@ public class ThreadPoolManager {
             globalExecutor.setMaximumPoolSize(threads);
         }
     }
-    
+
     /**
      * 设置根路径预览线程数
+     *
      * @param rootPath 根路径
-     * @param threads 线程数
+     * @param threads  线程数
      */
     public void setRootPathPreviewThreads(String rootPath, int threads) {
         this.rootPathPreviewThreads.put(rootPath, threads);
@@ -129,11 +134,12 @@ public class ThreadPoolManager {
             }
         }
     }
-    
+
     /**
      * 设置根路径执行线程数
+     *
      * @param rootPath 根路径
-     * @param threads 线程数
+     * @param threads  线程数
      */
     public void setRootPathExecutionThreads(String rootPath, int threads) {
         this.rootPathExecutionThreads.put(rootPath, threads);
@@ -145,9 +151,10 @@ public class ThreadPoolManager {
             }
         }
     }
-    
+
     /**
      * 设置线程池模式
+     *
      * @param mode 模式
      */
     public void setThreadPoolMode(String mode) {
@@ -155,15 +162,16 @@ public class ThreadPoolManager {
         // 如果切换模式，需要重新创建线程池
         shutdownAll();
     }
-    
+
     /**
      * 获取当前线程池模式
+     *
      * @return 模式
      */
     public String getThreadPoolMode() {
         return currentMode;
     }
-    
+
     /**
      * 关闭所有线程池
      */
@@ -177,7 +185,7 @@ public class ThreadPoolManager {
         }
         rootPathExecutors.clear();
     }
-    
+
     /**
      * 等待所有线程池终止
      */

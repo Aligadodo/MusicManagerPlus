@@ -3,19 +3,13 @@ package com.filemanager.tool.file;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.CleanupParams;
 import com.filemanager.strategy.FileCleanupStrategy;
-import com.filemanager.type.OperationType;
 import com.filemanager.type.ExecStatus;
+import com.filemanager.type.OperationType;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.StandardCopyOption;
+import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.nio.file.FileVisitResult;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -40,11 +34,11 @@ public class DeleteExecutor {
                 // 文件夹合并操作（包括同名父子文件夹合并和嵌套文件夹合并）
                 String childDirPath = params.get("childDir");
                 String parentDirPath = params.get("parentDir");
-                
+
                 if (childDirPath != null && parentDirPath != null) {
                     File childDir = new File(childDirPath);
                     File parentDir = new File(parentDirPath);
-                    
+
                     if (childDir.exists() && parentDir.exists() && parentDir.isDirectory()) {
                         // 将子文件夹中的所有文件移动到父文件夹
                         File[] subFiles = childDir.listFiles();
@@ -52,15 +46,15 @@ public class DeleteExecutor {
                             for (File subFile : subFiles) {
                                 if (subFile.isFile()) {
                                     File destFile = new File(parentDir, subFile.getName());
-                                    
+
                                     // 检查是否存在冲突
                                     boolean conflict = destFile.exists();
-                                    
+
                                     // 处理冲突：当前默认覆盖，后续可以扩展为支持用户选择
-                                    StandardCopyOption[] copyOptions = conflict ? 
-                                            new StandardCopyOption[]{StandardCopyOption.REPLACE_EXISTING} : 
+                                    StandardCopyOption[] copyOptions = conflict ?
+                                            new StandardCopyOption[]{StandardCopyOption.REPLACE_EXISTING} :
                                             new StandardCopyOption[]{};
-                                    
+
                                     // 尝试移动
                                     try {
                                         Files.move(subFile.toPath(), destFile.toPath(), copyOptions);
@@ -90,7 +84,7 @@ public class DeleteExecutor {
                                 }
                             }
                         }
-                        
+
                         // 删除空的子文件夹
                         deleteDirectoryRecursively(childDir);
                     }
@@ -156,7 +150,7 @@ public class DeleteExecutor {
             File trashRoot;
             Path sourcePath = f.toPath();
             Path root = sourcePath.getRoot();
-            
+
             // 基础回收站路径
             if (Paths.get(params.getTrashPath()).isAbsolute()) {
                 // 模式 B: 固定绝对路径
@@ -172,7 +166,7 @@ public class DeleteExecutor {
                 Path relativeToRoot = root.relativize(sourcePath).getParent();
                 if (relativeToRoot != null) trashRoot = new File(trashRoot, relativeToRoot.toString());
             }
-            
+
             // 可回滚删除：添加时间戳子目录
             if (params.getMethod() == FileCleanupStrategy.DeleteMethod.ROLLBACKABLE_DELETE) {
                 // 使用应用启动时间戳作为统一的时间戳 (格式: yyyyMMdd_HHmmss)
@@ -210,8 +204,9 @@ public class DeleteExecutor {
     /**
      * 合并两个目录的内容
      * 将sourceDir的内容移动到destDir，覆盖同名文件，合并同名目录
+     *
      * @param sourceDir 源目录
-     * @param destDir 目标目录
+     * @param destDir   目标目录
      * @throws IOException 操作异常
      */
     private void mergeDirectories(File sourceDir, File destDir) throws IOException {
@@ -219,12 +214,12 @@ public class DeleteExecutor {
         if (!destDir.exists()) {
             Files.createDirectories(destDir.toPath());
         }
-        
+
         File[] subFiles = sourceDir.listFiles();
         if (subFiles != null) {
             for (File subFile : subFiles) {
                 File destFile = new File(destDir, subFile.getName());
-                
+
                 if (subFile.isFile()) {
                     // 移动文件，覆盖已有文件
                     try {
@@ -243,7 +238,7 @@ public class DeleteExecutor {
             }
         }
     }
-    
+
     private void copyDirectory(File source, File target) throws IOException {
         // 使用FileVisitor来正确处理目录复制
         Files.walkFileTree(source.toPath(), new SimpleFileVisitor<Path>() {
@@ -256,7 +251,7 @@ public class DeleteExecutor {
                 }
                 return FileVisitResult.CONTINUE;
             }
-            
+
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
                 Path targetPath = target.toPath().resolve(source.toPath().relativize(file));

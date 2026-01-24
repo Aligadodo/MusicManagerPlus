@@ -1,25 +1,25 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-13 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-13
  */
 package com.filemanager.app.tools.display;
 
+import com.filemanager.app.base.IAutoReloadAble;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.Properties;
 
-import com.filemanager.app.base.IAutoReloadAble;
-
 /**
  * 界面主题配置模型
  * 存储颜色、透明度、圆角等外观参数
  * 按组件类型分组，支持不同级别组件的样式设置
+ *
  * @author 28667
  */
 @Data
@@ -28,13 +28,13 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
     // 模板信息
     private String templateName = "默认主题"; // 模板名称
     private String templateDescription = "默认的界面样式模板";
-    
+
     // 背景设置
     private String bgImagePath = "";
     @com.alibaba.fastjson.annotation.JSONField(alternateNames = "backgroundImage")
     private String backgroundImage = "";
     private String bgColor = "#f5f5f5";
-    
+
     // 背景图显示策略
     public enum BackgroundStrategy {
         STRETCH,      // 拉伸填充
@@ -42,42 +42,43 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
         COVER,        // 覆盖（保持比例，可能裁切）
         CONTAIN       // 包含（保持比例，全部显示）
     }
+
     private BackgroundStrategy bgImageStrategy = BackgroundStrategy.STRETCH;
-    
+
     // 当backgroundImage被设置时，同时设置bgImagePath
     public void setBackgroundImage(String backgroundImage) {
         this.backgroundImage = backgroundImage;
         this.bgImagePath = backgroundImage;
     }
-    
+
     // 主题色
     private String accentColor = "#3498db"; // 主色调
     private String accentLightColor = "#5dade2"; // 主色调亮色
     private String accentDarkColor = "#2980b9"; // 主色调暗色
-    
+
     // 文本颜色分级
     private String textPrimaryColor = "#2c3e50";  // 主要文本颜色
     private String textSecondaryColor = "#546e7a";  // 次要文本颜色
     private String textTertiaryColor = "#78909c";  // 三级文本颜色
     private String textDisabledColor = "#b0bec5";  // 禁用文本颜色
-    
+
     // 毛玻璃透明度 (0.0 - 1.0, 值越小越透明)
     private double glassOpacity = 0.85;
-    
+
     // 是否启用深色背景模式
     private boolean isDarkBackground = false;
-    
+
     // 基础样式设置
     private double cornerRadius = 5.0;
     private String borderColor = "#e0e0e0";
     private double borderWidth = 1.0;
-    
+
     // 面板样式分组
     private String panelBgColor = "transparent";
     private String panelBorderColor = "#e0e0e0";
     private String panelTitleColor = "#2c3e50";
     private String panelHoverColor = "#f5f5f5";
-    
+
     // 按钮样式分级
     // 主要按钮
     private String buttonPrimaryBgColor = "#3498db";
@@ -85,43 +86,43 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
     private String buttonPrimaryBorderColor = "#2980b9";
     private String buttonPrimaryHoverColor = "#2980b9";
     private String buttonPrimaryPressedColor = "#21618c";
-    
+
     // 次要按钮
     private String buttonSecondaryBgColor = "#ffffff";
     private String buttonSecondaryTextColor = "#2c3e50";
     private String buttonSecondaryBorderColor = "#e0e0e0";
     private String buttonSecondaryHoverColor = "#f5f5f5";
     private String buttonSecondaryPressedColor = "#e0e0e0";
-    
+
     // 成功按钮
     private String buttonSuccessBgColor = "#27ae60";
     private String buttonSuccessTextColor = "#ffffff";
     private String buttonSuccessBorderColor = "#229954";
     private String buttonSuccessHoverColor = "#229954";
-    
+
     // 警告按钮
     private String buttonWarningBgColor = "#f39c12";
     private String buttonWarningTextColor = "#ffffff";
     private String buttonWarningBorderColor = "#e67e22";
     private String buttonWarningHoverColor = "#e67e22";
-    
+
     // 错误按钮
     private String buttonErrorBgColor = "#e74c3c";
     private String buttonErrorTextColor = "#ffffff";
     private String buttonErrorBorderColor = "#c0392b";
     private String buttonErrorHoverColor = "#c0392b";
-    
+
     // 按钮尺寸设置
     private double buttonHeight = 28.0;
     private double buttonLargeSize = 32.0;
     private double buttonSmallSize = 26.0;
     private double buttonIconSize = 16.0;
-    
+
     // 统一按钮颜色设置（支持单独设计按钮颜色）
     private String buttonBgColor = "#3498db"; // 按钮背景色
     private String buttonTextColor = "#ffffff"; // 按钮文字颜色
     private String buttonBorderColor = "#2980b9"; // 按钮边框颜色
-    
+
     // 列表样式分组
     private String listBgColor = "#ffffff";
     private String listRowEvenBgColor = "#ffffff";
@@ -132,47 +133,47 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
     private String listBorderColor = "#e0e0e0";
     private String listHeaderBgColor = "#f5f5f5";
     private String listHeaderTextColor = "#2c3e50";
-    
+
     // 状态颜色
     private String hoverColor = "#f5f5f5";
     private String selectedColor = "#e3f2fd";
     private String disabledColor = "#f5f5f5";
-    
+
     // 进度条和状态指示颜色
     private String progressBarColor = "#27ae60";
     private String successColor = "#27ae60";
     private String warningColor = "#f39c12";
     private String errorColor = "#e74c3c";
     private String infoColor = "#3498db";
-    
+
     // 字体设置
     private String fontFamily = "Segoe UI, Arial, sans-serif";
     private double fontSize = 14.0;
-    
+
     // 字体样式分级
     private String titleFontFamily = "Segoe UI, Arial, sans-serif";
     private double titleFontSize = 18.0;
     private String titleFontColor = "#2c3e50";
-    
+
     private String subtitleFontFamily = "Segoe UI, Arial, sans-serif";
     private double subtitleFontSize = 16.0;
     private String subtitleFontColor = "#546e7a";
-    
+
     private String buttonFontFamily = "Segoe UI, Arial, sans-serif";
     private double buttonFontSize = 14.0;
-    
+
     private String descriptionFontFamily = "Segoe UI, Arial, sans-serif";
     private double descriptionFontSize = 14.0;
     private String descriptionFontColor = "#78909c";
-    
+
     private String logFontFamily = "Courier New, monospace";
     private double logFontSize = 12.0;
     private String logFontColor = "#2c3e50";
-    
+
     private String runtimeInfoFontFamily = "Segoe UI, Arial, sans-serif";
     private double runtimeInfoFontSize = 12.0;
     private String runtimeInfoFontColor = "#78909c";
-    
+
     // 间距设置
     private double smallSpacing = 5.0;
     private double mediumSpacing = 10.0;
@@ -191,29 +192,48 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
     // 手动添加的getter方法，解决Lombok注解处理器问题
 
     // 字体相关getter方法
-    public String getTitleFontFamily() { return titleFontFamily; }
-    public double getTitleFontSize() { return titleFontSize; }
-    public String getDescriptionFontFamily() { return descriptionFontFamily; }
-    public double getDescriptionFontSize() { return descriptionFontSize; }
-    public String getButtonFontFamily() { return buttonFontFamily; }
-    public double getButtonFontSize() { return buttonFontSize; }
-    
+    public String getTitleFontFamily() {
+        return titleFontFamily;
+    }
+
+    public double getTitleFontSize() {
+        return titleFontSize;
+    }
+
+    public String getDescriptionFontFamily() {
+        return descriptionFontFamily;
+    }
+
+    public double getDescriptionFontSize() {
+        return descriptionFontSize;
+    }
+
+    public String getButtonFontFamily() {
+        return buttonFontFamily;
+    }
+
+    public double getButtonFontSize() {
+        return buttonFontSize;
+    }
+
     // 透明度计算方法
+
     /**
      * 获取带透明度的颜色值
-     * @param color 原始颜色值（如 #ffffff）
+     *
+     * @param color             原始颜色值（如 #ffffff）
      * @param opacityMultiplier 透明度倍数（0.0-1.0）
      * @return 带透明度的颜色值（如 #ffffff80）
      */
     public String getColorWithOpacity(String color, double opacityMultiplier) {
         // 特殊处理transparent关键字，无论是否带有#前缀或被截断为transp
-        if (color == null || 
-            "transparent".equalsIgnoreCase(color) || 
-            "#transparent".equalsIgnoreCase(color) ||
-            "transp".equalsIgnoreCase(color) ||
-            "#transp".equalsIgnoreCase(color) ||
-            !color.startsWith("#") || 
-            color.length() != 7) {
+        if (color == null ||
+                "transparent".equalsIgnoreCase(color) ||
+                "#transparent".equalsIgnoreCase(color) ||
+                "transp".equalsIgnoreCase(color) ||
+                "#transp".equalsIgnoreCase(color) ||
+                !color.startsWith("#") ||
+                color.length() != 7) {
             return "transparent";
         }
         // 计算最终透明度（毛玻璃透明度 * 倍数）
@@ -222,63 +242,69 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
         String alphaHex = String.format("%02x", alpha);
         return color + alphaHex;
     }
-    
+
     /**
      * 获取带透明度的列表背景色
+     *
      * @return 带透明度的列表背景色
      */
     public String getListBgColorWithOpacity() {
         return getColorWithOpacity(this.listBgColor, 1.0);
     }
-    
+
     /**
      * 获取带透明度的列表选中行背景色
+     *
      * @param opacityMultiplier 透明度倍数（0.0-1.0）
      * @return 带透明度的列表选中行背景色
      */
     public String getListRowSelectedBgColorWithOpacity(double opacityMultiplier) {
         return getColorWithOpacity(this.listRowSelectedBgColor, opacityMultiplier);
     }
-    
+
     /**
      * 获取带透明度的列表悬停行背景色
+     *
      * @param opacityMultiplier 透明度倍数（0.0-1.0）
      * @return 带透明度的列表悬停行背景色
      */
     public String getListRowHoverBgColorWithOpacity(double opacityMultiplier) {
         return getColorWithOpacity(this.listRowHoverBgColor, opacityMultiplier);
     }
-    
+
     /**
      * 获取带透明度的列表行背景色
+     *
      * @param opacityMultiplier 透明度倍数（0.0-1.0）
      * @return 带透明度的列表行背景色
      */
     public String getListRowBgColorWithOpacity(double opacityMultiplier) {
         return getColorWithOpacity(this.listBgColor, opacityMultiplier);
     }
-    
+
     /**
      * 获取带透明度的面板背景色
+     *
      * @param opacityMultiplier 透明度倍数（0.0-1.0）
      * @return 带透明度的面板背景色
      */
     public String getPanelBgColorWithOpacity(double opacityMultiplier) {
         return getColorWithOpacity(this.panelBgColor, opacityMultiplier);
     }
-    
+
     /**
      * 获取带透明度的表头背景色（特殊处理：使用比毛玻璃透明度高0.1的透明度）
+     *
      * @return 带透明度的表头背景色
      */
     public String getTableHeaderBgColorWithOpacity() {
         // 特殊处理transparent关键字，无论是否带有#前缀或被截断为transp
-        if (this.panelBgColor == null || 
-            "transparent".equalsIgnoreCase(this.panelBgColor) || 
-            "#transparent".equalsIgnoreCase(this.panelBgColor) ||
-            "transp".equalsIgnoreCase(this.panelBgColor) ||
-            "#transp".equalsIgnoreCase(this.panelBgColor) ||
-            !this.panelBgColor.startsWith("#") || this.panelBgColor.length() != 7) {
+        if (this.panelBgColor == null ||
+                "transparent".equalsIgnoreCase(this.panelBgColor) ||
+                "#transparent".equalsIgnoreCase(this.panelBgColor) ||
+                "transp".equalsIgnoreCase(this.panelBgColor) ||
+                "#transp".equalsIgnoreCase(this.panelBgColor) ||
+                !this.panelBgColor.startsWith("#") || this.panelBgColor.length() != 7) {
             return "transparent";
         }
         // 计算最终透明度（毛玻璃透明度 + 0.1）
@@ -289,26 +315,78 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
     }
 
     // 间距相关getter方法
-    public double getSmallSpacing() { return smallSpacing; }
-    public double getMediumSpacing() { return mediumSpacing; }
-    public double getLargeSpacing() { return largeSpacing; }
+    public double getSmallSpacing() {
+        return smallSpacing;
+    }
+
+    public double getMediumSpacing() {
+        return mediumSpacing;
+    }
+
+    public double getLargeSpacing() {
+        return largeSpacing;
+    }
 
     // 按钮样式相关getter方法
-    public String getButtonPrimaryBorderColor() { return buttonPrimaryBorderColor; }
-    public String getButtonPrimaryHoverColor() { return buttonPrimaryHoverColor; }
-    public String getButtonSecondaryHoverColor() { return buttonSecondaryHoverColor; }
-    public String getButtonSuccessBgColor() { return buttonSuccessBgColor; }
-    public String getButtonSuccessTextColor() { return buttonSuccessTextColor; }
-    public String getButtonSuccessBorderColor() { return buttonSuccessBorderColor; }
-    public String getButtonSuccessHoverColor() { return buttonSuccessHoverColor; }
-    public String getButtonWarningBgColor() { return buttonWarningBgColor; }
-    public String getButtonWarningTextColor() { return buttonWarningTextColor; }
-    public String getButtonWarningBorderColor() { return buttonWarningBorderColor; }
-    public String getButtonWarningHoverColor() { return buttonWarningHoverColor; }
-    public String getButtonErrorBgColor() { return buttonErrorBgColor; }
-    public String getButtonErrorTextColor() { return buttonErrorTextColor; }
-    public String getButtonErrorBorderColor() { return buttonErrorBorderColor; }
-    public String getButtonErrorHoverColor() { return buttonErrorHoverColor; }
+    public String getButtonPrimaryBorderColor() {
+        return buttonPrimaryBorderColor;
+    }
+
+    public String getButtonPrimaryHoverColor() {
+        return buttonPrimaryHoverColor;
+    }
+
+    public String getButtonSecondaryHoverColor() {
+        return buttonSecondaryHoverColor;
+    }
+
+    public String getButtonSuccessBgColor() {
+        return buttonSuccessBgColor;
+    }
+
+    public String getButtonSuccessTextColor() {
+        return buttonSuccessTextColor;
+    }
+
+    public String getButtonSuccessBorderColor() {
+        return buttonSuccessBorderColor;
+    }
+
+    public String getButtonSuccessHoverColor() {
+        return buttonSuccessHoverColor;
+    }
+
+    public String getButtonWarningBgColor() {
+        return buttonWarningBgColor;
+    }
+
+    public String getButtonWarningTextColor() {
+        return buttonWarningTextColor;
+    }
+
+    public String getButtonWarningBorderColor() {
+        return buttonWarningBorderColor;
+    }
+
+    public String getButtonWarningHoverColor() {
+        return buttonWarningHoverColor;
+    }
+
+    public String getButtonErrorBgColor() {
+        return buttonErrorBgColor;
+    }
+
+    public String getButtonErrorTextColor() {
+        return buttonErrorTextColor;
+    }
+
+    public String getButtonErrorBorderColor() {
+        return buttonErrorBorderColor;
+    }
+
+    public String getButtonErrorHoverColor() {
+        return buttonErrorHoverColor;
+    }
 
     public String getListRowSelectedBgColor() {
         return listRowSelectedBgColor;
@@ -683,71 +761,71 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
         // 模板信息
         props.setProperty("ui.template.name", this.templateName);
         props.setProperty("ui.template.description", this.templateDescription);
-        
+
         // 背景设置
         props.setProperty("ui.bg.image", this.bgImagePath);
         props.setProperty("ui.bg.color", this.bgColor);
-        
+
         // 主题色
         props.setProperty("ui.accent.color", this.accentColor);
         props.setProperty("ui.accent.light.color", this.accentLightColor);
         props.setProperty("ui.accent.dark.color", this.accentDarkColor);
-        
+
         // 文本颜色分级
         props.setProperty("ui.text.primary", this.textPrimaryColor);
         props.setProperty("ui.text.secondary", this.textSecondaryColor);
         props.setProperty("ui.text.tertiary", this.textTertiaryColor);
         props.setProperty("ui.text.disabled", this.textDisabledColor);
-        
+
         // 透明度和背景模式
         props.setProperty("ui.glass.opacity", String.valueOf(this.glassOpacity));
         props.setProperty("ui.dark.bg", String.valueOf(this.isDarkBackground));
-        
+
         // 基础样式设置
         props.setProperty("ui.corner.radius", String.valueOf(this.cornerRadius));
         props.setProperty("ui.border.color", this.borderColor);
         props.setProperty("ui.border.width", String.valueOf(this.borderWidth));
-        
+
         // 面板样式分组
         props.setProperty("ui.panel.bg.color", this.panelBgColor);
         props.setProperty("ui.panel.border.color", this.panelBorderColor);
         props.setProperty("ui.panel.title.color", this.panelTitleColor);
         props.setProperty("ui.panel.hover.color", this.panelHoverColor);
-        
+
         // 按钮样式分级
         props.setProperty("ui.button.primary.bg", this.buttonPrimaryBgColor);
         props.setProperty("ui.button.primary.text", this.buttonPrimaryTextColor);
         props.setProperty("ui.button.primary.border", this.buttonPrimaryBorderColor);
         props.setProperty("ui.button.primary.hover", this.buttonPrimaryHoverColor);
         props.setProperty("ui.button.primary.pressed", this.buttonPrimaryPressedColor);
-        
+
         props.setProperty("ui.button.secondary.bg", this.buttonSecondaryBgColor);
         props.setProperty("ui.button.secondary.text", this.buttonSecondaryTextColor);
         props.setProperty("ui.button.secondary.border", this.buttonSecondaryBorderColor);
         props.setProperty("ui.button.secondary.hover", this.buttonSecondaryHoverColor);
         props.setProperty("ui.button.secondary.pressed", this.buttonSecondaryPressedColor);
-        
+
         props.setProperty("ui.button.success.bg", this.buttonSuccessBgColor);
         props.setProperty("ui.button.success.text", this.buttonSuccessTextColor);
         props.setProperty("ui.button.success.border", this.buttonSuccessBorderColor);
         props.setProperty("ui.button.success.hover", this.buttonSuccessHoverColor);
-        
+
         props.setProperty("ui.button.warning.bg", this.buttonWarningBgColor);
         props.setProperty("ui.button.warning.text", this.buttonWarningTextColor);
         props.setProperty("ui.button.warning.border", this.buttonWarningBorderColor);
         props.setProperty("ui.button.warning.hover", this.buttonWarningHoverColor);
-        
+
         props.setProperty("ui.button.error.bg", this.buttonErrorBgColor);
         props.setProperty("ui.button.error.text", this.buttonErrorTextColor);
         props.setProperty("ui.button.error.border", this.buttonErrorBorderColor);
         props.setProperty("ui.button.error.hover", this.buttonErrorHoverColor);
-        
+
         // 按钮尺寸设置
         props.setProperty("ui.button.height", String.valueOf(this.buttonHeight));
         props.setProperty("ui.button.large.size", String.valueOf(this.buttonLargeSize));
         props.setProperty("ui.button.small.size", String.valueOf(this.buttonSmallSize));
         props.setProperty("ui.button.icon.size", String.valueOf(this.buttonIconSize));
-        
+
         // 列表样式分组
         props.setProperty("ui.list.bg", this.listBgColor);
         props.setProperty("ui.list.row.even", this.listRowEvenBgColor);
@@ -758,47 +836,47 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
         props.setProperty("ui.list.border", this.listBorderColor);
         props.setProperty("ui.list.header.bg", this.listHeaderBgColor);
         props.setProperty("ui.list.header.text", this.listHeaderTextColor);
-        
+
         // 状态颜色
         props.setProperty("ui.hover.color", this.hoverColor);
         props.setProperty("ui.selected.color", this.selectedColor);
         props.setProperty("ui.disabled.color", this.disabledColor);
-        
+
         // 进度条和状态指示颜色
         props.setProperty("ui.progress.bar.color", this.progressBarColor);
         props.setProperty("ui.success.color", this.successColor);
         props.setProperty("ui.warning.color", this.warningColor);
         props.setProperty("ui.error.color", this.errorColor);
         props.setProperty("ui.info.color", this.infoColor);
-        
+
         // 字体设置
         props.setProperty("ui.font.family", this.fontFamily);
         props.setProperty("ui.font.size", String.valueOf(this.fontSize));
-        
+
         // 字体样式分级
         props.setProperty("ui.font.title.family", this.titleFontFamily);
         props.setProperty("ui.font.title.size", String.valueOf(this.titleFontSize));
         props.setProperty("ui.font.title.color", this.titleFontColor);
-        
+
         props.setProperty("ui.font.subtitle.family", this.subtitleFontFamily);
         props.setProperty("ui.font.subtitle.size", String.valueOf(this.subtitleFontSize));
         props.setProperty("ui.font.subtitle.color", this.subtitleFontColor);
-        
+
         props.setProperty("ui.font.button.family", this.buttonFontFamily);
         props.setProperty("ui.font.button.size", String.valueOf(this.buttonFontSize));
-        
+
         props.setProperty("ui.font.description.family", this.descriptionFontFamily);
         props.setProperty("ui.font.description.size", String.valueOf(this.descriptionFontSize));
         props.setProperty("ui.font.description.color", this.descriptionFontColor);
-        
+
         props.setProperty("ui.font.log.family", this.logFontFamily);
         props.setProperty("ui.font.log.size", String.valueOf(this.logFontSize));
         props.setProperty("ui.font.log.color", this.logFontColor);
-        
+
         props.setProperty("ui.font.runtime.info.family", this.runtimeInfoFontFamily);
         props.setProperty("ui.font.runtime.info.size", String.valueOf(this.runtimeInfoFontSize));
         props.setProperty("ui.font.runtime.info.color", this.runtimeInfoFontColor);
-        
+
         // 间距设置
         props.setProperty("ui.spacing.small", String.valueOf(this.smallSpacing));
         props.setProperty("ui.spacing.medium", String.valueOf(this.mediumSpacing));
@@ -817,19 +895,19 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
      */
     private String validateAndFormatColor(String colorValue, String defaultValue) {
         // 特殊处理transparent关键字，无论是否带有#前缀
-        if (colorValue == null || colorValue.isEmpty() || 
-            "transparent".equalsIgnoreCase(colorValue) || 
-            "#transparent".equalsIgnoreCase(colorValue) ||
-            "transp".equalsIgnoreCase(colorValue) ||
-            "#transp".equalsIgnoreCase(colorValue)) {
+        if (colorValue == null || colorValue.isEmpty() ||
+                "transparent".equalsIgnoreCase(colorValue) ||
+                "#transparent".equalsIgnoreCase(colorValue) ||
+                "transp".equalsIgnoreCase(colorValue) ||
+                "#transp".equalsIgnoreCase(colorValue)) {
             return "transparent"; // 直接返回transparent关键字
         }
-        
+
         // 移除可能的透明度后缀
         if (colorValue.contains("#") && colorValue.length() > 7) {
             colorValue = colorValue.substring(0, 7);
         }
-        
+
         // 转换0x开头的颜色值
         if (colorValue.startsWith("0x")) {
             try {
@@ -842,17 +920,17 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
                 return defaultValue;
             }
         }
-        
+
         // 确保颜色值以#开头
         if (!colorValue.startsWith("#")) {
             return "#" + colorValue;
         }
-        
+
         // 确保颜色值有正确的长度
         if (colorValue.length() != 7) {
             return defaultValue;
         }
-        
+
         return colorValue;
     }
 
@@ -867,7 +945,7 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
         if (templateDesc != null) {
             this.templateDescription = templateDesc;
         }
-        
+
         // 背景设置
         String bgPath = props.getProperty("ui.bg.image");
         if (bgPath != null) {
@@ -876,7 +954,7 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
         if (props.containsKey("ui.bg.color")) {
             this.bgColor = validateAndFormatColor(props.getProperty("ui.bg.color"), this.bgColor);
         }
-        
+
         // 主题色
         if (props.containsKey("ui.accent.color")) {
             this.accentColor = validateAndFormatColor(props.getProperty("ui.accent.color"), this.accentColor);
@@ -887,7 +965,7 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
         if (props.containsKey("ui.accent.dark.color")) {
             this.accentDarkColor = validateAndFormatColor(props.getProperty("ui.accent.dark.color"), this.accentDarkColor);
         }
-        
+
         // 文本颜色分级
         if (props.containsKey("ui.text.primary")) {
             this.textPrimaryColor = validateAndFormatColor(props.getProperty("ui.text.primary"), this.textPrimaryColor);
@@ -901,7 +979,7 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
         if (props.containsKey("ui.text.disabled")) {
             this.textDisabledColor = validateAndFormatColor(props.getProperty("ui.text.disabled"), this.textDisabledColor);
         }
-        
+
         // 透明度和背景模式
         if (props.containsKey("ui.glass.opacity")) {
             this.glassOpacity = Double.parseDouble(props.getProperty("ui.glass.opacity"));
@@ -909,7 +987,7 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
         if (props.containsKey("ui.dark.bg")) {
             this.isDarkBackground = Boolean.parseBoolean(props.getProperty("ui.dark.bg"));
         }
-        
+
         // 基础样式设置
         if (props.containsKey("ui.corner.radius")) {
             this.cornerRadius = Double.parseDouble(props.getProperty("ui.corner.radius"));
@@ -920,7 +998,7 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
         if (props.containsKey("ui.border.width")) {
             this.borderWidth = Double.parseDouble(props.getProperty("ui.border.width"));
         }
-        
+
         // 面板样式分组
         if (props.containsKey("ui.panel.bg.color")) {
             this.panelBgColor = validateAndFormatColor(props.getProperty("ui.panel.bg.color"), this.panelBgColor);
@@ -934,7 +1012,7 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
         if (props.containsKey("ui.panel.hover.color")) {
             this.panelHoverColor = validateAndFormatColor(props.getProperty("ui.panel.hover.color"), this.panelHoverColor);
         }
-        
+
         // 按钮样式分级
         if (props.containsKey("ui.button.primary.bg")) {
             this.buttonPrimaryBgColor = validateAndFormatColor(props.getProperty("ui.button.primary.bg"), this.buttonPrimaryBgColor);
@@ -951,7 +1029,7 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
         if (props.containsKey("ui.button.primary.pressed")) {
             this.buttonPrimaryPressedColor = validateAndFormatColor(props.getProperty("ui.button.primary.pressed"), this.buttonPrimaryPressedColor);
         }
-        
+
         if (props.containsKey("ui.button.secondary.bg")) {
             this.buttonSecondaryBgColor = validateAndFormatColor(props.getProperty("ui.button.secondary.bg"), this.buttonSecondaryBgColor);
         }
@@ -967,7 +1045,7 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
         if (props.containsKey("ui.button.secondary.pressed")) {
             this.buttonSecondaryPressedColor = validateAndFormatColor(props.getProperty("ui.button.secondary.pressed"), this.buttonSecondaryPressedColor);
         }
-        
+
         if (props.containsKey("ui.button.success.bg")) {
             this.buttonSuccessBgColor = validateAndFormatColor(props.getProperty("ui.button.success.bg"), this.buttonSuccessBgColor);
         }
@@ -980,7 +1058,7 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
         if (props.containsKey("ui.button.success.hover")) {
             this.buttonSuccessHoverColor = validateAndFormatColor(props.getProperty("ui.button.success.hover"), this.buttonSuccessHoverColor);
         }
-        
+
         if (props.containsKey("ui.button.warning.bg")) {
             this.buttonWarningBgColor = validateAndFormatColor(props.getProperty("ui.button.warning.bg"), this.buttonWarningBgColor);
         }
@@ -993,7 +1071,7 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
         if (props.containsKey("ui.button.warning.hover")) {
             this.buttonWarningHoverColor = validateAndFormatColor(props.getProperty("ui.button.warning.hover"), this.buttonWarningHoverColor);
         }
-        
+
         if (props.containsKey("ui.button.error.bg")) {
             this.buttonErrorBgColor = validateAndFormatColor(props.getProperty("ui.button.error.bg"), this.buttonErrorBgColor);
         }
@@ -1006,7 +1084,7 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
         if (props.containsKey("ui.button.error.hover")) {
             this.buttonErrorHoverColor = validateAndFormatColor(props.getProperty("ui.button.error.hover"), this.buttonErrorHoverColor);
         }
-        
+
         // 按钮尺寸设置
         if (props.containsKey("ui.button.height")) {
             this.buttonHeight = Double.parseDouble(props.getProperty("ui.button.height"));
@@ -1020,7 +1098,7 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
         if (props.containsKey("ui.button.icon.size")) {
             this.buttonIconSize = Double.parseDouble(props.getProperty("ui.button.icon.size"));
         }
-        
+
         // 列表样式分组
         if (props.containsKey("ui.list.bg")) {
             this.listBgColor = validateAndFormatColor(props.getProperty("ui.list.bg"), this.listBgColor);
@@ -1049,7 +1127,7 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
         if (props.containsKey("ui.list.header.text")) {
             this.listHeaderTextColor = validateAndFormatColor(props.getProperty("ui.list.header.text"), this.listHeaderTextColor);
         }
-        
+
         // 状态颜色
         if (props.containsKey("ui.hover.color")) {
             this.hoverColor = validateAndFormatColor(props.getProperty("ui.hover.color"), this.hoverColor);
@@ -1060,7 +1138,7 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
         if (props.containsKey("ui.disabled.color")) {
             this.disabledColor = validateAndFormatColor(props.getProperty("ui.disabled.color"), this.disabledColor);
         }
-        
+
         // 进度条和状态指示颜色
         if (props.containsKey("ui.progress.bar.color")) {
             this.progressBarColor = validateAndFormatColor(props.getProperty("ui.progress.bar.color"), this.progressBarColor);
@@ -1077,7 +1155,7 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
         if (props.containsKey("ui.info.color")) {
             this.infoColor = validateAndFormatColor(props.getProperty("ui.info.color"), this.infoColor);
         }
-        
+
         // 字体设置
         if (props.containsKey("ui.font.family")) {
             this.fontFamily = props.getProperty("ui.font.family");
@@ -1085,7 +1163,7 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
         if (props.containsKey("ui.font.size")) {
             this.fontSize = Double.parseDouble(props.getProperty("ui.font.size"));
         }
-        
+
         // 字体样式分级
         if (props.containsKey("ui.font.title.family")) {
             this.titleFontFamily = props.getProperty("ui.font.title.family");
@@ -1096,7 +1174,7 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
         if (props.containsKey("ui.font.title.color")) {
             this.titleFontColor = props.getProperty("ui.font.title.color");
         }
-        
+
         if (props.containsKey("ui.font.subtitle.family")) {
             this.subtitleFontFamily = props.getProperty("ui.font.subtitle.family");
         }
@@ -1106,14 +1184,14 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
         if (props.containsKey("ui.font.subtitle.color")) {
             this.subtitleFontColor = props.getProperty("ui.font.subtitle.color");
         }
-        
+
         if (props.containsKey("ui.font.button.family")) {
             this.buttonFontFamily = props.getProperty("ui.font.button.family");
         }
         if (props.containsKey("ui.font.button.size")) {
             this.buttonFontSize = Double.parseDouble(props.getProperty("ui.font.button.size"));
         }
-        
+
         if (props.containsKey("ui.font.description.family")) {
             this.descriptionFontFamily = props.getProperty("ui.font.description.family");
         }
@@ -1123,7 +1201,7 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
         if (props.containsKey("ui.font.description.color")) {
             this.descriptionFontColor = props.getProperty("ui.font.description.color");
         }
-        
+
         if (props.containsKey("ui.font.log.family")) {
             this.logFontFamily = props.getProperty("ui.font.log.family");
         }
@@ -1133,7 +1211,7 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
         if (props.containsKey("ui.font.log.color")) {
             this.logFontColor = props.getProperty("ui.font.log.color");
         }
-        
+
         if (props.containsKey("ui.font.runtime.info.family")) {
             this.runtimeInfoFontFamily = props.getProperty("ui.font.runtime.info.family");
         }
@@ -1143,7 +1221,7 @@ public class ThemeConfig implements Cloneable, IAutoReloadAble {
         if (props.containsKey("ui.font.runtime.info.color")) {
             this.runtimeInfoFontColor = props.getProperty("ui.font.runtime.info.color");
         }
-        
+
         // 间距设置
         if (props.containsKey("ui.spacing.small")) {
             this.smallSpacing = Double.parseDouble(props.getProperty("ui.spacing.small"));

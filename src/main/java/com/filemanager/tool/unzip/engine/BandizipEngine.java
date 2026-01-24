@@ -9,7 +9,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class BandizipEngine extends AbstractUnarchiveEngine {
-    public BandizipEngine(String path) { this.executablePath = path; }
+    public BandizipEngine(String path) {
+        this.executablePath = path;
+    }
 
     @Override
     protected List<String> buildCommand(UnarchiveTask task) {
@@ -19,10 +21,10 @@ public class BandizipEngine extends AbstractUnarchiveEngine {
         cmd.add("-o:" + task.targetDir);
         cmd.add(task.overwrite ? "-aoa" : "-aos");
         cmd.add("-y");
-        
+
         String pwd = (task.password != null) ? task.password : autoDetectPassword(task.archivePath);
         if (pwd != null) cmd.add("-p:" + pwd);
-        
+
         cmd.add(task.archivePath);
         return cmd;
     }

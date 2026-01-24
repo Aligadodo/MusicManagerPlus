@@ -1,11 +1,11 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.util;
 
@@ -95,11 +95,8 @@ public class LanguageUtil {
      * 判断单个字符是否为韩文
      */
     public static boolean isKoreaChar(char c) {
-        if (!((c > 0x3130 && c < 0x318F)
-                || (c >= 0xAC00 && c <= 0xD7A3))) {
-            return false;
-        }
-        return true;
+        return (c > 0x3130 && c < 0x318F)
+                || (c >= 0xAC00 && c <= 0xD7A3);
     }
 
     /**
@@ -194,7 +191,7 @@ public class LanguageUtil {
      * 名称标准化，含去空格、转半角、转简体、转大写等
      **/
     public static String toClassicName(String name, boolean isChinese) {
-        if(!isChinese){
+        if (!isChinese) {
             return toSimpleChinese(toHalfWidth(name)).replace(" ", "").trim();
         }
         return toClassicName(name);

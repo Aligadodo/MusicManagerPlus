@@ -1,19 +1,22 @@
 package com.filemanager.app.components;
 
+import com.filemanager.strategy.FileCleanupStrategy;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXComboBox;
-import com.filemanager.strategy.FileCleanupStrategy;
+import javafx.beans.binding.BooleanBinding;
 import javafx.collections.FXCollections;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
-import javafx.scene.control.*;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 
 import java.io.File;
-import javafx.beans.binding.BooleanBinding;
 
 public class CleanupUIConfig {
     // --- UI Components ---
@@ -61,36 +64,36 @@ public class CleanupUIConfig {
         txtKeepExt = new TextField("wav");
         txtKeepExt.setPromptText("优先保留后缀");
         txtKeepExt.visibleProperty().bind(cbMode.getSelectionModel().selectedItemProperty().isEqualTo(FileCleanupStrategy.CleanupMode.DEDUP_FILES));
-        
+
         // 文件名预处理选项初始化
         chkPreprocessLower = new CheckBox("文件名转小写");
         chkPreprocessLower.setSelected(true);
         chkPreprocessLower.visibleProperty().bind(cbMode.getSelectionModel().selectedItemProperty().isEqualTo(FileCleanupStrategy.CleanupMode.DEDUP_FILES));
         chkPreprocessLower.setTooltip(new Tooltip("将文件名转换为小写后进行比较"));
-        
+
         chkPreprocessUpper = new CheckBox("文件名转大写");
         chkPreprocessUpper.setSelected(false);
         chkPreprocessUpper.visibleProperty().bind(cbMode.getSelectionModel().selectedItemProperty().isEqualTo(FileCleanupStrategy.CleanupMode.DEDUP_FILES));
         chkPreprocessUpper.setTooltip(new Tooltip("将文件名转换为大写后进行比较"));
-        
+
         // 实现大小写转换的互斥逻辑
         chkPreprocessLower.selectedProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue) {
                 chkPreprocessUpper.setSelected(false);
             }
         });
-        
+
         chkPreprocessUpper.selectedProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue) {
                 chkPreprocessLower.setSelected(false);
             }
         });
-        
+
         chkPreprocessSimplified = new CheckBox("文件名转简体中文");
         chkPreprocessSimplified.setSelected(false);
         chkPreprocessSimplified.visibleProperty().bind(cbMode.getSelectionModel().selectedItemProperty().isEqualTo(FileCleanupStrategy.CleanupMode.DEDUP_FILES));
         chkPreprocessSimplified.setTooltip(new Tooltip("将文件名中的繁体中文转换为简体中文后进行比较"));
-        
+
         // 文件大小范围选择初始化
         cbSizeRange = new JFXComboBox<>(FXCollections.observableArrayList(FileCleanupStrategy.FileSizeRange.values()));
         cbSizeRange.getSelectionModel().select(FileCleanupStrategy.FileSizeRange.ALL);
@@ -99,7 +102,7 @@ public class CleanupUIConfig {
                 .or(cbMode.getSelectionModel().selectedItemProperty().isEqualTo(FileCleanupStrategy.CleanupMode.DIRECT_CLEANUP));
         cbSizeRange.visibleProperty().bind(showSizeRange);
         cbSizeRange.setTooltip(new Tooltip("选择要处理的文件大小范围"));
-        
+
         // 音频特殊处理选项初始化
         chkAudioSpecial = new CheckBox("音频文件特殊处理");
         chkAudioSpecial.setSelected(true);
@@ -132,7 +135,7 @@ public class CleanupUIConfig {
             if (f != null) txtTrashPath.setText(f.getAbsolutePath());
         });
         trashBox.getChildren().addAll(new Label("回收站路径:"), txtTrashPath, btnPickTrash);
-        
+
         // 伪删除和可回滚删除都需要显示回收站路径配置
         BooleanBinding showTrashPath = cbMethod.getSelectionModel().selectedItemProperty().isEqualTo(FileCleanupStrategy.DeleteMethod.PSEUDO_DELETE)
                 .or(cbMethod.getSelectionModel().selectedItemProperty().isEqualTo(FileCleanupStrategy.DeleteMethod.ROLLBACKABLE_DELETE));
@@ -142,60 +145,60 @@ public class CleanupUIConfig {
 
         // 去重配置
         VBox dedupBox = new VBox(8);
-        
+
         // 分组标题：基本去重选项
         Label lblBasicOptions = new Label("基本去重选项:");
         lblBasicOptions.setStyle("-fx-font-weight: bold;");
         VBox basicOptionsBox = new VBox(5);
         basicOptionsBox.setPadding(new javafx.geometry.Insets(0, 0, 0, 5));
-        
+
         HBox keepRow1 = new HBox(10, new Label("优先后缀:"), txtKeepExt);
         keepRow1.setAlignment(Pos.CENTER_LEFT);
         HBox keepRow2 = new HBox(10, chkKeepLargest);
         keepRow2.setAlignment(Pos.CENTER_LEFT);
         HBox keepRow3 = new HBox(10, chkKeepEarliest);
         keepRow3.setAlignment(Pos.CENTER_LEFT);
-        
+
         basicOptionsBox.getChildren().addAll(keepRow1, keepRow2, keepRow3);
-        
+
         // 分组标题：文件名预处理
         Label lblPreprocess = new Label("文件名预处理:");
         lblPreprocess.setStyle("-fx-font-weight: bold;");
         VBox preprocessBox = new VBox(3);
         preprocessBox.setPadding(new javafx.geometry.Insets(5, 0, 5, 20));
         preprocessBox.getChildren().addAll(chkPreprocessLower, chkPreprocessUpper, chkPreprocessSimplified);
-        
+
         // 分组标题：文件范围与特殊处理
         Label lblAdvancedOptions = new Label("高级选项:");
         lblAdvancedOptions.setStyle("-fx-font-weight: bold;");
         VBox advancedOptionsBox = new VBox(5);
         advancedOptionsBox.setPadding(new javafx.geometry.Insets(0, 0, 0, 5));
-        
+
         // 文件大小范围选择
         HBox sizeRangeRow = new HBox(10, new Label("文件大小范围:"), cbSizeRange);
         sizeRangeRow.setAlignment(Pos.CENTER_LEFT);
-        
+
         // 音频特殊处理选项
         HBox audioSpecialRow = new HBox(10, chkAudioSpecial);
         audioSpecialRow.setAlignment(Pos.CENTER_LEFT);
-        
+
         advancedOptionsBox.getChildren().addAll(sizeRangeRow, audioSpecialRow);
-        
+
         // 添加分隔线
         javafx.scene.control.Separator separator1 = new javafx.scene.control.Separator();
         javafx.scene.control.Separator separator2 = new javafx.scene.control.Separator();
-        
+
         // 提示信息
         Label lblHint = new Label("提示：去重仅在同类型文件（如音频vs音频）间进行，会自动忽略 '(1)', 'Copy' 等后缀。");
         lblHint.setStyle("-fx-font-size: 10px; -fx-text-fill: gray;");
-        
+
         dedupBox.getChildren().addAll(
-            lblBasicOptions, basicOptionsBox,
-            separator1,
-            lblPreprocess, preprocessBox,
-            separator2,
-            lblAdvancedOptions, advancedOptionsBox,
-            lblHint
+                lblBasicOptions, basicOptionsBox,
+                separator1,
+                lblPreprocess, preprocessBox,
+                separator2,
+                lblAdvancedOptions, advancedOptionsBox,
+                lblHint
         );
         dedupBox.visibleProperty().bind(cbMode.getSelectionModel().selectedItemProperty().isEqualTo(FileCleanupStrategy.CleanupMode.DEDUP_FILES));
         dedupBox.managedProperty().bind(dedupBox.visibleProperty());

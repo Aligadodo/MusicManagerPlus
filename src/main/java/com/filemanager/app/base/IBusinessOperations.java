@@ -1,11 +1,11 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.app.base;
 
@@ -16,6 +16,7 @@ import java.util.function.Consumer;
 /**
  * 业务操作接口
  * 定义业务操作相关的方法
+ * @author 28667
  */
 public interface IBusinessOperations {
     /**
@@ -25,6 +26,7 @@ public interface IBusinessOperations {
 
     /**
      * 移除源目录
+     *
      * @param dir 要移除的目录
      */
     void removeSourceDir(File dir);
@@ -36,12 +38,14 @@ public interface IBusinessOperations {
 
     /**
      * 添加策略步骤
+     *
      * @param template 策略模板
      */
     void addStrategyStep(IAppStrategy template);
 
     /**
      * 移除策略步骤
+     *
      * @param strategy 要移除的策略
      */
     void removeStrategyStep(IAppStrategy strategy);
@@ -55,15 +59,17 @@ public interface IBusinessOperations {
      * 运行管道执行
      */
     void runPipelineExecution();
-    
+
     /**
      * 运行管道执行
+     *
      * @param record 要执行的单个任务
      */
     void runPipelineExecution(com.filemanager.model.ChangeRecord record);
-    
+
     /**
      * 运行管道执行
+     *
      * @param records 要执行的任务列表
      */
     void runPipelineExecution(java.util.List<com.filemanager.model.ChangeRecord> records);
@@ -75,6 +81,7 @@ public interface IBusinessOperations {
 
     /**
      * 使预览失效
+     *
      * @param reason 失效原因
      */
     void invalidatePreview(String reason);
@@ -86,22 +93,25 @@ public interface IBusinessOperations {
 
     /**
      * 在系统中打开文件
+     *
      * @param f 要打开的文件
      */
     void openFileInSystem(File f);
 
     /**
      * 打开父目录
+     *
      * @param f 文件
      */
     void openParentDirectory(File f);
 
     /**
      * 健壮地扫描文件
-     * @param root 根目录
+     *
+     * @param root     根目录
      * @param minDepth 最小深度
      * @param maxDepth 最大深度
-     * @param msg 消息消费者
+     * @param msg      消息消费者
      * @return 文件列表
      */
     java.util.List<File> scanFilesRobust(File root, int minDepth, int maxDepth, AtomicInteger globalLimit, AtomicInteger dirLimit, Consumer<String> msg);

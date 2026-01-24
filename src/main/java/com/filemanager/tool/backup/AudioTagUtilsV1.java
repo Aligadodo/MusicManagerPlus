@@ -1,11 +1,11 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.tool.backup;
 
@@ -30,7 +30,7 @@ public class AudioTagUtilsV1 {
 
     static {
         // === 全局配置 (关键步骤) ===
-        
+
         // 1. 禁用 jaudiotagger 的日志噪音
         Logger.getLogger("org.jaudiotagger").setLevel(Level.OFF);
 
@@ -64,7 +64,7 @@ public class AudioTagUtilsV1 {
         try {
             // 读取音频文件
             AudioFile f = AudioFileIO.read(audioFile);
-            
+
             // 获取或创建 Tag
             Tag tag = f.getTag();
 
@@ -84,7 +84,7 @@ public class AudioTagUtilsV1 {
 
             // === 核心修复逻辑：覆盖写入 ===
             // 注意：jaudiotagger 会根据我们在 static 块中设置的 Encoding 自动处理字符集
-            
+
             setFieldWait(tag, FieldKey.TITLE, title);
             setFieldWait(tag, FieldKey.ARTIST, artist);
             setFieldWait(tag, FieldKey.ALBUM, album);
@@ -132,6 +132,7 @@ public class AudioTagUtilsV1 {
             }
         }
     }
+
     /**
      * 安全设置字段，处理 null 值和空字符串
      */
@@ -153,7 +154,7 @@ public class AudioTagUtilsV1 {
     public static void main(String[] args) {
         // 示例用法
         File file = new File("C:\\Music\\TestSong.wav");
-        
+
         // 模拟从文件名或其他地方获取到的正确信息
         String correctTitle = "七里香";
         String correctArtist = "周杰伦";

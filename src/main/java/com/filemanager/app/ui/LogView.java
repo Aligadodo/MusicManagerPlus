@@ -1,11 +1,11 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.app.ui;
 
@@ -36,7 +36,7 @@ public class LogView implements IAutoReloadAble {
     private final Tab tabLog;
     private final ConcurrentLinkedQueue<LogInfo> logQueue = new ConcurrentLinkedQueue<>();
     private final TextArea logArea;
-    private final SmartLogAppender infoLogAppender,errorLogAppender;
+    private final SmartLogAppender infoLogAppender, errorLogAppender;
     private VBox viewNode;
 
     public LogView(IAppController controller) {
@@ -62,7 +62,7 @@ public class LogView implements IAutoReloadAble {
         // 移除硬编码样式，让StyleFactory统一管理
         VBox.setVgrow(logArea, Priority.ALWAYS);
 
-        HBox tools = StyleFactory.createHBoxPanel(clr,btnScrollTop, btnScrollBottom);
+        HBox tools = StyleFactory.createHBoxPanel(clr, btnScrollTop, btnScrollBottom);
         tools.setAlignment(Pos.CENTER_RIGHT);
         viewNode.getChildren().addAll(tools, logArea);
     }
@@ -116,7 +116,7 @@ public class LogView implements IAutoReloadAble {
     public void reload() {
         // 更新日志框样式，应用透明度效果
         String bgColor = controller.getCurrentTheme().getPanelBgColorWithOpacity(1.0);
-        
+
         // 只更新需要变化的部分，滚动窗格等样式已在创建时设置
         logArea.setStyle(String.format(
                 "-fx-background-color: %s; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-font-family: '%s'; -fx-font-size: %.1f;",

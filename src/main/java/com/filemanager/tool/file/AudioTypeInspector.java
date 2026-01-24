@@ -1,16 +1,17 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.tool.file;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.tika.Tika;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -106,11 +107,11 @@ public class AudioTypeInspector {
             boolean needsFix = !currentExt.equals(suggestedExt);
 
             return new FileTypeCheckResult(
-                true,
-                "检测成功",
-                detectedMimeType,
-                suggestedExt,
-                needsFix
+                    true,
+                    "检测成功",
+                    detectedMimeType,
+                    suggestedExt,
+                    needsFix
             );
 
         } catch (IOException e) {
@@ -196,14 +197,14 @@ public class AudioTypeInspector {
                     '}';
         }
     }
-    
+
     // ================== 测试 Main 方法 ==================
     public static void main(String[] args) {
         // 假设这里有一个被错误命名为 song.mp3 的 wav 文件
-        File testFile = new File("C:\\Music\\test_song.mp3"); 
+        File testFile = new File("C:\\Music\\test_song.mp3");
 
         FileTypeCheckResult result = AudioTypeInspector.inspect(testFile);
-        
+
         System.out.println(result);
 
         if (result.success && result.needsFix) {

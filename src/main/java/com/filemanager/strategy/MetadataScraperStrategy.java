@@ -1,27 +1,28 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.strategy;
 
 import com.filemanager.app.base.IAppStrategy;
 import com.filemanager.app.tools.display.StyleFactory;
-import com.filemanager.model.*;
+import com.filemanager.model.ChangeRecord;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
 import com.filemanager.util.MetadataHelper;
-import com.jfoenix.controls.*;
+import com.jfoenix.controls.JFXComboBox;
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.*;
-import javafx.scene.layout.*;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.VBox;
 import org.jaudiotagger.audio.AudioFile;
 import org.jaudiotagger.audio.AudioFileIO;
 import org.jaudiotagger.tag.FieldKey;
@@ -29,7 +30,10 @@ import org.jaudiotagger.tag.Tag;
 import org.jaudiotagger.tag.images.Artwork;
 import org.jaudiotagger.tag.images.StandardArtwork;
 
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -431,7 +435,7 @@ public class MetadataScraperStrategy extends IAppStrategy {
         try {
             Files.write(target.toPath(), sb.toString().getBytes(StandardCharsets.UTF_8));
         } catch (IOException e) {
-            logError("音频信息刮削失败，源文件："+rec.getFileHandle().getAbsolutePath());
+            logError("音频信息刮削失败，源文件：" + rec.getFileHandle().getAbsolutePath());
         }
     }
 
@@ -507,13 +511,13 @@ public class MetadataScraperStrategy extends IAppStrategy {
             }
             return res;
         } catch (Exception e) {
-            logError("音频信息刮削失败，地址："+urlStr);
+            logError("音频信息刮削失败，地址：" + urlStr);
             return null;
         }
     }
 
     // ... (httpGet, downloadBytes, extractJsonValue, Lyrics Providers 同前，保持不变) ...
-    private String httpGet(String urlStr) throws Exception{
+    private String httpGet(String urlStr) throws Exception {
         URL url = new URL(urlStr);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setConnectTimeout(3000);
@@ -540,7 +544,7 @@ public class MetadataScraperStrategy extends IAppStrategy {
                 return out.toByteArray();
             }
         } catch (Exception e) {
-            logError("音频信息刮削失败，地址："+urlStr);
+            logError("音频信息刮削失败，地址：" + urlStr);
             return null;
         }
     }

@@ -1,11 +1,11 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.tool.log;
 
@@ -28,11 +28,11 @@ public class SmartLogAppender {
     private final TextArea textArea;
     private final int maxLines;
     private PrintWriter fileWriter;
-    
+
     // 格式化：文件名使用连字符，避免 Windows 不支持冒号的问题
     private final DateTimeFormatter fileFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
     private final DateTimeFormatter logFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss ");
-    
+
     // 用于确保文件写入线程安全的锁对象
     private final Object lock = new Object();
 
@@ -72,6 +72,7 @@ public class SmartLogAppender {
 
     /**
      * 追加日志（线程安全）
+     *
      * @param message 日志内容
      */
     public void appendLog(String message) {
@@ -105,7 +106,7 @@ public class SmartLogAppender {
         if (currentLines > maxLines) {
             int linesToRemove = currentLines - maxLines;
             int endPosition = 0;
-            
+
             // 找到需要删除的边界位置
             for (int i = 0; i < linesToRemove; i++) {
                 int nextIndex = content.indexOf("\n", endPosition);

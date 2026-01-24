@@ -1,11 +1,11 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.model;
 
@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 public class RuleConditionGroup {
     private List<RuleCondition> conditions = new ArrayList<>();
-    
+
     // 组内逻辑：所有条件都满足 (AND)
     public boolean test(File f) {
         if (conditions.isEmpty()) return true; // 空组默认通过
@@ -32,15 +32,23 @@ public class RuleConditionGroup {
         }
         return true;
     }
-    
-    public void add(RuleCondition c) { conditions.add(c); }
-    public void remove(RuleCondition c) { conditions.remove(c); }
-    public void clear() { conditions.clear(); }
+
+    public void add(RuleCondition c) {
+        conditions.add(c);
+    }
+
+    public void remove(RuleCondition c) {
+        conditions.remove(c);
+    }
+
+    public void clear() {
+        conditions.clear();
+    }
 
     public List<RuleCondition> getConditions() {
         return conditions;
     }
-    
+
     @Override
     public String toString() {
         if (conditions.isEmpty()) return "无限制 (总是通过)";

@@ -1,11 +1,11 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.app;
 
@@ -20,11 +20,7 @@ import com.filemanager.app.tools.display.ProgressBarDisplay;
 import com.filemanager.app.tools.display.StyleFactory;
 import com.filemanager.app.tools.display.ThemeConfig;
 import com.filemanager.app.tools.display.ThemeManager;
-import com.filemanager.app.ui.AppearanceManager;
-import com.filemanager.app.ui.ComposeView;
-import com.filemanager.app.ui.GlobalSettingsView;
-import com.filemanager.app.ui.LogView;
-import com.filemanager.app.ui.PreviewView;
+import com.filemanager.app.ui.*;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.strategy.AppStrategyFactory;
 import com.filemanager.tool.ThreadPoolManager;
@@ -90,6 +86,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
     public AtomicBoolean getTaskRunningStatus() {
         return taskRunningStatus;
     }
+
     /**
      * -- GETTER --
      * 获取所有根路径线程数配置
@@ -111,15 +108,15 @@ public class FileManagerPlusApp extends Application implements IAppController {
     public long getTaskStartTimStamp() {
         return taskStartTimStamp;
     }
-    
+
     public Long getTaskEndTimestamp() {
         return taskEndTimestamp;
     }
-    
+
     public void setTaskEndTimestamp(Long taskEndTimestamp) {
         this.taskEndTimestamp = taskEndTimestamp;
     }
-    
+
     public void resetTaskTimestamps() {
         this.taskStartTimStamp = System.currentTimeMillis();
         this.taskEndTimestamp = null;
@@ -136,6 +133,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
     public JFXCheckBox getAutoRun() {
         return autoRun;
     }
+
     private JFXButton btnGo, btnExecute, btnStop;
     private Stage primaryStage;
 
@@ -143,6 +141,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
     public Stage getPrimaryStage() {
         return primaryStage;
     }
+
     // --- Infrastructure ---
     private ConfigFileManager configManager;
     @Getter
@@ -152,6 +151,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
     public List<ChangeRecord> getFullChangeList() {
         return fullChangeList;
     }
+
     // --- Modular Views (UI Modules) ---
     private GlobalSettingsView globalSettingsView;
     private ComposeView composeView;
@@ -236,7 +236,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
         this.autoReloadNodes = Lists.newArrayList(globalSettingsView, logView, previewView, composeView, currentTheme);
         configManager.loadConfig(lastConfigFile);
         applyAppearance();
-        
+
         // 确保所有组件应用最新主题样式
         Platform.runLater(() -> {
             // 延迟执行，确保所有UI组件已完全初始化
@@ -283,7 +283,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
         resetItem.setOnAction(e -> resetConfigAction());
         fileMenu.getItems().addAll(loadItem, saveItem, resetItem);
         menuBar.getMenus().add(fileMenu);
-        
+
         // 应用菜单样式
         StyleFactory.setMenuStyle(menuBar);
 
@@ -316,12 +316,12 @@ public class FileManagerPlusApp extends Application implements IAppController {
         mainTabPane = StyleFactory.createTabPane();
         // 将各模块的 View 挂载到 Tab
         mainTabPane.getTabs().addAll(composeView.getTab(), previewView.getTab(), logView.getTab());
-        
+
         // 添加界面设置tab页
         Tab appearanceTab = new Tab("界面设置");
         appearanceTab.setContent(appearanceManager.getAppearanceSettingsContent());
         mainTabPane.getTabs().add(appearanceTab);
-        
+
         mainTabPane.setPadding(new Insets(10));
         root.setCenter(mainTabPane);
         // 移除侧边栏菜单，使用TabPane进行视图切换
@@ -371,7 +371,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
         if (mainTabPane == null) {
             return;
         }
-        
+
         // 遍历所有Tab，找到内容与指定节点匹配的Tab
         for (Tab tab : mainTabPane.getTabs()) {
             if (tab.getContent() == node) {
@@ -452,12 +452,12 @@ public class FileManagerPlusApp extends Application implements IAppController {
     public void runPipelineExecution() {
         pipelineManager.runPipelineExecution();
     }
-    
+
     @Override
     public void runPipelineExecution(com.filemanager.model.ChangeRecord record) {
         pipelineManager.runPipelineExecution(record);
     }
-    
+
     @Override
     public void runPipelineExecution(java.util.List<com.filemanager.model.ChangeRecord> records) {
         pipelineManager.runPipelineExecution(records);
@@ -692,21 +692,21 @@ public class FileManagerPlusApp extends Application implements IAppController {
         File f = fc.showOpenDialog(primaryStage);
         if (f != null) configManager.loadConfig(f);
     }
-    
+
     @Override
     public void resetConfigAction() {
         // 重置配置管理器
         configManager.resetConfig();
-        
+
         // 重新初始化流程
         pipelineManager.resetPipeline();
-        
+
         // 重新加载全局设置
         globalSettingsView.resetSettings();
-        
+
         // 刷新界面组件
         getAutoReloadNodes().forEach(node -> node.reload());
-        
+
         // 应用外观
         applyAppearance();
     }
@@ -719,7 +719,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
     public void applyAppearance() {
         appearanceManager.applyAppearance();
     }
-    
+
     /**
      * 获取配置管理器实例
      */

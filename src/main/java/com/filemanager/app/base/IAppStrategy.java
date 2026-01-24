@@ -1,17 +1,18 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.app.base;
 
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.RuleCondition;
 import com.filemanager.model.RuleConditionGroup;
+import com.filemanager.strategy.base.IConfigComponent;
 import com.filemanager.type.ScanTarget;
 import javafx.scene.Node;
 import lombok.Getter;
@@ -24,7 +25,7 @@ import java.util.stream.Collectors;
  * @author 28667
  */
 @Getter
-public abstract class IAppStrategy implements INodeComponent{
+public abstract class IAppStrategy implements IConfigComponent {
     protected IAppController app;
     // 通用条件配置接口 (UI调用)
     // 通用前置条件 (所有策略都支持)
@@ -81,9 +82,10 @@ public abstract class IAppStrategy implements INodeComponent{
 
     /**
      * 分析当前记录与输入记录，返回变更记录列表
+     *
      * @param currentRecord 当前记录
-     * @param inputRecords 输入记录列表 [扫描范围内的全量文件]
-     * @param rootDirs 根目录列表
+     * @param inputRecords  输入记录列表 [扫描范围内的全量文件]
+     * @param rootDirs      根目录列表
      * @return 新增记录列表 [如果只是对已有文件进行操作，而不是生成新的文件，返回空列表即可]
      */
     public abstract List<ChangeRecord> analyze(ChangeRecord currentRecord, List<ChangeRecord> inputRecords, List<File> rootDirs);

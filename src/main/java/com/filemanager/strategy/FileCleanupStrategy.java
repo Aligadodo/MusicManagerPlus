@@ -1,11 +1,11 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.strategy;
 
@@ -15,13 +15,12 @@ import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.CleanupParams;
 import com.filemanager.tool.file.DeleteExecutor;
 import com.filemanager.tool.file.DuplicateAnalyzer;
-import com.filemanager.type.ExecStatus;
-import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
 import javafx.scene.Node;
 
 import java.io.File;
-import java.util.*;
+import java.util.List;
+import java.util.Properties;
 
 /**
  * 文件清理策略
@@ -115,6 +114,7 @@ public class FileCleanupStrategy extends IAppStrategy {
             return desc;
         }
     }
+
     // --- 组件引用 ---
     private final CleanupUIConfig uiConfig;
     private final CleanupParams params;

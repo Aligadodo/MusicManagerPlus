@@ -8,6 +8,7 @@ import org.apache.commons.compress.archivers.ArchiveInputStream;
 import org.apache.commons.compress.archivers.ArchiveStreamFactory;
 import org.apache.commons.compress.archivers.sevenz.SevenZArchiveEntry;
 import org.apache.commons.compress.archivers.sevenz.SevenZFile;
+
 import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -22,7 +23,7 @@ public class JavaBuiltInEngine extends AbstractUnarchiveEngine {
     public boolean extract(UnarchiveTask task) {
         File archive = new File(task.archivePath);
         File destDir = new File(task.targetDir);
-        
+
         // 内置引擎无法处理有密码的情况（通常需要特定的加密库支持）
         String pwd = (task.password != null) ? task.password : autoDetectPassword(task.archivePath);
         String lowerName = archive.getName().toLowerCase();
@@ -72,8 +73,9 @@ public class JavaBuiltInEngine extends AbstractUnarchiveEngine {
                         if (!target.isDirectory() && !target.mkdirs()) throw new IOException("无法创建目录: " + target);
                     } else {
                         File parent = target.getParentFile();
-                        if (!parent.isDirectory() && !parent.mkdirs()) throw new IOException("无法创建父目录: " + parent);
-                        
+                        if (!parent.isDirectory() && !parent.mkdirs())
+                            throw new IOException("无法创建父目录: " + parent);
+
                         // 覆盖策略判断
                         if (target.exists() && !task.overwrite) continue;
 
@@ -86,11 +88,11 @@ public class JavaBuiltInEngine extends AbstractUnarchiveEngine {
                             }
                         }
                     }
-                    
+
                     // 触发监听器（内置引擎可以实现更细粒度的回调）
                     if (task.listener != null) {
                         // 这里简单示意，实际可根据 entry 计数推算百分比
-                        task.listener.onProgress(-1); 
+                        task.listener.onProgress(-1);
                     }
                 }
                 return true;
@@ -102,10 +104,13 @@ public class JavaBuiltInEngine extends AbstractUnarchiveEngine {
     }
 
     @Override
-    protected List<String> buildCommand(UnarchiveTask task) { return null; } // 无需命令行
+    protected List<String> buildCommand(UnarchiveTask task) {
+        return null;
+    } // 无需命令行
 
     @Override
-    protected void parseProgress(String line, ProgressListener listener) { } // 无需解析文本
+    protected void parseProgress(String line, ProgressListener listener) {
+    } // 无需解析文本
 
     @Override
     public boolean isAvailable() {

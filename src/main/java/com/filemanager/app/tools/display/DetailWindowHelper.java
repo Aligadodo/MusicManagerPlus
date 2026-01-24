@@ -1,11 +1,11 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.app.tools.display;
 
@@ -26,8 +26,9 @@ public class DetailWindowHelper {
 
     /**
      * 将对象转为 JSON 并弹出窗口展示
-     * @param owner  父窗口（用于设置模态）
-     * @param data   要展示的数据对象
+     *
+     * @param owner 父窗口（用于设置模态）
+     * @param data  要展示的数据对象
      */
     public static void showJsonDetail(Stage owner, Object data) {
         if (data == null) return;
@@ -46,13 +47,13 @@ public class DetailWindowHelper {
             TextArea textArea = new TextArea(jsonText);
             textArea.setEditable(false);
             textArea.setWrapText(false); // 保持 JSON 结构，不自动换行
-            
+
             // 使用等宽字体，让 JSON 看起来更整齐
             textArea.setStyle("-fx-font-family: 'Courier New', 'Consolas', monospace; -fx-font-size: 13px;");
-            
+
             VBox root = new VBox(textArea);
             VBox.setVgrow(textArea, Priority.ALWAYS);
-            
+
             Scene scene = new Scene(root, 700, 500);
             detailStage.setScene(scene);
 

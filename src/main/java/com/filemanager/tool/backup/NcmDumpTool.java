@@ -1,24 +1,26 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.tool.backup;
+
+import com.filemanager.model.dump.NcmDump;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import com.filemanager.model.dump.NcmDump;
 
 public class NcmDumpTool {
 
@@ -58,9 +60,9 @@ public class NcmDumpTool {
         if (files != null) {
             for (File file : files) {
                 if (file.isFile() && !file.getName().toLowerCase().endsWith(".ncm")) {
-                    if(file.getTotalSpace()>10000&&file.getName().lastIndexOf('.')>0) {
+                    if (file.getTotalSpace() > 10000 && file.getName().lastIndexOf('.') > 0) {
                         existingFiles.add(file.getName().substring(0, file.getName().lastIndexOf('.')) + ".ncm");
-                    }else{
+                    } else {
                         Files.delete(file.toPath());
                         file.delete();
                     }
@@ -68,10 +70,10 @@ public class NcmDumpTool {
             }
             for (File file : files) {
                 if (file.isFile() && file.exists() && file.getName().toLowerCase().endsWith(".ncm")) {
-                    if(existingFiles.contains(file.getName())) {
+                    if (existingFiles.contains(file.getName())) {
                         Files.delete(file.toPath());
-                        System.out.println("delete "+file.getName());
-                    }else{
+                        System.out.println("delete " + file.getName());
+                    } else {
                         filesToTrans.add(file);
                     }
                 }
@@ -100,7 +102,7 @@ public class NcmDumpTool {
         }
 
         try {
-            while (countRunning.get()>0) {
+            while (countRunning.get() > 0) {
                 Thread.sleep(1000);
             }
             //关闭线程池

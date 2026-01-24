@@ -1,11 +1,11 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.util;
 
@@ -20,34 +20,34 @@ import java.util.Collection;
 import java.util.List;
 
 public class FileUtil {
-    private static boolean REAL_DELETE = false;
+    private static final boolean REAL_DELETE = false;
 
-    public static void batchCreateDirUnder(Collection<String> dirs, File rootDir){
-        for(String dir:dirs){
+    public static void batchCreateDirUnder(Collection<String> dirs, File rootDir) {
+        for (String dir : dirs) {
             try {
-                FileUtils.forceMkdir(new File(rootDir.getPath()+File.separator+dir));
+                FileUtils.forceMkdir(new File(rootDir.getPath() + File.separator + dir));
             } catch (IOException e) {
                 // ignore
             }
         }
     }
 
-    public static void delete(File file){
-        if(REAL_DELETE){
+    public static void delete(File file) {
+        if (REAL_DELETE) {
             try {
-                if(file.isDirectory()){
+                if (file.isDirectory()) {
                     FileUtils.deleteDirectory(file);
-                    System.out.println(String.format("dir %s deleted! ", file.getPath()));
-                }else{
+                    System.out.printf("dir %s deleted! %n", file.getPath());
+                } else {
                     FileUtils.delete(file);
-                    System.out.println(String.format("file %s deleted! ", file.getPath()+file.getName()));
+                    System.out.printf("file %s deleted! %n", file.getPath() + file.getName());
                 }
-            }catch (Exception e){
+            } catch (Exception e) {
 
             }
-        }else{
+        } else {
             String root = file.getPath().split(":")[0];
-            transferTo(file, new File(root+":"+"del"+File.separator+file.getParentFile().getPath().split(":")[1]));
+            transferTo(file, new File(root + ":" + "del" + File.separator + file.getParentFile().getPath().split(":")[1]));
         }
     }
 
@@ -80,7 +80,7 @@ public class FileUtil {
         }
         // 遍历文件和文件夹
         for (File file : files) {
-            if(file.getName().startsWith("$")||file.getName().startsWith("del")||file.getName().startsWith("Sys")){
+            if (file.getName().startsWith("$") || file.getName().startsWith("del") || file.getName().startsWith("Sys")) {
                 continue;
             }
             // 判断是否是文件,如果是文件则输出文件名
@@ -98,26 +98,27 @@ public class FileUtil {
     public static void transferTo(File file, File destPath) {
         transferTo(file, destPath, false);
     }
+
     // 转移文件目录
     public static void transferTo(File file, File destPath, boolean isForce) {
-        if(file.getParentFile().equals(destPath)){
+        if (file.getParentFile().equals(destPath)) {
             return;
         }
         // 子文件夹的东西不用移到外面
-        if (!isForce&&file.getPath().startsWith(destPath.getPath())&&!destPath.getPath().startsWith(file.getPath())) {
+        if (!isForce && file.getPath().startsWith(destPath.getPath()) && !destPath.getPath().startsWith(file.getPath())) {
             // System.out.println(String.format("file %s no need move ! ", file.getPath()));
             return;
         }
         // 移动文件
         try {
             System.out.println(file + " moving to " + destPath.getPath());
-            if(file.isFile()) {
-                if(!destPath.exists()){
+            if (file.isFile()) {
+                if (!destPath.exists()) {
                     FileUtils.createParentDirectories(destPath);
                 }
                 FileUtils.moveFileToDirectory(file, destPath, true);
                 System.out.println(file + " moved to " + destPath.getPath());
-            }else{
+            } else {
                 FileUtils.moveDirectoryToDirectory(file, destPath, true);
                 System.out.println(file + " moved to " + destPath.getPath());
             }
@@ -140,26 +141,26 @@ public class FileUtil {
     }
 
     public static void copyTo(File file, File destPath, boolean isForce) {
-        if(file.getParentFile().equals(destPath)){
+        if (file.getParentFile().equals(destPath)) {
             return;
         }
         // 子文件夹的东西不用移到外面
-        if (!isForce&&file.getPath().startsWith(destPath.getPath())&&!destPath.getPath().startsWith(file.getPath())) {
+        if (!isForce && file.getPath().startsWith(destPath.getPath()) && !destPath.getPath().startsWith(file.getPath())) {
             // System.out.println(String.format("file %s no need move ! ", file.getPath()));
             return;
         }
         // 移动文件
         try {
             System.out.println(file + " copy to " + destPath.getPath());
-            if(file.isFile()) {
-                if(new File(destPath.getPath()+File.separator+file.getName()).exists()){
+            if (file.isFile()) {
+                if (new File(destPath.getPath() + File.separator + file.getName()).exists()) {
                     System.out.println(file + " ignore copy to " + destPath.getPath());
                     return;
                 }
 //                FileUtils.createParentDirectories(new File(destPath.getPath()));
                 FileUtils.copyFileToDirectory(file, destPath, true);
                 System.out.println(file + " copy to " + destPath.getPath());
-            }else{
+            } else {
                 FileUtils.copyDirectoryToDirectory(file, destPath);
                 System.out.println(file + " copy to " + destPath.getPath());
             }
@@ -198,7 +199,7 @@ public class FileUtil {
             if (file.renameTo(targetFile)) {
                 System.out.println("文件名修改成功: ");
             } else {
-                if(targetFile.exists()) {
+                if (targetFile.exists()) {
                     System.out.println("目标文件存在，取较大的一个: ");
                     if (file.length() > targetFile.length()) {
                         delete(targetFile);

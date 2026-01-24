@@ -1,18 +1,18 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.tool.backup;
 
 import com.filemanager.model.FileStatisticInfo;
 import com.filemanager.model.MusicInfo;
 import com.filemanager.tool.backup.rule.Rule;
-
+import com.filemanager.util.FileUtil;
 import org.apache.commons.io.FileExistsException;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -24,8 +24,6 @@ import org.jaudiotagger.tag.FieldKey;
 import org.jaudiotagger.tag.Tag;
 import org.jaudiotagger.tag.wav.WavInfoTag;
 import org.jaudiotagger.tag.wav.WavTag;
-
-import com.filemanager.util.FileUtil;
 
 import java.io.File;
 import java.io.IOException;
@@ -41,7 +39,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class MusicTagUpdateTool {
 
     private static final String music_types = "wav";
-//    private static final String music_types = "flac,wav,aiff,ape,dfd,dsf,iso";
+    //    private static final String music_types = "flac,wav,aiff,ape,dfd,dsf,iso";
     private static final List<Rule> rules = new ArrayList<>();
 
     static {
@@ -64,7 +62,7 @@ public class MusicTagUpdateTool {
         List<File> files = new ArrayList<>();
         List<File> dirs = new ArrayList<>();
         FileUtil.listFiles(0, new File(rootDir), files, dirs);
-        System.out.println(String.format("dir has %d files and %d dirs ", files.size(), dirs.size()));
+        System.out.printf("dir has %d files and %d dirs %n", files.size(), dirs.size());
         ExecutorService executorService = Executors.newFixedThreadPool(10);
         AtomicLong count = new AtomicLong();
         files.forEach(
@@ -77,15 +75,15 @@ public class MusicTagUpdateTool {
                             if (rule != null) {
                                 tryRename(file, true);
                             }
-                        }catch (Exception e){
+                        } catch (Exception e) {
                             e.printStackTrace();
-                        }finally {
+                        } finally {
                             count.decrementAndGet();
                         }
                     }
                 })
         );
-        while (count.get()>0){
+        while (count.get() > 0) {
             System.out.println("wait finish...");
             Thread.sleep(1000);
         }
@@ -138,9 +136,9 @@ public class MusicTagUpdateTool {
             String artist = fileTags.getFirst(FieldKey.ARTIST);// 歌手名
             String album = fileTags.getFirst(FieldKey.ALBUM);// 專輯名
             String songName = fileTags.getFirst(FieldKey.TITLE);// 歌名
-            System.out.println(file.getName() + " album: " + album +" --- "+musicInfo.album); // 專輯名
-            System.out.println(file.getName() + " singer: " + artist +" --- "+musicInfo.artist); // 歌手名
-            System.out.println(file.getName() + " songName: " + songName +" --- "+musicInfo.songName); // 歌名
+            System.out.println(file.getName() + " album: " + album + " --- " + musicInfo.album); // 專輯名
+            System.out.println(file.getName() + " singer: " + artist + " --- " + musicInfo.artist); // 歌手名
+            System.out.println(file.getName() + " songName: " + songName + " --- " + musicInfo.songName); // 歌名
             boolean anyUpdate = false;
             if (artist.contains("?") || StringUtils.isBlank(artist)) {
                 if (musicInfo.artist != null) {

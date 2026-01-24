@@ -1,16 +1,16 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.tool.backup;
 
-import org.apache.commons.io.FileExistsException;
 import com.filemanager.util.FileUtil;
+import org.apache.commons.io.FileExistsException;
 
 import java.io.File;
 import java.util.HashMap;
@@ -24,7 +24,7 @@ public class DirSyncTool {
 
     public static void main(String[] args) {
         System.out.println("begin !");
-        syncDir("H:\\","I:\\" );
+        syncDir("H:\\", "I:\\");
 //        renameFiles("L:\\", rules);
         System.out.println("done !");
     }
@@ -33,31 +33,35 @@ public class DirSyncTool {
 
         Map<File, File> dirAndParentMap = new HashMap<>();
         listFiles(0, new File(rootDir), dirAndParentMap);
-        System.out.println(String.format("%s has  %d dirs ", rootDir,  dirAndParentMap.size()));
+        System.out.printf("%s has  %d dirs %n", rootDir, dirAndParentMap.size());
 
-        for(String oneMoreDirRoot:otherDirs){
+        for (String oneMoreDirRoot : otherDirs) {
             Map<File, File> dirAndParentMap2 = new HashMap<>();
             listFiles(0, new File(oneMoreDirRoot), dirAndParentMap2);
-            System.out.println();System.out.println();System.out.println();
+            System.out.println();
+            System.out.println();
+            System.out.println();
             System.out.println("-----------------------------------           BEGIN         ------------------------------------");
-            System.out.println(String.format("%s has  %d dirs ", oneMoreDirRoot,  dirAndParentMap2.size()));
+            System.out.printf("%s has  %d dirs %n", oneMoreDirRoot, dirAndParentMap2.size());
 
-            for(Map.Entry<File, File> entry:dirAndParentMap2.entrySet()){
+            for (Map.Entry<File, File> entry : dirAndParentMap2.entrySet()) {
                 File dir = entry.getKey();
                 File parentDir = entry.getValue();
                 Map.Entry<File, File> sample = dirAndParentMap.entrySet().stream().filter(item -> item.getKey().getName().equals(dir.getName())).findFirst().orElse(null);
-                if(sample==null){
-                    System.out.println(String.format("%s has no %s in  %s  ", rootDir,  dir.getName(), oneMoreDirRoot));
+                if (sample == null) {
+                    System.out.printf("%s has no %s in  %s  %n", rootDir, dir.getName(), oneMoreDirRoot);
                     continue;
                 }
-                if(sample.getValue().getPath().equals(rootDir)){
+                if (sample.getValue().getPath().equals(rootDir)) {
                     continue;
                 }
                 FileUtil.transferTo(dir, new File(sample.getValue().getPath().replace(rootDir, oneMoreDirRoot)));
             }
 
             System.out.println("-----------------------------------           END         ------------------------------------");
-            System.out.println();System.out.println();System.out.println();
+            System.out.println();
+            System.out.println();
+            System.out.println();
         }
 
     }
@@ -71,7 +75,7 @@ public class DirSyncTool {
         }
         // 遍历文件和文件夹
         for (File file : files) {
-            if(file.getName().startsWith("$")||file.getName().startsWith("del")||file.getName().startsWith("Sys")){
+            if (file.getName().startsWith("$") || file.getName().startsWith("del") || file.getName().startsWith("Sys")) {
                 continue;
             }
             if (file.isFile()) {

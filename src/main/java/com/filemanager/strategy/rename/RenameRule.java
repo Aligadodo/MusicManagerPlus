@@ -1,11 +1,11 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.strategy.rename;
 
@@ -14,7 +14,6 @@ import com.filemanager.tool.file.FileTypeUtil;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.List;
 
 public class RenameRule {
@@ -27,7 +26,7 @@ public class RenameRule {
     public RenameRule(List<RuleCondition> c, RenameActionType a, String f, String r) {
         this(c, a, f, r, RenameMode.ONLY_FILENAME);
     }
-    
+
     public RenameRule(List<RuleCondition> c, RenameActionType a, String f, String r, RenameMode m) {
         conditions = c;
         actionType = a;
@@ -42,7 +41,7 @@ public class RenameRule {
         for (RuleCondition c : conditions)
             if (!c.test(new File(s)))
                 return false; // Condition test needs File but here we check string logic inside RuleCondition
-                              // if possible, or adapt.
+        // if possible, or adapt.
         // Note: RuleCondition.test takes File. Here we are matching filename string.
         // Simplified for this context: RenameRule conditions usually match filename
         // string.

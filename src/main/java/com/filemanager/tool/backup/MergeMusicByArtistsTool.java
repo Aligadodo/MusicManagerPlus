@@ -1,18 +1,18 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.tool.backup;
 
 import com.alibaba.fastjson.JSONObject;
 import com.filemanager.model.FileStatisticInfo;
-import org.apache.commons.lang3.StringUtils;
 import com.filemanager.util.FileUtil;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
 import java.util.*;
@@ -39,9 +39,9 @@ public class MergeMusicByArtistsTool {
         List<File> files = new ArrayList<>();
         List<File> dirs = new ArrayList<>();
         FileUtil.listFiles(0, new File(rootDir), files, dirs);
-        System.out.println(String.format("dir has %d files and %d dirs ", files.size(), dirs.size()));
+        System.out.printf("dir has %d files and %d dirs %n", files.size(), dirs.size());
 
-        Map<String,Integer> countFind = new HashMap<>();
+        Map<String, Integer> countFind = new HashMap<>();
 
         files.forEach(
                 file -> {
@@ -49,26 +49,26 @@ public class MergeMusicByArtistsTool {
                         return;
                     }
                     FileStatisticInfo fileStatisticInfo = FileStatisticInfo.create(file);
-                    if(!full_music_types.contains(fileStatisticInfo.type)){
+                    if (!full_music_types.contains(fileStatisticInfo.type)) {
                         return;
                     }
                     String dir = MusicNameParserUtil.getDirNameFromMusicFile(file, false);
                     if (MusicNameParserUtil.existingDirMapping.containsKey(dir)) {
                         System.out.println(file + " moved to " + MusicNameParserUtil.existingDirMapping.get(dir));
                         FileUtil.transferTo(file, MusicNameParserUtil.existingDirMapping.get(dir));
-                    }else{
-                        if(dir!=null&&dir.length()<10){
-                            countFind.put(dir, countFind.getOrDefault(dir, 0)+1);
+                    } else {
+                        if (dir != null && dir.length() < 10) {
+                            countFind.put(dir, countFind.getOrDefault(dir, 0) + 1);
                         }
                     }
                 }
         );
 
         // 输出出现多于一定次数的歌手名
-        Set<String> newDirS = countFind.entrySet().stream().filter(i->i.getValue()>=2
-                        && !StringUtils.containsAny(i.getKey(),"CD", "音轨", "Track", "Record"
-                        ,"群星","Artist","DTS","惊叹号","跨时代","七里香","我很忙","彼得","神笛","标题","IA","中孝介",
-                        "WAV","FLAC","MP3"))
+        Set<String> newDirS = countFind.entrySet().stream().filter(i -> i.getValue() >= 2
+                        && !StringUtils.containsAny(i.getKey(), "CD", "音轨", "Track", "Record"
+                        , "群星", "Artist", "DTS", "惊叹号", "跨时代", "七里香", "我很忙", "彼得", "神笛", "标题", "IA", "中孝介",
+                        "WAV", "FLAC", "MP3"))
 
                 .map(Map.Entry::getKey).collect(Collectors.toSet());
 

@@ -1,19 +1,19 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.tool.backup;
 
 import com.filemanager.model.FileStatisticInfo;
+import com.filemanager.util.FileUtil;
 import org.apache.commons.io.FileExistsException;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
-import com.filemanager.util.FileUtil;
 
 import java.io.File;
 import java.io.IOException;
@@ -45,22 +45,22 @@ public class AutoMucisNameSwapTool {
 
         List<File> dirs = new ArrayList<>();
         FileUtil.listFiles(0, new File(rootDir), new ArrayList<>(), dirs);
-        System.out.println(String.format("dir has  %d dirs ", dirs.size()));
+        System.out.printf("dir has  %d dirs %n", dirs.size());
         dirs.forEach(
                 dir -> {
                     if (dir.listFiles() == null) {
                         return;
                     }
-                    List<File> files = Arrays.asList(dir.listFiles()).stream().filter(file->{
-                        return AutoMucisNameSwapTool.isMusicFile(file)&&file.getName().contains("-");
+                    List<File> files = Arrays.asList(dir.listFiles()).stream().filter(file -> {
+                        return AutoMucisNameSwapTool.isMusicFile(file) && file.getName().contains("-");
                     }).collect(Collectors.toList());
                     long count = files.stream().filter(file -> {
                         String art = MusicNameParserUtil.getDirNameFromMusicFile(file);
                         FileStatisticInfo musicInfo = FileStatisticInfo.create(file);
-                        return art != null && StringUtils.endsWithIgnoreCase(musicInfo.classicName,art);
+                        return art != null && StringUtils.endsWithIgnoreCase(musicInfo.classicName, art);
                     }).count();
                     if (!files.isEmpty() && count * 4 > files.size()) {
-                        files.forEach(file -> tryRename(file,"-"));
+                        files.forEach(file -> tryRename(file, "-"));
                     }
                 }
         );
@@ -76,7 +76,7 @@ public class AutoMucisNameSwapTool {
             List<String> strs = Arrays.asList(oriName.split(seperator));
             Collections.reverse(strs);
             String songName = StringUtils.join(strs, seperator);
-            System.out.println("try covert "+oriName+" to "+songName);
+            System.out.println("try covert " + oriName + " to " + songName);
             FileUtil.renameFile(file, songName);
         } catch (Exception e) {
             // ignore

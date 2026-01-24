@@ -1,11 +1,11 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-12 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-12
  */
 package com.filemanager.app.ui;
 
@@ -213,13 +213,13 @@ public class ComposeView implements IAutoReloadAble {
                     setText(null);
                     setMinHeight(60);
                     setMaxHeight(60);
-                    
+
                     BorderPane pane = new BorderPane();
                     pane.setPadding(new Insets(8, 0, 8, 0));
 
                     VBox v = new VBox(2);
                     Label n = StyleFactory.createLabel((getIndex() + 1) + ". " + item.getName(), 14, true);
-                    
+
                     // 创建描述标签，不使用自动换行，而是使用省略号截断
                     Label d = new Label(item.getDescription());
                     d.setFont(javafx.scene.text.Font.font(10));
@@ -228,7 +228,7 @@ public class ComposeView implements IAutoReloadAble {
                     d.setWrapText(false);
                     d.setEllipsisString("...");
                     d.setTooltip(new Tooltip(item.getDescription())); // 添加悬浮提示
-                    
+
                     v.getChildren().addAll(n, d);
 
                     HBox actions = StyleFactory.createTreeItemMenu(null, e -> {
@@ -321,17 +321,17 @@ public class ComposeView implements IAutoReloadAble {
         rightPanel.setPadding(new Insets(15));
         // 确保面板填充整个区域
         VBox.setVgrow(rightPanel, Priority.ALWAYS);
-        
+
         configContainer = new VBox(10);
         // 使用面板背景色，而不是透明背景
         configContainer.setStyle("-fx-background-color: " + app.getCurrentTheme().getPanelBgColor() + ";");
-        
+
         ScrollPane sc = new ScrollPane(configContainer);
         sc.setFitToWidth(true);
         sc.setFitToHeight(true);
         // 使用面板背景色，确保一致的显示效果
         sc.setStyle("-fx-background: " + app.getCurrentTheme().getPanelBgColor() + "; -fx-background-color: " + app.getCurrentTheme().getPanelBgColor() + ";");
-        
+
         VBox.setVgrow(sc, Priority.ALWAYS);
         rightPanel.getChildren().add(sc);
         return rightPanel;
@@ -532,12 +532,12 @@ public class ComposeView implements IAutoReloadAble {
         if (tpFilters != null) {
             StyleFactory.updateNodeStyle(tpFilters);
         }
-        
+
         // 更新配置容器的背景色
         if (configContainer != null) {
             configContainer.setStyle("-fx-background-color: " + app.getCurrentTheme().getPanelBgColor() + ";");
         }
-        
+
         // 更新所有主要面板的样式
         if (viewNode != null) {
             StyleFactory.setBasicStyle(viewNode);

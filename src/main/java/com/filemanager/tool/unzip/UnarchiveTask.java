@@ -2,6 +2,7 @@ package com.filemanager.tool.unzip;
 
 /**
  * 解压任务实体
+ *
  * @author 28667
  */
 public class UnarchiveTask {

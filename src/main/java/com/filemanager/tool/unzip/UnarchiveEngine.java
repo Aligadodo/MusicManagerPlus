@@ -5,5 +5,6 @@ package com.filemanager.tool.unzip;
  */
 public interface UnarchiveEngine {
     boolean extract(UnarchiveTask task);
+
     boolean isAvailable();
 }

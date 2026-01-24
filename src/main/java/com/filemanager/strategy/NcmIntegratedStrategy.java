@@ -1,35 +1,30 @@
-/* 
- * Copyright (c) 2026 hrcao (chrse1997@163.com) 
- * Licensed under GPLv3 + Non-Commercial Clause. 
- * You may not use this file except in compliance with the License. 
- * See the LICENSE file in the project root for more information. 
- * Author: hrcao 
- * Mail: chrse1997@163.com 
- * Date: 2026-01-24 
+/*
+ * Copyright (c) 2026 hrcao (chrse1997@163.com)
+ * Licensed under GPLv3 + Non-Commercial Clause.
+ * You may not use this file except in compliance with the License.
+ * See the LICENSE file in the project root for more information.
+ * Author: hrcao
+ * Mail: chrse1997@163.com
+ * Date: 2026-01-24
  */
 package com.filemanager.strategy;
 
 import com.filemanager.app.base.IAppStrategy;
-import com.filemanager.app.tools.display.PathSelectionComponent;
 import com.filemanager.app.tools.display.StyleFactory;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.dump.NcmDump;
+import com.filemanager.strategy.base.PathSelectionComponent;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
-import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXComboBox;
-import com.jfoenix.controls.JFXTabPane;
-import com.jfoenix.controls.JFXTextField;
 import javafx.scene.Node;
 import javafx.scene.control.CheckBox;
-import javafx.scene.control.Tab;
 import javafx.scene.layout.VBox;
-import javafx.stage.DirectoryChooser;
 
-import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLEncoder;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
@@ -41,16 +36,16 @@ public class NcmIntegratedStrategy extends IAppStrategy {
     // --- UI 组件 --- 
     private final JFXComboBox<String> cbFunction;
     private final PathSelectionComponent pathSelection;
-    
+
     // NCM转换选项
     private final CheckBox chkDeleteSource;
-    
+
     // 缓存扫描选项
     private final CheckBox chkDownloadLyric;
-    
+
     // 歌词下载选项
     private final CheckBox chkOverwriteExisting;
-    
+
     // 运行时参数
     private String pFunction;
     private boolean pDeleteSource;
@@ -62,18 +57,18 @@ public class NcmIntegratedStrategy extends IAppStrategy {
         cbFunction = new JFXComboBox<>();
         cbFunction.getItems().addAll("NCM转换", "缓存扫描", "歌词下载");
         cbFunction.getSelectionModel().select(0);
-        
+
         // 创建路径选择组件
         pathSelection = new PathSelectionComponent("ncm");
-        
+
         // NCM转换选项
         chkDeleteSource = new CheckBox("转换后删除源.ncm文件");
         chkDeleteSource.setSelected(false);
-        
+
         // 缓存扫描选项
         chkDownloadLyric = new CheckBox("自动下载对应歌词");
         chkDownloadLyric.setSelected(false);
-        
+
         // 歌词下载选项
         chkOverwriteExisting = new CheckBox("覆盖已存在的歌词文件");
         chkOverwriteExisting.setSelected(false);
@@ -81,7 +76,7 @@ public class NcmIntegratedStrategy extends IAppStrategy {
 
     @Override
     public String getName() {
-        return "网易云音乐工具集"; 
+        return "网易云音乐工具集";
     }
 
     @Override
@@ -89,27 +84,27 @@ public class NcmIntegratedStrategy extends IAppStrategy {
         // 创建主面板容器
         VBox mainPanel = new VBox();
         mainPanel.setSpacing(10);
-        
+
         // 功能选择部分
         VBox functionSelection = new VBox(
-            StyleFactory.createChapter("功能选择"),
-            StyleFactory.createParamPairLine("选择功能:", cbFunction)
+                StyleFactory.createChapter("功能选择"),
+                StyleFactory.createParamPairLine("选择功能:", cbFunction)
         );
-        
+
         // 添加功能选择部分到主面板
         mainPanel.getChildren().add(functionSelection);
-        
+
         // 根据当前选择的功能构建面板内容
         rebuildPanelContent(mainPanel, cbFunction.getValue());
-        
+
         // 添加功能选择变化监听器
         cbFunction.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
             rebuildPanelContent(mainPanel, newValue);
         });
-        
+
         return mainPanel;
     }
-    
+
     /**
      * 根据选择的功能重新构建面板内容
      */
@@ -118,53 +113,53 @@ public class NcmIntegratedStrategy extends IAppStrategy {
         if (mainPanel.getChildren().size() > 1) {
             mainPanel.getChildren().subList(1, mainPanel.getChildren().size()).clear();
         }
-        
+
         // 根据选择的功能添加相应的内容
         switch (function) {
             case "NCM转换":
                 // 添加输出设置
                 addOutputSettings(mainPanel);
-                
+
                 // 添加NCM转换选项
                 mainPanel.getChildren().addAll(
-                    StyleFactory.createSeparator(),
-                    StyleFactory.createChapter("NCM转换选项"),
-                    chkDeleteSource
+                        StyleFactory.createSeparator(),
+                        StyleFactory.createChapter("NCM转换选项"),
+                        chkDeleteSource
                 );
                 break;
-                
+
             case "缓存扫描":
                 // 添加输出设置
                 addOutputSettings(mainPanel);
-                
+
                 // 添加缓存扫描选项
                 mainPanel.getChildren().addAll(
-                    StyleFactory.createSeparator(),
-                    StyleFactory.createChapter("缓存扫描选项"),
-                    chkDownloadLyric
+                        StyleFactory.createSeparator(),
+                        StyleFactory.createChapter("缓存扫描选项"),
+                        chkDownloadLyric
                 );
                 break;
-                
+
             case "歌词下载":
                 // 歌词下载不需要输出设置
-                
+
                 // 添加歌词下载选项
                 mainPanel.getChildren().addAll(
-                    StyleFactory.createSeparator(),
-                    StyleFactory.createChapter("歌词下载选项"),
-                    chkOverwriteExisting
+                        StyleFactory.createSeparator(),
+                        StyleFactory.createChapter("歌词下载选项"),
+                        chkOverwriteExisting
                 );
                 break;
         }
     }
-    
+
     /**
      * 添加输出设置部分
      */
     private void addOutputSettings(VBox container) {
         container.getChildren().addAll(
-            StyleFactory.createSeparator(),
-            pathSelection.getConfigNode()
+                StyleFactory.createSeparator(),
+                pathSelection.getConfigNode()
         );
     }
 
@@ -174,7 +169,7 @@ public class NcmIntegratedStrategy extends IAppStrategy {
         List<ChangeRecord> result = new ArrayList<>();
 
         File file = currentRecord.getFileHandle();
-        
+
         // 根据选择的功能生成相应的ChangeRecord
         switch (pFunction) {
             case "NCM转换":
@@ -183,7 +178,7 @@ public class NcmIntegratedStrategy extends IAppStrategy {
                     result.add(record);
                 }
                 break;
-                
+
             case "缓存扫描":
                 if (file.isFile()) {
                     // 自动识别缓存文件格式 .idx 和 .uc
@@ -199,7 +194,7 @@ public class NcmIntegratedStrategy extends IAppStrategy {
                     scanCacheFiles(file, result);
                 }
                 break;
-                
+
             case "歌词下载":
                 if (file.isFile() && isAudioFile(file)) {
                     ChangeRecord record = new ChangeRecord(file.getName(), file.getName(), file, true, file.getAbsolutePath(), OperationType.NCM_LYRIC_DOWNLOAD);
@@ -210,12 +205,12 @@ public class NcmIntegratedStrategy extends IAppStrategy {
 
         return result;
     }
-    
+
     private boolean isCacheFile(File file) {
         String name = file.getName().toLowerCase();
         return name.endsWith(".idx") || name.endsWith(".uc");
     }
-    
+
     private boolean isCacheFileComplete(File file) {
         // 检查缓存文件是否完整
         // 对于 .uc 文件，检查是否有对应的 .idx 文件
@@ -232,11 +227,11 @@ public class NcmIntegratedStrategy extends IAppStrategy {
         }
         return false;
     }
-    
+
     private void scanCacheFiles(File directory, List<ChangeRecord> result) {
         File[] files = directory.listFiles();
         if (files == null) return;
-        
+
         for (File file : files) {
             if (file.isDirectory()) {
                 scanCacheFiles(file, result);
@@ -246,7 +241,7 @@ public class NcmIntegratedStrategy extends IAppStrategy {
             }
         }
     }
-    
+
     private String getOutputPath(File file) {
         return pathSelection.getOutputPath(file);
     }
@@ -255,7 +250,7 @@ public class NcmIntegratedStrategy extends IAppStrategy {
     public void execute(ChangeRecord rec) throws Exception {
         File file = rec.getFileHandle();
         OperationType opType = rec.getOpType();
-        
+
         switch (opType) {
             case NCM_CONVERT:
                 executeNcmConvert(file, rec.getNewPath());
@@ -336,7 +331,7 @@ public class NcmIntegratedStrategy extends IAppStrategy {
         // 这里添加缓存文件转换逻辑
         // 实际实现时，需要根据缓存文件格式进行解码和转换
         // 例如：处理.uc文件的解密和转换
-        
+
         // 模拟转换完成
         log("缓存文件转换完成: " + ucFile.getName() + " -> " + targetFile.getName());
 
@@ -352,11 +347,11 @@ public class NcmIntegratedStrategy extends IAppStrategy {
         // 识别缓存音频的原始格式
         // 实际实现时，需要分析缓存文件的头部信息或元数据
         // 这里使用简单的模拟实现
-        
+
         // 模拟识别结果，实际需要根据文件内容分析
         // 例如：通过文件大小、头部特征等判断
         long fileSize = ucFile.length();
-        
+
         // 简单的大小判断，实际需要更复杂的分析
         if (fileSize > 10 * 1024 * 1024) { // 大于10MB
             return "flac"; // 假设大文件为FLAC格式
@@ -369,7 +364,7 @@ public class NcmIntegratedStrategy extends IAppStrategy {
         // 生成目标文件名
         // 实际实现时，需要从缓存文件或元数据中提取歌曲信息
         // 这里使用简单的模拟实现
-        
+
         String baseName = ucFile.getName().substring(0, ucFile.getName().lastIndexOf('.'));
         return baseName + "." + audioFormat;
     }
@@ -404,8 +399,8 @@ public class NcmIntegratedStrategy extends IAppStrategy {
 
     private boolean isAudioFile(File file) {
         String name = file.getName().toLowerCase();
-        return name.endsWith(".mp3") || name.endsWith(".flac") || name.endsWith(".wav") || 
-               name.endsWith(".m4a") || name.endsWith(".aac") || name.endsWith(".ogg");
+        return name.endsWith(".mp3") || name.endsWith(".flac") || name.endsWith(".wav") ||
+                name.endsWith(".m4a") || name.endsWith(".aac") || name.endsWith(".ogg");
     }
 
     private String extractSongName(File file) {
@@ -441,7 +436,7 @@ public class NcmIntegratedStrategy extends IAppStrategy {
     private String downloadLyric(String songName, String artistName) throws Exception {
         // 这里使用模拟实现，实际应调用网易云API
         log("尝试下载歌曲歌词: " + songName + (artistName.isEmpty() ? "" : " - " + artistName));
-        
+
         // 模拟返回歌词内容
         return generateMockLyric(songName, artistName);
     }
@@ -522,19 +517,19 @@ public class NcmIntegratedStrategy extends IAppStrategy {
         public void execute() {
             // 调用父类的execute方法
             super.execute();
-            
+
             // 如果指定了目标目录，需要将转换后的文件移动到目标目录
             if (targetDir != null && targetDir.exists()) {
                 try {
                     // 查找转换后的文件
                     File originalDir = getFile().getParentFile();
                     String baseName = getFile().getName().substring(0, getFile().getName().lastIndexOf('.'));
-                    
+
                     File[] convertedFiles = originalDir.listFiles(
                             f -> f.getName().startsWith(baseName) && !f.getName().equals(getFile().getName())
                     );
-                    
-                    if (convertedFiles != null && convertedFiles.length > 0) {
+
+                    if (convertedFiles != null) {
                         for (File convertedFile : convertedFiles) {
                             File targetFile = new File(targetDir, convertedFile.getName());
                             // 移动文件到目标目录
@@ -546,11 +541,11 @@ public class NcmIntegratedStrategy extends IAppStrategy {
                     logError("移动转换后的文件到目标目录失败: " + e.getMessage());
                 }
             }
-            
+
             // 这里可以添加额外的处理逻辑，比如音频格式转换
             // 例如：如果需要将转换后的音频文件进一步转换为其他格式
         }
-        
+
         private File getFile() {
             // 反射获取父类的file字段
             try {
