@@ -57,7 +57,7 @@ public class GlobalSettingsView implements IAutoReloadAble {
     private HBox recursionDepthRangeBox;
 
     private void initControls() {
-        cbRecursionMode = new JFXComboBox<>(FXCollections.observableArrayList("当前目录", "全部文件", "指定目录层级", "目录层级范围"));
+        cbRecursionMode = new JFXComboBox<>(FXCollections.observableArrayList("全部文件", "当前目录", "指定目录层级", "目录层级范围"));
         cbRecursionMode.getSelectionModel().select(1);
 
         spRecursionDepth = new Spinner<>(1, 20, 2);

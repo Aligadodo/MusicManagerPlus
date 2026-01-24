@@ -182,7 +182,7 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
     protected void updateDefaultPathPrompt(String format) {
         if (format == null) return;
         String cleanFormat = format.split(" ")[0].toUpperCase();
-        pathSelection.setPathPrompt("默认: " + getDefaultDirPrefix() + " - " + cleanFormat);
+        pathSelection.getTxtPath().setPromptText("默认: " + getDefaultDirPrefix() + " - " + cleanFormat);
     }
 
     @Override

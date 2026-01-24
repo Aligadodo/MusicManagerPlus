@@ -18,6 +18,7 @@ import javafx.scene.Node;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
+import lombok.Getter;
 
 import java.io.File;
 import java.util.Map;
@@ -32,6 +33,7 @@ import java.util.Properties;
 public class PathSelectionComponent implements IConfigComponent {
     // UI组件
     private final JFXComboBox<String> cbOutputDirMode;
+    @Getter
     private final JFXTextField txtPath;
     private final JFXButton btnPickDir;
 
@@ -207,15 +209,6 @@ public class PathSelectionComponent implements IConfigComponent {
      */
     public String getPath() {
         return pPath != null ? pPath : txtPath.getText();
-    }
-
-    /**
-     * 设置路径输入框的提示文本
-     *
-     * @param prompt 提示文本
-     */
-    public void setPathPrompt(String prompt) {
-        txtPath.setPromptText(prompt);
     }
 
     /**
