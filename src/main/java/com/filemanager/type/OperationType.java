@@ -21,7 +21,10 @@ public enum OperationType {
     SPLIT("分割", "将整轨文件（如APE/FLAC）按CUE索引切分为单曲"),
     DELETE("删除", "将文件从磁盘中永久删除"),
     UNZIP("解压", "对压缩包文件进行解解压操作"),
-    FIX_TYPE("修复类型", "修复文件的真正类型");
+    FIX_TYPE("修复类型", "修复文件的真正类型"),
+    NCM_CONVERT("NCM转换", "将网易云.ncm格式文件转换为常规音频文件"),
+    NCM_CACHE_SCAN("NCM缓存扫描", "自动扫描网易云音乐缓存文件并转换为正常音频格式"),
+    NCM_LYRIC_DOWNLOAD("NCM歌词下载", "根据音频文件信息下载网易云平台对应歌词");
 
     public final String name;
     public final String desc;

@@ -31,6 +31,7 @@ public class AppStrategyFactory {
         strategyPrototypes.add(new CueFileRenameStrategy());
         strategyPrototypes.add(new FileTypeFixStrategy());
         strategyPrototypes.add(new FileCollectionStrategy());
+        strategyPrototypes.add(new NcmIntegratedStrategy());
         return strategyPrototypes;
     }
 
@@ -49,6 +50,7 @@ public class AppStrategyFactory {
             if (op == OperationType.DELETE && s instanceof FileCleanupStrategy) return s;
             if (op == OperationType.CUE_RENAME && s instanceof CueFileRenameStrategy) return s;
             if (op == OperationType.FIX_TYPE && s instanceof FileTypeFixStrategy) return s;
+            if ((op == OperationType.NCM_CONVERT || op == OperationType.NCM_CACHE_SCAN || op == OperationType.NCM_LYRIC_DOWNLOAD) && s instanceof NcmIntegratedStrategy) return s;
         }
         return null;
     }

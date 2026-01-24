@@ -10,6 +10,7 @@
 package com.filemanager.strategy;
 
 import com.filemanager.app.base.IAppStrategy;
+import com.filemanager.app.tools.display.PathSelectionComponent;
 import com.filemanager.app.tools.display.StyleFactory;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.tool.file.PathUtils;
@@ -42,8 +43,7 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
     private static FFmpeg ffmpeg = null;
     // --- UI 组件 ---
     protected final JFXComboBox<String> cbTargetFormat;
-    protected final JFXComboBox<String> cbOutputDirMode;
-    protected final TextField txtRelativePath;
+    protected final PathSelectionComponent pathSelection;
     // 覆盖控制
     protected final CheckBox chkOverwrite;
     // FFmpeg 参数控制
@@ -61,8 +61,6 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
     protected final CheckBox chkAutoFormatFilename;
     // --- 运行时参数 ---
     protected String pFormat;
-    protected String pMode;
-    protected String pRelPath;
     protected boolean pOverwrite;
     protected String pFFmpeg;
     protected boolean pUseCache;
@@ -83,15 +81,11 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
         cbTargetFormat.setTooltip(new Tooltip("WAV CD标准会按照16bit转录音频文件，反之则按照24bit转录，对CD刻录场景的播放会有负面影响。"));
         cbTargetFormat.getSelectionModel().select(0);
 
-        cbOutputDirMode = new JFXComboBox<>(FXCollections.observableArrayList(
-                "原目录 (Source)",
-                "子目录 (Sub-folder)",
-                "相对路径"
-        ));
-        cbOutputDirMode.getSelectionModel().select(1);
-
-        txtRelativePath = new TextField("");
-        updateDefaultPathPrompt("WAV");
+        // 创建路径选择组件
+        Map<String, Object> defaults = new HashMap<>();
+        defaults.put("outputDirMode", "子目录");
+        defaults.put("path", "Convert - WAV");
+        pathSelection = new PathSelectionComponent("ffmpeg",defaults);
 
         cbSampleRate = new JFXComboBox<>(FXCollections.observableArrayList("保持原样 (Original)", "44100", "48000", "88200", "96000", "192000"));
         cbSampleRate.getSelectionModel().select(1);
@@ -107,8 +101,6 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
             cbSampleRate.setDisable(isCD);
             cbChannels.setDisable(isCD);
         });
-
-        txtRelativePath.visibleProperty().bind(cbOutputDirMode.getSelectionModel().selectedItemProperty().isNotEqualTo("原目录 (Source)"));
 
         chkOverwrite = new CheckBox("强制覆盖已存在的目标文件");
         chkOverwrite.setSelected(false);
@@ -189,7 +181,7 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
     protected void updateDefaultPathPrompt(String format) {
         if (format == null) return;
         String cleanFormat = format.split(" ")[0].toUpperCase();
-        txtRelativePath.setPromptText("默认: " + getDefaultDirPrefix() + " - " + cleanFormat);
+        pathSelection.setPathPrompt("默认: " + getDefaultDirPrefix() + " - " + cleanFormat);
     }
 
     @Override
@@ -227,7 +219,8 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
         return StyleFactory.createVBoxPanel(
                 StyleFactory.createChapter("输出格式设置"),
                 StyleFactory.createParamPairLine("目标格式:", cbTargetFormat),
-                StyleFactory.createParamPairLine("输出模式:", StyleFactory.createHBox(cbOutputDirMode, txtRelativePath)),
+                StyleFactory.createSeparator(),
+                pathSelection.getConfigNode(),
                 StyleFactory.createSeparator(),
                 StyleFactory.createChapter("转换参数设置"),
                 StyleFactory.createParamPairLine("FFmpeg路径:", txtFFmpegPath, btnPickFFmpeg),
@@ -282,8 +275,6 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
     @Override
     public void captureParams() {
         pFormat = cbTargetFormat.getValue();
-        pMode = cbOutputDirMode.getValue();
-        pRelPath = txtRelativePath.getText();
         pOverwrite = chkOverwrite.isSelected();
         pFFmpeg = txtFFmpegPath.getText();
         pUseCache = chkEnableCache.isSelected();
@@ -296,18 +287,13 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
         pSampleRate = cbSampleRate.getValue();
         pChannels = cbChannels.getValue();
         pAutoFormatFilename = chkAutoFormatFilename.isSelected();
+        pathSelection.captureParams();
     }
 
     @Override
     public void saveConfig(Properties props) {
         if (cbTargetFormat.getValue() != null) {
             props.setProperty("ac_format", cbTargetFormat.getValue());
-        }
-        if (cbOutputDirMode.getValue() != null) {
-            props.setProperty("ac_outMode", cbOutputDirMode.getValue());
-        }
-        if (txtRelativePath.getText() != null) {
-            props.setProperty("ac_pRelPath ", txtRelativePath.getText());
         }
         if (txtFFmpegPath.getText() != null) {
             props.setProperty("ac_ffmpeg", txtFFmpegPath.getText());
@@ -327,18 +313,15 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
         props.setProperty("ac_sampleRate", cbSampleRate.getValue());
         props.setProperty("ac_channels", cbChannels.getValue());
         props.setProperty("ac_autoFormatFilename", String.valueOf(chkAutoFormatFilename.isSelected()));
+        
+        // 保存路径选择组件配置
+        pathSelection.saveConfig(props);
     }
 
     @Override
     public void loadConfig(Properties props) {
         if (props.containsKey("ac_format")) {
             cbTargetFormat.getSelectionModel().select(props.getProperty("ac_format"));
-        }
-        if (props.containsKey("ac_outMode")) {
-            cbOutputDirMode.getSelectionModel().select(props.getProperty("ac_outMode"));
-        }
-        if (props.containsKey("ac_pRelPath ")) {
-            txtRelativePath.setText(props.getProperty("ac_pRelPath "));
         }
         if (props.containsKey("ac_ffmpeg")) {
             txtFFmpegPath.setText(props.getProperty("ac_ffmpeg"));
@@ -379,6 +362,9 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
         if (props.containsKey("ac_autoFormatFilename")) {
             chkAutoFormatFilename.setSelected(Boolean.parseBoolean(props.getProperty("ac_autoFormatFilename")));
         }
+        
+        // 加载路径选择组件配置
+        pathSelection.loadConfig(props);
     }
 
     @Override
@@ -499,25 +485,14 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
 
     protected Map<String, String> getParams(File parentDir, String tempName) {
         Map<String, String> params = new HashMap<>();
-        // [核心优化] 默认目录名逻辑
-        if (pRelPath == null || pRelPath.trim().isEmpty()) {
-            String cleanFormat = pFormat != null ? pFormat.split(" ")[0].toUpperCase() : "UNK";
-            pRelPath = getDefaultDirPrefix() + " - " + cleanFormat;
-        }
         if (pUseCache && (pCacheDir == null || pCacheDir.trim().isEmpty() || !new File(pCacheDir).isDirectory())) {
             pUseCache = false;
         }
-        if (pMode == null) pMode = "原目录";
-        String parentPath = null;
-        if (pMode.startsWith("原目录")) {
-            parentPath = parentDir.getAbsolutePath();
-        } else if (pMode.startsWith("子目录")) {
-            parentPath = new File(parentDir, pRelPath).getAbsolutePath();
-        } else if (pMode.startsWith("相对路径")) {
-            parentPath = parentDir.toPath().resolve(new File(pRelPath).toPath()).toString();
-        } else {
-            parentPath = parentDir.getAbsolutePath();
-        }
+        
+        // 使用pathSelection组件计算输出路径
+        File tempFile = new File(parentDir, tempName);
+        String outputPath = pathSelection.getOutputPath(tempFile);
+        String parentPath = outputPath;
 
         if (pUseSnapPath) {
             params.put("doubleCheckParentPath", parentPath);

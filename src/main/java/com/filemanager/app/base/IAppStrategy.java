@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
  * @author 28667
  */
 @Getter
-public abstract class IAppStrategy implements IAutoReloadAble{
+public abstract class IAppStrategy implements INodeComponent{
     protected IAppController app;
     // 通用条件配置接口 (UI调用)
     // 通用前置条件 (所有策略都支持)
@@ -115,6 +115,7 @@ public abstract class IAppStrategy implements IAutoReloadAble{
 
     public abstract ScanTarget getTargetType();
 
+    @Override
     public void captureParams() {
     }
 
