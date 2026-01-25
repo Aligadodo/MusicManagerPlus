@@ -35,6 +35,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -42,6 +44,7 @@ import java.util.logging.Logger;
 public class NcmDump {
 
     private final File file;
+    private final File targetDir;
     private FileInputStream inputStream;
     private String neteaseKey;
 
@@ -58,15 +61,18 @@ public class NcmDump {
     }
 
     public NcmDump(File ncmFile) {
+        this(ncmFile, null);
+    }
 
+    public NcmDump(File ncmFile, File targetDir) {
         this.file = ncmFile;
+        this.targetDir = targetDir;
 
         try {
             this.inputStream = new FileInputStream(file);
         } catch (FileNotFoundException e) {
             ErrorUtils.error("File not found", "Path: " + ncmFile.getAbsolutePath());
         }
-
     }
 
     public void execute() {
@@ -84,6 +90,20 @@ public class NcmDump {
         File musicFile = writeMusicData(metaData, musicData);
 
         fixId3Tags(musicFile, metaData, albumImageData);
+
+        // 如果指定了目标目录，需要将转换后的文件移动到目标目录
+        if (targetDir != null && targetDir.exists()) {
+            try {
+                // 移动文件到目标目录
+                File targetFile = new File(targetDir, musicFile.getName());
+                Files.move(musicFile.toPath(), targetFile.toPath(),
+                        StandardCopyOption.REPLACE_EXISTING);
+                System.out.println("已将转换后的文件移动到目标目录: " + targetFile.getAbsolutePath());
+                musicFile = targetFile; // 更新音乐文件引用
+            } catch (Exception e) {
+                System.err.println("移动转换后的文件到目标目录失败: " + e.getMessage());
+            }
+        }
 
         System.out.println("- Finish dumping .ncm -");
         System.out.println("=> Output file path: " + musicFile.getAbsolutePath());
