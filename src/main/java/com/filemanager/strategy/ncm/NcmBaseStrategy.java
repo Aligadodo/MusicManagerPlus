@@ -26,7 +26,11 @@ public abstract class NcmBaseStrategy extends IAppStrategy implements IConfigCom
     protected PathSelectionComponent pathSelection;
     
     public NcmBaseStrategy(String propPrefix) {
-        this.pathSelection = new PathSelectionComponent(propPrefix);
+        // 创建路径选择组件，设置默认参数为"Convert - Cache"子目录
+        java.util.Map<String, Object> defaults = new java.util.HashMap<>();
+        defaults.put("outputDirMode", "子目录");
+        defaults.put("path", "Convert - Cache");
+        this.pathSelection = new PathSelectionComponent(propPrefix, defaults);
     }
     
     /**

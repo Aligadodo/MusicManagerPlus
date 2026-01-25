@@ -40,8 +40,14 @@ public class NcmLyricDownloadStrategy extends NcmBaseStrategy {
     private boolean pOverwriteExisting;
     private boolean pPreMatchLyric;
     
+    // API客户端
+    private final NeteaseApiClient neteaseApiClient;
+    
     public NcmLyricDownloadStrategy() {
         super("ncm_lyric");
+        
+        // 初始化API客户端
+        neteaseApiClient = new NeteaseApiClient();
         
         // 歌词下载选项
         chkOverwriteExisting = new JFXCheckBox("覆盖已存在的歌词文件");
@@ -251,24 +257,7 @@ public class NcmLyricDownloadStrategy extends NcmBaseStrategy {
      * @return 歌曲ID
      */
     private String searchSong(String songName, String artistName) throws Exception {
-        String searchUrl = "http://music.163.com/api/search/get/web?csrf_token=";
-        String query = songName + (artistName.isEmpty() ? "" : " " + artistName);
-        String data = "s=" + URLEncoder.encode(query, "UTF-8") + "&type=1&offset=0&subType=&limit=10";
-        
-        String response = sendPostRequest(searchUrl, data);
-        
-        // 解析JSON响应，获取歌曲ID
-        // 这里使用简单的字符串处理，实际应使用JSON解析库
-        int idStart = response.indexOf("\"id\":");
-        if (idStart > 0) {
-            idStart += 5;
-            int idEnd = response.indexOf(",", idStart);
-            if (idEnd > idStart) {
-                return response.substring(idStart, idEnd).trim();
-            }
-        }
-        
-        return null;
+        return neteaseApiClient.searchSong(songName, artistName);
     }
     
     /**
@@ -278,100 +267,10 @@ public class NcmLyricDownloadStrategy extends NcmBaseStrategy {
      * @return 歌词内容
      */
     private String getLyricById(String songId) throws Exception {
-        String lyricUrl = "http://music.163.com/api/song/lyric?id=" + songId + "&lv=1&tv=-1";
-        String response = sendGetRequest(lyricUrl);
-        
-        // 解析JSON响应，获取歌词
-        // 这里使用简单的字符串处理，实际应使用JSON解析库
-        int lrcStart = response.indexOf("\"lyric\":\"");
-        if (lrcStart > 0) {
-            lrcStart += 9;
-            int lrcEnd = response.indexOf("\"}", lrcStart);
-            if (lrcEnd > lrcStart) {
-                String lyric = response.substring(lrcStart, lrcEnd);
-                // 解码转义字符
-                lyric = lyric.replace("\\n", "\n").replace("\\r", "\r").replace("\\\"", "\"");
-                return lyric;
-            }
-        }
-        
-        return null;
+        return neteaseApiClient.getLyricById(songId);
     }
     
-    /**
-     * 发送GET请求
-     * 
-     * @param url 请求URL
-     * @return 响应内容
-     */
-    private String sendGetRequest(String url) throws Exception {
-        URL obj = new URL(url);
-        HttpURLConnection con = (HttpURLConnection) obj.openConnection();
-        con.setRequestMethod("GET");
-        con.setRequestProperty("User-Agent",
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36");
-        con.setRequestProperty("Referer", "http://music.163.com");
-        con.setRequestProperty("Host", "music.163.com");
-        
-        int responseCode = con.getResponseCode();
-        if (responseCode != HttpURLConnection.HTTP_OK) {
-            logError("GET请求失败，响应码: " + responseCode);
-            return null;
-        }
-        
-        BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream(), StandardCharsets.UTF_8));
-        String inputLine;
-        StringBuilder response = new StringBuilder();
-        
-        while ((inputLine = in.readLine()) != null) {
-            response.append(inputLine);
-        }
-        in.close();
-        
-        return response.toString();
-    }
-    
-    /**
-     * 发送POST请求
-     * 
-     * @param url  请求URL
-     * @param data 请求数据
-     * @return 响应内容
-     */
-    private String sendPostRequest(String url, String data) throws Exception {
-        URL obj = new URL(url);
-        HttpURLConnection con = (HttpURLConnection) obj.openConnection();
-        con.setRequestMethod("POST");
-        con.setRequestProperty("User-Agent",
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36");
-        con.setRequestProperty("Referer", "http://music.163.com");
-        con.setRequestProperty("Host", "music.163.com");
-        con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-        con.setRequestProperty("Content-Length", String.valueOf(data.length()));
-        
-        con.setDoOutput(true);
-        try (DataOutputStream wr = new DataOutputStream(con.getOutputStream())) {
-            wr.writeBytes(data);
-            wr.flush();
-        }
-        
-        int responseCode = con.getResponseCode();
-        if (responseCode != HttpURLConnection.HTTP_OK) {
-            logError("POST请求失败，响应码: " + responseCode);
-            return null;
-        }
-        
-        BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream(), StandardCharsets.UTF_8));
-        String inputLine;
-        StringBuilder response = new StringBuilder();
-        
-        while ((inputLine = in.readLine()) != null) {
-            response.append(inputLine);
-        }
-        in.close();
-        
-        return response.toString();
-    }
+
     
     private String generateMockLyric(String songName, String artistName) {
         StringBuilder lyric = new StringBuilder();
