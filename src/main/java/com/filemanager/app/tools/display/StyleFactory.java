@@ -757,18 +757,6 @@ public class StyleFactory {
         return ComponentFactory.createRefreshButton(handler);
     }
 
-    public static void setBasicStyle(Node node) {
-//        node.setStyle(baseStyle);
-//        if (node instanceof Labeled) {
-//            ((Labeled) node).setTextFill(Color.web(theme.getTextColor()));
-//        }
-//        if (node instanceof Parent) {
-//            for (Node c : ((Parent) node).getChildrenUnmodifiable()) {
-//                setBasicStyle(c);
-//            }
-//        }
-    }
-
     /**
      * 创建统一风格的进度条
      *

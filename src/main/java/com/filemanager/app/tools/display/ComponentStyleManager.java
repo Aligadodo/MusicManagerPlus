@@ -9,7 +9,6 @@
  */
 package com.filemanager.app.tools.display;
 
-import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.*;
@@ -510,406 +509,50 @@ public class ComponentStyleManager {
      * 应用ListView样式
      */
     public static void applyListViewStyle(ListView<?> listView) {
-        // 使用ThemeConfig的透明度计算方法
-        String listBgColor = theme.getListBgColorWithOpacity();
-        String selectedBgColor = theme.getListRowSelectedBgColorWithOpacity(0.6); // 60%透明度
-        String hoverBgColor = theme.getListRowHoverBgColorWithOpacity(0.5); // 50%透明度
-
-        // 拆分CSS样式为多个部分，提高可维护性
-
-        // 1. 基础样式
-
-        String styleBuilder = String.format(
-                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-background-radius: %.1f; -fx-border-radius: %.1f;\n",
-                listBgColor, theme.getListBorderColor(), theme.getBorderWidth(), theme.getCornerRadius(), theme.getCornerRadius()
-        ) +
-
-                // 2. 单元格基础样式
-                String.format(
-                        ".list-view .list-cell {\n" +
-                                "    -fx-background-color: transparent;\n" +
-                                "    -fx-text-fill: %s;\n" +
-                                "    -fx-font-family: '%s';\n" +
-                                "    -fx-padding: 8 10;\n" +
-                                "}\n",
-                        theme.getTextPrimaryColor(), theme.getFontFamily()
-                ) +
-
-                // 3. 选中单元格样式
-                String.format(
-                        ".list-view .list-cell:filled:selected {\n" +
-                                "    -fx-background-color: %s;\n" +
-                                "    -fx-text-fill: %s;\n" +
-                                "    -fx-border-color: %s;\n" +
-                                "    -fx-border-width: 2;\n" +
-                                "    -fx-border-radius: %.1f;\n" +
-                                "}\n",
-                        selectedBgColor, theme.getListRowSelectedTextColor(), theme.getBorderColor(), theme.getCornerRadius()
-                ) +
-
-                // 4. 悬停单元格样式
-                String.format(
-                        ".list-view .list-cell:filled:hover {\n" +
-                                "    -fx-background-color: %s;\n" +
-                                "    -fx-text-fill: %s;\n" +
-                                "}\n",
-                        theme.getListRowHoverBgColor(), theme.getTextPrimaryColor()
-                ) +
-
-                // 5. 滚动条样式
-                String.format(
-                        ".list-view .virtual-flow .scroll-bar:vertical,\n" +
-                                ".list-view .virtual-flow .scroll-bar:horizontal {\n" +
-                                "    -fx-background-color: transparent;\n" +
-                                "}\n" +
-                                ".list-view .virtual-flow .scroll-bar .thumb {\n" +
-                                "    -fx-background-color: %s;\n" +
-                                "    -fx-background-radius: 4;\n" +
-                                "}\n" +
-                                ".list-view .virtual-flow .scroll-bar .track {\n" +
-                                "    -fx-background-color: transparent;\n" +
-                                "}",
-                        theme.getTextTertiaryColor()
-                );
-
-        // 设置ListView的样式
-        listView.setStyle(styleBuilder);
+        if (listView == null || theme == null) {
+            return;
+        }
+        com.filemanager.app.tools.display.styles.ListViewStyle.applyStyle(listView, theme);
     }
 
     /**
      * 应用TableView样式
      */
     public static void applyTableViewStyle(TableView<?> tableView) {
-        // 使用ThemeConfig的透明度计算方法
-        String listBgColor = theme.getListBgColorWithOpacity();
-        String headerBgColor = theme.getTableHeaderBgColorWithOpacity(); // 特殊处理：使用比毛玻璃透明度高0.1的透明度
-        String selectedBgColor = theme.getListRowSelectedBgColorWithOpacity(0.8); // 80%透明度
-        String hoverBgColor = theme.getListRowHoverBgColorWithOpacity(0.6); // 60%透明度
-
-        // 确保数值类型正确，避免格式化错误
-        double borderWidth = theme.getBorderWidth();
-        double cornerRadius = theme.getCornerRadius();
-
-        // 拆分CSS样式为多个部分，提高可维护性
-
-        // 1. 基础样式
-
-        String styleBuilder = String.format(
-                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-background-radius: %.1f; -fx-border-radius: %.1f;\n",
-                listBgColor, theme.getListBorderColor(), borderWidth, cornerRadius, cornerRadius
-        ) +
-
-                // 2. 表头背景样式
-                String.format(
-                        ".table-view .column-header-background {\n" +
-                                "    -fx-background-color: %s;\n" +
-                                "    -fx-border-color: %s;\n" +
-                                "    -fx-border-width: 0 0 %.1f 0;\n" +
-                                "    -fx-background-radius: %.1f %.1f 0 0;\n" +
-                                "}\n",
-                        headerBgColor, theme.getBorderColor(), borderWidth, cornerRadius, cornerRadius
-                ) +
-
-                // 3. 表头填充样式
-                ".table-view .column-header-background .filler {\n" +
-                "    -fx-background-color: transparent;\n" +
-                "}\n" +
-
-                // 4. 列头样式
-                String.format(
-                        ".table-view .column-header {\n" +
-                                "    -fx-background-color: transparent;\n" +
-                                "    -fx-border-color: %s;\n" +
-                                "    -fx-border-width: 0 %.1f 0 0;\n" +
-                                "}\n",
-                        theme.getBorderColor(), borderWidth
-                ) +
-
-                // 5. 列头标签样式
-                String.format(
-                        ".table-view .column-header .label {\n" +
-                                "    -fx-text-fill: %s;\n" +
-                                "    -fx-font-family: '%s';\n" +
-                                "    -fx-font-weight: bold;\n" +
-                                "    -fx-padding: 12 10;\n" +
-                                "}\n",
-                        theme.getTextPrimaryColor(), theme.getFontFamily()
-                ) +
-
-                // 6. 行单元格样式
-                ".table-view .table-row-cell {\n" +
-                "    -fx-background-color: transparent;\n" +
-                "    -fx-border-color: transparent;\n" +
-                "    -fx-border-width: 1 0 0 0;\n" +
-                "}\n" +
-                ".table-view .table-row-cell:filled {\n" +
-                "    -fx-background-color: transparent;\n" +
-                "}\n" +
-
-                // 7. 选中行样式
-                String.format(
-                        ".table-view .table-row-cell:filled:selected {\n" +
-                                "    -fx-background-color: %s;\n" +
-                                "}\n",
-                        selectedBgColor
-                ) +
-
-                // 8. 悬停行样式
-                String.format(
-                        ".table-view .table-row-cell:filled:hover {\n" +
-                                "    -fx-background-color: %s;\n" +
-                                "}\n",
-                        hoverBgColor
-                ) +
-
-                // 9. 单元格样式
-                String.format(
-                        ".table-view .table-cell {\n" +
-                                "    -fx-text-fill: %s;\n" +
-                                "    -fx-font-family: '%s';\n" +
-                                "    -fx-padding: 10 10;\n" +
-                                "    -fx-border-color: transparent;\n" +
-                                "}\n",
-                        theme.getTextPrimaryColor(), theme.getFontFamily()
-                ) +
-
-                // 10. 滚动条样式
-                String.format(
-                        ".table-view .virtual-flow .scroll-bar:vertical,\n" +
-                                ".table-view .virtual-flow .scroll-bar:horizontal {\n" +
-                                "    -fx-background-color: transparent;\n" +
-                                "}\n" +
-                                ".table-view .virtual-flow .scroll-bar .thumb {\n" +
-                                "    -fx-background-color: %s;\n" +
-                                "    -fx-background-radius: 4;\n" +
-                                "}\n" +
-                                ".table-view .virtual-flow .scroll-bar .track {\n" +
-                                "    -fx-background-color: transparent;\n" +
-                                "}",
-                        theme.getTextTertiaryColor()
-                );
-
-        // 设置TableView的样式
-        tableView.setStyle(styleBuilder);
+        if (tableView == null || theme == null) {
+            return;
+        }
+        com.filemanager.app.tools.display.styles.TableViewStyle.applyStyle(tableView, theme);
     }
 
     /**
      * 应用TreeTableView样式
      */
     public static void applyTreeTableViewStyle(TreeTableView<?> treeTableView) {
-        // 使用ThemeConfig的透明度计算方法
-        String listBgColor = theme.getListBgColorWithOpacity();
-        String headerBgColor = theme.getTableHeaderBgColorWithOpacity(); // 特殊处理：使用比毛玻璃透明度高0.1的透明度
-        String selectedBgColor = theme.getListRowSelectedBgColorWithOpacity(0.8); // 80%透明度
-        String hoverBgColor = theme.getListRowHoverBgColorWithOpacity(0.6); // 60%透明度
-
-        // 确保数值类型正确，避免格式化错误
-        double borderWidth = theme.getBorderWidth();
-        double cornerRadius = theme.getCornerRadius();
-
-        // 设置TreeTableView的完整样式，包括背景、边框、表头、单元格等
-        treeTableView.setStyle(String.format(
-                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-background-radius: %.1f; -fx-border-radius: %.1f;\n" +
-                        ".tree-table-view .column-header-background {\n" +
-                        "    -fx-background-color: %s;\n" +
-                        "    -fx-border-color: %s;\n" +
-                        "    -fx-border-width: 0 0 %.1f 0;\n" +
-                        "    -fx-background-radius: %.1f %.1f 0 0;\n" +
-                        "}\n" +
-                        ".tree-table-view .column-header-background .filler {\n" +
-                        "    -fx-background-color: transparent;\n" +
-                        "}\n" +
-                        ".tree-table-view .column-header {\n" +
-                        "    -fx-background-color: transparent;\n" +
-                        "    -fx-border-color: %s;\n" +
-                        "    -fx-border-width: 0 %.1f 0 0;\n" +
-                        "}\n" +
-                        ".tree-table-view .column-header .label {\n" +
-                        "    -fx-text-fill: %s;\n" +
-                        "    -fx-font-family: '%s';\n" +
-                        "    -fx-font-weight: bold;\n" +
-                        "    -fx-padding: 12 10;\n" +
-                        "}\n" +
-                        ".tree-table-view .tree-table-row-cell {\n" +
-                        "    -fx-background-color: %s;\n" +
-                        "    -fx-border-color: transparent;\n" +
-                        "    -fx-border-width: 1 0 0 0;\n" +
-                        "}\n" +
-                        ".tree-table-view .tree-table-row-cell:filled {\n" +
-                        "    -fx-background-color: %s;\n" +
-                        "}\n" +
-                        ".tree-table-view .tree-table-row-cell:filled:selected {\n" +
-                        "    -fx-background-color: %s;\n" +
-                        "    -fx-table-cell-border-color: transparent;\n" +
-                        "    -fx-border-color: %s;\n" +
-                        "    -fx-border-width: 2;\n" +
-                        "    -fx-border-radius: %.1f;\n" +
-                        "}\n" +
-                        ".tree-table-view .tree-table-row-cell:filled:hover {\n" +
-                        "    -fx-background-color: %s;\n" +
-                        "    -fx-table-cell-border-color: transparent;\n" +
-                        "    -fx-border-color: transparent;\n" +
-                        "}\n" +
-                        ".tree-table-view .tree-table-row-cell:focused {\n" +
-                        "    -fx-background-color: %s;\n" +
-                        "    -fx-table-cell-border-color: transparent;\n" +
-                        "    -fx-border-color: %s;\n" +
-                        "    -fx-border-width: 2;\n" +
-                        "    -fx-border-radius: %.1f;\n" +
-                        "}\n" +
-                        ".tree-table-view .tree-table-row-cell:focused:selected {\n" +
-                        "    -fx-background-color: %s;\n" +
-                        "    -fx-table-cell-border-color: transparent;\n" +
-                        "    -fx-border-color: %s;\n" +
-                        "    -fx-border-width: 2;\n" +
-                        "    -fx-border-radius: %.1f;\n" +
-                        "}\n" +
-                        ".tree-table-view .tree-table-cell {\n" +
-                        "    -fx-text-fill: %s;\n" +
-                        "    -fx-font-family: '%s';\n" +
-                        "    -fx-padding: 10 10;\n" +
-                        "    -fx-border-color: transparent;\n" +
-                        "    -fx-alignment: center-left;\n" +
-                        "}\n" +
-                        ".tree-table-view .tree-table-cell:selected {\n" +
-                        "    -fx-text-fill: %s;\n" +
-                        "    -fx-background-color: transparent;\n" +
-                        "}\n" +
-                        ".tree-table-view .tree-table-cell:focused {\n" +
-                        "    -fx-text-fill: %s;\n" +
-                        "    -fx-background-color: transparent;\n" +
-                        "}\n" +
-                        ".tree-table-view .virtual-flow .scroll-bar:vertical,\n" +
-                        ".tree-table-view .virtual-flow .scroll-bar:horizontal {\n" +
-                        "    -fx-background-color: transparent;\n" +
-                        "}\n" +
-                        ".tree-table-view .virtual-flow .scroll-bar .thumb {\n" +
-                        "    -fx-background-color: %s;\n" +
-                        "    -fx-background-radius: 4;\n" +
-                        "}\n" +
-                        ".tree-table-view .virtual-flow .scroll-bar .track {\n" +
-                        "    -fx-background-color: transparent;\n" +
-                        "}\n" +
-                        ".tree-table-view .virtual-flow .scroll-bar .increment-button,\n" +
-                        ".tree-table-view .virtual-flow .scroll-bar .decrement-button {\n" +
-                        "    -fx-background-color: transparent;\n" +
-                        "    -fx-shape: none;\n" +
-                        "    -fx-padding: 0;\n" +
-                        "}",
-                listBgColor, theme.getListBorderColor(), borderWidth, cornerRadius, cornerRadius,
-                headerBgColor, theme.getBorderColor(), borderWidth, cornerRadius,
-                theme.getBorderColor(), borderWidth,
-                theme.getTextPrimaryColor(), theme.getFontFamily(),
-                selectedBgColor, theme.getBorderColor(), cornerRadius,
-                hoverBgColor,
-                selectedBgColor, theme.getBorderColor(), cornerRadius,
-                selectedBgColor, theme.getBorderColor(), cornerRadius,
-                theme.getTextPrimaryColor(), theme.getFontFamily(),
-                theme.getTextPrimaryColor(),
-                theme.getTextPrimaryColor(),
-                theme.getTextTertiaryColor()
-        ));
+        if (treeTableView == null || theme == null) {
+            return;
+        }
+        com.filemanager.app.tools.display.styles.TreeTableViewStyle.applyStyle(treeTableView, theme);
     }
 
     /**
      * 应用TreeView样式
      */
     public static void applyTreeViewStyle(TreeView<?> treeView) {
-        // 为列表背景添加透明度，实现玻璃效果
-        String listBgColor = theme.getListBgColor();
-
-        if (listBgColor.startsWith("#")) {
-            // 将十六进制颜色转换为带透明度的RGBA颜色
-            int alpha = (int) (theme.getGlassOpacity() * 255);
-            String alphaHex = String.format("%02x", alpha);
-            listBgColor = listBgColor + alphaHex;
+        if (treeView == null || theme == null) {
+            return;
         }
-
-        // 设置TreeView的完整样式，包括背景、边框、树节点等
-        treeView.setStyle(String.format(
-                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-background-radius: %.1f; -fx-border-radius: %.1f;\n" +
-                        ".tree-view .tree-cell {\n" +
-                        "    -fx-background-color: transparent;\n" +
-                        "    -fx-text-fill: %s;\n" +
-                        "    -fx-font-family: '%s';\n" +
-                        "    -fx-padding: 6 10;\n" +
-                        "}\n" +
-                        ".tree-view .tree-cell:filled:selected {\n" +
-                        "    -fx-background-color: %s;\n" +
-                        "    -fx-text-fill: %s;\n" +
-                        "}\n" +
-                        ".tree-view .tree-cell:filled:hover {\n" +
-                        "    -fx-background-color: %s;\n" +
-                        "    -fx-text-fill: %s;\n" +
-                        "}\n" +
-                        ".tree-view .virtual-flow .scroll-bar:vertical,\n" +
-                        ".tree-view .virtual-flow .scroll-bar:horizontal {\n" +
-                        "    -fx-background-color: transparent;\n" +
-                        "}\n" +
-                        ".tree-view .virtual-flow .scroll-bar .thumb {\n" +
-                        "    -fx-background-color: %s;\n" +
-                        "    -fx-background-radius: 4;\n" +
-                        "}\n" +
-                        ".tree-view .virtual-flow .scroll-bar .track {\n" +
-                        "    -fx-background-color: transparent;\n" +
-                        "}\n" +
-                        ".tree-view .check-box {\n" +
-                        "    -fx-text-fill: %s;\n" +
-                        "}\n" +
-                        ".tree-view .check-box .box {\n" +
-                        "    -fx-background-color: %s;\n" +
-                        "    -fx-border-color: %s;\n" +
-                        "    -fx-border-width: %.1f;\n" +
-                        "    -fx-border-radius: 3;\n" +
-                        "}\n" +
-                        ".tree-view .check-box:selected .mark {\n" +
-                        "    -fx-background-color: %s;\n" +
-                        "}",
-                listBgColor, theme.getListBorderColor(), theme.getBorderWidth(), theme.getCornerRadius(), theme.getCornerRadius(),
-                theme.getTextPrimaryColor(), theme.getFontFamily(),
-                theme.getListRowSelectedBgColor(), theme.getListRowSelectedTextColor(),
-                theme.getListRowHoverBgColor(), theme.getTextPrimaryColor(),
-                theme.getTextTertiaryColor(),
-                theme.getTextPrimaryColor(),
-                theme.getPanelBgColor(), theme.getBorderColor(), theme.getBorderWidth(),
-                theme.getAccentColor()
-        ));
+        com.filemanager.app.tools.display.styles.TreeViewStyle.applyStyle(treeView, theme);
     }
 
     /**
      * 应用TextArea样式
      */
     public static void applyTextAreaStyle(TextArea textArea) {
-        // 设置TextArea的背景色、边框和字体，与createTextArea保持一致
-        textArea.setStyle(String.format(
-                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f; -fx-background-radius: %.1f;\n" +
-                        "-fx-text-fill: %s; -fx-font-family: '%s'; -fx-font-size: %.1f;\n" +
-                        ".text-area .scroll-pane {\n" +
-                        "    -fx-background-color: transparent;\n" +
-                        "}\n" +
-                        ".text-area .scroll-pane .viewport {\n" +
-                        "    -fx-background-color: transparent;\n" +
-                        "}\n" +
-                        ".text-area .scroll-pane .content {\n" +
-                        "    -fx-background-color: transparent;\n" +
-                        "}\n" +
-                        ".text-area .scroll-bar:vertical {\n" +
-                        "    -fx-background-color: transparent;\n" +
-                        "}\n" +
-                        ".text-area .scroll-bar:horizontal {\n" +
-                        "    -fx-background-color: transparent;\n" +
-                        "}\n" +
-                        ".text-area .scroll-bar .thumb {\n" +
-                        "    -fx-background-color: %s;\n" +
-                        "    -fx-background-radius: 4;\n" +
-                        "}\n" +
-                        ".text-area .scroll-bar .track {\n" +
-                        "    -fx-background-color: transparent;\n" +
-                        "}",
-                theme.getListBgColor(), theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius(), theme.getCornerRadius(),
-                theme.getTextPrimaryColor(), theme.getFontFamily(), theme.getFontSize(),
-                theme.getTextTertiaryColor()
-        ));
+        if (textArea == null || theme == null) {
+            return;
+        }
+        com.filemanager.app.tools.display.styles.TextAreaStyle.applyStyle(textArea, theme);
     }
 
     /**
@@ -1106,23 +749,51 @@ public class ComponentStyleManager {
         ));
     }
 
-    // ==================== 颜色对比度计算工具方法 ====================
+    /**
+     * 提取父容器的背景颜色
+     */
+    private static String extractBackgroundColor(Node node) {
+        if (node == null) {
+            return theme.getBgColor(); // 默认返回主题背景色
+        }
+
+        String style = node.getStyle();
+        if (style.contains("-fx-background-color:")) {
+            // 提取背景颜色值
+            int startIndex = style.indexOf("-fx-background-color:") + "-fx-background-color:".length();
+            int endIndex = style.indexOf(";" , startIndex);
+            if (endIndex > startIndex) {
+                return style.substring(startIndex, endIndex).trim();
+            }
+        }
+
+        // 递归向上查找
+        return extractBackgroundColor(node.getParent());
+    }
 
     /**
-     * 根据背景颜色自动计算合适的文本颜色
-     * @param backgroundColor 背景颜色字符串（支持#RRGGBB或#RRGGBBAA格式）
-     * @return 适合的文本颜色字符串
+     * 根据背景颜色计算对比文本颜色
      */
-    public static String getContrastTextColor(String backgroundColor) {
-        if (backgroundColor == null || backgroundColor.isEmpty() || "transparent".equalsIgnoreCase(backgroundColor)) {
+    private static String getContrastTextColor(String bgColor) {
+        // 默认返回主题主要文本颜色
+        if (bgColor == null || bgColor.isEmpty()) {
+            return theme.getTextPrimaryColor();
+        }
+
+        // 处理透明背景情况
+        if (bgColor.equals("transparent")) {
             return theme.getTextPrimaryColor();
         }
 
         try {
-            Color bgColor = Color.web(backgroundColor);
-            double brightness = calculateColorBrightness(bgColor);
-            // 根据亮度返回对比色：亮背景用深色文本，暗背景用浅色文本
-            return brightness > 0.5 ? theme.getTextPrimaryColor() : "#ffffff";
+            // 解析颜色
+            Color color = Color.web(bgColor);
+
+            // 计算亮度
+            double brightness = color.getBrightness();
+
+            // 根据亮度返回对比文本颜色
+            return brightness > 0.5 ? theme.getTextPrimaryColor() : theme.getTextPrimaryColor();
         } catch (Exception e) {
             // 如果颜色解析失败，返回默认文本颜色
             return theme.getTextPrimaryColor();
@@ -1130,177 +801,129 @@ public class ComponentStyleManager {
     }
 
     /**
-     * 计算颜色的亮度（0-1，值越大越亮）
-     * @param color 颜色对象
-     * @return 亮度值
-     */
-    private static double calculateColorBrightness(Color color) {
-        // 使用相对 luminance 公式计算亮度
-        // 参考：https://www.w3.org/WAI/GL/wiki/Relative_luminance
-        double r = color.getRed();
-        double g = color.getGreen();
-        double b = color.getBlue();
-
-        // 线性化 RGB 值
-        r = r <= 0.03928 ? r / 12.92 : Math.pow((r + 0.055) / 1.055, 2.4);
-        g = g <= 0.03928 ? g / 12.92 : Math.pow((g + 0.055) / 1.055, 2.4);
-        b = b <= 0.03928 ? b / 12.92 : Math.pow((b + 0.055) / 1.055, 2.4);
-
-        // 计算相对亮度
-        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    }
-
-    /**
-     * 从组件样式中提取背景颜色
-     * @param node 组件节点
-     * @return 背景颜色字符串
-     */
-    private static String extractBackgroundColor(Node node) {
-        if (node == null) {
-            return null;
-        }
-
-        String style = node.getStyle();
-        if (style == null || style.isEmpty()) {
-            return null;
-        }
-
-        // 从样式字符串中提取背景颜色
-        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("-fx-background-color:\\s*([^;]+);");
-        java.util.regex.Matcher matcher = pattern.matcher(style);
-        if (matcher.find()) {
-            return matcher.group(1).trim();
-        }
-
-        return null;
-    }
-
-    /**
      * 检查组件是否标记为主题独立
-     * @param node 组件节点
-     * @return 是否为主题独立
      */
     private static boolean isThemeIndependent(Node node) {
-        if (node == null) {
-            return false;
-        }
-
-        // 检查组件的样式是否包含主题独立标记
         String style = node.getStyle();
         return style != null && style.contains("-fx-theme-independent: true");
     }
 
     /**
-     * 为组件添加主题独立标记
-     * @param node 组件节点
+     * 为单个组件应用主题样式（外部调用入口）
      */
-    public static void markAsThemeIndependent(Node node) {
-        if (node == null) {
+    public static void applyThemeStyle(Node node) {
+        if (node == null || theme == null) {
             return;
         }
 
-        String currentStyle = node.getStyle();
-        if (!currentStyle.contains("-fx-theme-independent: true")) {
-            node.setStyle(currentStyle + " -fx-theme-independent: true;");
+        // 根据组件类型应用不同的样式
+        if (node instanceof Button) {
+            applyLabeledStyle((Button) node);
+        } else if (node instanceof Label) {
+            applyLabeledStyle((Label) node);
+        } else if (node instanceof TextField) {
+            applyTextInputControlStyle((TextField) node);
+        } else if (node instanceof PasswordField) {
+            applyTextInputControlStyle((PasswordField) node);
+        } else if (node instanceof ComboBox) {
+            applyComboBoxStyle((ComboBox<?>) node);
+        } else if (node instanceof CheckBox) {
+            applyCheckBoxStyle((CheckBox) node);
+        } else if (node instanceof RadioButton) {
+            applyRadioButtonStyle((RadioButton) node);
+        } else if (node instanceof ToggleButton) {
+            applyToggleButtonStyle((ToggleButton) node);
+        } else if (node instanceof VBox) {
+            applyVBoxStyle((VBox) node);
+        } else if (node instanceof HBox) {
+            applyHBoxStyle((HBox) node);
+        } else if (node instanceof BorderPane) {
+            applyBorderPaneStyle((BorderPane) node);
+        } else if (node instanceof GridPane) {
+            applyGridPaneStyle((GridPane) node);
+        } else if (node instanceof StackPane) {
+            applyStackPaneStyle((StackPane) node);
+        } else if (node instanceof ScrollPane) {
+            applyScrollPaneStyle((ScrollPane) node);
+        } else if (node instanceof TabPane) {
+            applyTabPaneStyle((TabPane) node);
+        } else if (node instanceof TitledPane) {
+            applyTitledPaneStyle((TitledPane) node);
+        } else if (node instanceof Separator) {
+            applySeparatorStyle((Separator) node);
+        } else if (node instanceof ProgressBar) {
+            applyProgressBarStyle((ProgressBar) node);
+        } else if (node instanceof ListView) {
+            applyListViewStyle((ListView<?>) node);
+        } else if (node instanceof TableView) {
+            applyTableViewStyle((TableView<?>) node);
+        } else if (node instanceof TreeTableView) {
+            applyTreeTableViewStyle((TreeTableView<?>) node);
+        } else if (node instanceof TreeView) {
+            applyTreeViewStyle((TreeView<?>) node);
+        } else if (node instanceof TextArea) {
+            applyTextAreaStyle((TextArea) node);
         }
     }
 
     /**
+     * 获取当前主题配置
+     */
+    public static ThemeConfig getTheme() {
+        return theme;
+    }
+
+    /**
      * 设置面板的基本样式
-     * @param region 区域组件
      */
     public static void setBasicStyle(Region region) {
         if (region == null || theme == null) {
             return;
         }
-
-        // 为面板背景添加透明度，实现玻璃效果
-        String panelBgColor = theme.getPanelBgColor();
-        // 特殊处理transparent关键字，无论是否带有#前缀或被截断为transp
-        if (panelBgColor != null && !"transparent".equalsIgnoreCase(panelBgColor) && !"#transparent".equalsIgnoreCase(panelBgColor) && !"transp".equalsIgnoreCase(panelBgColor) && !"#transp".equalsIgnoreCase(panelBgColor) && panelBgColor.startsWith("#")) {
-            // 将十六进制颜色转换为带透明度的RGBA颜色
-            int alpha = (int) (theme.getGlassOpacity() * 255);
-            String alphaHex = String.format("%02x", alpha);
-            panelBgColor = panelBgColor + alphaHex;
-        }
-
-        // 设置面板的基本样式
         region.setStyle(String.format(
-                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-background-radius: %.1f; -fx-border-radius: %.1f;",
-                panelBgColor, theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius(), theme.getCornerRadius()
+                "-fx-background-color: transparent; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f;",
+                theme.getCornerRadius(), theme.getTextPrimaryColor(), theme.getBorderColor(), theme.getBorderWidth()
         ));
     }
 
     /**
      * 设置菜单和菜单项的样式
-     * @param menuBar 菜单栏组件
      */
     public static void setMenuStyle(MenuBar menuBar) {
         if (menuBar == null || theme == null) {
             return;
         }
-
-        // 设置菜单栏的基本样式
         menuBar.setStyle(String.format(
-                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: 0 0 %.1f 0;",
-                theme.getPanelBgColor(), theme.getBorderColor(), theme.getBorderWidth()
+                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: 0 0 %.1f 0; -fx-text-fill: %s;",
+                theme.getPanelBgColor(), theme.getBorderColor(), theme.getBorderWidth(), theme.getTextPrimaryColor()
         ));
-
-        // 递归更新所有菜单项的样式
-        for (Menu menu : menuBar.getMenus()) {
-            updateMenuItemStyle(menu);
-        }
     }
 
     /**
-     * 更新菜单项的样式
-     * @param menuItem 菜单项组件
-     */
-    private static void updateMenuItemStyle(MenuItem menuItem) {
-        if (menuItem == null || theme == null) {
-            return;
-        }
-
-        // 设置菜单项的样式
-        menuItem.setStyle(String.format(
-                "-fx-text-fill: %s; -fx-font-family: '%s';",
-                theme.getTextPrimaryColor(), theme.getFontFamily()
-        ));
-
-        // 如果是子菜单，递归更新
-        if (menuItem instanceof Menu) {
-            Menu menu = (Menu) menuItem;
-            for (MenuItem subMenuItem : menu.getItems()) {
-                updateMenuItemStyle(subMenuItem);
-            }
-        }
-    }
-
-    /**
-     * 更新树节点的样式
-     * @param node 节点组件
-     * @param selected 是否选中
+     * 更新树节点样式
      */
     public static void updateTreeItemStyle(Node node, boolean selected) {
         if (node == null || theme == null) {
             return;
         }
-
-        // 提取背景颜色并计算对比文本颜色
-        String bgColor = extractBackgroundColor(node);
-        String textColor = getContrastTextColor(bgColor);
-
-        // 根据选中状态设置不同的样式
         if (selected) {
             node.setStyle(String.format(
-                    "-fx-background-color: %s; -fx-text-fill: %s; -fx-font-family: '%s';",
-                    theme.getListRowSelectedBgColor(), theme.getListRowSelectedTextColor(), theme.getFontFamily()
+                    "-fx-background-color: %s; -fx-text-fill: %s;",
+                    theme.getListRowSelectedBgColor(), theme.getListRowSelectedTextColor()
             ));
         } else {
             node.setStyle(String.format(
-                    "-fx-background-color: transparent; -fx-text-fill: %s; -fx-font-family: '%s';",
-                    textColor, theme.getFontFamily()
+                    "-fx-background-color: transparent; -fx-text-fill: %s;",
+                    theme.getTextPrimaryColor()
             ));
         }
+    }
+
+    /**
+     * 手动触发主题刷新（当主题配置变更时调用）
+     */
+    public static void refreshTheme() {
+        // 主题配置已在 ThemeManager 的监听器中更新
+        // 此方法留作手动触发刷新的入口
     }
 }
