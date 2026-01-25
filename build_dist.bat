@@ -96,18 +96,18 @@ echo [8/8] 生成启动脚本...
     echo REM 设置控制台字体以支持中文
     echo set "PYTHONIOENCODING=utf-8"
     echo cd /d "%%~dp0"
-    echo 正在启动 Echo Music Manager...
-    echo.
+    echo echo 正在启动 Echo Music Manager...
+    echo echo.
     echo REM 启动命令 - 添加JavaFX参数以解决黑屏问题
     echo "jre\bin\java.exe" -Xms1g -Xmx2g -XX:+HeapDumpOnOutOfMemoryError ^
     echo  -Dprism.order=sw ^
     echo  -Dprism.forceGPU=false ^
     echo  -Djavafx.animation.fullspeed=true ^
     echo  -jar "bin\EchoMusicManager.jar"
-    echo.
+    echo echo.
     echo if %%errorlevel%% neq 0 ^(
-    echo     echo 程序异常退出，错误码: %%errorlevel%%
-    echo     pause
+    echo     echo echo 程序异常退出，错误码: %%errorlevel%%
+    echo     echo pause
     echo ^)
 ) > "dist\点此启动软件.bat"
 
