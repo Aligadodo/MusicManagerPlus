@@ -20,8 +20,11 @@ import com.filemanager.util.file.FileExistsChecker;
 import com.google.common.collect.Lists;
 import javafx.scene.Node;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.Tooltip;
+import com.filemanager.app.tools.display.FloatingTooltip;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -45,8 +48,17 @@ public class AudioConverterStrategy extends AbstractFfmpegStrategy {
 
         // 初始化"不处理音轨转换"复选框
         chkSkipCueTracks = new CheckBox("当音频文件大于100MB且同目录下有.cue文件时，跳过处理");
-        chkSkipCueTracks.setTooltip(new javafx.scene.control.Tooltip("当启用此选项时，对于大于100MB的音频文件，如果同目录下存在.cue文件，则会跳过转换处理"));
+        chkSkipCueTracks.setTooltip(new Tooltip("当启用此选项时，对于大于100MB的音频文件，如果同目录下存在.cue文件，则会跳过转换处理"));
         chkSkipCueTracks.setSelected(true); // 默认开启
+        
+        // 添加悬浮提示信息
+        ArrayList<String> skipCueTooltipLines = new ArrayList<>();
+        skipCueTooltipLines.add("参数名称：智能跳过处理");
+        skipCueTooltipLines.add("参数用途：用于跳过处理可能是CD镜像的大音频文件");
+        skipCueTooltipLines.add("示例：");
+        skipCueTooltipLines.add("- 启用：当音频文件大于100MB且同目录下有.cue文件时，跳过处理");
+        skipCueTooltipLines.add("- 禁用：对所有音频文件进行转换处理");
+        FloatingTooltip.bindToNode(chkSkipCueTracks, "音频转换设置", skipCueTooltipLines);
     }
 
     @Override

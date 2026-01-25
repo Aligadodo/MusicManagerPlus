@@ -26,6 +26,7 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.TextField;
 import javafx.scene.control.Tooltip;
 import javafx.stage.DirectoryChooser;
+import com.filemanager.app.tools.display.FloatingTooltip;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import java.io.File;
@@ -66,13 +67,41 @@ public class CueSplitterStrategy extends AbstractFfmpegStrategy {
         ));
         cbAfterSplitAction.setTooltip(new Tooltip("选择切分完成后对原始文件的处理方式"));
         cbAfterSplitAction.getSelectionModel().select(0);
+        
+        // 添加悬浮提示信息
+        ArrayList<String> afterSplitTooltipLines = new ArrayList<>();
+        afterSplitTooltipLines.add("参数名称：切分后操作");
+        afterSplitTooltipLines.add("参数用途：用于设置切分完成后对原始文件的处理方式");
+        afterSplitTooltipLines.add("示例：");
+        afterSplitTooltipLines.add("- 什么都不做：保持原始文件不变");
+        afterSplitTooltipLines.add("- 删除原始文件：切分后删除原始文件");
+        afterSplitTooltipLines.add("- 归档原始文件：切分后将原始文件移动到归档目录");
+        FloatingTooltip.bindToNode(cbAfterSplitAction, "CUE分轨设置", afterSplitTooltipLines);
 
         chkEnableArchive = new CheckBox("启用归档目录");
         chkEnableArchive.setTooltip(new Tooltip("启用时，将原始文件移动到指定的归档目录"));
         chkEnableArchive.setSelected(false);
+        
+        // 添加悬浮提示信息
+        ArrayList<String> enableArchiveTooltipLines = new ArrayList<>();
+        enableArchiveTooltipLines.add("参数名称：启用归档目录");
+        enableArchiveTooltipLines.add("参数用途：用于启用或禁用原始文件的归档功能");
+        enableArchiveTooltipLines.add("示例：");
+        enableArchiveTooltipLines.add("- 启用：切分后将原始文件移动到指定的归档目录");
+        enableArchiveTooltipLines.add("- 禁用：不使用归档功能");
+        FloatingTooltip.bindToNode(chkEnableArchive, "CUE分轨设置", enableArchiveTooltipLines);
 
         txtArchiveDir = new TextField();
         txtArchiveDir.setPromptText("归档目录路径");
+        
+        // 添加悬浮提示信息
+        ArrayList<String> archiveDirTooltipLines = new ArrayList<>();
+        archiveDirTooltipLines.add("参数名称：归档目录路径");
+        archiveDirTooltipLines.add("参数用途：用于设置原始文件的归档目录路径");
+        archiveDirTooltipLines.add("示例：");
+        archiveDirTooltipLines.add("- D:/Archive：将原始文件移动到D盘的Archive文件夹");
+        archiveDirTooltipLines.add("- E:/Music/Backup：将原始文件移动到E盘的Music/Backup文件夹");
+        FloatingTooltip.bindToNode(txtArchiveDir, "CUE分轨设置", archiveDirTooltipLines);
 
         btnPickArchiveDir = StyleFactory.createActionButton("选择路径", "", () -> {
             DirectoryChooser dc = new DirectoryChooser();

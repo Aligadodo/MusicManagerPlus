@@ -1,5 +1,6 @@
 package com.filemanager.app.components;
 
+import com.filemanager.app.tools.display.FloatingTooltip;
 import com.filemanager.strategy.cleanup.CleanupMode;
 import com.filemanager.strategy.cleanup.DeleteMethod;
 import com.filemanager.strategy.cleanup.FileSizeRange;
@@ -11,6 +12,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.Separator;
 import javafx.scene.control.TextField;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.GridPane;
@@ -19,6 +21,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 
 import java.io.File;
+import java.util.ArrayList;
 
 public class CleanupUIConfig {
     // --- UI Components ---
@@ -41,19 +44,58 @@ public class CleanupUIConfig {
         cbMode = new JFXComboBox<>(FXCollections.observableArrayList(CleanupMode.values()));
         cbMode.getSelectionModel().select(CleanupMode.DEDUP_FILES);
         cbMode.setTooltip(new Tooltip("选择清理的逻辑规则"));
+        
+        // 添加悬浮提示信息
+        ArrayList<String> modeTooltipLines = new ArrayList<>();
+        modeTooltipLines.add("参数名称：清理模式");
+        modeTooltipLines.add("参数用途：用于选择清理的逻辑规则");
+        modeTooltipLines.add("示例：");
+        modeTooltipLines.add("- 文件去重：识别并清理重复文件");
+        modeTooltipLines.add("- 文件夹去重：识别并清理重复文件夹");
+        modeTooltipLines.add("- 清理空目录：清理所有空目录");
+        modeTooltipLines.add("- 直接清理：直接删除符合条件的文件");
+        FloatingTooltip.bindToNode(cbMode, "文件清理设置", modeTooltipLines);
 
         cbMethod = new JFXComboBox<>(FXCollections.observableArrayList(DeleteMethod.values()));
         cbMethod.getSelectionModel().select(DeleteMethod.PSEUDO_DELETE);
         cbMethod.setTooltip(new Tooltip("选择删除的方式"));
+        
+        // 添加悬浮提示信息
+        ArrayList<String> methodTooltipLines = new ArrayList<>();
+        methodTooltipLines.add("参数名称：删除方式");
+        methodTooltipLines.add("参数用途：用于选择删除的方式");
+        methodTooltipLines.add("示例：");
+        methodTooltipLines.add("- 伪删除：将文件移动到回收站");
+        methodTooltipLines.add("- 直接删除：直接删除文件，不可恢复");
+        methodTooltipLines.add("- 可回滚删除：删除后可恢复");
+        FloatingTooltip.bindToNode(cbMethod, "文件清理设置", methodTooltipLines);
 
         txtTrashPath = new TextField(".EchoTrash");
         txtTrashPath.setPromptText("回收站位置");
         txtTrashPath.setTooltip(new Tooltip("输入相对名称（如 .del）将在各盘根目录创建；输入绝对路径（如 D:/Trash）则统一移动到该处。"));
+        
+        // 添加悬浮提示信息
+        ArrayList<String> trashPathTooltipLines = new ArrayList<>();
+        trashPathTooltipLines.add("参数名称：回收站路径");
+        trashPathTooltipLines.add("参数用途：用于设置回收站的位置");
+        trashPathTooltipLines.add("示例：");
+        trashPathTooltipLines.add("- 相对路径：.EchoTrash（在各盘根目录创建）");
+        trashPathTooltipLines.add("- 绝对路径：D:/Trash（统一移动到该处）");
+        FloatingTooltip.bindToNode(txtTrashPath, "文件清理设置", trashPathTooltipLines);
 
         chkKeepLargest = new CheckBox("保留体积/质量最佳的副本");
         chkKeepLargest.setSelected(true);
         chkKeepLargest.visibleProperty().bind(cbMode.getSelectionModel().selectedItemProperty().isEqualTo(CleanupMode.DEDUP_FILES));
         chkKeepLargest.setTooltip(new Tooltip("勾选：保留最大的文件；不勾选：保留名字最短（通常是原件）的文件"));
+        
+        // 添加悬浮提示信息
+        ArrayList<String> keepLargestTooltipLines = new ArrayList<>();
+        keepLargestTooltipLines.add("参数名称：保留体积/质量最佳的副本");
+        keepLargestTooltipLines.add("参数用途：用于控制去重时保留的文件版本");
+        keepLargestTooltipLines.add("示例：");
+        keepLargestTooltipLines.add("- 选中：保留最大的文件");
+        keepLargestTooltipLines.add("- 不选中：保留名字最短（通常是原件）的文件");
+        FloatingTooltip.bindToNode(chkKeepLargest, "文件清理设置", keepLargestTooltipLines);
 
         chkKeepEarliest = new CheckBox("保留日期最早/最晚的副本");
         chkKeepEarliest.setSelected(true);
@@ -62,21 +104,57 @@ public class CleanupUIConfig {
                 .and(cbMode.getSelectionModel().selectedItemProperty().isNotEqualTo(CleanupMode.DIRECT_CLEANUP));
         chkKeepEarliest.visibleProperty().bind(showKeepEarliest);
         chkKeepEarliest.setTooltip(new Tooltip("勾选：保留日期最早的文件(夹)；不勾选：保留最新的文件(夹)"));
+        
+        // 添加悬浮提示信息
+        ArrayList<String> keepEarliestTooltipLines = new ArrayList<>();
+        keepEarliestTooltipLines.add("参数名称：保留日期最早/最晚的副本");
+        keepEarliestTooltipLines.add("参数用途：用于控制去重时保留的文件日期版本");
+        keepEarliestTooltipLines.add("示例：");
+        keepEarliestTooltipLines.add("- 选中：保留日期最早的文件(夹)");
+        keepEarliestTooltipLines.add("- 不选中：保留最新的文件(夹)");
+        FloatingTooltip.bindToNode(chkKeepEarliest, "文件清理设置", keepEarliestTooltipLines);
 
         txtKeepExt = new TextField("wav");
         txtKeepExt.setPromptText("优先保留后缀");
         txtKeepExt.visibleProperty().bind(cbMode.getSelectionModel().selectedItemProperty().isEqualTo(CleanupMode.DEDUP_FILES));
+        
+        // 添加悬浮提示信息
+        ArrayList<String> keepExtTooltipLines = new ArrayList<>();
+        keepExtTooltipLines.add("参数名称：优先后缀");
+        keepExtTooltipLines.add("参数用途：用于设置去重时优先保留的文件后缀");
+        keepExtTooltipLines.add("示例：");
+        keepExtTooltipLines.add("- wav：优先保留wav格式的文件");
+        keepExtTooltipLines.add("- mp3：优先保留mp3格式的文件");
+        FloatingTooltip.bindToNode(txtKeepExt, "文件清理设置", keepExtTooltipLines);
 
         // 文件名预处理选项初始化
         chkPreprocessLower = new CheckBox("文件名转小写");
         chkPreprocessLower.setSelected(true);
         chkPreprocessLower.visibleProperty().bind(cbMode.getSelectionModel().selectedItemProperty().isEqualTo(CleanupMode.DEDUP_FILES));
         chkPreprocessLower.setTooltip(new Tooltip("将文件名转换为小写后进行比较"));
+        
+        // 添加悬浮提示信息
+        ArrayList<String> preprocessLowerTooltipLines = new ArrayList<>();
+        preprocessLowerTooltipLines.add("参数名称：文件名转小写");
+        preprocessLowerTooltipLines.add("参数用途：用于在去重时将文件名转换为小写后进行比较");
+        preprocessLowerTooltipLines.add("示例：");
+        preprocessLowerTooltipLines.add("- 转换前：TestFile.txt");
+        preprocessLowerTooltipLines.add("- 转换后：testfile.txt");
+        FloatingTooltip.bindToNode(chkPreprocessLower, "文件清理设置", preprocessLowerTooltipLines);
 
         chkPreprocessUpper = new CheckBox("文件名转大写");
         chkPreprocessUpper.setSelected(false);
         chkPreprocessUpper.visibleProperty().bind(cbMode.getSelectionModel().selectedItemProperty().isEqualTo(CleanupMode.DEDUP_FILES));
         chkPreprocessUpper.setTooltip(new Tooltip("将文件名转换为大写后进行比较"));
+        
+        // 添加悬浮提示信息
+        ArrayList<String> preprocessUpperTooltipLines = new ArrayList<>();
+        preprocessUpperTooltipLines.add("参数名称：文件名转大写");
+        preprocessUpperTooltipLines.add("参数用途：用于在去重时将文件名转换为大写后进行比较");
+        preprocessUpperTooltipLines.add("示例：");
+        preprocessUpperTooltipLines.add("- 转换前：TestFile.txt");
+        preprocessUpperTooltipLines.add("- 转换后：TESTFILE.TXT");
+        FloatingTooltip.bindToNode(chkPreprocessUpper, "文件清理设置", preprocessUpperTooltipLines);
 
         // 实现大小写转换的互斥逻辑
         chkPreprocessLower.selectedProperty().addListener((observable, oldValue, newValue) -> {
@@ -95,6 +173,15 @@ public class CleanupUIConfig {
         chkPreprocessSimplified.setSelected(false);
         chkPreprocessSimplified.visibleProperty().bind(cbMode.getSelectionModel().selectedItemProperty().isEqualTo(CleanupMode.DEDUP_FILES));
         chkPreprocessSimplified.setTooltip(new Tooltip("将文件名中的繁体中文转换为简体中文后进行比较"));
+        
+        // 添加悬浮提示信息
+        ArrayList<String> preprocessSimplifiedTooltipLines = new ArrayList<>();
+        preprocessSimplifiedTooltipLines.add("参数名称：文件名转简体中文");
+        preprocessSimplifiedTooltipLines.add("参数用途：用于在去重时将文件名中的繁体中文转换为简体中文后进行比较");
+        preprocessSimplifiedTooltipLines.add("示例：");
+        preprocessSimplifiedTooltipLines.add("- 转换前：測試文件.txt");
+        preprocessSimplifiedTooltipLines.add("- 转换后：测试文件.txt");
+        FloatingTooltip.bindToNode(chkPreprocessSimplified, "文件清理设置", preprocessSimplifiedTooltipLines);
 
         // 文件大小范围选择初始化
         cbSizeRange = new JFXComboBox<>(FXCollections.observableArrayList(FileSizeRange.values()));
@@ -104,12 +191,31 @@ public class CleanupUIConfig {
                 .or(cbMode.getSelectionModel().selectedItemProperty().isEqualTo(CleanupMode.DIRECT_CLEANUP));
         cbSizeRange.visibleProperty().bind(showSizeRange);
         cbSizeRange.setTooltip(new Tooltip("选择要处理的文件大小范围"));
+        
+        // 添加悬浮提示信息
+        ArrayList<String> sizeRangeTooltipLines = new ArrayList<>();
+        sizeRangeTooltipLines.add("参数名称：文件大小范围");
+        sizeRangeTooltipLines.add("参数用途：用于选择要处理的文件大小范围");
+        sizeRangeTooltipLines.add("示例：");
+        sizeRangeTooltipLines.add("- 全部：处理所有大小的文件");
+        sizeRangeTooltipLines.add("- 小于1MB：仅处理小于1MB的文件");
+        sizeRangeTooltipLines.add("- 大于1GB：仅处理大于1GB的文件");
+        FloatingTooltip.bindToNode(cbSizeRange, "文件清理设置", sizeRangeTooltipLines);
 
         // 音频特殊处理选项初始化
         chkAudioSpecial = new CheckBox("音频文件特殊处理");
         chkAudioSpecial.setSelected(true);
         chkAudioSpecial.visibleProperty().bind(cbMode.getSelectionModel().selectedItemProperty().isEqualTo(CleanupMode.DEDUP_FILES));
         chkAudioSpecial.setTooltip(new Tooltip("对音频文件进行特殊处理，确保时间长度一致时优先保留质量较高的文件"));
+        
+        // 添加悬浮提示信息
+        ArrayList<String> audioSpecialTooltipLines = new ArrayList<>();
+        audioSpecialTooltipLines.add("参数名称：音频文件特殊处理");
+        audioSpecialTooltipLines.add("参数用途：用于对音频文件进行特殊处理，确保时间长度一致时优先保留质量较高的文件");
+        audioSpecialTooltipLines.add("示例：");
+        audioSpecialTooltipLines.add("- 处理前：多个相同时长的音频文件");
+        audioSpecialTooltipLines.add("- 处理后：保留音质最好的音频文件");
+        FloatingTooltip.bindToNode(chkAudioSpecial, "文件清理设置", audioSpecialTooltipLines);
     }
 
     public Node getConfigNode() {
@@ -187,8 +293,8 @@ public class CleanupUIConfig {
         advancedOptionsBox.getChildren().addAll(sizeRangeRow, audioSpecialRow);
 
         // 添加分隔线
-        javafx.scene.control.Separator separator1 = new javafx.scene.control.Separator();
-        javafx.scene.control.Separator separator2 = new javafx.scene.control.Separator();
+        Separator separator1 = new Separator();
+        Separator separator2 = new Separator();
 
         // 提示信息
         Label lblHint = new Label("提示：去重仅在同类型文件（如音频vs音频）间进行，会自动忽略 '(1)', 'Copy' 等后缀。");

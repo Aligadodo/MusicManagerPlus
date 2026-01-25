@@ -23,6 +23,7 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
+import com.filemanager.app.tools.display.FloatingTooltip;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -45,9 +46,38 @@ public class FileMigrateStrategy extends IAppStrategy {
     public FileMigrateStrategy() {
         txtDestDir = new TextField();
         txtDestDir.setPromptText("选择目标根目录...");
+        
+        // 添加悬浮提示信息
+        ArrayList<String> destDirTooltipLines = new ArrayList<>();
+        destDirTooltipLines.add("参数名称：目标根目录");
+        destDirTooltipLines.add("参数用途：用于设置文件移动的目标根目录");
+        destDirTooltipLines.add("示例：");
+        destDirTooltipLines.add("- D:/Music：将文件移动到D盘的Music文件夹");
+        destDirTooltipLines.add("- E:/Media：将文件移动到E盘的Media文件夹");
+        FloatingTooltip.bindToNode(txtDestDir, "文件批量归档设置", destDirTooltipLines);
+        
         txtPathPattern = new TextField("%artist%/%year% %album%/%track% - %title%");
+        
+        // 添加悬浮提示信息
+        ArrayList<String> patternTooltipLines = new ArrayList<>();
+        patternTooltipLines.add("参数名称：结构模板");
+        patternTooltipLines.add("参数用途：用于设置文件移动的目录结构模板");
+        patternTooltipLines.add("示例：");
+        patternTooltipLines.add("- %artist%/%year% %album%/%track% - %title%");
+        patternTooltipLines.add("- %year%/%album%/%title%");
+        FloatingTooltip.bindToNode(txtPathPattern, "文件批量归档设置", patternTooltipLines);
+        
         chkCleanEmpty = new CheckBox("移动后清理源空文件夹");
         chkCleanEmpty.setSelected(true);
+        
+        // 添加悬浮提示信息
+        ArrayList<String> cleanEmptyTooltipLines = new ArrayList<>();
+        cleanEmptyTooltipLines.add("参数名称：清理空文件夹");
+        cleanEmptyTooltipLines.add("参数用途：用于设置是否在移动后清理源空文件夹");
+        cleanEmptyTooltipLines.add("示例：");
+        cleanEmptyTooltipLines.add("- 启用：移动后清理源空文件夹");
+        cleanEmptyTooltipLines.add("- 禁用：移动后不清理源空文件夹");
+        FloatingTooltip.bindToNode(chkCleanEmpty, "文件批量归档设置", cleanEmptyTooltipLines);
     }
 
     @Override

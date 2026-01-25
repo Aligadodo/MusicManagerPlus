@@ -9,6 +9,7 @@
  */
 package com.filemanager.strategy.ncm;
 
+import com.filemanager.app.tools.display.FloatingTooltip;
 import com.filemanager.app.tools.display.StyleFactory;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.strategy.ncm.model.NcmDump;
@@ -41,6 +42,15 @@ public class NcmConvertStrategy extends NcmBaseStrategy {
         // NCM转换选项
         chkDeleteSource = new JFXCheckBox("转换后删除源.ncm文件");
         chkDeleteSource.setSelected(false);
+        
+        // 添加悬浮提示信息
+        java.util.List<String> tooltipLines = new java.util.ArrayList<>();
+        tooltipLines.add("参数名称：转换后删除源.ncm文件");
+        tooltipLines.add("参数用途：用于控制转换完成后是否删除原始的.ncm文件");
+        tooltipLines.add("示例：");
+        tooltipLines.add("- 选中：转换完成后会自动删除源文件");
+        tooltipLines.add("- 不选中：源文件会被保留");
+        FloatingTooltip.bindToNode(chkDeleteSource, "NCM转换选项", tooltipLines);
     }
     
     @Override

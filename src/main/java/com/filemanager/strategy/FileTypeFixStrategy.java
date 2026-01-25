@@ -18,6 +18,7 @@ import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
 import javafx.scene.Node;
 import javafx.scene.control.CheckBox;
+import com.filemanager.app.tools.display.FloatingTooltip;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -25,6 +26,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
+import java.util.*;
 
 /**
  * 文件类型修复工具
@@ -37,6 +39,15 @@ public class FileTypeFixStrategy extends IAppStrategy {
 
     public FileTypeFixStrategy() {
         isForce = new CheckBox("通过读取文件来识别文件类型（准确率更高但会变慢）");
+        
+        // 添加悬浮提示信息
+        ArrayList<String> forceTooltipLines = new ArrayList<>();
+        forceTooltipLines.add("参数名称：强制文件类型识别");
+        forceTooltipLines.add("参数用途：用于设置是否通过读取文件内容来识别文件类型");
+        forceTooltipLines.add("示例：");
+        forceTooltipLines.add("- 启用：通过读取文件内容识别，准确率更高但速度较慢");
+        forceTooltipLines.add("- 禁用：仅通过文件名识别，速度快但准确率较低");
+        FloatingTooltip.bindToNode(isForce, "文件类型修复设置", forceTooltipLines);
     }
 
     @Override

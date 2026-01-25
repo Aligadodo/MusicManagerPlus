@@ -57,13 +57,40 @@ public class PathSelectionComponent implements IConfigComponent {
         cbOutputDirMode = new JFXComboBox<>();
         cbOutputDirMode.getItems().addAll("原目录", "子目录", "相对路径", "指定目录");
         cbOutputDirMode.getSelectionModel().select(0);
+        
+        // 添加悬浮提示信息
+        java.util.List<String> modeTooltipLines = new java.util.ArrayList<>();
+        modeTooltipLines.add("参数名称：输出目录模式");
+        modeTooltipLines.add("参数用途：用于选择转换后文件的输出目录位置");
+        modeTooltipLines.add("示例：");
+        modeTooltipLines.add("- 原目录：输出到源文件所在的目录");
+        modeTooltipLines.add("- 子目录：输出到源文件所在目录的子目录中");
+        modeTooltipLines.add("- 相对路径：输出到指定的相对路径");
+        modeTooltipLines.add("- 指定目录：输出到指定的绝对路径");
+        com.filemanager.app.tools.display.FloatingTooltip.bindToNode(cbOutputDirMode, "输出设置", modeTooltipLines);
 
         // 路径输入框
         txtPath = new JFXTextField();
         txtPath.setPromptText("子目录名称或指定目录路径");
+        
+        // 添加悬浮提示信息
+        java.util.List<String> pathTooltipLines = new java.util.ArrayList<>();
+        pathTooltipLines.add("参数名称：路径");
+        pathTooltipLines.add("参数用途：用于设置子目录名称或指定目录路径");
+        pathTooltipLines.add("示例：");
+        pathTooltipLines.add("- 子目录模式：输入子目录名称，如 'Convert'");
+        pathTooltipLines.add("- 指定目录模式：输入完整的目录路径，如 'D:\\Music'");
+        com.filemanager.app.tools.display.FloatingTooltip.bindToNode(txtPath, "输出设置", pathTooltipLines);
 
         // 选择目录按钮
         btnPickDir = StyleFactory.createActionButton("选择路径", "", this::pickDirectory);
+        
+        // 添加悬浮提示信息
+        java.util.List<String> buttonTooltipLines = new java.util.ArrayList<>();
+        buttonTooltipLines.add("参数名称：选择路径按钮");
+        buttonTooltipLines.add("参数用途：用于打开目录选择器，选择输出目录");
+        buttonTooltipLines.add("示例：点击按钮后会弹出目录选择对话框");
+        com.filemanager.app.tools.display.FloatingTooltip.bindToNode(btnPickDir, "输出设置", buttonTooltipLines);
 
         // 绑定可见性
         txtPath.visibleProperty().bind(

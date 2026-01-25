@@ -19,6 +19,7 @@ import com.filemanager.type.ScanTarget;
 import com.filemanager.util.MetadataHelper;
 import javafx.scene.Node;
 import javafx.scene.control.TextField;
+import com.filemanager.app.tools.display.FloatingTooltip;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -35,6 +36,16 @@ public class AlbumDirNormalizeStrategy extends IAppStrategy {
     public AlbumDirNormalizeStrategy() {
         txtTemplate = new TextField("%artist% - %year% - %album%");
         txtTemplate.setPromptText("例如: %year% %album% 或 %artist%/[%year%] %album%");
+        
+        // 添加悬浮提示信息
+        ArrayList<String> templateTooltipLines = new ArrayList<>();
+        templateTooltipLines.add("参数名称：目录命名模板");
+        templateTooltipLines.add("参数用途：用于设置专辑目录的命名模板");
+        templateTooltipLines.add("示例：");
+        templateTooltipLines.add("- %artist% - %year% - %album%");
+        templateTooltipLines.add("- %year% %album%");
+        templateTooltipLines.add("- %artist%/[%year%] %album%");
+        FloatingTooltip.bindToNode(txtTemplate, "专辑目录标准化设置", templateTooltipLines);
     }
 
     @Override

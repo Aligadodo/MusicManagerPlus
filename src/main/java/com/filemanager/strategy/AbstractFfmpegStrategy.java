@@ -10,6 +10,7 @@
 package com.filemanager.strategy;
 
 import com.filemanager.app.base.IAppStrategy;
+import com.filemanager.app.tools.display.FloatingTooltip;
 import com.filemanager.app.tools.display.StyleFactory;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.strategy.base.PathSelectionComponent;
@@ -80,6 +81,16 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
         cbTargetFormat = new JFXComboBox<>(FXCollections.observableArrayList("WAV (CD标准)", "FLAC", "WAV", "MP3", "ALAC", "AAC", "OGG"));
         cbTargetFormat.setTooltip(new Tooltip("WAV CD标准会按照16bit转录音频文件，反之则按照24bit转录，对CD刻录场景的播放会有负面影响。"));
         cbTargetFormat.getSelectionModel().select(0);
+        
+        // 添加悬浮提示信息
+        java.util.List<String> formatTooltipLines = new java.util.ArrayList<>();
+        formatTooltipLines.add("参数名称：目标格式");
+        formatTooltipLines.add("参数用途：用于选择转换后的音频文件格式");
+        formatTooltipLines.add("示例：");
+        formatTooltipLines.add("- WAV (CD标准)：16bit/44.1kHz，适合CD刻录");
+        formatTooltipLines.add("- FLAC：无损压缩格式");
+        formatTooltipLines.add("- MP3：有损压缩格式，适合存储");
+        FloatingTooltip.bindToNode(cbTargetFormat, "音频转换设置", formatTooltipLines);
 
         // 创建路径选择组件
         Map<String, Object> defaults = new HashMap<>();
@@ -89,9 +100,30 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
 
         cbSampleRate = new JFXComboBox<>(FXCollections.observableArrayList("保持原样 (Original)", "44100", "48000", "88200", "96000", "192000"));
         cbSampleRate.getSelectionModel().select(1);
+        
+        // 添加悬浮提示信息
+        java.util.List<String> sampleRateTooltipLines = new java.util.ArrayList<>();
+        sampleRateTooltipLines.add("参数名称：采样率");
+        sampleRateTooltipLines.add("参数用途：用于选择转换后的音频采样率");
+        sampleRateTooltipLines.add("示例：");
+        sampleRateTooltipLines.add("- 保持原样：使用原始文件的采样率");
+        sampleRateTooltipLines.add("- 44100：CD标准采样率");
+        sampleRateTooltipLines.add("- 48000：DVD标准采样率");
+        FloatingTooltip.bindToNode(cbSampleRate, "音频转换设置", sampleRateTooltipLines);
 
         cbChannels = new JFXComboBox<>(FXCollections.observableArrayList("保持原样 (Original)", "1 (Mono)", "2 (Stereo)", "6 (5.1)"));
         cbChannels.getSelectionModel().select(2);
+        
+        // 添加悬浮提示信息
+        java.util.List<String> channelsTooltipLines = new java.util.ArrayList<>();
+        channelsTooltipLines.add("参数名称：声道数");
+        channelsTooltipLines.add("参数用途：用于选择转换后的音频声道数");
+        channelsTooltipLines.add("示例：");
+        channelsTooltipLines.add("- 保持原样：使用原始文件的声道数");
+        channelsTooltipLines.add("- 1 (Mono)：单声道");
+        channelsTooltipLines.add("- 2 (Stereo)：立体声");
+        channelsTooltipLines.add("- 6 (5.1)：5.1环绕声");
+        FloatingTooltip.bindToNode(cbChannels, "音频转换设置", channelsTooltipLines);
 
         cbTargetFormat.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
             updateDefaultPathPrompt(newVal);
@@ -105,36 +137,126 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
         chkOverwrite = new CheckBox("强制覆盖已存在的目标文件");
         chkOverwrite.setSelected(false);
         chkOverwrite.setTooltip(new Tooltip("如果不勾选，遇到已存在的目标文件将跳过处理。"));
+        
+        // 添加悬浮提示信息
+        java.util.List<String> overwriteTooltipLines = new java.util.ArrayList<>();
+        overwriteTooltipLines.add("参数名称：强制覆盖已存在的目标文件");
+        overwriteTooltipLines.add("参数用途：用于控制是否覆盖已存在的目标文件");
+        overwriteTooltipLines.add("示例：");
+        overwriteTooltipLines.add("- 选中：会覆盖已存在的目标文件");
+        overwriteTooltipLines.add("- 不选中：遇到已存在的目标文件将跳过处理");
+        FloatingTooltip.bindToNode(chkOverwrite, "音频转换设置", overwriteTooltipLines);
 
         chkForceFilenameMeta = new CheckBox("忽略原始文件标签（强制用文件名重构元数据）");
         chkForceFilenameMeta.setTooltip(new Tooltip("勾选此项可解决严重的乱码问题，完全丢弃源文件信息，仅依据文件名和目录名生成Tag。"));
         chkForceFilenameMeta.setSelected(false);
+        
+        // 添加悬浮提示信息
+        java.util.List<String> forceMetaTooltipLines = new java.util.ArrayList<>();
+        forceMetaTooltipLines.add("参数名称：忽略原始文件标签（强制用文件名重构元数据）");
+        forceMetaTooltipLines.add("参数用途：用于控制是否忽略原始文件标签，强制用文件名重构元数据");
+        forceMetaTooltipLines.add("示例：");
+        forceMetaTooltipLines.add("- 选中：完全丢弃源文件信息，仅依据文件名和目录名生成Tag");
+        forceMetaTooltipLines.add("- 不选中：使用原始文件的标签信息");
+        FloatingTooltip.bindToNode(chkForceFilenameMeta, "音频转换设置", forceMetaTooltipLines);
 
         spFfmpegThreads = new Spinner<>(1, 16, 4);
         spFfmpegThreads.setEditable(true);
+        
+        // 添加悬浮提示信息
+        java.util.List<String> threadsTooltipLines = new java.util.ArrayList<>();
+        threadsTooltipLines.add("参数名称：FFmpeg线程数");
+        threadsTooltipLines.add("参数用途：用于设置FFmpeg的线程数，影响转换速度");
+        threadsTooltipLines.add("示例：");
+        threadsTooltipLines.add("- 1-16：根据CPU核心数设置，建议设置为CPU核心数的一半");
+        FloatingTooltip.bindToNode(spFfmpegThreads, "音频转换设置", threadsTooltipLines);
 
         // 自动扫描FFmpeg路径
         String ffmpegPath = findFFmpeg();
         txtFFmpegPath = new TextField(ffmpegPath);
         txtFFmpegPath.setPromptText("Path to ffmpeg executable");
+        
+        // 添加悬浮提示信息
+        java.util.List<String> ffmpegPathTooltipLines = new java.util.ArrayList<>();
+        ffmpegPathTooltipLines.add("参数名称：FFmpeg路径");
+        ffmpegPathTooltipLines.add("参数用途：用于设置FFmpeg可执行文件的路径");
+        ffmpegPathTooltipLines.add("示例：");
+        ffmpegPathTooltipLines.add("- Windows：C:\\ffmpeg\\bin\\ffmpeg.exe");
+        ffmpegPathTooltipLines.add("- Linux：/usr/bin/ffmpeg");
+        FloatingTooltip.bindToNode(txtFFmpegPath, "音频转换设置", ffmpegPathTooltipLines);
 
         chkEnableCache = new CheckBox("启用临时文件缓存(缓解IO瓶颈)");
+        
+        // 添加悬浮提示信息
+        java.util.List<String> cacheTooltipLines = new java.util.ArrayList<>();
+        cacheTooltipLines.add("参数名称：启用临时文件缓存(缓解IO瓶颈)");
+        cacheTooltipLines.add("参数用途：用于启用临时文件缓存，缓解IO瓶颈");
+        cacheTooltipLines.add("示例：");
+        cacheTooltipLines.add("- 选中：启用临时文件缓存");
+        cacheTooltipLines.add("- 不选中：禁用临时文件缓存");
+        FloatingTooltip.bindToNode(chkEnableCache, "音频转换设置", cacheTooltipLines);
+
         chkEnableSnap = new CheckBox("启用镜像路径暂存(需要手动移动文件)");
+        
+        // 添加悬浮提示信息
+        java.util.List<String> snapTooltipLines = new java.util.ArrayList<>();
+        snapTooltipLines.add("参数名称：启用镜像路径暂存(需要手动移动文件)");
+        snapTooltipLines.add("参数用途：用于启用镜像路径暂存，需要手动移动文件");
+        snapTooltipLines.add("示例：");
+        snapTooltipLines.add("- 选中：启用镜像路径暂存");
+        snapTooltipLines.add("- 不选中：禁用镜像路径暂存");
+        FloatingTooltip.bindToNode(chkEnableSnap, "音频转换设置", snapTooltipLines);
 
         chkEnableTempSuffix = new CheckBox("启用.temp文件后缀(文件缓存启用时不生效)");
         chkEnableTempSuffix.disableProperty().bind(chkEnableCache.selectedProperty());
         chkEnableTempSuffix.setSelected(true);
+        
+        // 添加悬浮提示信息
+        java.util.List<String> tempSuffixTooltipLines = new java.util.ArrayList<>();
+        tempSuffixTooltipLines.add("参数名称：启用.temp文件后缀(文件缓存启用时不生效)");
+        tempSuffixTooltipLines.add("参数用途：用于启用.temp文件后缀，文件缓存启用时不生效");
+        tempSuffixTooltipLines.add("示例：");
+        tempSuffixTooltipLines.add("- 选中：启用.temp文件后缀");
+        tempSuffixTooltipLines.add("- 不选中：禁用.temp文件后缀");
+        FloatingTooltip.bindToNode(chkEnableTempSuffix, "音频转换设置", tempSuffixTooltipLines);
 
         // 初始化自动格式化目标文件名复选框
         chkAutoFormatFilename = new CheckBox("自动格式化目标文件名");
         chkAutoFormatFilename.setTooltip(new Tooltip("自动将目标文件名转换为简体中文并去除首尾空格"));
         chkAutoFormatFilename.setSelected(true);
+        
+        // 添加悬浮提示信息
+        java.util.List<String> autoFormatTooltipLines = new java.util.ArrayList<>();
+        autoFormatTooltipLines.add("参数名称：自动格式化目标文件名");
+        autoFormatTooltipLines.add("参数用途：用于自动将目标文件名转换为简体中文并去除首尾空格");
+        autoFormatTooltipLines.add("示例：");
+        autoFormatTooltipLines.add("- 选中：自动格式化目标文件名");
+        autoFormatTooltipLines.add("- 不选中：保持原始文件名格式");
+        FloatingTooltip.bindToNode(chkAutoFormatFilename, "音频转换设置", autoFormatTooltipLines);
 
         txtCacheDir = new TextField();
         txtCacheDir.setPromptText("临时文件缓存目录路径");
+        
+        // 添加悬浮提示信息
+        java.util.List<String> cacheDirTooltipLines = new java.util.ArrayList<>();
+        cacheDirTooltipLines.add("参数名称：临时文件缓存目录路径");
+        cacheDirTooltipLines.add("参数用途：用于设置临时文件缓存目录路径");
+        cacheDirTooltipLines.add("示例：");
+        cacheDirTooltipLines.add("- Windows：C:\\Temp\\ffmpeg_cache");
+        cacheDirTooltipLines.add("- Linux：/tmp/ffmpeg_cache");
+        FloatingTooltip.bindToNode(txtCacheDir, "音频转换设置", cacheDirTooltipLines);
 
         txtSnapDir = new TextField();
         txtSnapDir.setPromptText("镜像存储目录路径");
+        
+        // 添加悬浮提示信息
+        java.util.List<String> snapDirTooltipLines = new java.util.ArrayList<>();
+        snapDirTooltipLines.add("参数名称：镜像存储目录路径");
+        snapDirTooltipLines.add("参数用途：用于设置镜像存储目录路径");
+        snapDirTooltipLines.add("示例：");
+        snapDirTooltipLines.add("- Windows：D:\\Music\\snap");
+        snapDirTooltipLines.add("- Linux：/mnt/music/snap");
+        FloatingTooltip.bindToNode(txtSnapDir, "音频转换设置", snapDirTooltipLines);
     }
 
     /**

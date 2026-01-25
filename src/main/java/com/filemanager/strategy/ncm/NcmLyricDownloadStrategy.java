@@ -9,6 +9,7 @@
  */
 package com.filemanager.strategy.ncm;
 
+import com.filemanager.app.tools.display.FloatingTooltip;
 import com.filemanager.app.tools.display.StyleFactory;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.strategy.ncm.tool.NeteaseApiClient;
@@ -51,9 +52,27 @@ public class NcmLyricDownloadStrategy extends NcmBaseStrategy {
         chkOverwriteExisting = new JFXCheckBox("覆盖已存在的歌词文件");
         chkOverwriteExisting.setSelected(false);
         
+        // 添加悬浮提示信息
+        java.util.List<String> overwriteLines = new java.util.ArrayList<>();
+        overwriteLines.add("参数名称：覆盖已存在的歌词文件");
+        overwriteLines.add("参数用途：用于控制下载歌词时是否覆盖已存在的歌词文件");
+        overwriteLines.add("示例：");
+        overwriteLines.add("- 选中：如果歌词文件已存在，会被新下载的歌词覆盖");
+        overwriteLines.add("- 不选中：如果歌词文件已存在，不会下载新的歌词");
+        FloatingTooltip.bindToNode(chkOverwriteExisting, "歌词下载选项", overwriteLines);
+        
         // 预匹配歌词选项
         chkPreMatchLyric = new JFXCheckBox("预览阶段先匹配歌词");
         chkPreMatchLyric.setSelected(true);
+        
+        // 添加悬浮提示信息
+        java.util.List<String> preMatchLines = new java.util.ArrayList<>();
+        preMatchLines.add("参数名称：预览阶段先匹配歌词");
+        preMatchLines.add("参数用途：用于控制是否在预览阶段先匹配歌词，提前获取歌曲ID和歌词信息");
+        preMatchLines.add("示例：");
+        preMatchLines.add("- 选中：在预览阶段会先匹配歌词，执行时直接使用匹配结果");
+        preMatchLines.add("- 不选中：在执行阶段才会匹配歌词");
+        FloatingTooltip.bindToNode(chkPreMatchLyric, "歌词下载选项", preMatchLines);
     }
     
     @Override

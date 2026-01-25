@@ -10,6 +10,7 @@
 package com.filemanager.strategy;
 
 import com.filemanager.app.base.IAppStrategy;
+import com.filemanager.app.tools.display.FloatingTooltip;
 import com.filemanager.app.tools.display.StyleFactory;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.strategy.ncm.NcmCacheTransStrategy;
@@ -43,6 +44,16 @@ public class NcmIntegratedStrategy extends IAppStrategy {
         cbFunction = new JFXComboBox<>();
         cbFunction.getItems().addAll("NCM转换", "缓存扫描", "歌词下载");
         cbFunction.getSelectionModel().select(0);
+        
+        // 添加悬浮提示信息
+        java.util.List<String> tooltipLines = new java.util.ArrayList<>();
+        tooltipLines.add("参数名称：功能选择");
+        tooltipLines.add("参数用途：用于选择要执行的网易云音乐工具功能");
+        tooltipLines.add("示例：");
+        tooltipLines.add("- NCM转换：将.ncm格式文件转换为普通音频文件");
+        tooltipLines.add("- 缓存扫描：扫描网易云音乐缓存文件并转换为正式音频文件");
+        tooltipLines.add("- 歌词下载：为音频文件下载对应的网易云音乐歌词");
+        FloatingTooltip.bindToNode(cbFunction, "网易云音乐工具集", tooltipLines);
 
         // 初始化策略实例
         convertStrategy = new NcmConvertStrategy();

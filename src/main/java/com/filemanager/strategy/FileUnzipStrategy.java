@@ -30,6 +30,7 @@ import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
+import com.filemanager.app.tools.display.FloatingTooltip;
 
 import java.io.File;
 import java.io.IOException;
@@ -91,6 +92,15 @@ public class FileUnzipStrategy extends IAppStrategy {
         txtExePath = new TextField();
         txtExePath.setPromptText("7z.exe 或 bz.exe 路径");
         txtExePath.visibleProperty().bind(cbEngine.getSelectionModel().selectedItemProperty().isNotEqualTo("Java 内置引擎"));
+        
+        // 添加悬浮提示信息
+        ArrayList<String> exePathTooltipLines = new ArrayList<>();
+        exePathTooltipLines.add("参数名称：可执行文件路径");
+        exePathTooltipLines.add("参数用途：用于设置外部解压工具的可执行文件路径");
+        exePathTooltipLines.add("示例：");
+        exePathTooltipLines.add("- 7-Zip：C:\\Program Files\\7-Zip\\7z.exe");
+        exePathTooltipLines.add("- Bandizip：C:\\Program Files\\Bandizip\\bz.exe");
+        FloatingTooltip.bindToNode(txtExePath, "批量解压设置", exePathTooltipLines);
 
         // 监听引擎选择变化，自动检测对应工具路径
         cbEngine.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
@@ -106,34 +116,107 @@ public class FileUnzipStrategy extends IAppStrategy {
                 "同级新建文件夹 (Sibling Folder)"
         ));
         cbOutputMode.getSelectionModel().select(0);
+        
+        // 添加悬浮提示信息
+        ArrayList<String> outputModeTooltipLines = new ArrayList<>();
+        outputModeTooltipLines.add("参数名称：输出模式");
+        outputModeTooltipLines.add("参数用途：用于设置解压文件的输出目录模式");
+        outputModeTooltipLines.add("示例：");
+        outputModeTooltipLines.add("- 当前目录：解压到当前文件所在目录");
+        outputModeTooltipLines.add("- 指定目录：解压到指定的目录");
+        outputModeTooltipLines.add("- 同级新建文件夹：在同级目录创建新文件夹并解压到其中");
+        FloatingTooltip.bindToNode(cbOutputMode, "批量解压设置", outputModeTooltipLines);
 
         txtCustomPath = new TextField("Unzipped");
         txtCustomPath.setPromptText("目标文件夹路径");
         txtCustomPath.visibleProperty().bind(cbOutputMode.getSelectionModel().selectedItemProperty().isEqualTo("指定目录 (Custom Path)"));
+        
+        // 添加悬浮提示信息
+        ArrayList<String> customPathTooltipLines = new ArrayList<>();
+        customPathTooltipLines.add("参数名称：目标文件夹路径");
+        customPathTooltipLines.add("参数用途：用于设置解压文件的目标文件夹路径");
+        customPathTooltipLines.add("示例：");
+        customPathTooltipLines.add("- Unzipped：在当前目录创建Unzipped文件夹");
+        customPathTooltipLines.add("- D:/Extracted：解压到D盘的Extracted文件夹");
+        FloatingTooltip.bindToNode(txtCustomPath, "批量解压设置", customPathTooltipLines);
 
         // 选项
         chkSmartFolder = new CheckBox("自动解压到独立文件夹");
         chkSmartFolder.setSelected(true);
-        chkSmartFolder.setTooltip(new Tooltip("始终先在独立文件夹解压，若解压后发现只有单目录则自动移出。\n防止“解压炸弹”弄乱目录。"));
+        chkSmartFolder.setTooltip(new Tooltip("始终先在独立文件夹解压，若解压后发现只有单目录则自动移出。\n防止\"解压炸弹\"弄乱目录。"));
+        
+        // 添加悬浮提示信息
+        ArrayList<String> smartFolderTooltipLines = new ArrayList<>();
+        smartFolderTooltipLines.add("参数名称：自动解压到独立文件夹");
+        smartFolderTooltipLines.add("参数用途：用于防止解压炸弹弄乱目录");
+        smartFolderTooltipLines.add("示例：");
+        smartFolderTooltipLines.add("- 启用：先在独立文件夹解压，若只有单目录则自动移出");
+        smartFolderTooltipLines.add("- 禁用：直接解压到目标目录");
+        FloatingTooltip.bindToNode(chkSmartFolder, "批量解压设置", smartFolderTooltipLines);
 
         chkMergeSameName = new CheckBox("同名父子文件夹合并");
         chkMergeSameName.setSelected(true);
         chkMergeSameName.setTooltip(new Tooltip("将具有相同名称的父子文件夹进行合并，如 '音乐/音乐/' 合并为 '音乐/'。"));
+        
+        // 添加悬浮提示信息
+        ArrayList<String> mergeSameNameTooltipLines = new ArrayList<>();
+        mergeSameNameTooltipLines.add("参数名称：同名父子文件夹合并");
+        mergeSameNameTooltipLines.add("参数用途：用于合并具有相同名称的父子文件夹");
+        mergeSameNameTooltipLines.add("示例：");
+        mergeSameNameTooltipLines.add("- 合并前：音乐/音乐/");
+        mergeSameNameTooltipLines.add("- 合并后：音乐/");
+        FloatingTooltip.bindToNode(chkMergeSameName, "批量解压设置", mergeSameNameTooltipLines);
 
         chkNestedFolderMerge = new CheckBox("嵌套文件夹合并");
         chkNestedFolderMerge.setSelected(false);
         chkNestedFolderMerge.setTooltip(new Tooltip("当父目录只有一个子目录文件夹且没有其他文件时，自动合并掉这些空的目录层次。"));
+        
+        // 添加悬浮提示信息
+        ArrayList<String> nestedMergeTooltipLines = new ArrayList<>();
+        nestedMergeTooltipLines.add("参数名称：嵌套文件夹合并");
+        nestedMergeTooltipLines.add("参数用途：用于合并嵌套的空目录层次");
+        nestedMergeTooltipLines.add("示例：");
+        nestedMergeTooltipLines.add("- 合并前：A/B/C/文件.txt");
+        nestedMergeTooltipLines.add("- 合并后：C/文件.txt");
+        FloatingTooltip.bindToNode(chkNestedFolderMerge, "批量解压设置", nestedMergeTooltipLines);
 
         chkDeleteSource = new CheckBox("解压成功并校验后删除源文件");
         chkDeleteSource.setSelected(false);
         chkDeleteSource.setStyle("-fx-text-fill: #27ae60;"); // 绿色提示
+        
+        // 添加悬浮提示信息
+        ArrayList<String> deleteSourceTooltipLines = new ArrayList<>();
+        deleteSourceTooltipLines.add("参数名称：解压成功后删除源文件");
+        deleteSourceTooltipLines.add("参数用途：用于在解压成功并校验后删除源文件");
+        deleteSourceTooltipLines.add("示例：");
+        deleteSourceTooltipLines.add("- 启用：解压成功后删除原始压缩文件");
+        deleteSourceTooltipLines.add("- 禁用：保留原始压缩文件");
+        FloatingTooltip.bindToNode(chkDeleteSource, "批量解压设置", deleteSourceTooltipLines);
 
         chkDeleteOnFail = new CheckBox("失败后删除源文件 (慎用)");
         chkDeleteOnFail.setSelected(false);
         chkDeleteOnFail.setStyle("-fx-text-fill: #e74c3c;"); // 红色警示
+        
+        // 添加悬浮提示信息
+        ArrayList<String> deleteOnFailTooltipLines = new ArrayList<>();
+        deleteOnFailTooltipLines.add("参数名称：失败后删除源文件");
+        deleteOnFailTooltipLines.add("参数用途：用于在解压失败后删除源文件");
+        deleteOnFailTooltipLines.add("示例：");
+        deleteOnFailTooltipLines.add("- 启用：解压失败后删除原始压缩文件");
+        deleteOnFailTooltipLines.add("- 禁用：保留原始压缩文件");
+        FloatingTooltip.bindToNode(chkDeleteOnFail, "批量解压设置", deleteOnFailTooltipLines);
 
         chkOverwrite = new CheckBox("覆盖已存在");
         chkOverwrite.setSelected(false);
+        
+        // 添加悬浮提示信息
+        ArrayList<String> overwriteTooltipLines = new ArrayList<>();
+        overwriteTooltipLines.add("参数名称：覆盖已存在");
+        overwriteTooltipLines.add("参数用途：用于设置是否覆盖已存在的文件");
+        overwriteTooltipLines.add("示例：");
+        overwriteTooltipLines.add("- 启用：覆盖已存在的文件");
+        overwriteTooltipLines.add("- 禁用：跳过已存在的文件");
+        FloatingTooltip.bindToNode(chkOverwrite, "批量解压设置", overwriteTooltipLines);
 
         // 密码箱初始化
         lvPasswords = StyleFactory.createListView();

@@ -30,6 +30,7 @@ import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import com.filemanager.app.tools.display.FloatingTooltip;
 
 import java.io.File;
 import java.io.IOException;
@@ -78,8 +79,28 @@ public class AdvancedRenameStrategy extends IAppStrategy {
 
         cbCrossDriveMode = new JFXComboBox<>(FXCollections.observableArrayList("移动 (Move)", "复制 (Copy)"));
         cbCrossDriveMode.getSelectionModel().select(0);
+        
+        // 添加悬浮提示信息
+        ArrayList<String> crossDriveTooltipLines = new ArrayList<>();
+        crossDriveTooltipLines.add("参数名称：跨盘动作");
+        crossDriveTooltipLines.add("参数用途：用于设置跨盘操作时的动作");
+        crossDriveTooltipLines.add("示例：");
+        crossDriveTooltipLines.add("- 移动：将文件从一个盘移动到另一个盘");
+        crossDriveTooltipLines.add("- 复制：将文件从一个盘复制到另一个盘");
+        FloatingTooltip.bindToNode(cbCrossDriveMode, "高级重命名设置", crossDriveTooltipLines);
+        
         cbProcessScope = new JFXComboBox<>(FXCollections.observableArrayList("仅处理文件", "仅处理文件夹", "全部处理"));
         cbProcessScope.getSelectionModel().select(2);
+        
+        // 添加悬浮提示信息
+        ArrayList<String> processScopeTooltipLines = new ArrayList<>();
+        processScopeTooltipLines.add("参数名称：处理范围");
+        processScopeTooltipLines.add("参数用途：用于设置处理的文件类型范围");
+        processScopeTooltipLines.add("示例：");
+        processScopeTooltipLines.add("- 仅处理文件：只处理文件，不处理文件夹");
+        processScopeTooltipLines.add("- 仅处理文件夹：只处理文件夹，不处理文件");
+        processScopeTooltipLines.add("- 全部处理：同时处理文件和文件夹");
+        FloatingTooltip.bindToNode(cbProcessScope, "高级重命名设置", processScopeTooltipLines);
     }
 
     private void moveRule(int o) {

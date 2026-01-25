@@ -9,6 +9,7 @@
  */
 package com.filemanager.strategy.ncm;
 
+import com.filemanager.app.tools.display.FloatingTooltip;
 import com.filemanager.app.tools.display.StyleFactory;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.strategy.ncm.model.CacheFileInfo;
@@ -58,6 +59,15 @@ public class NcmCacheTransStrategy extends NcmBaseStrategy {
         // 缓存扫描选项
         chkDownloadLyric = new JFXCheckBox("自动下载对应歌词");
         chkDownloadLyric.setSelected(false);
+        
+        // 添加悬浮提示信息
+        java.util.List<String> tooltipLines = new java.util.ArrayList<>();
+        tooltipLines.add("参数名称：自动下载对应歌词");
+        tooltipLines.add("参数用途：用于控制缓存文件转换完成后是否自动下载对应歌曲的歌词");
+        tooltipLines.add("示例：");
+        tooltipLines.add("- 选中：转换完成后会自动下载歌词文件");
+        tooltipLines.add("- 不选中：不会下载歌词文件");
+        FloatingTooltip.bindToNode(chkDownloadLyric, "缓存扫描选项", tooltipLines);
         
         // 设置默认输出路径为子目录 "Convert - Cache"
         pathSelection.getCbOutputDirMode().getSelectionModel().select("子目录");

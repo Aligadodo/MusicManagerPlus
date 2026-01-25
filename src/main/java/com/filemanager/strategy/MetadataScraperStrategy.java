@@ -28,6 +28,7 @@ import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
+import com.filemanager.app.tools.display.FloatingTooltip;
 import org.jaudiotagger.audio.AudioFile;
 import org.jaudiotagger.audio.AudioFileIO;
 import org.jaudiotagger.tag.FieldKey;
@@ -95,28 +96,102 @@ public class MetadataScraperStrategy extends IAppStrategy {
                 "本地推断 (仅生成清单)"
         ));
         cbSource.getSelectionModel().select(0);
+        
+        // 添加悬浮提示信息
+        ArrayList<String> sourceTooltipLines = new ArrayList<>();
+        sourceTooltipLines.add("参数名称：数据源");
+        sourceTooltipLines.add("参数用途：用于设置元数据刮削的数据源");
+        sourceTooltipLines.add("示例：");
+        sourceTooltipLines.add("- iTunes Music API：稳定推荐，数据准确");
+        sourceTooltipLines.add("- 本地推断：仅基于文件名生成清单");
+        FloatingTooltip.bindToNode(cbSource, "元数据刮削设置", sourceTooltipLines);
 
         chkUpdateBasicMeta = new CheckBox("更新单曲元数据 (标题/歌手/专辑/内嵌封面)");
         chkUpdateBasicMeta.setSelected(true);
+        
+        // 添加悬浮提示信息
+        ArrayList<String> basicMetaTooltipLines = new ArrayList<>();
+        basicMetaTooltipLines.add("参数名称：更新单曲元数据");
+        basicMetaTooltipLines.add("参数用途：用于更新单曲的基本元数据信息");
+        basicMetaTooltipLines.add("示例：");
+        basicMetaTooltipLines.add("- 标题：歌曲名称");
+        basicMetaTooltipLines.add("- 歌手：艺术家名称");
+        basicMetaTooltipLines.add("- 专辑：专辑名称");
+        basicMetaTooltipLines.add("- 内嵌封面：将封面图片嵌入音频文件");
+        FloatingTooltip.bindToNode(chkUpdateBasicMeta, "元数据刮削设置", basicMetaTooltipLines);
 
         chkFetchLyrics = new CheckBox("下载歌词 (内嵌到音频文件)");
         chkFetchLyrics.setSelected(true);
+        
+        // 添加悬浮提示信息
+        ArrayList<String> lyricsTooltipLines = new ArrayList<>();
+        lyricsTooltipLines.add("参数名称：下载歌词");
+        lyricsTooltipLines.add("参数用途：用于下载歌词并内嵌到音频文件中");
+        lyricsTooltipLines.add("示例：");
+        lyricsTooltipLines.add("- 从网易云音乐获取歌词");
+        lyricsTooltipLines.add("- 从咪咕音乐获取歌词");
+        FloatingTooltip.bindToNode(chkFetchLyrics, "元数据刮削设置", lyricsTooltipLines);
 
         // 新增专辑级选项
         chkSaveCoverFile = new CheckBox("保存专辑封面文件 (cover.jpg 到目录)");
         chkSaveCoverFile.setSelected(true);
+        
+        // 添加悬浮提示信息
+        ArrayList<String> coverFileTooltipLines = new ArrayList<>();
+        coverFileTooltipLines.add("参数名称：保存专辑封面文件");
+        coverFileTooltipLines.add("参数用途：用于保存专辑封面文件到目录中");
+        coverFileTooltipLines.add("示例：");
+        coverFileTooltipLines.add("- 在专辑目录中生成 cover.jpg 文件");
+        FloatingTooltip.bindToNode(chkSaveCoverFile, "元数据刮削设置", coverFileTooltipLines);
 
         chkSaveAlbumInfo = new CheckBox("生成专辑资料 (AlbumInfo.txt - 简介+曲目)");
         chkSaveAlbumInfo.setSelected(true);
+        
+        // 添加悬浮提示信息
+        ArrayList<String> albumInfoTooltipLines = new ArrayList<>();
+        albumInfoTooltipLines.add("参数名称：生成专辑资料");
+        albumInfoTooltipLines.add("参数用途：用于生成专辑资料文件");
+        albumInfoTooltipLines.add("示例：");
+        albumInfoTooltipLines.add("- 在专辑目录中生成 AlbumInfo.txt 文件");
+        albumInfoTooltipLines.add("- 包含专辑简介和曲目列表");
+        FloatingTooltip.bindToNode(chkSaveAlbumInfo, "元数据刮削设置", albumInfoTooltipLines);
 
         chkScrapeIntro = new CheckBox("尝试刮削网络简介/版权信息");
         chkScrapeIntro.setSelected(true);
         chkScrapeIntro.disableProperty().bind(chkSaveAlbumInfo.selectedProperty().not());
+        
+        // 添加悬浮提示信息
+        ArrayList<String> introTooltipLines = new ArrayList<>();
+        introTooltipLines.add("参数名称：尝试刮削网络简介");
+        introTooltipLines.add("参数用途：用于尝试从网络刮削专辑简介和版权信息");
+        introTooltipLines.add("示例：");
+        introTooltipLines.add("- 从网络获取专辑简介");
+        introTooltipLines.add("- 从网络获取版权信息");
+        FloatingTooltip.bindToNode(chkScrapeIntro, "元数据刮削设置", introTooltipLines);
 
         chkOverwrite = new CheckBox("强制覆盖已有信息/文件");
         chkOverwrite.setSelected(false);
+        
+        // 添加悬浮提示信息
+        ArrayList<String> overwriteTooltipLines = new ArrayList<>();
+        overwriteTooltipLines.add("参数名称：强制覆盖");
+        overwriteTooltipLines.add("参数用途：用于设置是否强制覆盖已有信息和文件");
+        overwriteTooltipLines.add("示例：");
+        overwriteTooltipLines.add("- 启用：覆盖已有元数据和文件");
+        overwriteTooltipLines.add("- 禁用：仅在无现有信息时添加");
+        FloatingTooltip.bindToNode(chkOverwrite, "元数据刮削设置", overwriteTooltipLines);
 
         spThreads = new Spinner<>(1, 8, 2);
+        
+        // 添加悬浮提示信息
+        ArrayList<String> threadsTooltipLines = new ArrayList<>();
+        threadsTooltipLines.add("参数名称：网络并发");
+        threadsTooltipLines.add("参数用途：用于设置网络请求的并发线程数");
+        threadsTooltipLines.add("示例：");
+        threadsTooltipLines.add("- 1：单线程，速度较慢但稳定");
+        threadsTooltipLines.add("- 2：双线程，平衡速度和稳定性");
+        threadsTooltipLines.add("- 8：多线程，速度快但可能不稳定");
+        FloatingTooltip.bindToNode(spThreads, "元数据刮削设置", threadsTooltipLines);
 
         txtPreviewLog = new TextArea();
         txtPreviewLog.setPromptText("预览日志区域...");

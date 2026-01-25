@@ -21,6 +21,7 @@ import javafx.collections.FXCollections;
 import javafx.scene.Node;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
+import com.filemanager.app.tools.display.FloatingTooltip;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
@@ -42,7 +43,25 @@ public class CueFileRenameStrategy extends IAppStrategy {
     public CueFileRenameStrategy() {
         mode = new JFXComboBox<>(FXCollections.observableArrayList("全自动修改"));
         mode.getSelectionModel().select(0);
+        
+        // 添加悬浮提示信息
+        ArrayList<String> modeTooltipLines = new ArrayList<>();
+        modeTooltipLines.add("参数名称：修改模式");
+        modeTooltipLines.add("参数用途：用于设置专辑文件重命名的模式");
+        modeTooltipLines.add("示例：");
+        modeTooltipLines.add("- 全自动修改：自动处理cue文件和对应的音频文件");
+        FloatingTooltip.bindToNode(mode, "专辑文件重命名设置", modeTooltipLines);
+        
         fileName = new TextField("album");
+        
+        // 添加悬浮提示信息
+        ArrayList<String> fileNameTooltipLines = new ArrayList<>();
+        fileNameTooltipLines.add("参数名称：文件名前缀");
+        fileNameTooltipLines.add("参数用途：用于设置重命名后的文件前缀");
+        fileNameTooltipLines.add("示例：");
+        fileNameTooltipLines.add("- album：生成 album.cue 和 album.flac 等文件");
+        fileNameTooltipLines.add("- disc：生成 disc.cue 和 disc.flac 等文件");
+        FloatingTooltip.bindToNode(fileName, "专辑文件重命名设置", fileNameTooltipLines);
     }
 
     @Override
