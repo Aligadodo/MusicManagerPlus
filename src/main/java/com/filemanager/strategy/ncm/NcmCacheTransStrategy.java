@@ -190,85 +190,8 @@ public class NcmCacheTransStrategy extends NcmBaseStrategy {
                 }
             }
         }
-        // 扫描下属文件会导致反复处理
-//        else if (file.isDirectory()) {
-//            // 处理目录
-//            scanCacheFiles(file, result);
-//        }
         return result;
     }
-    
-
-    
-    private void scanCacheFiles(File directory, List<ChangeRecord> result) {
-        File[] files = directory.listFiles();
-        if (files == null)
-            return;
-        
-        for (File file : files) {
-            if (file.isDirectory()) {
-                scanCacheFiles(file, result);
-            } else if (fileNameExtractor.isCacheFile(file) && idxFileParser.isCacheFileComplete(file)) {
-                // 从文件名中提取歌曲ID
-                String songId = fileNameExtractor.extractSongIdFromFileName(file.getName());
-                if (songId == null) {
-                    continue;
-                }
-                
-                // 检查是否已经有对应的.info文件
-                String ucFileName = file.getName();
-                String infoFileName = ucFileName.substring(0, ucFileName.lastIndexOf('.')) + ".info";
-                File infoFile = new File(file.getParent(), infoFileName);
-                String songName = null;
-                String artistName = null;
-                
-                // 如果.info文件存在，从其中读取歌曲信息
-                if (infoFile.exists()) {
-                    Map<String, String> songInfo = readSongInfoFromInfoFile(infoFile);
-                    songName = songInfo.get("songName");
-                    artistName = songInfo.get("artistName");
-                }
-                
-                // 如果.info文件不存在或解析失败，从网易云API获取歌曲信息
-                if (songName == null || artistName == null) {
-                    Map<String, String> songInfo = getSongInfoFromApi(songId, infoFile);
-                    songName = songInfo.get("songName");
-                    artistName = songInfo.get("artistName");
-                    
-                    // 如果API获取失败，跳过当前文件
-                    if (songName == null || artistName == null) {
-                        continue;
-                    }
-                }
-                
-                // 识别缓存音频的原始格式
-                String audioFormat = identifyCacheAudioFormat(file);
-                if (audioFormat == null) {
-                    continue;
-                }
-                
-                // 创建CacheFileInfo
-                CacheFileInfo cacheInfo = new CacheFileInfo(songName, artistName, audioFormat);
-                String displayName = cacheInfo.getDisplayName();
-                String targetDir = getOutputPath(file);
-                // 确保targetPath是包含文件名称的全路径
-                String targetPath = targetDir + File.separator + displayName;
-                
-                // 创建ChangeRecord
-                ChangeRecord record = new ChangeRecord(file.getName(), displayName, file, true, targetPath,
-                        OperationType.NCM_CACHE_SCAN);
-                
-                // 存储缓存文件信息到额外参数
-                record.getExtraParams().put("audioFormat", cacheInfo.getAudioFormat());
-                record.getExtraParams().put("songName", cacheInfo.getSongName());
-                record.getExtraParams().put("artistName", cacheInfo.getArtistName());
-                record.getExtraParams().put("songId", songId);
-                
-                result.add(record);
-            }
-        }
-    }
-    
 
     
     @Override
@@ -413,15 +336,6 @@ public class NcmCacheTransStrategy extends NcmBaseStrategy {
         } else {
             return "mp3"; // 小文件为MP3格式
         }
-    }
-    
-    private String generateTargetFileName(File ucFile, String audioFormat) {
-        // 生成目标文件名
-        // 实际实现时，需要从缓存文件或元数据中提取歌曲信息
-        // 这里使用简单的模拟实现
-        
-        String baseName = ucFile.getName().substring(0, ucFile.getName().lastIndexOf('.'));
-        return baseName + "." + audioFormat;
     }
     
     private String extractSongName(File file) {
