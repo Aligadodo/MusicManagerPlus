@@ -20,44 +20,49 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
-import javafx.stage.Popup;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 import javafx.stage.Window;
 
 import java.util.List;
 
 /**
  * 悬浮提示框组件
- * 支持多行文本、自适应显示、自动换行、鼠标右上角显示
+ * 支持多行文本、自适应显示、自动换行、低优先级显示
  */
 public class FloatingTooltip {
-    private final Popup popup;
+    private final Stage stage;
     private final TextFlow content;
-    private final double widthToHeightRatio = 3.0 / 7.0;
     
     /**
      * 构造函数
      */
     public FloatingTooltip() {
-        // 创建弹出窗口
-        popup = new Popup();
-        popup.setAutoHide(true);
-        popup.setAutoFix(true);
-        popup.setHideOnEscape(true);
+        // 创建非模态窗口
+        stage = new Stage();
+        stage.initStyle(StageStyle.TRANSPARENT);
+        stage.initModality(Modality.NONE); // 非模态，不阻止其他窗口操作
+        stage.setAlwaysOnTop(false); // 不总是在最前面
         
         // 创建文本流容器
         content = new TextFlow();
         content.setStyle(
-            "-fx-background-color: rgba(0, 0, 0, 0.8); " +
+            "-fx-background-color: rgba(0, 0, 0, 0.6); " + // 降低透明度
             "-fx-text-fill: white; " +
             "-fx-padding: 8 12 8 12; " +
             "-fx-border-radius: 4; " +
             "-fx-background-radius: 4;"
         );
-        content.setMaxWidth(300); // 设置最大宽度
-        
-        // 添加到弹出窗口
-        popup.getContent().add(content);
+        content.setMinWidth(100); // 设置最小宽度
+        content.setMaxWidth(350); // 设置最大宽度
+        content.setPrefWidth(Region.USE_COMPUTED_SIZE); // 使用计算的宽度
+        content.setPrefHeight(Region.USE_COMPUTED_SIZE); // 使用计算的高度
+        // 设置场景
+        javafx.scene.Scene scene = new javafx.scene.Scene(content);
+        scene.setFill(Color.TRANSPARENT);
+        stage.setScene(scene);
+        stage.setResizable(true);
     }
     
     /**
@@ -82,9 +87,6 @@ public class FloatingTooltip {
             lineText.setFill(Color.WHITE);
             content.getChildren().add(lineText);
         }
-        
-        // 自适应调整大小
-        adjustSize();
     }
     
     /**
@@ -100,34 +102,6 @@ public class FloatingTooltip {
         text.setFont(Font.font("System", 11));
         text.setFill(Color.WHITE);
         content.getChildren().add(text);
-        
-        // 自适应调整大小
-        adjustSize();
-    }
-    
-    /**
-     * 自适应调整大小
-     */
-    private void adjustSize() {
-        // 测量文本宽度
-        content.layout();
-        double textWidth = content.getWidth();
-        double textHeight = content.getHeight();
-        
-        // 根据长宽比调整
-        if (textWidth > 0 && textHeight > 0) {
-            double currentRatio = textWidth / textHeight;
-            if (currentRatio > widthToHeightRatio) {
-                // 宽度过大，增加高度
-                content.setMaxWidth(textWidth * widthToHeightRatio);
-            } else {
-                // 高度过大，增加宽度
-                content.setMaxWidth(textWidth);
-            }
-        }
-        
-        // 强制重新布局
-        content.layout();
     }
     
     /**
@@ -148,29 +122,59 @@ public class FloatingTooltip {
         }
         
         // 计算显示位置：窗口中心位置
+        double windowX = window.getX();
+        double windowY = window.getY();
         double windowWidth = window.getWidth();
         double windowHeight = window.getHeight();
-        double popupWidth = content.getWidth();
-        double popupHeight = content.getHeight();
         
-        // 确保popup大小已计算
+        // 确保content大小已计算
+        content.applyCss();
         content.layout();
-        popupWidth = content.getWidth();
-        popupHeight = content.getHeight();
         
-        // 计算窗口中心坐标
-        double screenX = window.getX() + (windowWidth - popupWidth) / 2;
-        double screenY = window.getY() + (windowHeight - popupHeight) / 2;
+        // 强制计算内容的首选大小
+        double contentPrefWidth = content.prefWidth(-1);
+        double contentPrefHeight = content.prefHeight(contentPrefWidth);
+        
+        // 确保宽度在最小和最大范围内
+        double contentWidth = Math.max(100, Math.min(350, contentPrefWidth));
+        double contentHeight = content.prefHeight(contentWidth);
+        
+        // 更新content的实际大小
+        content.setPrefWidth(contentWidth);
+        content.setPrefHeight(contentHeight);
+        content.layout();
+        
+        // 计算窗口中心坐标，确保提示框中心与窗口中心对齐
+        double windowCenterX = windowX + windowWidth / 2;
+        double windowCenterY = windowY + windowHeight / 2;
+        double stageWidth = contentWidth + 24; // 加上padding
+        double stageHeight = contentHeight + 16; // 加上padding
+        double screenX = windowCenterX - stageWidth / 2;
+        double screenY = windowCenterY - stageHeight / 2;
+        
+        // 设置窗口位置和大小
+        stage.setX(screenX);
+        stage.setY(screenY);
+        stage.setWidth(stageWidth);
+        stage.setHeight(stageHeight);
         
         // 显示提示框
-        popup.show(node, screenX, screenY);
+        stage.show();
     }
     
     /**
      * 隐藏提示框
      */
     public void hide() {
-        popup.hide();
+        stage.hide();
+    }
+    
+    /**
+     * 检查提示框是否正在显示
+     * @return 是否正在显示
+     */
+    public boolean isShowing() {
+        return stage.isShowing();
     }
     
     /**
@@ -190,7 +194,7 @@ public class FloatingTooltip {
         
         // 鼠标移动事件
         node.setOnMouseMoved(event -> {
-            if (!tooltip.popup.isShowing()) {
+            if (!tooltip.isShowing()) {
                 tooltip.show(node, event.getX(), event.getY());
             }
         });
@@ -217,7 +221,7 @@ public class FloatingTooltip {
         
         // 鼠标移动事件
         node.setOnMouseMoved(event -> {
-            if (!tooltip.popup.isShowing()) {
+            if (!tooltip.isShowing()) {
                 tooltip.show(node, event.getX(), event.getY());
             }
         });
