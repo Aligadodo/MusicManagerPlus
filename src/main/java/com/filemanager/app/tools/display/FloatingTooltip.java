@@ -147,14 +147,20 @@ public class FloatingTooltip {
             return;
         }
         
-        // 计算显示位置：鼠标上方有距离的位置
-        Point2D point = node.localToScene(x, y);
-        double sceneX = point.getX();
-        double sceneY = point.getY();
+        // 计算显示位置：窗口中心位置
+        double windowWidth = window.getWidth();
+        double windowHeight = window.getHeight();
+        double popupWidth = content.getWidth();
+        double popupHeight = content.getHeight();
         
-        // 转换为屏幕坐标
-        double screenX = node.getScene().getWindow().getX() + sceneX + 10; // 向右偏移10像素
-        double screenY = node.getScene().getWindow().getY() + sceneY - 30; // 向上偏移30像素，避免遮挡鼠标
+        // 确保popup大小已计算
+        content.layout();
+        popupWidth = content.getWidth();
+        popupHeight = content.getHeight();
+        
+        // 计算窗口中心坐标
+        double screenX = window.getX() + (windowWidth - popupWidth) / 2;
+        double screenY = window.getY() + (windowHeight - popupHeight) / 2;
         
         // 显示提示框
         popup.show(node, screenX, screenY);
