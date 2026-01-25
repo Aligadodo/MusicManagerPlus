@@ -189,10 +189,12 @@ public class NcmCacheTransStrategy extends NcmBaseStrategy {
                     result.add(record);
                 }
             }
-        } else if (file.isDirectory()) {
-            // 处理目录
-            scanCacheFiles(file, result);
         }
+        // 扫描下属文件会导致反复处理
+//        else if (file.isDirectory()) {
+//            // 处理目录
+//            scanCacheFiles(file, result);
+//        }
         return result;
     }
     
