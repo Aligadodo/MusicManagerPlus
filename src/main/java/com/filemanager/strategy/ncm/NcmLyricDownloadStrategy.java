@@ -85,18 +85,18 @@ public class NcmLyricDownloadStrategy extends NcmBaseStrategy {
     @Override
     public void saveConfig(Properties props) {
         pathSelection.saveConfig(props);
-        props.setProperty("ncm_lyric_overwriteExisting", String.valueOf(chkOverwriteExisting.isSelected()));
-        props.setProperty("ncm_lyric_preMatchLyric", String.valueOf(chkPreMatchLyric.isSelected()));
+        props.setProperty("ncm_lyric_overwrite_existing", String.valueOf(chkOverwriteExisting.isSelected()));
+        props.setProperty("ncm_lyric_pre_match_lyric", String.valueOf(chkPreMatchLyric.isSelected()));
     }
     
     @Override
     public void loadConfig(Properties props) {
         pathSelection.loadConfig(props);
-        if (props.containsKey("ncm_lyric_overwriteExisting")) {
-            chkOverwriteExisting.setSelected(Boolean.parseBoolean(props.getProperty("ncm_lyric_overwriteExisting")));
+        if (props.containsKey("ncm_lyric_overwrite_existing")) {
+            chkOverwriteExisting.setSelected(Boolean.parseBoolean(props.getProperty("ncm_lyric_overwrite_existing")));
         }
-        if (props.containsKey("ncm_lyric_preMatchLyric")) {
-            chkPreMatchLyric.setSelected(Boolean.parseBoolean(props.getProperty("ncm_lyric_preMatchLyric")));
+        if (props.containsKey("ncm_lyric_pre_match_lyric")) {
+            chkPreMatchLyric.setSelected(Boolean.parseBoolean(props.getProperty("ncm_lyric_pre_match_lyric")));
         }
     }
     
@@ -266,21 +266,6 @@ public class NcmLyricDownloadStrategy extends NcmBaseStrategy {
      */
     private String getLyricById(String songId) throws Exception {
         return neteaseApiClient.getLyricById(songId);
-    }
-    
-
-    
-    private String generateMockLyric(String songName, String artistName) {
-        StringBuilder lyric = new StringBuilder();
-        lyric.append("[ti:").append(songName).append("]\n");
-        if (!artistName.isEmpty()) {
-            lyric.append("[ar:").append(artistName).append("]\n");
-        }
-        lyric.append("[al:未知专辑]\n");
-        lyric.append("[00:00.00]歌词下载功能模拟\n");
-        lyric.append("[00:05.00]实际实现时应调用网易云API\n");
-        lyric.append("[00:10.00]获取真实歌词内容\n");
-        return lyric.toString();
     }
     
     @Override

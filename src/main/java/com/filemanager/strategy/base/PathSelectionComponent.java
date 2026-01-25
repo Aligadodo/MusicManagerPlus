@@ -149,7 +149,7 @@ public class PathSelectionComponent implements IConfigComponent {
      */
     public void saveConfig(Properties props) {
         if (cbOutputDirMode.getValue() != null) {
-            props.setProperty(propPrefix + "_outputDirMode", cbOutputDirMode.getValue());
+            props.setProperty(propPrefix + "_output_dir_mode", cbOutputDirMode.getValue());
         }
         if (txtPath.getText() != null) {
             props.setProperty(propPrefix + "_path", txtPath.getText());
@@ -162,8 +162,8 @@ public class PathSelectionComponent implements IConfigComponent {
      * @param props 属性对象
      */
     public void loadConfig(Properties props) {
-        if (props.containsKey(propPrefix + "_outputDirMode")) {
-            cbOutputDirMode.getSelectionModel().select(props.getProperty(propPrefix + "_outputDirMode"));
+        if (props.containsKey(propPrefix + "_output_dir_mode")) {
+            cbOutputDirMode.getSelectionModel().select(props.getProperty(propPrefix + "_output_dir_mode"));
         }
         if (props.containsKey(propPrefix + "_path")) {
             txtPath.setText(props.getProperty(propPrefix + "_path"));

@@ -299,21 +299,21 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
         if (txtFFmpegPath.getText() != null) {
             props.setProperty("ac_ffmpeg", txtFFmpegPath.getText());
         }
-        props.setProperty("ac_useSnap", String.valueOf(chkEnableSnap.isSelected()));
+        props.setProperty("ac_use_snap", String.valueOf(chkEnableSnap.isSelected()));
         if (txtSnapDir.getText() != null) {
-            props.setProperty("ac_snapPath", txtSnapDir.getText());
+            props.setProperty("ac_snap_path", txtSnapDir.getText());
         }
-        props.setProperty("ac_useCache", String.valueOf(chkEnableCache.isSelected()));
-        props.setProperty("ac_useTempSuffix", String.valueOf(chkEnableTempSuffix.isSelected()));
+        props.setProperty("ac_use_cache", String.valueOf(chkEnableCache.isSelected()));
+        props.setProperty("ac_use_temp_suffix", String.valueOf(chkEnableTempSuffix.isSelected()));
         if (txtCacheDir.getText() != null) {
-            props.setProperty("ac_cacheDir", txtCacheDir.getText());
+            props.setProperty("ac_cache_dir", txtCacheDir.getText());
         }
-        props.setProperty("ac_forceMeta", String.valueOf(chkForceFilenameMeta.isSelected()));
+        props.setProperty("ac_force_meta", String.valueOf(chkForceFilenameMeta.isSelected()));
         props.setProperty("ac_overwrite", String.valueOf(chkOverwrite.isSelected()));
-        props.setProperty("ac_innerThreads", String.valueOf(spFfmpegThreads.getValue()));
-        props.setProperty("ac_sampleRate", cbSampleRate.getValue());
+        props.setProperty("ac_inner_threads", String.valueOf(spFfmpegThreads.getValue()));
+        props.setProperty("ac_sample_rate", cbSampleRate.getValue());
         props.setProperty("ac_channels", cbChannels.getValue());
-        props.setProperty("ac_autoFormatFilename", String.valueOf(chkAutoFormatFilename.isSelected()));
+        props.setProperty("ac_auto_format_filename", String.valueOf(chkAutoFormatFilename.isSelected()));
 
         // 保存路径选择组件配置
         pathSelection.saveConfig(props);
@@ -327,41 +327,41 @@ public abstract class AbstractFfmpegStrategy extends IAppStrategy {
         if (props.containsKey("ac_ffmpeg")) {
             txtFFmpegPath.setText(props.getProperty("ac_ffmpeg"));
         }
-        if (props.containsKey("ac_useCache")) {
-            chkEnableCache.setSelected(Boolean.parseBoolean(props.getProperty("ac_useCache")));
+        if (props.containsKey("ac_use_cache")) {
+            chkEnableCache.setSelected(Boolean.parseBoolean(props.getProperty("ac_use_cache")));
         }
-        if (props.containsKey("ac_useTempSuffix")) {
-            chkEnableTempSuffix.setSelected(Boolean.parseBoolean(props.getProperty("ac_useTempSuffix")));
+        if (props.containsKey("ac_use_temp_suffix")) {
+            chkEnableTempSuffix.setSelected(Boolean.parseBoolean(props.getProperty("ac_use_temp_suffix")));
         }
-        if (props.containsKey("ac_cacheDir")) {
-            txtCacheDir.setText(props.getProperty("ac_cacheDir"));
+        if (props.containsKey("ac_cache_dir")) {
+            txtCacheDir.setText(props.getProperty("ac_cache_dir"));
         }
-        if (props.containsKey("ac_forceMeta")) {
-            chkForceFilenameMeta.setSelected(Boolean.parseBoolean(props.getProperty("ac_forceMeta")));
+        if (props.containsKey("ac_force_meta")) {
+            chkForceFilenameMeta.setSelected(Boolean.parseBoolean(props.getProperty("ac_force_meta")));
         }
         if (props.containsKey("ac_overwrite")) {
             chkOverwrite.setSelected(Boolean.parseBoolean(props.getProperty("ac_overwrite")));
         }
-        if (props.containsKey("ac_innerThreads")) {
+        if (props.containsKey("ac_inner_threads")) {
             try {
-                spFfmpegThreads.getValueFactory().setValue(Integer.parseInt(props.getProperty("ac_innerThreads")));
+                spFfmpegThreads.getValueFactory().setValue(Integer.parseInt(props.getProperty("ac_inner_threads")));
             } catch (Exception e) {
             }
         }
-        if (props.containsKey("ac_sampleRate")) {
-            cbSampleRate.getSelectionModel().select(props.getProperty("ac_sampleRate"));
+        if (props.containsKey("ac_sample_rate")) {
+            cbSampleRate.getSelectionModel().select(props.getProperty("ac_sample_rate"));
         }
         if (props.containsKey("ac_channels")) {
             cbChannels.getSelectionModel().select(props.getProperty("ac_channels"));
         }
-        if (props.containsKey("ac_useSnap")) {
-            chkEnableSnap.setSelected(Boolean.parseBoolean(props.getProperty("ac_useSnap")));
+        if (props.containsKey("ac_use_snap")) {
+            chkEnableSnap.setSelected(Boolean.parseBoolean(props.getProperty("ac_use_snap")));
         }
-        if (props.containsKey("ac_snapPath")) {
-            txtSnapDir.setText(props.getProperty("ac_snapPath"));
+        if (props.containsKey("ac_snap_path")) {
+            txtSnapDir.setText(props.getProperty("ac_snap_path"));
         }
-        if (props.containsKey("ac_autoFormatFilename")) {
-            chkAutoFormatFilename.setSelected(Boolean.parseBoolean(props.getProperty("ac_autoFormatFilename")));
+        if (props.containsKey("ac_auto_format_filename")) {
+            chkAutoFormatFilename.setSelected(Boolean.parseBoolean(props.getProperty("ac_auto_format_filename")));
         }
 
         // 加载路径选择组件配置

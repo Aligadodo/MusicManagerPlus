@@ -15,6 +15,7 @@ import com.filemanager.strategy.ncm.model.CacheFileInfo;
 import com.filemanager.strategy.ncm.tool.FileNameExtractor;
 import com.filemanager.strategy.ncm.tool.IdxFileParser;
 import com.filemanager.strategy.ncm.tool.NeteaseApiClient;
+import com.filemanager.tool.file.AudioTypeInspector;
 import com.filemanager.type.OperationType;
 import com.jfoenix.controls.JFXCheckBox;
 import javafx.scene.Node;
@@ -59,8 +60,8 @@ public class NcmCacheTransStrategy extends NcmBaseStrategy {
         chkDownloadLyric.setSelected(false);
         
         // 设置默认输出路径为子目录 "Convert - Cache"
-        pathSelection.getTxtPath().setText("Convert - Cache");
         pathSelection.getCbOutputDirMode().getSelectionModel().select("子目录");
+        pathSelection.getTxtPath().setText("Convert - Cache"); 
     }
     
     @Override
@@ -108,14 +109,14 @@ public class NcmCacheTransStrategy extends NcmBaseStrategy {
     @Override
     public void saveConfig(Properties props) {
         pathSelection.saveConfig(props);
-        props.setProperty("ncm_cache_downloadLyric", String.valueOf(chkDownloadLyric.isSelected()));
+        props.setProperty("ncm_cache_download_lyric", String.valueOf(chkDownloadLyric.isSelected()));
     }
     
     @Override
     public void loadConfig(Properties props) {
         pathSelection.loadConfig(props);
-        if (props.containsKey("ncm_cache_downloadLyric")) {
-            chkDownloadLyric.setSelected(Boolean.parseBoolean(props.getProperty("ncm_cache_downloadLyric")));
+        if (props.containsKey("ncm_cache_download_lyric")) {
+            chkDownloadLyric.setSelected(Boolean.parseBoolean(props.getProperty("ncm_cache_download_lyric")));
         }
     }
     
@@ -328,6 +329,36 @@ public class NcmCacheTransStrategy extends NcmBaseStrategy {
             java.nio.file.Files.write(targetFile.toPath(), ucContent);
             
             log("缓存文件转换完成: " + ucFile.getName() + " -> " + targetFile.getName());
+            
+            // 使用AudioTypeInspector检测并修复文件类型
+            try {
+                AudioTypeInspector.FileTypeCheckResult checkResult = AudioTypeInspector.inspectHard(targetFile);
+                if (checkResult.success) {
+                    if (checkResult.needsFix) {
+                        // 需要修复文件类型
+                        String filename = targetFile.getName();
+                        String nameWithoutExt = filename.substring(0, filename.lastIndexOf('.'));
+                        File newFile = new File(targetFile.getParent(), nameWithoutExt + checkResult.suggestedExtension);
+                        
+                        // 重命名文件
+                        if (targetFile.renameTo(newFile)) {
+                            log("文件类型修复完成: " + targetFile.getName() + " -> " + newFile.getName());
+                            // 更新targetFile为修复后的文件
+                            targetFile = newFile;
+                            // 更新ChangeRecord中的新路径
+                            rec.setNewPath(newFile.getAbsolutePath());
+                        } else {
+                            logError("文件类型修复失败: 无法重命名文件");
+                        }
+                    } else {
+                        log("文件类型正确，无需修复: " + targetFile.getName());
+                    }
+                } else {
+                    logError("文件类型检测失败: " + checkResult.message);
+                }
+            } catch (Exception e) {
+                logError("文件类型检测和修复失败: " + e.getMessage());
+            }
         } catch (Exception e) {
             logError("缓存文件转换失败: " + e.getMessage());
             return;

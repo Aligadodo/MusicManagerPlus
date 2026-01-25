@@ -72,14 +72,14 @@ public class NcmConvertStrategy extends NcmBaseStrategy {
     @Override
     public void saveConfig(Properties props) {
         pathSelection.saveConfig(props);
-        props.setProperty("ncm_convert_deleteSource", String.valueOf(chkDeleteSource.isSelected()));
+        props.setProperty("ncm_convert_delete_source", String.valueOf(chkDeleteSource.isSelected()));
     }
     
     @Override
     public void loadConfig(Properties props) {
         pathSelection.loadConfig(props);
-        if (props.containsKey("ncm_convert_deleteSource")) {
-            chkDeleteSource.setSelected(Boolean.parseBoolean(props.getProperty("ncm_convert_deleteSource")));
+        if (props.containsKey("ncm_convert_delete_source")) {
+            chkDeleteSource.setSelected(Boolean.parseBoolean(props.getProperty("ncm_convert_delete_source")));
         }
     }
     
