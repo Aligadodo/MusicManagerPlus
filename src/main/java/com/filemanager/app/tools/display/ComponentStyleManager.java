@@ -14,6 +14,7 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
 
 /**
  * UI 组件样式管理器
@@ -69,6 +70,11 @@ public class ComponentStyleManager {
      */
     private static void applyComponentStyle(Node node) {
         if (node == null || theme == null) {
+            return;
+        }
+
+        // 检查组件是否标记为主题独立
+        if (isThemeIndependent(node)) {
             return;
         }
 
@@ -173,7 +179,9 @@ public class ComponentStyleManager {
         // 跳过MenuBarButton，因为它的style属性已经被绑定了
         if (labeled.getClass().getName().contains("MenuBarButton")) {
             // 只更新文本颜色，不设置完整样式
-            labeled.setTextFill(javafx.scene.paint.Color.web(theme.getTextPrimaryColor()));
+            String bgColor = extractBackgroundColor(labeled.getParent());
+            String textColor = getContrastTextColor(bgColor);
+            labeled.setTextFill(javafx.scene.paint.Color.web(textColor));
             labeled.setFont(javafx.scene.text.Font.font(theme.getFontFamily(), labeled.getFont().getSize()));
             return;
         }
@@ -189,6 +197,10 @@ public class ComponentStyleManager {
             currentStyle = currentStyle.replaceAll(".*?-fx-font-family:[^;]*;", "");
         }
 
+        // 提取背景颜色并计算对比文本颜色
+        String bgColor = extractBackgroundColor(labeled.getParent());
+        String textColor = getContrastTextColor(bgColor);
+
         // 设置更新后的样式，确保不会保留*号前缀
         String trimmedStyle = currentStyle.trim();
         if (trimmedStyle.startsWith("*")) {
@@ -196,7 +208,7 @@ public class ComponentStyleManager {
         }
         labeled.setStyle(String.format(
                 "%s -fx-text-fill: %s; -fx-font-family: '%s';",
-                trimmedStyle, theme.getTextPrimaryColor(), theme.getFontFamily()
+                trimmedStyle, textColor, theme.getFontFamily()
         ));
     }
 
@@ -883,11 +895,9 @@ public class ComponentStyleManager {
                         "}\n" +
                         ".text-area .scroll-bar:vertical {\n" +
                         "    -fx-background-color: transparent;\n" +
-                        "    -fx-background-radius: 0;\n" +
                         "}\n" +
                         ".text-area .scroll-bar:horizontal {\n" +
                         "    -fx-background-color: transparent;\n" +
-                        "    -fx-background-radius: 0;\n" +
                         "}\n" +
                         ".text-area .scroll-bar .thumb {\n" +
                         "    -fx-background-color: %s;\n" +
@@ -895,18 +905,11 @@ public class ComponentStyleManager {
                         "}\n" +
                         ".text-area .scroll-bar .track {\n" +
                         "    -fx-background-color: transparent;\n" +
-                        "}\n" +
-                        ".text-area .scroll-bar .increment-button, .text-area .scroll-bar .decrement-button {\n" +
-                        "    -fx-background-color: transparent;\n" +
-                        "    -fx-pref-height: 0;\n" +
-                        "    -fx-pref-width: 0;\n" +
                         "}",
-                theme.getPanelBgColor(), theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius(), theme.getCornerRadius(),
-                theme.getTextPrimaryColor(), theme.getLogFontFamily(), theme.getLogFontSize(),
+                theme.getListBgColor(), theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius(), theme.getCornerRadius(),
+                theme.getTextPrimaryColor(), theme.getFontFamily(), theme.getFontSize(),
                 theme.getTextTertiaryColor()
         ));
-        // 确保文本区域有内边距
-        textArea.setPadding(new Insets(10, 0, 0, 0));
     }
 
     /**
@@ -950,6 +953,10 @@ public class ComponentStyleManager {
             panelBgColor = panelBgColor + alphaHex;
         }
 
+        // 提取背景颜色并计算对比文本颜色
+        String bgColor = extractBackgroundColor(control.getParent());
+        String textColor = getContrastTextColor(bgColor);
+
         // 设置更新后的样式，确保不会保留*号前缀
         String trimmedStyle = currentStyle.trim();
         if (trimmedStyle.startsWith("*")) {
@@ -957,7 +964,7 @@ public class ComponentStyleManager {
         }
         control.setStyle(String.format(
                 "%s -fx-text-fill: %s; -fx-font-family: '%s'; -fx-background-color: %s; -fx-border-color: %s; -fx-border-radius: %.1f; -fx-background-radius: %.1f;",
-                trimmedStyle, theme.getTextPrimaryColor(), theme.getFontFamily(), panelBgColor, theme.getBorderColor(), theme.getCornerRadius(), theme.getCornerRadius()
+                trimmedStyle, textColor, theme.getFontFamily(), panelBgColor, theme.getBorderColor(), theme.getCornerRadius(), theme.getCornerRadius()
         ));
     }
 
@@ -997,21 +1004,19 @@ public class ComponentStyleManager {
             panelBgColor = panelBgColor + alphaHex;
         }
 
+        // 提取背景颜色并计算对比文本颜色
+        String bgColor = extractBackgroundColor(comboBox.getParent());
+        String textColor = getContrastTextColor(bgColor);
+
+        // 设置更新后的样式，确保不会保留*号前缀
+        String trimmedStyle = currentStyle.trim();
+        if (trimmedStyle.startsWith("*")) {
+            trimmedStyle = trimmedStyle.substring(1).trim();
+        }
         comboBox.setStyle(String.format(
                 "%s -fx-text-fill: %s; -fx-font-family: '%s'; -fx-background-color: %s; -fx-border-color: %s; -fx-border-radius: %.1f; -fx-background-radius: %.1f;",
-                currentStyle.trim(), theme.getTextPrimaryColor(), theme.getFontFamily(), panelBgColor, theme.getBorderColor(), theme.getCornerRadius(), theme.getCornerRadius()
+                trimmedStyle, textColor, theme.getFontFamily(), panelBgColor, theme.getBorderColor(), theme.getCornerRadius(), theme.getCornerRadius()
         ));
-
-        // 更新下拉列表样式
-        ContextMenu contextMenu = comboBox.getContextMenu();
-        if (contextMenu != null) {
-            contextMenu.setStyle(
-                    "-fx-background-color: " + panelBgColor + "; " +
-                            "-fx-border-color: " + theme.getBorderColor() + "; " +
-                            "-fx-border-radius: " + theme.getCornerRadius() + "; " +
-                            "-fx-background-radius: " + theme.getCornerRadius() + ";"
-            );
-        }
     }
 
     /**
@@ -1028,9 +1033,18 @@ public class ComponentStyleManager {
             currentStyle = currentStyle.replaceAll(".*?-fx-font-family:[^;]*;", "");
         }
 
+        // 提取背景颜色并计算对比文本颜色
+        String bgColor = extractBackgroundColor(checkBox.getParent());
+        String textColor = getContrastTextColor(bgColor);
+
+        // 设置更新后的样式，确保不会保留*号前缀
+        String trimmedStyle = currentStyle.trim();
+        if (trimmedStyle.startsWith("*")) {
+            trimmedStyle = trimmedStyle.substring(1).trim();
+        }
         checkBox.setStyle(String.format(
                 "%s -fx-text-fill: %s; -fx-font-family: '%s';",
-                currentStyle.trim(), theme.getTextPrimaryColor(), theme.getFontFamily()
+                trimmedStyle, textColor, theme.getFontFamily()
         ));
     }
 
@@ -1048,9 +1062,18 @@ public class ComponentStyleManager {
             currentStyle = currentStyle.replaceAll(".*?-fx-font-family:[^;]*;", "");
         }
 
+        // 提取背景颜色并计算对比文本颜色
+        String bgColor = extractBackgroundColor(radioButton.getParent());
+        String textColor = getContrastTextColor(bgColor);
+
+        // 设置更新后的样式，确保不会保留*号前缀
+        String trimmedStyle = currentStyle.trim();
+        if (trimmedStyle.startsWith("*")) {
+            trimmedStyle = trimmedStyle.substring(1).trim();
+        }
         radioButton.setStyle(String.format(
                 "%s -fx-text-fill: %s; -fx-font-family: '%s';",
-                currentStyle.trim(), theme.getTextPrimaryColor(), theme.getFontFamily()
+                trimmedStyle, textColor, theme.getFontFamily()
         ));
     }
 
@@ -1068,114 +1091,215 @@ public class ComponentStyleManager {
             currentStyle = currentStyle.replaceAll(".*?-fx-font-family:[^;]*;", "");
         }
 
+        // 提取背景颜色并计算对比文本颜色
+        String bgColor = extractBackgroundColor(toggleButton.getParent());
+        String textColor = getContrastTextColor(bgColor);
+
+        // 设置更新后的样式，确保不会保留*号前缀
+        String trimmedStyle = currentStyle.trim();
+        if (trimmedStyle.startsWith("*")) {
+            trimmedStyle = trimmedStyle.substring(1).trim();
+        }
         toggleButton.setStyle(String.format(
                 "%s -fx-text-fill: %s; -fx-font-family: '%s';",
-                currentStyle.trim(), theme.getTextPrimaryColor(), theme.getFontFamily()
+                trimmedStyle, textColor, theme.getFontFamily()
         ));
+    }
+
+    // ==================== 颜色对比度计算工具方法 ====================
+
+    /**
+     * 根据背景颜色自动计算合适的文本颜色
+     * @param backgroundColor 背景颜色字符串（支持#RRGGBB或#RRGGBBAA格式）
+     * @return 适合的文本颜色字符串
+     */
+    public static String getContrastTextColor(String backgroundColor) {
+        if (backgroundColor == null || backgroundColor.isEmpty() || "transparent".equalsIgnoreCase(backgroundColor)) {
+            return theme.getTextPrimaryColor();
+        }
+
+        try {
+            Color bgColor = Color.web(backgroundColor);
+            double brightness = calculateColorBrightness(bgColor);
+            // 根据亮度返回对比色：亮背景用深色文本，暗背景用浅色文本
+            return brightness > 0.5 ? theme.getTextPrimaryColor() : "#ffffff";
+        } catch (Exception e) {
+            // 如果颜色解析失败，返回默认文本颜色
+            return theme.getTextPrimaryColor();
+        }
+    }
+
+    /**
+     * 计算颜色的亮度（0-1，值越大越亮）
+     * @param color 颜色对象
+     * @return 亮度值
+     */
+    private static double calculateColorBrightness(Color color) {
+        // 使用相对 luminance 公式计算亮度
+        // 参考：https://www.w3.org/WAI/GL/wiki/Relative_luminance
+        double r = color.getRed();
+        double g = color.getGreen();
+        double b = color.getBlue();
+
+        // 线性化 RGB 值
+        r = r <= 0.03928 ? r / 12.92 : Math.pow((r + 0.055) / 1.055, 2.4);
+        g = g <= 0.03928 ? g / 12.92 : Math.pow((g + 0.055) / 1.055, 2.4);
+        b = b <= 0.03928 ? b / 12.92 : Math.pow((b + 0.055) / 1.055, 2.4);
+
+        // 计算相对亮度
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    }
+
+    /**
+     * 从组件样式中提取背景颜色
+     * @param node 组件节点
+     * @return 背景颜色字符串
+     */
+    private static String extractBackgroundColor(Node node) {
+        if (node == null) {
+            return null;
+        }
+
+        String style = node.getStyle();
+        if (style == null || style.isEmpty()) {
+            return null;
+        }
+
+        // 从样式字符串中提取背景颜色
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("-fx-background-color:\\s*([^;]+);");
+        java.util.regex.Matcher matcher = pattern.matcher(style);
+        if (matcher.find()) {
+            return matcher.group(1).trim();
+        }
+
+        return null;
+    }
+
+    /**
+     * 检查组件是否标记为主题独立
+     * @param node 组件节点
+     * @return 是否为主题独立
+     */
+    private static boolean isThemeIndependent(Node node) {
+        if (node == null) {
+            return false;
+        }
+
+        // 检查组件的样式是否包含主题独立标记
+        String style = node.getStyle();
+        return style != null && style.contains("-fx-theme-independent: true");
+    }
+
+    /**
+     * 为组件添加主题独立标记
+     * @param node 组件节点
+     */
+    public static void markAsThemeIndependent(Node node) {
+        if (node == null) {
+            return;
+        }
+
+        String currentStyle = node.getStyle();
+        if (!currentStyle.contains("-fx-theme-independent: true")) {
+            node.setStyle(currentStyle + " -fx-theme-independent: true;");
+        }
     }
 
     /**
      * 设置面板的基本样式
+     * @param region 区域组件
      */
     public static void setBasicStyle(Region region) {
         if (region == null || theme == null) {
             return;
         }
 
-        // 使用ThemeConfig中已有的方法获取带透明度的面板背景色
-        String bgColor = theme.getPanelBgColorWithOpacity(1.0);
+        // 为面板背景添加透明度，实现玻璃效果
+        String panelBgColor = theme.getPanelBgColor();
+        // 特殊处理transparent关键字，无论是否带有#前缀或被截断为transp
+        if (panelBgColor != null && !"transparent".equalsIgnoreCase(panelBgColor) && !"#transparent".equalsIgnoreCase(panelBgColor) && !"transp".equalsIgnoreCase(panelBgColor) && !"#transp".equalsIgnoreCase(panelBgColor) && panelBgColor.startsWith("#")) {
+            // 将十六进制颜色转换为带透明度的RGBA颜色
+            int alpha = (int) (theme.getGlassOpacity() * 255);
+            String alphaHex = String.format("%02x", alpha);
+            panelBgColor = panelBgColor + alphaHex;
+        }
 
+        // 设置面板的基本样式
         region.setStyle(String.format(
-                "-fx-background-color: %s; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f;",
-                bgColor, theme.getCornerRadius(), theme.getTextPrimaryColor(), theme.getBorderColor(), theme.getBorderWidth()
+                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-background-radius: %.1f; -fx-border-radius: %.1f;",
+                panelBgColor, theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius(), theme.getCornerRadius()
         ));
     }
 
     /**
      * 设置菜单和菜单项的样式
+     * @param menuBar 菜单栏组件
      */
     public static void setMenuStyle(MenuBar menuBar) {
         if (menuBar == null || theme == null) {
             return;
         }
 
-        // 设置菜单栏样式
-        menuBar.setStyle(
-                "-fx-background-color: transparent; " +
-                        "-fx-text-fill: " + theme.getTextPrimaryColor() + ";"
-        );
+        // 设置菜单栏的基本样式
+        menuBar.setStyle(String.format(
+                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: 0 0 %.1f 0;",
+                theme.getPanelBgColor(), theme.getBorderColor(), theme.getBorderWidth()
+        ));
 
-        // 设置所有菜单和菜单项的样式
+        // 递归更新所有菜单项的样式
         for (Menu menu : menuBar.getMenus()) {
-            setMenuItemStyle(menu);
-            for (MenuItem item : menu.getItems()) {
-                setMenuItemStyle(item);
-            }
+            updateMenuItemStyle(menu);
         }
     }
 
     /**
-     * 设置单个菜单项的样式
+     * 更新菜单项的样式
+     * @param menuItem 菜单项组件
      */
-    private static void setMenuItemStyle(MenuItem item) {
-        if (item == null || theme == null) {
+    private static void updateMenuItemStyle(MenuItem menuItem) {
+        if (menuItem == null || theme == null) {
             return;
         }
 
-        // 设置菜单项样式
-        item.setStyle(
-                "-fx-text-fill: " + theme.getTextPrimaryColor() + "; " +
-                        "-fx-font-family: " + theme.getFontFamily() + "; " +
-                        "-fx-font-size: 14px;"
-        );
+        // 设置菜单项的样式
+        menuItem.setStyle(String.format(
+                "-fx-text-fill: %s; -fx-font-family: '%s';",
+                theme.getTextPrimaryColor(), theme.getFontFamily()
+        ));
 
-        // 确保菜单的label也应用正确的文本颜色
-        if (item instanceof Menu) {
-            Menu menu = (Menu) item;
-            if (menu.getGraphic() instanceof Label) {
-                Label label = (Label) menu.getGraphic();
-                label.setTextFill(javafx.scene.paint.Color.web(theme.getTextPrimaryColor()));
+        // 如果是子菜单，递归更新
+        if (menuItem instanceof Menu) {
+            Menu menu = (Menu) menuItem;
+            for (MenuItem subMenuItem : menu.getItems()) {
+                updateMenuItemStyle(subMenuItem);
             }
-            // 递归设置子菜单项的样式
-            for (MenuItem subItem : menu.getItems()) {
-                setMenuItemStyle(subItem);
-            }
-        }
-
-        // 为上下文菜单设置样式
-        ContextMenu contextMenu = item.getParentPopup();
-        if (contextMenu != null) {
-            contextMenu.setStyle(
-                    "-fx-background-color: " + theme.getPanelBgColor() + "; " +
-                            "-fx-border-color: " + theme.getBorderColor() + "; " +
-                            "-fx-border-width: " + theme.getBorderWidth() + "; " +
-                            "-fx-border-radius: " + theme.getCornerRadius() + ";"
-            );
         }
     }
 
     /**
-     * 更新树节点样式
+     * 更新树节点的样式
+     * @param node 节点组件
+     * @param selected 是否选中
      */
     public static void updateTreeItemStyle(Node node, boolean selected) {
-        if (theme == null) {
+        if (node == null || theme == null) {
             return;
         }
 
-        if (selected) {
-            // 使用ThemeConfig的透明度计算方法
-            String selectedBgColor = theme.getListRowSelectedBgColorWithOpacity(0.6); // 60%透明度
+        // 提取背景颜色并计算对比文本颜色
+        String bgColor = extractBackgroundColor(node);
+        String textColor = getContrastTextColor(bgColor);
 
-            // 选中样式：使用带透明度的背景色，加强边框
+        // 根据选中状态设置不同的样式
+        if (selected) {
             node.setStyle(String.format(
-                    "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: 2; -fx-border-radius: %.1f; -fx-text-fill: %s;",
-                    selectedBgColor, theme.getBorderColor(), theme.getCornerRadius(), theme.getTextPrimaryColor()
+                    "-fx-background-color: %s; -fx-text-fill: %s; -fx-font-family: '%s';",
+                    theme.getListRowSelectedBgColor(), theme.getListRowSelectedTextColor(), theme.getFontFamily()
             ));
         } else {
-            // 默认样式：使用主题中的边框颜色
             node.setStyle(String.format(
-                    "-fx-background-color: transparent; -fx-border-color: %s; -fx-border-width: 0 0 1 0; -fx-text-fill: %s;",
-                    theme.getBorderColor(), theme.getTextPrimaryColor()
+                    "-fx-background-color: transparent; -fx-text-fill: %s; -fx-font-family: '%s';",
+                    textColor, theme.getFontFamily()
             ));
         }
     }
