@@ -673,7 +673,7 @@ public class PreviewView implements IAutoReloadAble {
         btnDeleteTarget.setOnMouseExited(null);
 
         // 添加执行选中行按钮
-        btnExecuteSelected = StyleFactory.createPrimaryButton("执行选中行", () -> {
+        btnExecuteSelected = StyleFactory.createSecondaryButton("执行选中的行", () -> {
             executeSelectedRecords();
         });
         // 移除悬浮效果
