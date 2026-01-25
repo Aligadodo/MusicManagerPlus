@@ -1,30 +1,35 @@
-/*
- * Copyright (c) 2026 hrcao (chrse1997@163.com)
- * Licensed under GPLv3 + Non-Commercial Clause.
- * You may not use this file except in compliance with the License.
- * See the LICENSE file in the project root for more information.
- * Author: hrcao
- * Mail: chrse1997@163.com
- * Date: 2026-01-24
+/* 
+ * Copyright (c) 2026 hrcao (chrse1997@163.com) 
+ * Licensed under GPLv3 + Non-Commercial Clause. 
+ * You may not use this file except in compliance with the License. 
+ * See the LICENSE file in the project root for more information. 
+ * Author: hrcao 
+ * Mail: chrse1997@163.com 
+ * Date: 2026-01-24 
  */
 package com.filemanager.strategy;
 
 import com.filemanager.app.base.IAppStrategy;
 import com.filemanager.app.tools.display.StyleFactory;
+import com.filemanager.strategy.base.PathSelectionComponent;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.dump.NcmDump;
-import com.filemanager.strategy.base.PathSelectionComponent;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
+import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXComboBox;
+import com.jfoenix.controls.JFXTabPane;
+import com.jfoenix.controls.JFXTextField;
 import javafx.scene.Node;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.Tab;
 import javafx.scene.layout.VBox;
+import javafx.stage.DirectoryChooser;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.OutputStreamWriter;
+import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
@@ -33,7 +38,7 @@ import java.util.List;
 import java.util.Properties;
 
 public class NcmIntegratedStrategy extends IAppStrategy {
-    // --- UI 组件 --- 
+    // --- UI 组件 ---
     private final JFXComboBox<String> cbFunction;
     private final PathSelectionComponent pathSelection;
 
@@ -45,12 +50,14 @@ public class NcmIntegratedStrategy extends IAppStrategy {
 
     // 歌词下载选项
     private final CheckBox chkOverwriteExisting;
+    private final CheckBox chkPreMatchLyric;
 
     // 运行时参数
     private String pFunction;
     private boolean pDeleteSource;
     private boolean pDownloadLyric;
     private boolean pOverwriteExisting;
+    private boolean pPreMatchLyric;
 
     public NcmIntegratedStrategy() {
         // 创建功能选择下拉框
@@ -72,6 +79,10 @@ public class NcmIntegratedStrategy extends IAppStrategy {
         // 歌词下载选项
         chkOverwriteExisting = new CheckBox("覆盖已存在的歌词文件");
         chkOverwriteExisting.setSelected(false);
+
+        // 预匹配歌词选项
+        chkPreMatchLyric = new CheckBox("预览阶段先匹配歌词");
+        chkPreMatchLyric.setSelected(true);
     }
 
     @Override
@@ -88,8 +99,7 @@ public class NcmIntegratedStrategy extends IAppStrategy {
         // 功能选择部分
         VBox functionSelection = new VBox(
                 StyleFactory.createChapter("功能选择"),
-                StyleFactory.createParamPairLine("选择功能:", cbFunction)
-        );
+                StyleFactory.createParamPairLine("选择功能:", cbFunction));
 
         // 添加功能选择部分到主面板
         mainPanel.getChildren().add(functionSelection);
@@ -124,8 +134,7 @@ public class NcmIntegratedStrategy extends IAppStrategy {
                 mainPanel.getChildren().addAll(
                         StyleFactory.createSeparator(),
                         StyleFactory.createChapter("NCM转换选项"),
-                        chkDeleteSource
-                );
+                        chkDeleteSource);
                 break;
 
             case "缓存扫描":
@@ -136,8 +145,7 @@ public class NcmIntegratedStrategy extends IAppStrategy {
                 mainPanel.getChildren().addAll(
                         StyleFactory.createSeparator(),
                         StyleFactory.createChapter("缓存扫描选项"),
-                        chkDownloadLyric
-                );
+                        chkDownloadLyric);
                 break;
 
             case "歌词下载":
@@ -147,8 +155,8 @@ public class NcmIntegratedStrategy extends IAppStrategy {
                 mainPanel.getChildren().addAll(
                         StyleFactory.createSeparator(),
                         StyleFactory.createChapter("歌词下载选项"),
-                        chkOverwriteExisting
-                );
+                        chkOverwriteExisting,
+                        chkPreMatchLyric);
                 break;
         }
     }
@@ -159,13 +167,12 @@ public class NcmIntegratedStrategy extends IAppStrategy {
     private void addOutputSettings(VBox container) {
         container.getChildren().addAll(
                 StyleFactory.createSeparator(),
-                pathSelection.getConfigNode()
-        );
+                pathSelection.getConfigNode());
     }
 
     @Override
-    public List<ChangeRecord> analyze(ChangeRecord currentRecord, List<ChangeRecord> inputRecords, List<File> rootDirs) {
-        captureParams();
+    public List<ChangeRecord> analyze(ChangeRecord currentRecord, List<ChangeRecord> inputRecords,
+            List<File> rootDirs) {
         List<ChangeRecord> result = new ArrayList<>();
 
         File file = currentRecord.getFileHandle();
@@ -174,7 +181,8 @@ public class NcmIntegratedStrategy extends IAppStrategy {
         switch (pFunction) {
             case "NCM转换":
                 if (file.isFile() && file.getName().toLowerCase().endsWith(".ncm")) {
-                    ChangeRecord record = new ChangeRecord(file.getName(), file.getName(), file, true, getOutputPath(file), OperationType.NCM_CONVERT);
+                    ChangeRecord record = new ChangeRecord(file.getName(), file.getName(), file, true,
+                            getOutputPath(file), OperationType.NCM_CONVERT);
                     result.add(record);
                 }
                 break;
@@ -185,7 +193,8 @@ public class NcmIntegratedStrategy extends IAppStrategy {
                     if (isCacheFile(file)) {
                         // 检查缓存文件是否完整
                         if (isCacheFileComplete(file)) {
-                            ChangeRecord record = new ChangeRecord(file.getName(), file.getName(), file, true, getOutputPath(file), OperationType.NCM_CACHE_SCAN);
+                            ChangeRecord record = new ChangeRecord(file.getName(), file.getName(), file, true,
+                                    getOutputPath(file), OperationType.NCM_CACHE_SCAN);
                             result.add(record);
                         }
                     }
@@ -197,8 +206,47 @@ public class NcmIntegratedStrategy extends IAppStrategy {
 
             case "歌词下载":
                 if (file.isFile() && isAudioFile(file)) {
-                    ChangeRecord record = new ChangeRecord(file.getName(), file.getName(), file, true, file.getAbsolutePath(), OperationType.NCM_LYRIC_DOWNLOAD);
-                    result.add(record);
+                    // 构建歌词文件路径
+                    String lyricFileName = file.getName().substring(0, file.getName().lastIndexOf('.')) + ".lrc";
+                    File lyricFile = new File(file.getParent(), lyricFileName);
+                    String lyricFilePath = lyricFile.getAbsolutePath();
+
+                    // 创建ChangeRecord
+                    ChangeRecord record = new ChangeRecord(file.getName(), lyricFileName, file, true, lyricFilePath,
+                            OperationType.NCM_LYRIC_DOWNLOAD);
+
+                    // 提取歌曲信息
+                    String songName = extractSongName(file);
+                    String artistName = extractArtistName(file);
+
+                    // 存储歌曲信息到额外参数
+                    record.getExtraParams().put("songName", songName);
+                    record.getExtraParams().put("artistName", artistName);
+
+                    // 根据pPreMatchLyric决定是否在分析阶段预匹配歌词
+                    if (pPreMatchLyric) {
+                        // 尝试搜索歌曲，获取歌曲ID
+                        String songId = null;
+                        try {
+                            songId = searchSong(songName, artistName);
+                        } catch (Exception e) {
+                            logError("搜索歌曲时发生错误: " + e.getMessage());
+                        }
+
+                        if (songId != null) {
+                            record.getExtraParams().put("songId", songId);
+                            log("找到歌曲ID: " + songId + " 对应歌曲: " + songName
+                                    + (artistName.isEmpty() ? "" : " - " + artistName));
+
+                            result.add(record);
+                        } else {
+                            log("未找到对应歌曲: " + songName + (artistName.isEmpty() ? "" : " - " + artistName));
+                        }
+                    } else {
+
+                        result.add(record);
+                    }
+
                 }
                 break;
         }
@@ -230,13 +278,15 @@ public class NcmIntegratedStrategy extends IAppStrategy {
 
     private void scanCacheFiles(File directory, List<ChangeRecord> result) {
         File[] files = directory.listFiles();
-        if (files == null) return;
+        if (files == null)
+            return;
 
         for (File file : files) {
             if (file.isDirectory()) {
                 scanCacheFiles(file, result);
             } else if (isCacheFile(file) && isCacheFileComplete(file)) {
-                ChangeRecord record = new ChangeRecord(file.getName(), file.getName(), file, true, getOutputPath(file), OperationType.NCM_CACHE_SCAN);
+                ChangeRecord record = new ChangeRecord(file.getName(), file.getName(), file, true, getOutputPath(file),
+                        OperationType.NCM_CACHE_SCAN);
                 result.add(record);
             }
         }
@@ -259,7 +309,7 @@ public class NcmIntegratedStrategy extends IAppStrategy {
                 executeCacheScan(file);
                 break;
             case NCM_LYRIC_DOWNLOAD:
-                executeLyricDownload(file);
+                executeLyricDownload(rec);
                 break;
             default:
                 logError("未知操作类型: " + opType);
@@ -337,7 +387,38 @@ public class NcmIntegratedStrategy extends IAppStrategy {
 
         // 如果需要下载歌词
         if (pDownloadLyric && targetFile.exists()) {
-            executeLyricDownload(targetFile);
+            // 为缓存转换后的文件创建一个临时的ChangeRecord来下载歌词
+            ChangeRecord tempRec = new ChangeRecord(targetFile.getName(), targetFile.getName(), targetFile, true,
+                    targetFile.getAbsolutePath(), OperationType.NCM_LYRIC_DOWNLOAD);
+
+            // 提取歌曲信息
+            String songName = extractSongName(targetFile);
+            String artistName = extractArtistName(targetFile);
+
+            // 尝试搜索歌曲，获取歌曲ID
+            String songId = null;
+            try {
+                songId = searchSong(songName, artistName);
+            } catch (Exception e) {
+                logError("搜索歌曲时发生错误: " + e.getMessage());
+            }
+
+            // 存储歌曲信息到额外参数
+            tempRec.getExtraParams().put("songName", songName);
+            tempRec.getExtraParams().put("artistName", artistName);
+            if (songId != null) {
+                tempRec.getExtraParams().put("songId", songId);
+                log("找到歌曲ID: " + songId + " 对应歌曲: " + songName + (artistName.isEmpty() ? "" : " - " + artistName));
+            } else {
+                log("未找到对应歌曲: " + songName + (artistName.isEmpty() ? "" : " - " + artistName));
+            }
+
+            // 构建歌词文件路径
+            String lyricFileName = targetFile.getName().substring(0, targetFile.getName().lastIndexOf('.')) + ".lrc";
+            File lyricFile = new File(targetFile.getParent(), lyricFileName);
+            tempRec.setNewPath(lyricFile.getAbsolutePath());
+
+            executeLyricDownload(tempRec);
         }
 
         log("缓存文件处理完成: " + ucFile.getName());
@@ -369,23 +450,36 @@ public class NcmIntegratedStrategy extends IAppStrategy {
         return baseName + "." + audioFormat;
     }
 
-    private void executeLyricDownload(File audioFile) throws Exception {
+    private void executeLyricDownload(ChangeRecord rec) throws Exception {
+        File audioFile = rec.getFileHandle();
         log("开始为音频文件下载歌词: " + audioFile.getName());
 
-        String songName = extractSongName(audioFile);
+        // 从ChangeRecord中获取歌曲信息
+        String songName = rec.getExtraParams().get("songName");
+        String artistName = rec.getExtraParams().get("artistName");
+        String songId = rec.getExtraParams().get("songId");
+
         if (songName == null || songName.isEmpty()) {
-            logError("无法从文件名中提取歌曲名称: " + audioFile.getName());
+            logError("无法获取歌曲名称: " + audioFile.getName());
             return;
         }
 
-        String artistName = extractArtistName(audioFile);
-        String lyricContent = downloadLyric(songName, artistName);
+        String lyricContent = null;
+        if (songId != null) {
+            // 直接使用歌曲ID获取歌词
+            lyricContent = getLyricById(songId);
+        } else {
+            // 再次尝试搜索并下载歌词
+            lyricContent = downloadLyric(songName, artistName);
+        }
 
         if (lyricContent != null && !lyricContent.isEmpty()) {
-            File lyricFile = new File(audioFile.getParent(), audioFile.getName().substring(0, audioFile.getName().lastIndexOf('.')) + ".lrc");
+            // 使用ChangeRecord中的新路径作为歌词文件路径
+            File lyricFile = new File(rec.getNewPath());
 
             if (!lyricFile.exists() || pOverwriteExisting) {
-                try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(lyricFile), StandardCharsets.UTF_8))) {
+                try (BufferedWriter writer = new BufferedWriter(
+                        new OutputStreamWriter(new FileOutputStream(lyricFile), StandardCharsets.UTF_8))) {
                     writer.write(lyricContent);
                 }
                 log("歌词下载完成，已保存为: " + lyricFile.getName());
@@ -393,7 +487,7 @@ public class NcmIntegratedStrategy extends IAppStrategy {
                 log("歌词文件已存在，跳过下载: " + lyricFile.getName());
             }
         } else {
-            logError("未找到对应歌词: " + songName);
+            logError("未找到对应歌词: " + songName + (artistName.isEmpty() ? "" : " - " + artistName));
         }
     }
 
@@ -434,11 +528,147 @@ public class NcmIntegratedStrategy extends IAppStrategy {
     }
 
     private String downloadLyric(String songName, String artistName) throws Exception {
-        // 这里使用模拟实现，实际应调用网易云API
         log("尝试下载歌曲歌词: " + songName + (artistName.isEmpty() ? "" : " - " + artistName));
 
-        // 模拟返回歌词内容
-        return generateMockLyric(songName, artistName);
+        // 搜索歌曲，获取歌曲ID
+        String songId = searchSong(songName, artistName);
+        if (songId == null) {
+            logError("未找到对应歌曲: " + songName + (artistName.isEmpty() ? "" : " - " + artistName));
+            return null;
+        }
+
+        // 根据歌曲ID获取歌词
+        return getLyricById(songId);
+    }
+
+    /**
+     * 搜索歌曲，获取歌曲ID
+     * 
+     * @param songName   歌曲名称
+     * @param artistName 艺术家名称
+     * @return 歌曲ID
+     */
+    private String searchSong(String songName, String artistName) throws Exception {
+        String searchUrl = "http://music.163.com/api/search/get/web?csrf_token=";
+        String query = songName + (artistName.isEmpty() ? "" : " " + artistName);
+        String data = "s=" + URLEncoder.encode(query, "UTF-8") + "&type=1&offset=0&subType=&limit=10";
+
+        String response = sendPostRequest(searchUrl, data);
+
+        // 解析JSON响应，获取歌曲ID
+        // 这里使用简单的字符串处理，实际应使用JSON解析库
+        int idStart = response.indexOf("\"id\":");
+        if (idStart > 0) {
+            idStart += 5;
+            int idEnd = response.indexOf(",", idStart);
+            if (idEnd > idStart) {
+                return response.substring(idStart, idEnd).trim();
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * 根据歌曲ID获取歌词
+     * 
+     * @param songId 歌曲ID
+     * @return 歌词内容
+     */
+    private String getLyricById(String songId) throws Exception {
+        String lyricUrl = "http://music.163.com/api/song/lyric?id=" + songId + "&lv=1&tv=-1";
+        String response = sendGetRequest(lyricUrl);
+
+        // 解析JSON响应，获取歌词
+        // 这里使用简单的字符串处理，实际应使用JSON解析库
+        int lrcStart = response.indexOf("\"lyric\":\"");
+        if (lrcStart > 0) {
+            lrcStart += 9;
+            int lrcEnd = response.indexOf("\"}", lrcStart);
+            if (lrcEnd > lrcStart) {
+                String lyric = response.substring(lrcStart, lrcEnd);
+                // 解码转义字符
+                lyric = lyric.replace("\\n", "\n").replace("\\r", "\r").replace("\\\"", "\"");
+                return lyric;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * 发送GET请求
+     * 
+     * @param url 请求URL
+     * @return 响应内容
+     */
+    private String sendGetRequest(String url) throws Exception {
+        URL obj = new URL(url);
+        HttpURLConnection con = (HttpURLConnection) obj.openConnection();
+        con.setRequestMethod("GET");
+        con.setRequestProperty("User-Agent",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36");
+        con.setRequestProperty("Referer", "http://music.163.com");
+        con.setRequestProperty("Host", "music.163.com");
+
+        int responseCode = con.getResponseCode();
+        if (responseCode != HttpURLConnection.HTTP_OK) {
+            logError("GET请求失败，响应码: " + responseCode);
+            return null;
+        }
+
+        BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream(), StandardCharsets.UTF_8));
+        String inputLine;
+        StringBuilder response = new StringBuilder();
+
+        while ((inputLine = in.readLine()) != null) {
+            response.append(inputLine);
+        }
+        in.close();
+
+        return response.toString();
+    }
+
+    /**
+     * 发送POST请求
+     * 
+     * @param url  请求URL
+     * @param data 请求数据
+     * @return 响应内容
+     */
+    private String sendPostRequest(String url, String data) throws Exception {
+        URL obj = new URL(url);
+        HttpURLConnection con = (HttpURLConnection) obj.openConnection();
+        con.setRequestMethod("POST");
+        con.setRequestProperty("User-Agent",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36");
+        con.setRequestProperty("Referer", "http://music.163.com");
+        con.setRequestProperty("Host", "music.163.com");
+        con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+        con.setRequestProperty("Content-Length", String.valueOf(data.length()));
+
+        con.setDoOutput(true);
+        try (DataOutputStream wr = new DataOutputStream(con.getOutputStream())) {
+            wr.writeBytes(data);
+            wr.flush();
+        }
+
+        int responseCode = con.getResponseCode();
+        if (responseCode != HttpURLConnection.HTTP_OK) {
+            logError("POST请求失败，响应码: " + responseCode);
+            return null;
+        }
+
+        BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream(), StandardCharsets.UTF_8));
+        String inputLine;
+        StringBuilder response = new StringBuilder();
+
+        while ((inputLine = in.readLine()) != null) {
+            response.append(inputLine);
+        }
+        in.close();
+
+        return response.toString();
     }
 
     private String generateMockLyric(String songName, String artistName) {
@@ -470,6 +700,7 @@ public class NcmIntegratedStrategy extends IAppStrategy {
         pDeleteSource = chkDeleteSource.isSelected();
         pDownloadLyric = chkDownloadLyric.isSelected();
         pOverwriteExisting = chkOverwriteExisting.isSelected();
+        pPreMatchLyric = chkPreMatchLyric.isSelected();
         pathSelection.captureParams();
     }
 
@@ -480,6 +711,7 @@ public class NcmIntegratedStrategy extends IAppStrategy {
         props.setProperty("ncm_deleteSource", String.valueOf(chkDeleteSource.isSelected()));
         props.setProperty("ncm_downloadLyric", String.valueOf(chkDownloadLyric.isSelected()));
         props.setProperty("ncm_overwriteExisting", String.valueOf(chkOverwriteExisting.isSelected()));
+        props.setProperty("ncm_preMatchLyric", String.valueOf(chkPreMatchLyric.isSelected()));
     }
 
     @Override
@@ -496,6 +728,9 @@ public class NcmIntegratedStrategy extends IAppStrategy {
         }
         if (props.containsKey("ncm_overwriteExisting")) {
             chkOverwriteExisting.setSelected(Boolean.parseBoolean(props.getProperty("ncm_overwriteExisting")));
+        }
+        if (props.containsKey("ncm_preMatchLyric")) {
+            chkPreMatchLyric.setSelected(Boolean.parseBoolean(props.getProperty("ncm_preMatchLyric")));
         }
     }
 
@@ -526,14 +761,14 @@ public class NcmIntegratedStrategy extends IAppStrategy {
                     String baseName = getFile().getName().substring(0, getFile().getName().lastIndexOf('.'));
 
                     File[] convertedFiles = originalDir.listFiles(
-                            f -> f.getName().startsWith(baseName) && !f.getName().equals(getFile().getName())
-                    );
+                            f -> f.getName().startsWith(baseName) && !f.getName().equals(getFile().getName()));
 
-                    if (convertedFiles != null) {
+                    if (convertedFiles != null && convertedFiles.length > 0) {
                         for (File convertedFile : convertedFiles) {
                             File targetFile = new File(targetDir, convertedFile.getName());
                             // 移动文件到目标目录
-                            Files.move(convertedFile.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                            Files.move(convertedFile.toPath(), targetFile.toPath(),
+                                    StandardCopyOption.REPLACE_EXISTING);
                             log("已将转换后的文件移动到目标目录: " + targetFile.getAbsolutePath());
                         }
                     }
