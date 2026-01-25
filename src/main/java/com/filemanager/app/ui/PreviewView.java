@@ -16,6 +16,7 @@ import com.filemanager.app.base.IAutoReloadAble;
 import com.filemanager.app.tools.MultiThreadTaskEstimator;
 import com.filemanager.app.tools.display.DetailWindowHelper;
 import com.filemanager.app.tools.display.FXDialogUtils;
+import com.filemanager.app.tools.display.FloatingTooltip;
 import com.filemanager.app.tools.display.StyleFactory;
 import com.filemanager.app.tools.display.ThemeConfig;
 import com.filemanager.model.ChangeRecord;
@@ -154,13 +155,48 @@ public class PreviewView implements IAutoReloadAble {
         // 自动刷新复选框
         chkAutoRefresh = new JFXCheckBox("自动刷新");
         chkAutoRefresh.setSelected(true);
-        chkAutoRefresh.setTooltip(new Tooltip("启用后每隔3秒自动刷新预览列表"));
         chkAutoRefresh.selectedProperty().addListener((obs, oldVal, newVal) -> toggleAutoRefresh(newVal));
 
         txtSearchFilter.textProperty().addListener((o, old, v) -> app.refreshPreviewTableFilter());
         cbStatusFilter.valueProperty().addListener((o, old, v) -> app.refreshPreviewTableFilter());
         cbOperationTypeFilter.valueProperty().addListener((o, old, v) -> app.refreshPreviewTableFilter());
         chkHideUnchanged.selectedProperty().addListener((o, old, v) -> app.refreshPreviewTableFilter());
+
+        // 添加搜索和过滤组件的提示信息
+        FloatingTooltip.bindToNode(txtSearchFilter, "搜索过滤", java.util.Arrays.asList(
+                "输入关键词搜索文件",
+                "支持文件名和路径搜索",
+                "实时过滤显示结果"
+        ));
+
+        FloatingTooltip.bindToNode(cbStatusFilter, "状态筛选", java.util.Arrays.asList(
+                "筛选文件执行状态",
+                "可选择：全部、执行中、成功、失败、跳过、无需处理"
+        ));
+
+        FloatingTooltip.bindToNode(cbOperationTypeFilter, "操作类型筛选", java.util.Arrays.asList(
+                "筛选文件操作类型",
+                "根据不同的操作类型过滤结果"
+        ));
+
+        FloatingTooltip.bindToNode(chkHideUnchanged, "仅显示变更", java.util.Arrays.asList(
+                "勾选后只显示有变更的文件",
+                "不显示无需处理的文件"
+        ));
+
+        FloatingTooltip.bindToNode(chkAutoRefresh, "自动刷新", java.util.Arrays.asList(
+                "启用后每隔10秒自动刷新预览列表",
+                "保持数据实时性"
+        ));
+
+        // 设置预览数量 默认200
+        numberDisplay = new JFXComboBox<>(FXCollections.observableArrayList(50, 100, 200, 500, 1000, 2000, 5000));
+        numberDisplay.getSelectionModel().selectFirst();
+
+        FloatingTooltip.bindToNode(numberDisplay, "显示数量限制", java.util.Arrays.asList(
+                "设置预览表格显示的最大文件数量",
+                "选择合适的值以提高性能"
+        ));
 
         mainProgressBar = StyleFactory.createMainProgressBar(0);
         runningLabel = StyleFactory.createChapter("无执行中任务");
@@ -191,10 +227,6 @@ public class PreviewView implements IAutoReloadAble {
         spExecutionThreads.setTooltip(new Tooltip("执行线程数：用于管道任务执行"));
         spExecutionThreads.setPrefWidth(60);
         spExecutionThreads.setMaxWidth(60);
-
-        // 设置预览数量 默认200
-        numberDisplay = new JFXComboBox<>(FXCollections.observableArrayList(50, 100, 200, 500, 1000, 2000, 5000));
-        numberDisplay.getSelectionModel().selectFirst();
 
         // 线程池模式选择
         cbThreadPoolMode = new JFXComboBox<>(FXCollections.observableArrayList(ThreadPoolManager.MODE_GLOBAL, ThreadPoolManager.MODE_ROOT_PATH));
@@ -272,10 +304,50 @@ public class PreviewView implements IAutoReloadAble {
 
         chkUnlimitedExecution = new JFXCheckBox("不限制");
         chkUnlimitedExecution.setSelected(true);
-        chkUnlimitedExecution.setTooltip(new Tooltip("不限制执行数量"));
         chkUnlimitedExecution.selectedProperty().addListener((obs, oldVal, newVal) -> {
             spGlobalExecutionLimit.setDisable(newVal);
         });
+
+        // 添加线程和数量限制设置的提示信息
+        FloatingTooltip.bindToNode(spPreviewThreads, "预览线程数", java.util.Arrays.asList(
+                "设置文件扫描和分析的线程数",
+                "值越大速度越快，但会增加系统负载",
+                "建议根据CPU核心数设置"
+        ));
+
+        FloatingTooltip.bindToNode(spExecutionThreads, "执行线程数", java.util.Arrays.asList(
+                "设置管道任务执行的线程数",
+                "值越大速度越快，但会增加系统负载",
+                "建议根据CPU核心数设置"
+        ));
+
+        FloatingTooltip.bindToNode(cbThreadPoolMode, "线程池模式", java.util.Arrays.asList(
+                "全局统一配置：所有根路径共用线程数设置",
+                "根路径独立：每个根路径可单独设置线程数",
+                "任务执行中无法切换模式"
+        ));
+
+        FloatingTooltip.bindToNode(spGlobalPreviewLimit, "全局预览数量上限", java.util.Arrays.asList(
+                "设置预览的最大文件数量",
+                "值越小性能越好，但显示的文件越少",
+                "达到上限后会停止扫描"
+        ));
+
+        FloatingTooltip.bindToNode(spGlobalExecutionLimit, "全局执行数量上限", java.util.Arrays.asList(
+                "设置执行的最大文件数量",
+                "值越小性能越好，但执行的文件越少",
+                "达到上限后会停止执行"
+        ));
+
+        FloatingTooltip.bindToNode(chkUnlimitedPreview, "不限制预览数量", java.util.Arrays.asList(
+                "取消勾选可设置预览数量上限",
+                "无限制可能会影响性能"
+        ));
+
+        FloatingTooltip.bindToNode(chkUnlimitedExecution, "不限制执行数量", java.util.Arrays.asList(
+                "取消勾选可设置执行数量上限",
+                "无限制可能会影响性能"
+        ));
 
         // 初始化根路径线程数配置UI
         rootPathThreadConfigBox = new VBox(10);
@@ -709,6 +781,27 @@ public class PreviewView implements IAutoReloadAble {
         // 初始化按钮状态 - 确保在所有按钮都实例化后再调用
         updateDeleteButtonsState();
         actionBox.setPadding(new Insets(5));
+
+        // 添加批量操作按钮的提示信息
+        FloatingTooltip.bindToNode(chkSelectAll, "全选", java.util.Arrays.asList(
+                "选择所有可见行",
+                "可用于批量操作"
+        ));
+
+        FloatingTooltip.bindToNode(btnExecuteSelected, "执行选中的行", java.util.Arrays.asList(
+                "仅执行选中的文件操作",
+                "跳过未选中的文件"
+        ));
+
+        FloatingTooltip.bindToNode(btnDeleteOriginal, "删除原始文件", java.util.Arrays.asList(
+                "删除选中文件的原始文件",
+                "谨慎操作，删除后不可恢复"
+        ));
+
+        FloatingTooltip.bindToNode(btnDeleteTarget, "删除目标文件", java.util.Arrays.asList(
+                "删除选中文件的目标文件",
+                "谨慎操作，删除后不可恢复"
+        ));
 
         // 表格
         previewTable.setShowRoot(false);

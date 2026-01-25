@@ -13,6 +13,7 @@ import com.filemanager.app.base.IAppController;
 import com.filemanager.app.base.IAutoReloadAble;
 import com.filemanager.app.tools.AdvancedFileTypeManager;
 import com.filemanager.app.tools.display.AutoShrinkLabel;
+import com.filemanager.app.tools.display.FloatingTooltip;
 import com.filemanager.app.tools.display.StyleFactory;
 import com.jfoenix.controls.JFXComboBox;
 import com.jfoenix.controls.JFXTextField;
@@ -90,6 +91,29 @@ public class GlobalSettingsView implements IAutoReloadAble {
         spRecursionDepth.setManaged(false);
         recursionDepthRangeBox.setVisible(false);
         recursionDepthRangeBox.setManaged(false);
+
+        // 添加扫描模式和层级设置的提示信息
+        FloatingTooltip.bindToNode(cbRecursionMode, "扫描模式", java.util.Arrays.asList(
+                "全部文件：扫描所有层级的文件",
+                "当前目录：只扫描当前目录",
+                "指定目录层级：扫描到指定的层级",
+                "目录层级范围：扫描指定范围内的层级"
+        ));
+
+        FloatingTooltip.bindToNode(spRecursionDepth, "扫描层级", java.util.Arrays.asList(
+                "设置扫描的目录层级深度",
+                "值越大扫描范围越广，但速度越慢"
+        ));
+
+        FloatingTooltip.bindToNode(spMinRecursionDepth, "最小层级", java.util.Arrays.asList(
+                "设置扫描的最小目录层级",
+                "与最大层级配合使用"
+        ));
+
+        FloatingTooltip.bindToNode(spMaxRecursionDepth, "最大层级", java.util.Arrays.asList(
+                "设置扫描的最大目录层级",
+                "与最小层级配合使用"
+        ));
 
         // 初始化文件扫描过滤配置
         scanFilterList = FXCollections.observableArrayList(
@@ -195,6 +219,20 @@ public class GlobalSettingsView implements IAutoReloadAble {
                 }
             }
         });
+
+        // 添加过滤规则设置的提示信息
+        FloatingTooltip.bindToNode(scanFilterInput, "添加过滤规则", java.util.Arrays.asList(
+                "输入过滤规则，按回车添加",
+                "支持通配符：* 匹配任意字符",
+                "例如：*Convert* 会过滤包含Convert的路径"
+        ));
+
+        FloatingTooltip.bindToNode(scanFilterListView, "过滤规则列表", java.util.Arrays.asList(
+                "显示当前的过滤规则",
+                "点击规则可进行编辑",
+                "使用上下按钮调整顺序",
+                "使用×按钮删除规则"
+        ));
     }
 
     private void buildUI() {
