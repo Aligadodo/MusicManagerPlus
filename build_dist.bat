@@ -91,12 +91,19 @@ REM --- 8. 生成启动脚本 ---
 echo [8/8] 生成启动脚本...
 (
     echo @echo off
+    echo REM 设置编码为UTF-8
     echo chcp 65001 ^>nul
+    echo REM 设置控制台字体以支持中文
+    echo set "PYTHONIOENCODING=utf-8"
     echo cd /d "%%~dp0"
     echo 正在启动 Echo Music Manager...
     echo.
-    echo REM 启动命令
-    echo "jre\bin\java.exe" -Xms1g -Xmx2g -XX:+HeapDumpOnOutOfMemoryError -jar "bin\EchoMusicManager.jar"
+    echo REM 启动命令 - 添加JavaFX参数以解决黑屏问题
+    echo "jre\bin\java.exe" -Xms1g -Xmx2g -XX:+HeapDumpOnOutOfMemoryError ^
+    echo  -Dprism.order=sw ^
+    echo  -Dprism.forceGPU=false ^
+    echo  -Djavafx.animation.fullspeed=true ^
+    echo  -jar "bin\EchoMusicManager.jar"
     echo.
     echo if %%errorlevel%% neq 0 ^(
     echo     echo 程序异常退出，错误码: %%errorlevel%%
