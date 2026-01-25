@@ -32,6 +32,7 @@ import java.util.Properties;
  */
 public class PathSelectionComponent implements IConfigComponent {
     // UI组件
+    @Getter
     private final JFXComboBox<String> cbOutputDirMode;
     @Getter
     private final JFXTextField txtPath;
