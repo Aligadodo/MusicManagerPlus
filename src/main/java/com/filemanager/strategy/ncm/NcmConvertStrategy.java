@@ -90,23 +90,58 @@ public class NcmConvertStrategy extends NcmBaseStrategy {
         File file = currentRecord.getFileHandle();
         
         if (file.isFile() && file.getName().toLowerCase().endsWith(".ncm")) {
-            ChangeRecord record = new ChangeRecord(file.getName(), file.getName(), file, true,
-                    getOutputPath(file), OperationType.NCM_CONVERT);
+            // 根据文件大小预先估计音频格式
+            String estimatedFormat = estimateAudioFormatBySize(file);
+            
+            // 构建目标文件名
+            String fileNameWithoutExt = file.getName().substring(0, file.getName().lastIndexOf('.'));
+            String targetFileName = fileNameWithoutExt + "." + estimatedFormat;
+            
+            // 构建完整的目标文件路径
+            String targetDir = getOutputPath(file);
+            String targetPath = targetDir + File.separator + targetFileName;
+            
+            ChangeRecord record = new ChangeRecord(file.getName(), targetFileName, file, true,
+                    targetPath, OperationType.NCM_CONVERT);
+            
+            // 存储估计的音频格式到额外参数
+            record.getExtraParams().put("estimatedFormat", estimatedFormat);
+            
             result.add(record);
         }
         
         return result;
     }
     
+    /**
+     * 根据文件大小估计音频格式
+     * @param file 源文件
+     * @return 估计的音频格式
+     */
+    private String estimateAudioFormatBySize(File file) {
+        long fileSize = file.length();
+        
+        // 根据文件大小粗略估计音频格式
+        // 这里只是一个简单的估计，实际的音频格式需要在转换后通过 AudioTypeInspector 来诊断
+        if (fileSize > 50 * 1024 * 1024) { // 大于50MB
+            return "wav"; // 无损格式
+        } else if (fileSize > 10 * 1024 * 1024) { // 大于10MB
+            return "flac"; // 高品质MP3
+        } else {
+            return "mp3"; // 默认MP3
+        }
+    }
+    
     @Override
     public void execute(ChangeRecord rec) throws Exception {
         File ncmFile = rec.getFileHandle();
-        String targetDirPath = rec.getNewPath();
+        String targetPath = rec.getNewPath();
         
         log("开始转换NCM文件: " + ncmFile.getName());
         
         // 确定输出目录
-        File targetDir = new File(targetDirPath);
+        File targetFile = new File(targetPath);
+        File targetDir = targetFile.getParentFile();
         if (!targetDir.exists()) {
             targetDir.mkdirs();
         }
@@ -115,15 +150,79 @@ public class NcmConvertStrategy extends NcmBaseStrategy {
         NcmDump ncmDump = new NcmDump(ncmFile, targetDir);
         ncmDump.execute();
         
-        if (pDeleteSource) {
+        // 查找转换后的文件
+        File convertedFile = findConvertedFile(targetDir, ncmFile);
+        if (convertedFile != null) {
+            // 使用AudioTypeInspector检测并修复文件类型
+            try {
+                com.filemanager.tool.file.AudioTypeInspector.FileTypeCheckResult checkResult = com.filemanager.tool.file.AudioTypeInspector.inspectHard(convertedFile);
+                if (checkResult.success) {
+                    if (checkResult.needsFix) {
+                        // 需要修复文件类型
+                        String filename = convertedFile.getName();
+                        String nameWithoutExt = filename.substring(0, filename.lastIndexOf('.'));
+                        File newFile = new File(convertedFile.getParent(), nameWithoutExt + checkResult.suggestedExtension);
+                        
+                        // 重命名文件
+                        if (convertedFile.renameTo(newFile)) {
+                            log("文件类型修复完成: " + convertedFile.getName() + " -> " + newFile.getName());
+                            // 更新targetFile为修复后的文件
+                            targetFile = newFile;
+                            // 更新ChangeRecord中的新路径
+                            rec.setNewPath(newFile.getAbsolutePath());
+                        } else {
+                            logError("文件类型修复失败: 无法重命名文件");
+                        }
+                    } else {
+                        log("文件类型正确，无需修复: " + convertedFile.getName());
+                        // 更新ChangeRecord中的新路径
+                        rec.setNewPath(convertedFile.getAbsolutePath());
+                    }
+                } else {
+                    logError("文件类型检测失败: " + checkResult.message);
+                }
+            } catch (Exception e) {
+                logError("文件类型检测和修复失败: " + e.getMessage());
+            }
+                    if (pDeleteSource) {
             if (ncmFile.delete()) {
-                log("已删除源NCM文件: " + ncmFile.getName());
-            } else {
-                logError("无法删除源NCM文件: " + ncmFile.getName());
+                    log("已删除源NCM文件: " + ncmFile.getName());
+                } else {
+                    logError("无法删除源NCM文件: " + ncmFile.getName());
+                }
+            }
+        } else {
+            logError("无法找到转换后的文件");
+        }
+        
+
+        
+        log("NCM文件转换完成: " + ncmFile.getName());
+    }
+    
+    /**
+     * 查找转换后的文件
+     * @param targetDir 目标目录
+     * @param ncmFile 源NCM文件
+     * @return 转换后的文件
+     */
+    private File findConvertedFile(File targetDir, File ncmFile) {
+        String fileNameWithoutExt = ncmFile.getName().substring(0, ncmFile.getName().lastIndexOf('.'));
+        
+        // 查找与源文件名相似的文件（不包括.ncm扩展名）
+        File[] files = targetDir.listFiles();
+        if (files != null) {
+            for (File file : files) {
+                if (file.isFile() && !file.getName().toLowerCase().endsWith(".ncm")) {
+                    String fileBaseName = file.getName();
+                    if (fileBaseName.startsWith(fileNameWithoutExt)) {
+                        return file;
+                    }
+                }
             }
         }
         
-        log("NCM文件转换完成: " + ncmFile.getName());
+        return null;
     }
     
     @Override
