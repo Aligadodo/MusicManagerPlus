@@ -223,6 +223,7 @@ public class NcmCacheTransStrategy extends NcmBaseStrategy {
         String audioFormat = extraParams.get("audioFormat");
         String songName = extraParams.get("songName");
         String artistName = extraParams.get("artistName");
+        String songId = extraParams.get("songId");
         
         // 如果没有缓存文件信息，则重新解析
         if (audioFormat == null) {
@@ -299,19 +300,10 @@ public class NcmCacheTransStrategy extends NcmBaseStrategy {
             ChangeRecord tempRec = new ChangeRecord(targetFile.getName(), targetFile.getName(), targetFile, true,
                     targetFile.getAbsolutePath(), OperationType.NCM_LYRIC_DOWNLOAD);
             
-            // 提取歌曲信息
-            // 优先使用缓存文件解析出的歌曲信息
-            // 如果没有缓存文件信息，则从目标文件名中提取
-            if (songName == null || songName.isEmpty()) {
-                songName = extractSongName(targetFile);
-            }
-            if (artistName == null || artistName.isEmpty()) {
-                artistName = extractArtistName(targetFile);
-            }
-            
             // 存储歌曲信息到额外参数
             tempRec.getExtraParams().put("songName", songName);
             tempRec.getExtraParams().put("artistName", artistName);
+            tempRec.getExtraParams().put("songId", songId);
             
             // 构建歌词文件路径
             String lyricFileName = targetFile.getName().substring(0, targetFile.getName().lastIndexOf('.')) + ".lrc";
