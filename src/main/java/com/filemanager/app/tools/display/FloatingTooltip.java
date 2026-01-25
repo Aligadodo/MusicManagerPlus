@@ -32,6 +32,9 @@ import java.util.List;
  * 支持多行文本、自适应显示、自动换行、低优先级显示
  */
 public class FloatingTooltip {
+    // 静态变量，控制是否显示提示信息
+    private static boolean showTooltips = true;
+    
     private final Stage stage;
     private final TextFlow content;
     
@@ -111,6 +114,11 @@ public class FloatingTooltip {
      * @param y 鼠标Y坐标
      */
     public void show(Node node, double x, double y) {
+        // 如果关闭了提示信息显示，则直接返回
+        if (!showTooltips) {
+            return;
+        }
+        
         if (node == null || !node.isVisible()) {
             return;
         }
@@ -230,5 +238,21 @@ public class FloatingTooltip {
         node.setOnMouseExited(event -> {
             tooltip.hide();
         });
+    }
+    
+    /**
+     * 设置是否显示提示信息
+     * @param show 是否显示提示信息
+     */
+    public static void setShowTooltips(boolean show) {
+        showTooltips = show;
+    }
+    
+    /**
+     * 获取是否显示提示信息
+     * @return 是否显示提示信息
+     */
+    public static boolean isShowTooltips() {
+        return showTooltips;
     }
 }

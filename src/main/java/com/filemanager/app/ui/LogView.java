@@ -11,6 +11,7 @@ package com.filemanager.app.ui;
 
 import com.filemanager.app.base.IAppController;
 import com.filemanager.app.base.IAutoReloadAble;
+import com.filemanager.app.tools.display.FloatingTooltip;
 import com.filemanager.app.tools.display.StyleFactory;
 import com.filemanager.tool.log.LogInfo;
 import com.filemanager.tool.log.LogType;
@@ -58,6 +59,22 @@ public class LogView implements IAutoReloadAble {
         JFXButton clr = StyleFactory.createSmallActionButton("清空日志", "#dcbecf", this::clearLog);
         JFXButton btnScrollTop = StyleFactory.createSmallActionButton("查看顶部", "#dcbecf", () -> logArea.setScrollTop(0));
         JFXButton btnScrollBottom = StyleFactory.createSmallActionButton("查看底部", "#dcbecf", () -> logArea.setScrollTop(Double.MAX_VALUE));
+        
+        // 添加提示信息
+        FloatingTooltip.bindToNode(clr, "清空日志", java.util.Arrays.asList(
+                "清空当前显示的所有日志",
+                "此操作不可撤销"
+        ));
+        
+        FloatingTooltip.bindToNode(btnScrollTop, "查看顶部", java.util.Arrays.asList(
+                "滚动到日志的顶部",
+                "查看最早的日志记录"
+        ));
+        
+        FloatingTooltip.bindToNode(btnScrollBottom, "查看底部", java.util.Arrays.asList(
+                "滚动到日志的底部",
+                "查看最新的日志记录"
+        ));
 
         // 移除硬编码样式，让StyleFactory统一管理
         VBox.setVgrow(logArea, Priority.ALWAYS);

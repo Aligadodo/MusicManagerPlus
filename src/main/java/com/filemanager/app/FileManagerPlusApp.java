@@ -16,6 +16,7 @@ import com.filemanager.app.components.FileScanner;
 import com.filemanager.app.components.PipelineManager;
 import com.filemanager.app.tools.ConfigFileManager;
 import com.filemanager.app.tools.MultiThreadTaskEstimator;
+import com.filemanager.app.tools.display.FloatingTooltip;
 import com.filemanager.app.tools.display.ProgressBarDisplay;
 import com.filemanager.app.tools.display.StyleFactory;
 import com.filemanager.app.tools.display.ThemeConfig;
@@ -287,6 +288,15 @@ public class FileManagerPlusApp extends Application implements IAppController {
         // 应用菜单样式
         StyleFactory.setMenuStyle(menuBar);
 
+        // 添加开启使用说明的开关
+        JFXCheckBox showTooltips = new JFXCheckBox("开启使用说明");
+        showTooltips.setSelected(true); // 默认勾选即开启提示
+        
+        // 添加事件监听器，控制提示信息的显示与否
+        showTooltips.selectedProperty().addListener((observable, oldValue, newValue) -> {
+            FloatingTooltip.setShowTooltips(newValue);
+        });
+        
         autoRun = new JFXCheckBox("预览成功立即运行");
         autoRun.setSelected(false);
         btnGo = StyleFactory.createActionButton("预览", null, this::runPipelineAnalysis);
@@ -307,7 +317,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
         logo.setTextFill(Color.web(currentTheme.getTextPrimaryColor()));
         logo.setStyle("-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 3, 0, 0, 1);");
 
-        header.getChildren().addAll(logo, new Region(), menuBar, autoRun, btnGo, btnExecute, btnStop);
+        header.getChildren().addAll(logo, new Region(), menuBar, showTooltips, autoRun, btnGo, btnExecute, btnStop);
         HBox.setHgrow(header.getChildren().get(1), Priority.ALWAYS);
         VBox top = new VBox(header, new Separator());
         root.setTop(top);

@@ -13,6 +13,7 @@ import com.filemanager.app.base.IAppController;
 import com.filemanager.app.base.IAppStrategy;
 import com.filemanager.app.base.IAutoReloadAble;
 import com.filemanager.app.tools.display.FXDialogUtils;
+import com.filemanager.app.tools.display.FloatingTooltip;
 import com.filemanager.app.tools.display.NodeUtils;
 import com.filemanager.app.tools.display.StyleFactory;
 import com.filemanager.model.RuleCondition;
@@ -165,10 +166,21 @@ public class ComposeView implements IAutoReloadAble {
         });
 
         HBox srcTools = new HBox(5);
-        srcTools.getChildren().addAll(
-                StyleFactory.createActionButton("添加目录", null, app::addDirectoryAction),
-                StyleFactory.createActionButton("清空", "#e74c3c", app::clearSourceDirs)
-        );
+        JFXButton btnAddDir = StyleFactory.createActionButton("添加目录", null, app::addDirectoryAction);
+        JFXButton btnClearDirs = StyleFactory.createActionButton("清空", "#e74c3c", app::clearSourceDirs);
+        
+        // 添加提示信息
+        FloatingTooltip.bindToNode(btnAddDir, "添加目录", java.util.Arrays.asList(
+                "添加需要处理的文件或文件夹",
+                "可通过弹窗选择或直接拖拽添加"
+        ));
+        
+        FloatingTooltip.bindToNode(btnClearDirs, "清空目录", java.util.Arrays.asList(
+                "清空所有已添加的源目录",
+                "此操作不可撤销"
+        ));
+        
+        srcTools.getChildren().addAll(btnAddDir, btnClearDirs);
 
         this.tpFilters = new TitledPane("全局筛选", app.getGlobalSettingsView());
         this.tpFilters.setCollapsible(true);
@@ -310,6 +322,18 @@ public class ComposeView implements IAutoReloadAble {
                         app.logError("组件添加失败:" + ExceptionUtils.getStackTrace(e));
                     }
                 });
+        
+        // 添加提示信息
+        FloatingTooltip.bindToNode(cbAdd, "选择功能", java.util.Arrays.asList(
+                "从下拉列表中选择需要的处理功能",
+                "每个功能对应一个处理步骤"
+        ));
+        
+        FloatingTooltip.bindToNode(btnAddStep, "添加步骤", java.util.Arrays.asList(
+                "将选中的功能添加到流水线中",
+                "添加后可在列表中调整顺序"
+        ));
+        
         pipeActions.getChildren().addAll(cbAdd, btnAddStep);
         centerPanel.getChildren().addAll(pipeActions, pipelineListView);
         return centerPanel;
@@ -419,6 +443,14 @@ public class ComposeView implements IAutoReloadAble {
             refreshConfig(strategy); // 刷新整个面板
             app.invalidatePreview("添加条件组");
         });
+        
+        // 添加提示信息
+        FloatingTooltip.bindToNode(btnAddGroup, "添加条件组", java.util.Arrays.asList(
+                "添加一个新的条件组",
+                "条件组内的条件为且关系",
+                "不同条件组之间为或关系"
+        ));
+        
         rootBox.getChildren().addAll(groupsContainer, btnAddGroup);
         return rootBox;
     }
@@ -495,6 +527,27 @@ public class ComposeView implements IAutoReloadAble {
             app.invalidatePreview("添加条件");
         });
         btnAdd.setStyle("-fx-background-color: #2ecc71; -fx-text-fill: white; -fx-padding: 2 8;");
+        
+        // 添加提示信息
+        FloatingTooltip.bindToNode(btnAdd, "添加条件", java.util.Arrays.asList(
+                "添加一个新的条件到当前条件组",
+                "根据选择的条件类型填写对应的值",
+                "条件组内的条件为且关系"
+        ));
+        
+        // 为条件类型下拉框添加提示信息
+        FloatingTooltip.bindToNode(cbType, "条件类型", java.util.Arrays.asList(
+                "选择条件的类型",
+                "不同类型的条件需要不同的参数",
+                "某些条件类型不需要填写值"
+        ));
+        
+        // 为条件值输入框添加提示信息
+        FloatingTooltip.bindToNode(txtVal, "条件值", java.util.Arrays.asList(
+                "根据选择的条件类型填写对应的值",
+                "某些条件类型不需要填写值",
+                "例如：文件扩展名、文件名包含等"
+        ));
 
         addForm.getChildren().addAll(cbType, txtVal, btnAdd);
 
