@@ -12,7 +12,7 @@ package com.filemanager.strategy;
 import com.filemanager.app.base.IAppStrategy;
 import com.filemanager.app.tools.display.StyleFactory;
 import com.filemanager.model.ChangeRecord;
-import com.filemanager.strategy.ncm.NcmCacheScanStrategy;
+import com.filemanager.strategy.ncm.NcmCacheTransStrategy;
 import com.filemanager.strategy.ncm.NcmConvertStrategy;
 import com.filemanager.strategy.ncm.NcmLyricDownloadStrategy;
 import com.filemanager.type.ScanTarget;
@@ -21,7 +21,6 @@ import javafx.scene.Node;
 import javafx.scene.layout.VBox;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
@@ -31,7 +30,7 @@ public class NcmIntegratedStrategy extends IAppStrategy {
     
     // 策略实例
     private final NcmConvertStrategy convertStrategy;
-    private final NcmCacheScanStrategy cacheScanStrategy;
+    private final NcmCacheTransStrategy cacheScanStrategy;
     private final NcmLyricDownloadStrategy lyricDownloadStrategy;
 
     // 运行时参数
@@ -47,7 +46,7 @@ public class NcmIntegratedStrategy extends IAppStrategy {
 
         // 初始化策略实例
         convertStrategy = new NcmConvertStrategy();
-        cacheScanStrategy = new NcmCacheScanStrategy();
+        cacheScanStrategy = new NcmCacheTransStrategy();
         lyricDownloadStrategy = new NcmLyricDownloadStrategy();
     }
 

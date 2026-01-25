@@ -11,6 +11,10 @@ package com.filemanager.strategy.ncm;
 
 import com.filemanager.app.tools.display.StyleFactory;
 import com.filemanager.model.ChangeRecord;
+import com.filemanager.strategy.ncm.model.CacheFileInfo;
+import com.filemanager.strategy.ncm.tool.FileNameExtractor;
+import com.filemanager.strategy.ncm.tool.IdxFileParser;
+import com.filemanager.strategy.ncm.tool.NeteaseApiClient;
 import com.filemanager.type.OperationType;
 import com.jfoenix.controls.JFXCheckBox;
 import javafx.scene.Node;
@@ -26,8 +30,9 @@ import java.util.Properties;
 /**
  * 缓存扫描策略
  * 负责网易云音乐缓存文件的扫描和转换功能
+ * @author 28667
  */
-public class NcmCacheScanStrategy extends NcmBaseStrategy {
+public class NcmCacheTransStrategy extends NcmBaseStrategy {
     // UI组件
     private final CheckBox chkDownloadLyric;
     
@@ -39,7 +44,7 @@ public class NcmCacheScanStrategy extends NcmBaseStrategy {
     private final NeteaseApiClient neteaseApiClient;
     private final FileNameExtractor fileNameExtractor;
     
-    public NcmCacheScanStrategy() {
+    public NcmCacheTransStrategy() {
         super("ncm_cache");
         
         // 初始化工具类

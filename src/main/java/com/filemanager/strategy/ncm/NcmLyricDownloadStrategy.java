@@ -11,6 +11,7 @@ package com.filemanager.strategy.ncm;
 
 import com.filemanager.app.tools.display.StyleFactory;
 import com.filemanager.model.ChangeRecord;
+import com.filemanager.strategy.ncm.tool.NeteaseApiClient;
 import com.filemanager.type.OperationType;
 import com.jfoenix.controls.JFXCheckBox;
 
@@ -19,9 +20,6 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.layout.VBox;
 
 import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;

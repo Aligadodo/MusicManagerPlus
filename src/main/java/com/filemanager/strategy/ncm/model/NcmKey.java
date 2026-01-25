@@ -7,7 +7,7 @@
  * Mail: chrse1997@163.com
  * Date: 2026-01-12
  */
-package com.filemanager.model.dump;
+package com.filemanager.strategy.ncm.model;
 
 public class NcmKey {
 

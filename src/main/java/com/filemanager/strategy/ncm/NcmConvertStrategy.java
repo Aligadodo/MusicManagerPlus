@@ -11,7 +11,7 @@ package com.filemanager.strategy.ncm;
 
 import com.filemanager.app.tools.display.StyleFactory;
 import com.filemanager.model.ChangeRecord;
-import com.filemanager.model.dump.NcmDump;
+import com.filemanager.strategy.ncm.model.NcmDump;
 import com.filemanager.type.OperationType;
 import com.jfoenix.controls.JFXCheckBox;
 
@@ -20,8 +20,6 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.layout.VBox;
 
 import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;

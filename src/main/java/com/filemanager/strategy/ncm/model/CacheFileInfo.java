@@ -7,7 +7,7 @@
  * Mail: chrse1997@163.com 
  * Date: 2026-01-25 
  */
-package com.filemanager.strategy.ncm;
+package com.filemanager.strategy.ncm.model;
 
 /**
  * 缓存文件信息类
