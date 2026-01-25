@@ -43,6 +43,7 @@ public class NcmCacheTransStrategy extends NcmBaseStrategy {
     private final IdxFileParser idxFileParser;
     private final NeteaseApiClient neteaseApiClient;
     private final FileNameExtractor fileNameExtractor;
+    private final NcmLyricDownloadStrategy lyricDownloadStrategy;
     
     public NcmCacheTransStrategy() {
         super("ncm_cache");
@@ -51,6 +52,7 @@ public class NcmCacheTransStrategy extends NcmBaseStrategy {
         idxFileParser = new IdxFileParser();
         neteaseApiClient = new NeteaseApiClient();
         fileNameExtractor = new FileNameExtractor();
+        lyricDownloadStrategy = new NcmLyricDownloadStrategy();
         
         // 缓存扫描选项
         chkDownloadLyric = new JFXCheckBox("自动下载对应歌词");
@@ -59,6 +61,12 @@ public class NcmCacheTransStrategy extends NcmBaseStrategy {
         // 设置默认输出路径为子目录 "Convert - Cache"
         pathSelection.getTxtPath().setText("Convert - Cache");
         pathSelection.getCbOutputDirMode().getSelectionModel().select("子目录");
+    }
+    
+    @Override
+    public void setContext(com.filemanager.app.base.IAppController app) {
+        super.setContext(app);
+        lyricDownloadStrategy.setContext(app);
     }
     
     @Override
@@ -137,102 +145,19 @@ public class NcmCacheTransStrategy extends NcmBaseStrategy {
                     
                     // 如果.info文件存在，从其中读取歌曲信息
                     if (infoFile.exists()) {
-                        try {
-                            java.io.FileInputStream fis = new java.io.FileInputStream(infoFile);
-                            byte[] buffer = new byte[1024];
-                            int bytesRead = fis.read(buffer);
-                            fis.close();
-                            
-                            if (bytesRead > 0) {
-                                String content = new String(buffer, 0, bytesRead, java.nio.charset.StandardCharsets.UTF_8);
-                                
-                                // 提取 songName
-                                int songNameStart = content.indexOf("songName");
-                                if (songNameStart != -1) {
-                                    int colonStart = content.indexOf(":", songNameStart);
-                                    if (colonStart != -1) {
-                                        int quoteStart = content.indexOf("\"", colonStart);
-                                        if (quoteStart != -1) {
-                                            int quoteEnd = content.indexOf("\"", quoteStart + 1);
-                                            if (quoteEnd != -1) {
-                                                songName = content.substring(quoteStart + 1, quoteEnd);
-                                            }
-                                        }
-                                    }
-                                }
-                                
-                                // 提取 artistName
-                                int artistNameStart = content.indexOf("artistName");
-                                if (artistNameStart != -1) {
-                                    int colonStart = content.indexOf(":", artistNameStart);
-                                    if (colonStart != -1) {
-                                        int quoteStart = content.indexOf("\"", colonStart);
-                                        if (quoteStart != -1) {
-                                            int quoteEnd = content.indexOf("\"", quoteStart + 1);
-                                            if (quoteEnd != -1) {
-                                                artistName = content.substring(quoteStart + 1, quoteEnd);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        } catch (Exception e) {
-                            logError("解析 .info 文件失败: " + e.getMessage());
-                        }
+                        Map<String, String> songInfo = readSongInfoFromInfoFile(infoFile);
+                        songName = songInfo.get("songName");
+                        artistName = songInfo.get("artistName");
                     }
                     
                     // 如果.info文件不存在或解析失败，从网易云API获取歌曲信息
                     if (songName == null || artistName == null) {
-                        try {
-                            java.net.URL url = new java.net.URL("http://music.163.com/api/song/detail/?id=" + songId + "&ids=%5B" + songId + "%5D");
-                            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
-                            conn.setRequestMethod("GET");
-                            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36");
-                            conn.setRequestProperty("Connection", "keep-alive");
-                            conn.setRequestProperty("Accept", "text/html,application/json,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
-                            conn.setRequestProperty("Accept-Language", "zh-CN,zh;q=0.8");
-                            
-                            java.io.BufferedReader br = new java.io.BufferedReader(new java.io.InputStreamReader(conn.getInputStream(), java.nio.charset.StandardCharsets.UTF_8));
-
-                            StringBuilder sb = new StringBuilder();
-                            String line;
-                            while ((line = br.readLine()) != null) {
-                                sb.append(line);
-                            }
-                            br.close();
-                            conn.disconnect();
-                            
-                            String response = sb.toString();
-                            
-                            // 提取歌曲名称
-                            java.util.regex.Pattern songNamePattern = java.util.regex.Pattern.compile("name.*?:.*?([^,]+)");
-                            java.util.regex.Matcher songNameMatcher = songNamePattern.matcher(response);
-                            if (songNameMatcher.find()) {
-                                songName = songNameMatcher.group(1).replaceAll("[\"\\{\\}]", "").trim();
-                            }
-                            
-                            // 提取艺术家名称
-                            java.util.regex.Pattern artistNamePattern = java.util.regex.Pattern.compile("artists.*?:.*?name.*?:.*?([^,]+)");
-                            java.util.regex.Matcher artistNameMatcher = artistNamePattern.matcher(response);
-                            if (artistNameMatcher.find()) {
-                                artistName = artistNameMatcher.group(1).replaceAll("[\"\\{\\}]", "").trim();
-                            }
-                            
-                            // 保存歌曲信息到.info文件
-                            if (songName != null && artistName != null) {
-                                StringBuilder infoJson = new StringBuilder();
-                                infoJson.append("{");
-                                infoJson.append("\"songName\":\"").append(songName).append("\",");
-                                infoJson.append("\"artistName\":\"").append(artistName).append("\",");
-                                infoJson.append("\"songId\":\"").append(songId).append("\"");
-                                infoJson.append("}");
-                                
-                                java.io.FileOutputStream fos = new java.io.FileOutputStream(infoFile);
-                                fos.write(infoJson.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
-                                fos.close();
-                            }
-                        } catch (Exception e) {
-                            logError("从网易云API获取歌曲信息失败: " + e.getMessage());
+                        Map<String, String> songInfo = getSongInfoFromApi(songId, infoFile);
+                        songName = songInfo.get("songName");
+                        artistName = songInfo.get("artistName");
+                        
+                        // 如果API获取失败，返回空结果
+                        if (songName == null || artistName == null) {
                             return result;
                         }
                     }
@@ -296,101 +221,19 @@ public class NcmCacheTransStrategy extends NcmBaseStrategy {
                 
                 // 如果.info文件存在，从其中读取歌曲信息
                 if (infoFile.exists()) {
-                    try {
-                        java.io.FileInputStream fis = new java.io.FileInputStream(infoFile);
-                        byte[] buffer = new byte[1024];
-                        int bytesRead = fis.read(buffer);
-                        fis.close();
-                        
-                        if (bytesRead > 0) {
-                            String content = new String(buffer, 0, bytesRead, java.nio.charset.StandardCharsets.UTF_8);
-                            
-                            // 提取 songName
-                            int songNameStart = content.indexOf("songName");
-                            if (songNameStart != -1) {
-                                int colonStart = content.indexOf(":", songNameStart);
-                                if (colonStart != -1) {
-                                    int quoteStart = content.indexOf("\"", colonStart);
-                                    if (quoteStart != -1) {
-                                        int quoteEnd = content.indexOf("\"", quoteStart + 1);
-                                        if (quoteEnd != -1) {
-                                            songName = content.substring(quoteStart + 1, quoteEnd);
-                                        }
-                                    }
-                                }
-                            }
-                            
-                            // 提取 artistName
-                            int artistNameStart = content.indexOf("artistName");
-                            if (artistNameStart != -1) {
-                                int colonStart = content.indexOf(":", artistNameStart);
-                                if (colonStart != -1) {
-                                    int quoteStart = content.indexOf("\"", colonStart);
-                                    if (quoteStart != -1) {
-                                        int quoteEnd = content.indexOf("\"", quoteStart + 1);
-                                        if (quoteEnd != -1) {
-                                            artistName = content.substring(quoteStart + 1, quoteEnd);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    } catch (Exception e) {
-                        logError("解析 .info 文件失败: " + e.getMessage());
-                    }
+                    Map<String, String> songInfo = readSongInfoFromInfoFile(infoFile);
+                    songName = songInfo.get("songName");
+                    artistName = songInfo.get("artistName");
                 }
                 
                 // 如果.info文件不存在或解析失败，从网易云API获取歌曲信息
                 if (songName == null || artistName == null) {
-                    try {
-                        java.net.URL url = new java.net.URL("http://music.163.com/api/song/detail/?id=" + songId + "&ids=%5B" + songId + "%5D");
-                        java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
-                        conn.setRequestMethod("GET");
-                        conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36");
-                        conn.setRequestProperty("Connection", "keep-alive");
-                        conn.setRequestProperty("Accept", "text/html,application/json,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
-                        conn.setRequestProperty("Accept-Language", "zh-CN,zh;q=0.8");
-                        
-                        java.io.BufferedReader br = new java.io.BufferedReader(new java.io.InputStreamReader(conn.getInputStream()));
-                        StringBuilder sb = new StringBuilder();
-                        String line;
-                        while ((line = br.readLine()) != null) {
-                            sb.append(line);
-                        }
-                        br.close();
-                        conn.disconnect();
-                        
-                        String response = sb.toString();
-                        
-                        // 提取歌曲名称
-                        java.util.regex.Pattern songNamePattern = java.util.regex.Pattern.compile("name.*?:.*?([^,]+)");
-                        java.util.regex.Matcher songNameMatcher = songNamePattern.matcher(response);
-                        if (songNameMatcher.find()) {
-                            songName = songNameMatcher.group(1).replaceAll("[\"\\{\\}]", "").trim();
-                        }
-                        
-                        // 提取艺术家名称
-                        java.util.regex.Pattern artistNamePattern = java.util.regex.Pattern.compile("artists.*?:.*?name.*?:.*?([^,]+)");
-                        java.util.regex.Matcher artistNameMatcher = artistNamePattern.matcher(response);
-                        if (artistNameMatcher.find()) {
-                            artistName = artistNameMatcher.group(1).replaceAll("[\"\\{\\}]", "").trim();
-                        }
-                        
-                        // 保存歌曲信息到.info文件
-                        if (songName != null && artistName != null) {
-                            StringBuilder infoJson = new StringBuilder();
-                            infoJson.append("{");
-                            infoJson.append("\"songName\":\"").append(songName).append("\",");
-                            infoJson.append("\"artistName\":\"").append(artistName).append("\",");
-                            infoJson.append("\"songId\":\"").append(songId).append("\"");
-                            infoJson.append("}");
-                            
-                            java.io.FileOutputStream fos = new java.io.FileOutputStream(infoFile);
-                            fos.write(infoJson.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
-                            fos.close();
-                        }
-                    } catch (Exception e) {
-                        logError("从网易云API获取歌曲信息失败: " + e.getMessage());
+                    Map<String, String> songInfo = getSongInfoFromApi(songId, infoFile);
+                    songName = songInfo.get("songName");
+                    artistName = songInfo.get("artistName");
+                    
+                    // 如果API获取失败，跳过当前文件
+                    if (songName == null || artistName == null) {
                         continue;
                     }
                 }
@@ -460,36 +303,35 @@ public class NcmCacheTransStrategy extends NcmBaseStrategy {
             }
         }
         
-        // 生成目标文件名
-        String targetFileName;
-        if (songName != null && !songName.isEmpty() && artistName != null && !artistName.isEmpty()) {
-            targetFileName = artistName + " - " + songName + "." + audioFormat;
-        } else if (songName != null && !songName.isEmpty()) {
-            targetFileName = songName + "." + audioFormat;
-        } else {
-            targetFileName = generateTargetFileName(ucFile, audioFormat);
-            if (targetFileName == null) {
-                logError("无法生成目标文件名: " + ucFile.getName());
-                return;
-            }
-        }
+        // 直接使用ChangeRecord中的目标文件路径
+        File targetFile = new File(rec.getNewPath());
         
-        // 确定输出目录
-        String outputDirPath = getOutputPath(ucFile);
-        File outputDir = new File(outputDirPath);
+        // 确保输出目录存在
+        File outputDir = targetFile.getParentFile();
         if (!outputDir.exists()) {
             outputDir.mkdirs();
         }
-        
-        File targetFile = new File(outputDir, targetFileName);
         log("目标文件: " + targetFile.getAbsolutePath());
         
-        // 这里添加缓存文件转换逻辑
-        // 实际实现时，需要根据缓存文件格式进行解码和转换
-        // 例如：处理.uc文件的解密和转换
-        
-        // 模拟转换完成
-        log("缓存文件转换完成: " + ucFile.getName() + " -> " + targetFile.getName());
+        // 缓存文件转换逻辑
+        // 处理.uc文件的解密和转换
+        try {
+            // 读取UC文件内容
+            byte[] ucContent = java.nio.file.Files.readAllBytes(ucFile.toPath());
+            
+            // 解密UC文件（对每个字节进行异或操作）
+            for (int i = 0; i < ucContent.length; i++) {
+                ucContent[i] ^= 0xa3;
+            }
+            
+            // 写入目标文件
+            java.nio.file.Files.write(targetFile.toPath(), ucContent);
+            
+            log("缓存文件转换完成: " + ucFile.getName() + " -> " + targetFile.getName());
+        } catch (Exception e) {
+            logError("缓存文件转换失败: " + e.getMessage());
+            return;
+        }
         
         // 如果需要下载歌词
         if (pDownloadLyric && targetFile.exists()) {
@@ -517,9 +359,7 @@ public class NcmCacheTransStrategy extends NcmBaseStrategy {
             tempRec.setNewPath(lyricFile.getAbsolutePath());
             
             // 使用歌词下载策略执行下载
-            NcmLyricDownloadStrategy lyricStrategy = new NcmLyricDownloadStrategy();
-            lyricStrategy.setContext(getApp());
-            lyricStrategy.execute(tempRec);
+            lyricDownloadStrategy.execute(tempRec);
         }
         
         log("缓存文件处理完成: " + ucFile.getName());
@@ -579,5 +419,124 @@ public class NcmCacheTransStrategy extends NcmBaseStrategy {
             return fileName.substring(0, dashIndex).trim();
         }
         return "Unknown Artist";
+    }
+    
+    /**
+     * 从.info文件中读取歌曲信息
+     * @param infoFile .info文件
+     * @return 包含songName和artistName的Map
+     */
+    private Map<String, String> readSongInfoFromInfoFile(File infoFile) {
+        Map<String, String> songInfo = new java.util.HashMap<>();
+        
+        try {
+            java.io.FileInputStream fis = new java.io.FileInputStream(infoFile);
+            byte[] buffer = new byte[1024];
+            int bytesRead = fis.read(buffer);
+            fis.close();
+            
+            if (bytesRead > 0) {
+                String content = new String(buffer, 0, bytesRead, java.nio.charset.StandardCharsets.UTF_8);
+                
+                // 提取 songName
+                int songNameStart = content.indexOf("songName");
+                if (songNameStart != -1) {
+                    int colonStart = content.indexOf(":", songNameStart);
+                    if (colonStart != -1) {
+                        int quoteStart = content.indexOf("\"", colonStart);
+                        if (quoteStart != -1) {
+                            int quoteEnd = content.indexOf("\"", quoteStart + 1);
+                            if (quoteEnd != -1) {
+                                songInfo.put("songName", content.substring(quoteStart + 1, quoteEnd));
+                            }
+                        }
+                    }
+                }
+                
+                // 提取 artistName
+                int artistNameStart = content.indexOf("artistName");
+                if (artistNameStart != -1) {
+                    int colonStart = content.indexOf(":", artistNameStart);
+                    if (colonStart != -1) {
+                        int quoteStart = content.indexOf("\"", colonStart);
+                        if (quoteStart != -1) {
+                            int quoteEnd = content.indexOf("\"", quoteStart + 1);
+                            if (quoteEnd != -1) {
+                                songInfo.put("artistName", content.substring(quoteStart + 1, quoteEnd));
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logError("解析 .info 文件失败: " + e.getMessage());
+        }
+        
+        return songInfo;
+    }
+    
+    /**
+     * 从网易云API获取歌曲信息
+     * @param songId 歌曲ID
+     * @param infoFile .info文件，用于保存歌曲信息
+     * @return 包含songName和artistName的Map
+     */
+    private Map<String, String> getSongInfoFromApi(String songId, File infoFile) {
+        Map<String, String> songInfo = new java.util.HashMap<>();
+        
+        try {
+            java.net.URL url = new java.net.URL("http://music.163.com/api/song/detail/?id=" + songId + "&ids=%5B" + songId + "%5D");
+            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36");
+            conn.setRequestProperty("Connection", "keep-alive");
+            conn.setRequestProperty("Accept", "text/html,application/json,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+            conn.setRequestProperty("Accept-Language", "zh-CN,zh;q=0.8");
+            
+            java.io.BufferedReader br = new java.io.BufferedReader(new java.io.InputStreamReader(conn.getInputStream(), java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = br.readLine()) != null) {
+                sb.append(line);
+            }
+            br.close();
+            conn.disconnect();
+            
+            String response = sb.toString();
+            
+            // 提取歌曲名称
+            java.util.regex.Pattern songNamePattern = java.util.regex.Pattern.compile("name.*?:.*?([^,]+)");
+            java.util.regex.Matcher songNameMatcher = songNamePattern.matcher(response);
+            if (songNameMatcher.find()) {
+                songInfo.put("songName", songNameMatcher.group(1).replaceAll("[\"\\{\\}]", "").trim());
+            }
+            
+            // 提取艺术家名称
+            java.util.regex.Pattern artistNamePattern = java.util.regex.Pattern.compile("artists.*?:.*?name.*?:.*?([^,]+)");
+            java.util.regex.Matcher artistNameMatcher = artistNamePattern.matcher(response);
+            if (artistNameMatcher.find()) {
+                songInfo.put("artistName", artistNameMatcher.group(1).replaceAll("[\"\\{\\}]", "").trim());
+            }
+            
+            // 保存歌曲信息到.info文件
+            String songName = songInfo.get("songName");
+            String artistName = songInfo.get("artistName");
+            if (songName != null && artistName != null) {
+                StringBuilder infoJson = new StringBuilder();
+                infoJson.append("{");
+                infoJson.append("\"songName\":\"").append(songName).append("\",");
+                infoJson.append("\"artistName\":\"").append(artistName).append("\",");
+                infoJson.append("\"songId\":\"").append(songId).append("\"");
+                infoJson.append("}");
+                
+                java.io.FileOutputStream fos = new java.io.FileOutputStream(infoFile);
+                fos.write(infoJson.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                fos.close();
+            }
+        } catch (Exception e) {
+            logError("从网易云API获取歌曲信息失败: " + e.getMessage());
+        }
+        
+        return songInfo;
     }
 }
