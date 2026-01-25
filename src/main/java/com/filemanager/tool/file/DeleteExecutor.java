@@ -2,7 +2,7 @@ package com.filemanager.tool.file;
 
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.CleanupParams;
-import com.filemanager.strategy.FileCleanupStrategy;
+import com.filemanager.strategy.cleanup.DeleteMethod;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
 
@@ -141,7 +141,7 @@ public class DeleteExecutor {
         String newName;
         Map<String, String> paramsMap = new HashMap<>();
 
-        if (params.getMethod() == FileCleanupStrategy.DeleteMethod.DIRECT_DELETE) {
+        if (params.getMethod() == DeleteMethod.DIRECT_DELETE) {
             newPath = "PERMANENT_DELETE";
             newName = "[删除] " + f.getName();
             paramsMap.put("method", "DIRECT");
@@ -168,7 +168,7 @@ public class DeleteExecutor {
             }
 
             // 可回滚删除：添加时间戳子目录
-            if (params.getMethod() == FileCleanupStrategy.DeleteMethod.ROLLBACKABLE_DELETE) {
+            if (params.getMethod() == DeleteMethod.ROLLBACKABLE_DELETE) {
                 // 使用应用启动时间戳作为统一的时间戳 (格式: yyyyMMdd_HHmmss)
                 String timestamp = new java.text.SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date(taskStartTimestamp));
                 trashRoot = new File(trashRoot, timestamp);
@@ -177,7 +177,7 @@ public class DeleteExecutor {
             File trashFile = new File(trashRoot, f.getName());
             newPath = trashFile.getAbsolutePath();
             newName = "[回收] " + f.getName();
-            paramsMap.put("method", params.getMethod() == FileCleanupStrategy.DeleteMethod.ROLLBACKABLE_DELETE ? "ROLLBACKABLE" : "PSEUDO");
+            paramsMap.put("method", params.getMethod() == DeleteMethod.ROLLBACKABLE_DELETE ? "ROLLBACKABLE" : "PSEUDO");
         }
         paramsMap.put("reason", reason);
 

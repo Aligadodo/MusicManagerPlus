@@ -2,7 +2,7 @@ package com.filemanager.tool.file;
 
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.CleanupParams;
-import com.filemanager.strategy.FileCleanupStrategy;
+import com.filemanager.strategy.cleanup.CleanupMode;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
 import com.filemanager.util.LanguageUtil;
@@ -36,18 +36,18 @@ public class DuplicateAnalyzer {
     }
 
     public List<ChangeRecord> analyze(File file) {
-        if (params.getMode() == FileCleanupStrategy.CleanupMode.REMOVE_EMPTY_DIRS) {
+        if (params.getMode() == CleanupMode.REMOVE_EMPTY_DIRS) {
             if (isDirectoryEmpty(file)) {
                 return Collections.singletonList(createDeleteRecord(file, "空文件夹 (无子文件)"));
             }
             return Collections.emptyList();
-        } else if (params.getMode() == FileCleanupStrategy.CleanupMode.DEDUP_FOLDERS) {
+        } else if (params.getMode() == CleanupMode.DEDUP_FOLDERS) {
             File[] files = file.listFiles();
             if (file.isFile() || files == null || files.length < 2) {
                 return Collections.emptyList();
             }
             return analyzeDuplicateFolders(Arrays.asList(files));
-        } else if (params.getMode() == FileCleanupStrategy.CleanupMode.DIRECT_CLEANUP) {
+        } else if (params.getMode() == CleanupMode.DIRECT_CLEANUP) {
             // 直接清理模式：直接删除文件（应用大小范围过滤）
             if (file.isDirectory()) {
                 File[] files = file.listFiles();
@@ -68,10 +68,10 @@ public class DuplicateAnalyzer {
                 }
                 return Collections.emptyList();
             }
-        } else if (params.getMode() == FileCleanupStrategy.CleanupMode.MERGE_SAME_NAME_PARENT_CHILD) {
+        } else if (params.getMode() == CleanupMode.MERGE_SAME_NAME_PARENT_CHILD) {
             // 同名父子文件夹合并模式
             return analyzeMergeSameNameFolders(file);
-        } else if (params.getMode() == FileCleanupStrategy.CleanupMode.MERGE_NESTED_FOLDERS) {
+        } else if (params.getMode() == CleanupMode.MERGE_NESTED_FOLDERS) {
             // 嵌套文件夹合并模式
             return analyzeMergeNestedFolders(file);
         } else {

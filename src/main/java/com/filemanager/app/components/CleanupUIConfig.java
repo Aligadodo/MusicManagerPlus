@@ -1,6 +1,8 @@
 package com.filemanager.app.components;
 
-import com.filemanager.strategy.FileCleanupStrategy;
+import com.filemanager.strategy.cleanup.CleanupMode;
+import com.filemanager.strategy.cleanup.DeleteMethod;
+import com.filemanager.strategy.cleanup.FileSizeRange;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXComboBox;
 import javafx.beans.binding.BooleanBinding;
@@ -20,8 +22,8 @@ import java.io.File;
 
 public class CleanupUIConfig {
     // --- UI Components ---
-    private final JFXComboBox<FileCleanupStrategy.CleanupMode> cbMode;
-    private final JFXComboBox<FileCleanupStrategy.DeleteMethod> cbMethod;
+    private final JFXComboBox<CleanupMode> cbMode;
+    private final JFXComboBox<DeleteMethod> cbMethod;
     private final TextField txtTrashPath; // 回收站路径（支持相对或绝对）
     private final CheckBox chkKeepLargest;
     private final CheckBox chkKeepEarliest;
@@ -31,17 +33,17 @@ public class CleanupUIConfig {
     private final CheckBox chkPreprocessUpper;
     private final CheckBox chkPreprocessSimplified;
     // 文件大小范围选择
-    private final JFXComboBox<FileCleanupStrategy.FileSizeRange> cbSizeRange;
+    private final JFXComboBox<FileSizeRange> cbSizeRange;
     // 音频特殊处理
     private final CheckBox chkAudioSpecial;
 
     public CleanupUIConfig() {
-        cbMode = new JFXComboBox<>(FXCollections.observableArrayList(FileCleanupStrategy.CleanupMode.values()));
-        cbMode.getSelectionModel().select(FileCleanupStrategy.CleanupMode.DEDUP_FILES);
+        cbMode = new JFXComboBox<>(FXCollections.observableArrayList(CleanupMode.values()));
+        cbMode.getSelectionModel().select(CleanupMode.DEDUP_FILES);
         cbMode.setTooltip(new Tooltip("选择清理的逻辑规则"));
 
-        cbMethod = new JFXComboBox<>(FXCollections.observableArrayList(FileCleanupStrategy.DeleteMethod.values()));
-        cbMethod.getSelectionModel().select(FileCleanupStrategy.DeleteMethod.PSEUDO_DELETE);
+        cbMethod = new JFXComboBox<>(FXCollections.observableArrayList(DeleteMethod.values()));
+        cbMethod.getSelectionModel().select(DeleteMethod.PSEUDO_DELETE);
         cbMethod.setTooltip(new Tooltip("选择删除的方式"));
 
         txtTrashPath = new TextField(".EchoTrash");
@@ -50,30 +52,30 @@ public class CleanupUIConfig {
 
         chkKeepLargest = new CheckBox("保留体积/质量最佳的副本");
         chkKeepLargest.setSelected(true);
-        chkKeepLargest.visibleProperty().bind(cbMode.getSelectionModel().selectedItemProperty().isEqualTo(FileCleanupStrategy.CleanupMode.DEDUP_FILES));
+        chkKeepLargest.visibleProperty().bind(cbMode.getSelectionModel().selectedItemProperty().isEqualTo(CleanupMode.DEDUP_FILES));
         chkKeepLargest.setTooltip(new Tooltip("勾选：保留最大的文件；不勾选：保留名字最短（通常是原件）的文件"));
 
         chkKeepEarliest = new CheckBox("保留日期最早/最晚的副本");
         chkKeepEarliest.setSelected(true);
         // 直接清理模式不需要显示日期保留选项
-        BooleanBinding showKeepEarliest = cbMode.getSelectionModel().selectedItemProperty().isNotEqualTo(FileCleanupStrategy.CleanupMode.REMOVE_EMPTY_DIRS)
-                .and(cbMode.getSelectionModel().selectedItemProperty().isNotEqualTo(FileCleanupStrategy.CleanupMode.DIRECT_CLEANUP));
+        BooleanBinding showKeepEarliest = cbMode.getSelectionModel().selectedItemProperty().isNotEqualTo(CleanupMode.REMOVE_EMPTY_DIRS)
+                .and(cbMode.getSelectionModel().selectedItemProperty().isNotEqualTo(CleanupMode.DIRECT_CLEANUP));
         chkKeepEarliest.visibleProperty().bind(showKeepEarliest);
         chkKeepEarliest.setTooltip(new Tooltip("勾选：保留日期最早的文件(夹)；不勾选：保留最新的文件(夹)"));
 
         txtKeepExt = new TextField("wav");
         txtKeepExt.setPromptText("优先保留后缀");
-        txtKeepExt.visibleProperty().bind(cbMode.getSelectionModel().selectedItemProperty().isEqualTo(FileCleanupStrategy.CleanupMode.DEDUP_FILES));
+        txtKeepExt.visibleProperty().bind(cbMode.getSelectionModel().selectedItemProperty().isEqualTo(CleanupMode.DEDUP_FILES));
 
         // 文件名预处理选项初始化
         chkPreprocessLower = new CheckBox("文件名转小写");
         chkPreprocessLower.setSelected(true);
-        chkPreprocessLower.visibleProperty().bind(cbMode.getSelectionModel().selectedItemProperty().isEqualTo(FileCleanupStrategy.CleanupMode.DEDUP_FILES));
+        chkPreprocessLower.visibleProperty().bind(cbMode.getSelectionModel().selectedItemProperty().isEqualTo(CleanupMode.DEDUP_FILES));
         chkPreprocessLower.setTooltip(new Tooltip("将文件名转换为小写后进行比较"));
 
         chkPreprocessUpper = new CheckBox("文件名转大写");
         chkPreprocessUpper.setSelected(false);
-        chkPreprocessUpper.visibleProperty().bind(cbMode.getSelectionModel().selectedItemProperty().isEqualTo(FileCleanupStrategy.CleanupMode.DEDUP_FILES));
+        chkPreprocessUpper.visibleProperty().bind(cbMode.getSelectionModel().selectedItemProperty().isEqualTo(CleanupMode.DEDUP_FILES));
         chkPreprocessUpper.setTooltip(new Tooltip("将文件名转换为大写后进行比较"));
 
         // 实现大小写转换的互斥逻辑
@@ -91,22 +93,22 @@ public class CleanupUIConfig {
 
         chkPreprocessSimplified = new CheckBox("文件名转简体中文");
         chkPreprocessSimplified.setSelected(false);
-        chkPreprocessSimplified.visibleProperty().bind(cbMode.getSelectionModel().selectedItemProperty().isEqualTo(FileCleanupStrategy.CleanupMode.DEDUP_FILES));
+        chkPreprocessSimplified.visibleProperty().bind(cbMode.getSelectionModel().selectedItemProperty().isEqualTo(CleanupMode.DEDUP_FILES));
         chkPreprocessSimplified.setTooltip(new Tooltip("将文件名中的繁体中文转换为简体中文后进行比较"));
 
         // 文件大小范围选择初始化
-        cbSizeRange = new JFXComboBox<>(FXCollections.observableArrayList(FileCleanupStrategy.FileSizeRange.values()));
-        cbSizeRange.getSelectionModel().select(FileCleanupStrategy.FileSizeRange.ALL);
+        cbSizeRange = new JFXComboBox<>(FXCollections.observableArrayList(FileSizeRange.values()));
+        cbSizeRange.getSelectionModel().select(FileSizeRange.ALL);
         // 去重文件和直接清理模式都需要显示文件大小范围选择
-        BooleanBinding showSizeRange = cbMode.getSelectionModel().selectedItemProperty().isEqualTo(FileCleanupStrategy.CleanupMode.DEDUP_FILES)
-                .or(cbMode.getSelectionModel().selectedItemProperty().isEqualTo(FileCleanupStrategy.CleanupMode.DIRECT_CLEANUP));
+        BooleanBinding showSizeRange = cbMode.getSelectionModel().selectedItemProperty().isEqualTo(CleanupMode.DEDUP_FILES)
+                .or(cbMode.getSelectionModel().selectedItemProperty().isEqualTo(CleanupMode.DIRECT_CLEANUP));
         cbSizeRange.visibleProperty().bind(showSizeRange);
         cbSizeRange.setTooltip(new Tooltip("选择要处理的文件大小范围"));
 
         // 音频特殊处理选项初始化
         chkAudioSpecial = new CheckBox("音频文件特殊处理");
         chkAudioSpecial.setSelected(true);
-        chkAudioSpecial.visibleProperty().bind(cbMode.getSelectionModel().selectedItemProperty().isEqualTo(FileCleanupStrategy.CleanupMode.DEDUP_FILES));
+        chkAudioSpecial.visibleProperty().bind(cbMode.getSelectionModel().selectedItemProperty().isEqualTo(CleanupMode.DEDUP_FILES));
         chkAudioSpecial.setTooltip(new Tooltip("对音频文件进行特殊处理，确保时间长度一致时优先保留质量较高的文件"));
     }
 
@@ -137,8 +139,8 @@ public class CleanupUIConfig {
         trashBox.getChildren().addAll(new Label("回收站路径:"), txtTrashPath, btnPickTrash);
 
         // 伪删除和可回滚删除都需要显示回收站路径配置
-        BooleanBinding showTrashPath = cbMethod.getSelectionModel().selectedItemProperty().isEqualTo(FileCleanupStrategy.DeleteMethod.PSEUDO_DELETE)
-                .or(cbMethod.getSelectionModel().selectedItemProperty().isEqualTo(FileCleanupStrategy.DeleteMethod.ROLLBACKABLE_DELETE));
+        BooleanBinding showTrashPath = cbMethod.getSelectionModel().selectedItemProperty().isEqualTo(DeleteMethod.PSEUDO_DELETE)
+                .or(cbMethod.getSelectionModel().selectedItemProperty().isEqualTo(DeleteMethod.ROLLBACKABLE_DELETE));
         txtTrashPath.visibleProperty().bind(showTrashPath);
         trashBox.visibleProperty().bind(showTrashPath);
         trashBox.managedProperty().bind(trashBox.visibleProperty());
@@ -200,7 +202,7 @@ public class CleanupUIConfig {
                 lblAdvancedOptions, advancedOptionsBox,
                 lblHint
         );
-        dedupBox.visibleProperty().bind(cbMode.getSelectionModel().selectedItemProperty().isEqualTo(FileCleanupStrategy.CleanupMode.DEDUP_FILES));
+        dedupBox.visibleProperty().bind(cbMode.getSelectionModel().selectedItemProperty().isEqualTo(CleanupMode.DEDUP_FILES));
         dedupBox.managedProperty().bind(dedupBox.visibleProperty());
 
         dynamicArea.getChildren().addAll(trashBox, dedupBox);
@@ -210,11 +212,11 @@ public class CleanupUIConfig {
     }
 
     // Getters for UI components
-    public JFXComboBox<FileCleanupStrategy.CleanupMode> getCbMode() {
+    public JFXComboBox<CleanupMode> getCbMode() {
         return cbMode;
     }
 
-    public JFXComboBox<FileCleanupStrategy.DeleteMethod> getCbMethod() {
+    public JFXComboBox<DeleteMethod> getCbMethod() {
         return cbMethod;
     }
 
@@ -246,7 +248,7 @@ public class CleanupUIConfig {
         return chkPreprocessSimplified;
     }
 
-    public JFXComboBox<FileCleanupStrategy.FileSizeRange> getCbSizeRange() {
+    public JFXComboBox<FileSizeRange> getCbSizeRange() {
         return cbSizeRange;
     }
 

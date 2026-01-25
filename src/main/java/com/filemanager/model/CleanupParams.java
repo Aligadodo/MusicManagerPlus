@@ -1,6 +1,8 @@
 package com.filemanager.model;
 
-import com.filemanager.strategy.FileCleanupStrategy;
+import com.filemanager.strategy.cleanup.CleanupMode;
+import com.filemanager.strategy.cleanup.DeleteMethod;
+import com.filemanager.strategy.cleanup.FileSizeRange;
 import com.jfoenix.controls.JFXComboBox;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.TextField;
@@ -9,8 +11,8 @@ import java.util.Properties;
 
 public class CleanupParams {
     // --- Runtime Params ---
-    private FileCleanupStrategy.CleanupMode pMode;
-    private FileCleanupStrategy.DeleteMethod pMethod;
+    private CleanupMode pMode;
+    private DeleteMethod pMethod;
     private String pTrashPath;
     private boolean pKeepLargest;
     private boolean pKeepEarliest;
@@ -20,14 +22,14 @@ public class CleanupParams {
     private boolean pPreprocessUpper;
     private boolean pPreprocessSimplified;
     // 文件大小范围参数
-    private FileCleanupStrategy.FileSizeRange pSizeRange;
+    private FileSizeRange pSizeRange;
     // 音频特殊处理参数
     private boolean pAudioSpecial;
 
     public CleanupParams() {
         // 默认参数
-        this.pMode = FileCleanupStrategy.CleanupMode.DEDUP_FILES;
-        this.pMethod = FileCleanupStrategy.DeleteMethod.PSEUDO_DELETE;
+        this.pMode = CleanupMode.DEDUP_FILES;
+        this.pMethod = DeleteMethod.PSEUDO_DELETE;
         this.pTrashPath = ".EchoTrash";
         this.pKeepLargest = true;
         this.pKeepEarliest = true;
@@ -35,13 +37,13 @@ public class CleanupParams {
         this.pPreprocessLower = true;
         this.pPreprocessUpper = false;
         this.pPreprocessSimplified = false;
-        this.pSizeRange = FileCleanupStrategy.FileSizeRange.ALL;
+        this.pSizeRange = FileSizeRange.ALL;
         this.pAudioSpecial = true;
     }
 
     public void captureParams(com.filemanager.app.components.CleanupUIConfig uiConfig) {
-        JFXComboBox<FileCleanupStrategy.CleanupMode> cbMode = uiConfig.getCbMode();
-        JFXComboBox<FileCleanupStrategy.DeleteMethod> cbMethod = uiConfig.getCbMethod();
+        JFXComboBox<CleanupMode> cbMode = uiConfig.getCbMode();
+        JFXComboBox<DeleteMethod> cbMethod = uiConfig.getCbMethod();
         TextField txtTrashPath = uiConfig.getTxtTrashPath();
         CheckBox chkKeepLargest = uiConfig.getChkKeepLargest();
         CheckBox chkKeepEarliest = uiConfig.getChkKeepEarliest();
@@ -49,7 +51,7 @@ public class CleanupParams {
         CheckBox chkPreprocessLower = uiConfig.getChkPreprocessLower();
         CheckBox chkPreprocessUpper = uiConfig.getChkPreprocessUpper();
         CheckBox chkPreprocessSimplified = uiConfig.getChkPreprocessSimplified();
-        JFXComboBox<FileCleanupStrategy.FileSizeRange> cbSizeRange = uiConfig.getCbSizeRange();
+        JFXComboBox<FileSizeRange> cbSizeRange = uiConfig.getCbSizeRange();
         CheckBox chkAudioSpecial = uiConfig.getChkAudioSpecial();
 
         pMode = cbMode.getValue();
@@ -94,9 +96,9 @@ public class CleanupParams {
 
     public void loadConfig(Properties props, com.filemanager.app.components.CleanupUIConfig uiConfig) {
         if (props.containsKey("clean_mode"))
-            uiConfig.getCbMode().getSelectionModel().select(FileCleanupStrategy.CleanupMode.valueOf(props.getProperty("clean_mode")));
+            uiConfig.getCbMode().getSelectionModel().select(CleanupMode.valueOf(props.getProperty("clean_mode")));
         if (props.containsKey("clean_method"))
-            uiConfig.getCbMethod().getSelectionModel().select(FileCleanupStrategy.DeleteMethod.valueOf(props.getProperty("clean_method")));
+            uiConfig.getCbMethod().getSelectionModel().select(DeleteMethod.valueOf(props.getProperty("clean_method")));
         if (props.containsKey("clean_trash")) uiConfig.getTxtTrashPath().setText(props.getProperty("clean_trash"));
         if (props.containsKey("clean_keepLarge"))
             uiConfig.getChkKeepLargest().setSelected(Boolean.parseBoolean(props.getProperty("clean_keepLarge")));
@@ -114,7 +116,7 @@ public class CleanupParams {
 
         // 加载文件大小范围参数
         if (props.containsKey("clean_sizeRange"))
-            uiConfig.getCbSizeRange().getSelectionModel().select(FileCleanupStrategy.FileSizeRange.valueOf(props.getProperty("clean_sizeRange")));
+            uiConfig.getCbSizeRange().getSelectionModel().select(FileSizeRange.valueOf(props.getProperty("clean_sizeRange")));
 
         // 加载音频特殊处理参数
         if (props.containsKey("clean_audioSpecial"))
@@ -125,11 +127,11 @@ public class CleanupParams {
     }
 
     // Getters for all parameters
-    public FileCleanupStrategy.CleanupMode getMode() {
+    public CleanupMode getMode() {
         return pMode;
     }
 
-    public FileCleanupStrategy.DeleteMethod getMethod() {
+    public DeleteMethod getMethod() {
         return pMethod;
     }
 
@@ -161,7 +163,7 @@ public class CleanupParams {
         return pPreprocessSimplified;
     }
 
-    public FileCleanupStrategy.FileSizeRange getSizeRange() {
+    public FileSizeRange getSizeRange() {
         return pSizeRange;
     }
 
@@ -170,11 +172,11 @@ public class CleanupParams {
     }
 
     // Setters for all parameters (if needed)
-    public void setMode(FileCleanupStrategy.CleanupMode pMode) {
+    public void setMode(CleanupMode pMode) {
         this.pMode = pMode;
     }
 
-    public void setMethod(FileCleanupStrategy.DeleteMethod pMethod) {
+    public void setMethod(DeleteMethod pMethod) {
         this.pMethod = pMethod;
     }
 
@@ -206,7 +208,7 @@ public class CleanupParams {
         this.pPreprocessSimplified = pPreprocessSimplified;
     }
 
-    public void setSizeRange(FileCleanupStrategy.FileSizeRange pSizeRange) {
+    public void setSizeRange(FileSizeRange pSizeRange) {
         this.pSizeRange = pSizeRange;
     }
 
