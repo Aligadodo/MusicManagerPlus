@@ -40,33 +40,15 @@ public class FileCollectionStrategy extends IAppStrategy {
     private final Slider slSimilarityThreshold;
     private final TextField txtCollectionSuffix;
     private final JFXComboBox<ScanTarget> cbTargetType;
-    private final CheckBox chkPreserveFileTypes;
-    private final CheckBox chkAddSequenceInfo;
-    private final CheckBox chkSmartMode;
-    private final Spinner<Integer> spMinFiles;
-    private final Spinner<Integer> spMinFileNameLength;
     private final TextField txtMustContainKeywords;
     private final TextField txtMustNotContainKeywords;
-    private final CheckBox chkSkipCollections;
-    private final Spinner<Integer> spMaxCollectionRatio;
-    private final Slider slRecognitionStrictness;
-    private final CheckBox chkAutoAddToExistingCollections;
 
     // 配置参数
     private double pThreshold;
     private String pCollectionSuffix;
     private ScanTarget pTargetType;
-    private boolean pPreserveFileTypes;
-    private boolean pAddSequenceInfo;
-    private boolean pSmartMode;
-    private int pMinFiles;
-    private int pMinFileNameLength;
     private List<String> pMustContainKeywords;
     private List<String> pMustNotContainKeywords;
-    private boolean pSkipCollections;
-    private double pMaxCollectionRatio;
-    private double pRecognitionStrictness;
-    private boolean pAutoAddToExistingCollections;
 
     // 模块化组件
     private FilenameNormalizer filenameNormalizer;
@@ -93,28 +75,6 @@ public class FileCollectionStrategy extends IAppStrategy {
         cbTargetType = new JFXComboBox<>(FXCollections.observableArrayList(ScanTarget.values()));
         cbTargetType.setValue(ScanTarget.FOLDERS_ONLY); // 默认只对文件夹生效
 
-        // 保留文件类型
-        chkPreserveFileTypes = new CheckBox("保留文件类型等限定词");
-        chkPreserveFileTypes.setSelected(true); // 默认开启
-
-        // 添加序列信息
-        chkAddSequenceInfo = new CheckBox("添加序列信息【最大数-当前数】");
-        chkAddSequenceInfo.setSelected(true);
-
-        // 智能模式
-        chkSmartMode = new CheckBox("智能模式：自动调整参数以适应不同命名风格");
-        chkSmartMode.setSelected(false); // 默认开启
-
-        // 系列文件最少数量
-        spMinFiles = new Spinner<>(2, 50, 2);
-        spMinFiles.setEditable(true);
-        spMinFiles.setMaxWidth(80);
-
-        // 最短文件名限制
-        spMinFileNameLength = new Spinner<>(5, 100, 8);
-        spMinFileNameLength.setEditable(true);
-        spMinFileNameLength.setMaxWidth(80);
-
         // 必须包含的关键词
         txtMustContainKeywords = new TextField("CD,系列,合集");
         txtMustContainKeywords.setPromptText("输入必须包含的关键词，用逗号分隔...");
@@ -122,26 +82,6 @@ public class FileCollectionStrategy extends IAppStrategy {
         // 不能包含的关键词
         txtMustNotContainKeywords = new TextField("下载,Album,群星");
         txtMustNotContainKeywords.setPromptText("输入不能包含的关键词，用逗号分隔...");
-
-        // 跳过已在合集文件夹中的文件
-        chkSkipCollections = new CheckBox("跳过已在合集文件夹中的文件");
-        chkSkipCollections.setSelected(true); // 默认开启
-
-        // 最大合集比例 (0-100%，表示如果目录中超过该比例的文件属于同一合集，则不再执行合并)
-        spMaxCollectionRatio = new Spinner<>(50, 100, 80);
-        spMaxCollectionRatio.setEditable(true);
-        spMaxCollectionRatio.setMaxWidth(80);
-
-        // 合集识别严格程度 (0.0-1.0，值越高识别越严格)
-        slRecognitionStrictness = new Slider(0.0, 1.0, 0.9);
-        slRecognitionStrictness.setShowTickMarks(true);
-        slRecognitionStrictness.setShowTickLabels(true);
-        slRecognitionStrictness.setMajorTickUnit(0.05);
-        slRecognitionStrictness.setMinorTickCount(9);
-
-        // 自动添加到已有合集
-        chkAutoAddToExistingCollections = new CheckBox("自动添加到已有合集");
-        chkAutoAddToExistingCollections.setSelected(false); // 默认关闭，避免暗中决策
     }
 
     @Override
@@ -169,22 +109,10 @@ public class FileCollectionStrategy extends IAppStrategy {
         basicBox.getChildren().addAll(
                 StyleFactory.createParamPairLine("相似度阈值 (0.0-1.0):", slSimilarityThreshold),
                 StyleFactory.createParamPairLine("合集文件夹格式:", txtCollectionSuffix),
-                StyleFactory.createParamPairLine("目标类型:", cbTargetType),
-                chkPreserveFileTypes,
-                chkAddSequenceInfo,
-                chkSmartMode
+                StyleFactory.createParamPairLine("目标类型:", cbTargetType)
         );
         TitledPane basicPane = new TitledPane("基础设置", basicBox);
         basicPane.setCollapsible(false);
-
-        // 合集规则
-        VBox ruleBox = new VBox(10);
-        ruleBox.getChildren().addAll(
-                StyleFactory.createParamPairLine("系列最少文件数:", spMinFiles),
-                StyleFactory.createParamPairLine("最短文件名长度:", spMinFileNameLength)
-        );
-        TitledPane rulePane = new TitledPane("合集规则", ruleBox);
-        rulePane.setCollapsible(false);
 
         // 关键词过滤
         VBox keywordBox = new VBox(10);
@@ -195,23 +123,10 @@ public class FileCollectionStrategy extends IAppStrategy {
         TitledPane keywordPane = new TitledPane("关键词过滤", keywordBox);
         keywordPane.setCollapsible(false);
 
-        // 高级选项
-        VBox advancedBox = new VBox(10);
-        advancedBox.getChildren().addAll(
-                chkSkipCollections,
-                chkAutoAddToExistingCollections,
-                StyleFactory.createParamPairLine("最大合集比例 (%):", spMaxCollectionRatio),
-                StyleFactory.createParamPairLine("合集识别严格程度 (0.0-1.0):", slRecognitionStrictness)
-        );
-        TitledPane advancedPane = new TitledPane("高级选项", advancedBox);
-        advancedPane.setCollapsible(false);
-
         // 将所有分类添加到主容器
         mainBox.getChildren().addAll(
                 basicPane,
-                rulePane,
-                keywordPane,
-                advancedPane
+                keywordPane
         );
 
         return mainBox;
@@ -222,21 +137,10 @@ public class FileCollectionStrategy extends IAppStrategy {
         pThreshold = slSimilarityThreshold.getValue();
         pCollectionSuffix = txtCollectionSuffix.getText();
         pTargetType = cbTargetType.getValue();
-        pPreserveFileTypes = chkPreserveFileTypes.isSelected();
-        pAddSequenceInfo = chkAddSequenceInfo.isSelected();
-        pSmartMode = chkSmartMode.isSelected();
-        pMinFiles = spMinFiles.getValue();
-        pMinFileNameLength = spMinFileNameLength.getValue();
 
         // 处理关键词
         pMustContainKeywords = parseKeywords(txtMustContainKeywords.getText());
         pMustNotContainKeywords = parseKeywords(txtMustNotContainKeywords.getText());
-
-        // 处理新的配置参数
-        pSkipCollections = chkSkipCollections.isSelected();
-        pMaxCollectionRatio = spMaxCollectionRatio.getValue() / 100.0;
-        pRecognitionStrictness = slRecognitionStrictness.getValue();
-        pAutoAddToExistingCollections = chkAutoAddToExistingCollections.isSelected();
 
         // 参数验证和默认值设置
         if (pCollectionSuffix == null || pCollectionSuffix.trim().isEmpty()) {
@@ -244,17 +148,6 @@ public class FileCollectionStrategy extends IAppStrategy {
         }
         if (pTargetType == null) {
             pTargetType = ScanTarget.FOLDERS_ONLY;
-        }
-        if (pMinFiles < 2) {
-            pMinFiles = 2;
-        }
-        if (pMinFileNameLength < 0) {
-            pMinFileNameLength = 0;
-        }
-        if (pMaxCollectionRatio < 0.5) {
-            pMaxCollectionRatio = 0.5;
-        } else if (pMaxCollectionRatio > 1.0) {
-            pMaxCollectionRatio = 1.0;
         }
 
         // 初始化模块化组件
@@ -269,8 +162,6 @@ public class FileCollectionStrategy extends IAppStrategy {
      */
     private void initializeComponents() {
         filenameNormalizer = FilenameNormalizer.builder()
-                .preserveTags(pPreserveFileTypes)
-                .preserveSequences(!pAddSequenceInfo)
                 .build();
 
         similarityCalculator = TextSimilarityCalculator.builder()
@@ -281,17 +172,11 @@ public class FileCollectionStrategy extends IAppStrategy {
                 .normalizer(filenameNormalizer)
                 .similarityCalculator(similarityCalculator)
                 .similarityThreshold(pThreshold)
-                .minClusterSize(pMinFiles)
                 .build();
 
         determinationAlgorithm = CollectionDeterminationAlgorithm.builder()
-                .minFiles(pMinFiles)
-                .minFileNameLength(pMinFileNameLength)
                 .mustContainKeywords(pMustContainKeywords)
                 .mustNotContainKeywords(pMustNotContainKeywords)
-                .maxCollectionRatio(pMaxCollectionRatio)
-                .recognitionStrictness(pRecognitionStrictness)
-                .skipCollections(pSkipCollections)
                 .build();
 
         determinationAlgorithm.setCollectionSuffix(pCollectionSuffix);
@@ -318,17 +203,8 @@ public class FileCollectionStrategy extends IAppStrategy {
         props.setProperty("fcs_threshold", String.valueOf(slSimilarityThreshold.getValue()));
         props.setProperty("fcs_suffix", txtCollectionSuffix.getText());
         props.setProperty("fcs_target_type", cbTargetType.getValue().name());
-        props.setProperty("fcs_preserve_file_types", String.valueOf(chkPreserveFileTypes.isSelected()));
-        props.setProperty("fcs_add_sequence_info", String.valueOf(chkAddSequenceInfo.isSelected()));
-        props.setProperty("fcs_smart_mode", String.valueOf(chkSmartMode.isSelected()));
-        props.setProperty("fcs_min_files", String.valueOf(spMinFiles.getValue()));
-        props.setProperty("fcs_min_filename_length", String.valueOf(spMinFileNameLength.getValue()));
         props.setProperty("fcs_must_contain", txtMustContainKeywords.getText());
         props.setProperty("fcs_must_not_contain", txtMustNotContainKeywords.getText());
-        props.setProperty("fcs_skip_collections", String.valueOf(chkSkipCollections.isSelected()));
-        props.setProperty("fcs_max_collection_ratio", String.valueOf(spMaxCollectionRatio.getValue()));
-        props.setProperty("fcs_recognition_strictness", String.valueOf(slRecognitionStrictness.getValue()));
-        props.setProperty("fcs_auto_add_to_existing", String.valueOf(chkAutoAddToExistingCollections.isSelected()));
     }
 
     @Override
@@ -342,38 +218,11 @@ public class FileCollectionStrategy extends IAppStrategy {
         if (props.containsKey("fcs_target_type")) {
             cbTargetType.setValue(ScanTarget.valueOf(props.getProperty("fcs_target_type")));
         }
-        if (props.containsKey("fcs_preserve_file_types")) {
-            chkPreserveFileTypes.setSelected(Boolean.parseBoolean(props.getProperty("fcs_preserve_file_types")));
-        }
-        if (props.containsKey("fcs_add_sequence_info")) {
-            chkAddSequenceInfo.setSelected(Boolean.parseBoolean(props.getProperty("fcs_add_sequence_info")));
-        }
-        if (props.containsKey("fcs_smart_mode")) {
-            chkSmartMode.setSelected(Boolean.parseBoolean(props.getProperty("fcs_smart_mode")));
-        }
-        if (props.containsKey("fcs_min_files")) {
-            spMinFiles.getValueFactory().setValue(Integer.parseInt(props.getProperty("fcs_min_files")));
-        }
-        if (props.containsKey("fcs_min_filename_length")) {
-            spMinFileNameLength.getValueFactory().setValue(Integer.parseInt(props.getProperty("fcs_min_filename_length")));
-        }
         if (props.containsKey("fcs_must_contain")) {
             txtMustContainKeywords.setText(props.getProperty("fcs_must_contain"));
         }
         if (props.containsKey("fcs_must_not_contain")) {
             txtMustNotContainKeywords.setText(props.getProperty("fcs_must_not_contain"));
-        }
-        if (props.containsKey("fcs_skip_collections")) {
-            chkSkipCollections.setSelected(Boolean.parseBoolean(props.getProperty("fcs_skip_collections")));
-        }
-        if (props.containsKey("fcs_max_collection_ratio")) {
-            spMaxCollectionRatio.getValueFactory().setValue(Integer.parseInt(props.getProperty("fcs_max_collection_ratio")));
-        }
-        if (props.containsKey("fcs_recognition_strictness")) {
-            slRecognitionStrictness.setValue(Double.parseDouble(props.getProperty("fcs_recognition_strictness")));
-        }
-        if (props.containsKey("fcs_auto_add_to_existing")) {
-            chkAutoAddToExistingCollections.setSelected(Boolean.parseBoolean(props.getProperty("fcs_auto_add_to_existing")));
         }
     }
 
@@ -405,7 +254,7 @@ public class FileCollectionStrategy extends IAppStrategy {
         }
 
         // 检查当前文件是否已经在合集文件夹中
-        if (pSkipCollections && isInCollectionFolder(currentFile)) {
+        if (isInCollectionFolder(currentFile)) {
             app.log("ℹ️ 文件归类策略：跳过，文件已在合集文件夹中 " + currentFile.getAbsolutePath());
             return Collections.emptyList();
         }
@@ -423,31 +272,19 @@ public class FileCollectionStrategy extends IAppStrategy {
                     File recordParentDir = recordFile.getParentFile();
                     return recordParentDir != null && recordParentDir.equals(parentDir) &&
                             isFileTypeMatch(recordFile) &&
-                            (!pSkipCollections || !isInCollectionFolder(recordFile)) &&
+                            !isInCollectionFolder(recordFile) &&
                             !isCollectionFolder(recordFile); // 跳过本身就是合集文件夹的文件
                 })
                 .collect(Collectors.toList());
 
         app.log("📁 文件归类策略：在目录 " + parentDir.getAbsolutePath() + " 中找到 " + dirRecords.size() + " 个符合条件的文件");
 
-        // 如果目录下的文件数量不足2个，但有现有集合，则只执行添加到现有集合的逻辑
+        // 如果目录下的文件数量不足2个，跳过处理
         if (dirRecords.size() < 2) {
-            // 只有当启用了自动添加到已有合集选项时，才尝试添加到现有集合中
-            if (pAutoAddToExistingCollections) {
-                app.log("📁 文件归类策略：文件数量不足2个，尝试添加到现有集合中");
-                List<ChangeRecord> changes = addFilesToExistingCollections(inputRecords, rootDirs, parentDir);
-
-                // 标记此目录已处理
-                parentDirClusters.put(parentDir, Collections.emptyMap());
-
-                app.log("📁 文件归类策略：处理完成，已标记目录为已处理 " + parentDir.getAbsolutePath());
-                return changes;
-            } else {
-                app.log("📁 文件归类策略：文件数量不足2个，且未启用自动添加到已有合集选项，跳过处理");
-                // 标记此目录已处理
-                parentDirClusters.put(parentDir, Collections.emptyMap());
-                return Collections.emptyList();
-            }
+            app.log("📁 文件归类策略：文件数量不足2个，跳过处理");
+            // 标记此目录已处理
+            parentDirClusters.put(parentDir, Collections.emptyMap());
+            return Collections.emptyList();
         }
 
         // 检查目录中是否大部分文件已经属于同一合集，如果是则不再执行合并
@@ -503,14 +340,10 @@ public class FileCollectionStrategy extends IAppStrategy {
 
         // 1. 首先尝试将文件添加到现有集合中
         List<ChangeRecord> existingCollectionChanges = Collections.emptyList();
-        if (pAutoAddToExistingCollections) {
-            app.log("📁 文件归类策略：尝试将文件添加到现有集合中");
-            existingCollectionChanges = addFilesToExistingCollections(inputRecords, rootDirs, parentDir);
-            changeRecords.addAll(existingCollectionChanges);
-            app.log("📁 文件归类策略：成功将 " + existingCollectionChanges.size() + " 个文件添加到现有集合中");
-        } else {
-            app.log("📁 文件归类策略：未启用自动添加到已有合集选项，跳过此步骤");
-        }
+        app.log("📁 文件归类策略：尝试将文件添加到现有集合中");
+        existingCollectionChanges = addFilesToExistingCollections(inputRecords, rootDirs, parentDir);
+        changeRecords.addAll(existingCollectionChanges);
+        app.log("📁 文件归类策略：成功将 " + existingCollectionChanges.size() + " 个文件添加到现有集合中");
 
         // 2. 然后处理新的集合创建
         app.log("📁 文件归类策略：开始处理新的集合创建");
@@ -743,8 +576,9 @@ public class FileCollectionStrategy extends IAppStrategy {
             }
         }
 
+        // 如果大部分文件属于同一合集（超过80%），则返回true
         double ratio = (double) maxClusterSize / records.size();
-        return ratio >= pMaxCollectionRatio;
+        return ratio >= 0.8;
     }
 
     @Override
@@ -794,12 +628,9 @@ public class FileCollectionStrategy extends IAppStrategy {
         }
 
         // 智能模式：如果两个文件名包含相同的艺术家和专辑信息，提高相似度
-        if (pSmartMode && hasSameArtistAlbumInfo(s1, s2)) {
+        if (hasSameArtistAlbumInfo(s1, s2)) {
             baseSimilarity = Math.max(baseSimilarity, 0.88);
         }
-
-        // 根据识别严格程度调整相似度阈值
-        baseSimilarity *= pRecognitionStrictness;
 
         return Math.max(0.0, Math.min(1.0, baseSimilarity));
     }
