@@ -9,7 +9,7 @@
  */
 package com.filemanager.strategy.ncm.model;
 
-import com.alibaba.fastjson2.JSONObject;
+import com.alibaba.fastjson.JSONObject;
 import com.filemanager.util.DecryptUtils;
 import com.filemanager.util.ErrorUtils;
 import com.filemanager.util.StreamUtils;

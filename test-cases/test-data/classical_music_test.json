@@ -1,0 +1,151 @@
+{
+  "testName": "classical_music_test",
+  "description": "Classical music albums test case",
+  "timestamp": 1769444200000,
+  "allFolders": [
+    "【古典】【SACD-DSF】Saint-Saens Symphony No.3 & Debussy La Mer",
+    "【古典声乐】Enrico Caruso Caruso 2000 Digital Recording 1999 [WAV+CUE]",
+    "【古典天碟】Pachelbel Canon 2003 [FLAC+CUE]",
+    "【古典天碟】Sandal Veg Mozart Serenades XRCD24 [WAV+CUE]",
+    "【古典天碟】Jochum Orff Carmina Burana 1995 [FLAC+CUE]",
+    "【古典天碟】Fiedler Hi-Fi Fiedler 1993 [WAV+CUE]",
+    "【古典天碟】Maastricht Salon Orchestra Serenata 24K Gold[WAV+CUE]",
+    "【古典音乐(J)】Andre Rieu - 2019 - My Music My World The Very Best Of 24bit (2CD) CD【合集】",
+    "【古典音乐】Schubert String Quintet 1978 [FLAC+CUE]",
+    "【古典音乐】André Rieu - 2010 - Les Roses de la Vie (FLAC)",
+    "【古典音乐】André Rieu - 2020 - Feliz Navidad (FLAC)",
+    "【古典音乐】Consortium.Classicum Kreutzer Quartets Quintets 1999 [FLAC+CUE]",
+    "【古典音乐】SODRE Selections 2006 [WAV+CUE]",
+    "【古典音乐】VA - 1998 - Most Relaxing Classical Album in World...Ever! II (2CD) CD2 (FLAC)",
+    "【古典音乐】Adagio Evening 2CD. 2002 [FLAC+CUE].cd2",
+    "【古典音乐】Adagio Evening 2CD. 2002 [FLAC+CUE].cd2 (2)",
+    "【古典音乐】Adagio Evening 2CD. 2002 [FLAC+CUE]cd1",
+    "【古典音乐】Adagio Evening 2CD. 2002 [FLAC+CUE]cd1 (2)",
+    "【古典音乐】Adagio Midnight 2CD. 2003 [FLAC+CUE]cd1",
+    "【古典音乐】Adagio Midnight 2CD. 2003 [FLAC+CUE]cd2",
+    "【古典音乐】Saint-Saens Selection 2CD. 1994 [FLAC+CUE]cd1",
+    "【古典音乐】Saint-Saens Selection 2CD. 1994 [FLAC+CUE]cd2",
+    "【古典音乐】Adagio Heavenly 2CD. 2003 [FLAC+CUE]cd1",
+    "【古典音乐】Adagio Heavenly 2CD. 2003 [FLAC+CUE]cd2",
+    "【古典音乐】Adagio Dreamy 2CD. 2006 [FLAC+CUE].cd1",
+    "【古典音乐】Adagio Dreamy 2CD. 2006 [FLAC+CUE].cd2",
+    "【古典音乐】Adagio Dreamy 2CD. 2006 [FLAC+CUE].cd2 (2)",
+    "【古典音乐】Adagio Baroque 2CD. 2002 [FLAC+CUE]cd1",
+    "【古典音乐】Adagio Baroque 2CD. 2002 [FLAC+CUE]cd2",
+    "【古典音乐】Adagio Baroque 2CD. 2002 [FLAC+CUE]cd2 (2)",
+    "【古典音乐】Harp Concertos 2CD. 1998 [WAV+CUE]【合集】",
+    "【古典音乐】Harp Adagio 2CD. 2005 [FLAC+CUE].cd1",
+    "【古典音乐】Harp Adagio 2CD. 2005 [FLAC+CUE].cd2",
+    "【古典音乐】Vivaldi Adagio 2CD. 1999 [FLAC+CUE].cd1",
+    "【古典音乐】Vivaldi Adagio 2CD. 1999 [FLAC+CUE].cd2",
+    "【古典音乐】Ballet Adagio 2CD. 2009 [FLAC+CUE].cd1",
+    "【古典音乐】Ballet Adagio 2009 [FLAC+CUE]cd1",
+    "【古典音乐】Mozart Quintets 4CD. 1997 [FLAC+CUE]Vol.【合集】",
+    "【古典音乐】Mozart Best Works 2CD. 1961 [FLAC+CUE]cd1",
+    "【古典音乐】Mozart Best Works 2CD. 1961 [FLAC+CUE]cd2",
+    "【古典音乐】Mozart Flute Works 2CD. 1994 [FLAC+CUE]cd1",
+    "【古典音乐】Mozart Flute Works 2CD. 1994 [FLAC+CUE]cd2"
+  ],
+  "expectedCollections": [
+    {
+      "collectionName": "Adagio Evening",
+      "folderNames": [
+        "【古典音乐】Adagio Evening 2CD. 2002 [FLAC+CUE]cd1",
+        "【古典音乐】Adagio Evening 2CD. 2002 [FLAC+CUE]cd2",
+        "【古典音乐】Adagio Evening 2CD. 2002 [FLAC+CUE]cd1 (2)",
+        "【古典音乐】Adagio Evening 2CD. 2002 [FLAC+CUE].cd2 (2)"
+      ],
+      "description": "Adagio Evening series"
+    },
+    {
+      "collectionName": "Adagio Midnight",
+      "folderNames": [
+        "【古典音乐】Adagio Midnight 2CD. 2003 [FLAC+CUE]cd1",
+        "【古典音乐】Adagio Midnight 2CD. 2003 [FLAC+CUE]cd2"
+      ],
+      "description": "Adagio Midnight series"
+    },
+    {
+      "collectionName": "Saint-Saens Selection",
+      "folderNames": [
+        "【古典音乐】Saint-Saens Selection 2CD. 1994 [FLAC+CUE]cd1",
+        "【古典音乐】Saint-Saens Selection 2CD. 1994 [FLAC+CUE]cd2"
+      ],
+      "description": "Saint-Saens Selection"
+    },
+    {
+      "collectionName": "Adagio Heavenly",
+      "folderNames": [
+        "【古典音乐】Adagio Heavenly 2CD. 2003 [FLAC+CUE]cd1",
+        "【古典音乐】Adagio Heavenly 2CD. 2003 [FLAC+CUE]cd2"
+      ],
+      "description": "Adagio Heavenly series"
+    },
+    {
+      "collectionName": "Adagio Dreamy",
+      "folderNames": [
+        "【古典音乐】Adagio Dreamy 2CD. 2006 [FLAC+CUE].cd1",
+        "【古典音乐】Adagio Dreamy 2CD. 2006 [FLAC+CUE].cd2",
+        "【古典音乐】Adagio Dreamy 2CD. 2006 [FLAC+CUE].cd2 (2)"
+      ],
+      "description": "Adagio Dreamy series"
+    },
+    {
+      "collectionName": "Adagio Baroque",
+      "folderNames": [
+        "【古典音乐】Adagio Baroque 2CD. 2002 [FLAC+CUE]cd1",
+        "【古典音乐】Adagio Baroque 2CD. 2002 [FLAC+CUE]cd2",
+        "【古典音乐】Adagio Baroque 2CD. 2002 [FLAC+CUE]cd2 (2)"
+      ],
+      "description": "Adagio Baroque series"
+    },
+    {
+      "collectionName": "Harp Adagio",
+      "folderNames": [
+        "【古典音乐】Harp Adagio 2CD. 2005 [FLAC+CUE].cd1",
+        "【古典音乐】Harp Adagio 2CD. 2005 [FLAC+CUE].cd2"
+      ],
+      "description": "Harp Adagio series"
+    },
+    {
+      "collectionName": "Vivaldi Adagio",
+      "folderNames": [
+        "【古典音乐】Vivaldi Adagio 2CD. 1999 [FLAC+CUE].cd1",
+        "【古典音乐】Vivaldi Adagio 2CD. 1999 [FLAC+CUE].cd2"
+      ],
+      "description": "Vivaldi Adagio series"
+    },
+    {
+      "collectionName": "Ballet Adagio",
+      "folderNames": [
+        "【古典音乐】Ballet Adagio 2CD. 2009 [FLAC+CUE].cd1",
+        "【古典音乐】Ballet Adagio 2009 [FLAC+CUE]cd1"
+      ],
+      "description": "Ballet Adagio series"
+    },
+    {
+      "collectionName": "Mozart Best Works",
+      "folderNames": [
+        "【古典音乐】Mozart Best Works 2CD. 1961 [FLAC+CUE]cd1",
+        "【古典音乐】Mozart Best Works 2CD. 1961 [FLAC+CUE]cd2"
+      ],
+      "description": "Mozart Best Works"
+    },
+    {
+      "collectionName": "Mozart Flute Works",
+      "folderNames": [
+        "【古典音乐】Mozart Flute Works 2CD. 1994 [FLAC+CUE]cd1",
+        "【古典音乐】Mozart Flute Works 2CD. 1994 [FLAC+CUE]cd2"
+      ],
+      "description": "Mozart Flute Works"
+    },
+    {
+      "collectionName": "Andre Rieu Series",
+      "folderNames": [
+        "【古典音乐】André Rieu - 2010 - Les Roses de la Vie (FLAC)",
+        "【古典音乐】André Rieu - 2020 - Feliz Navidad (FLAC)"
+      ],
+      "description": "Andre Rieu personal albums"
+    }
+  ]
+}

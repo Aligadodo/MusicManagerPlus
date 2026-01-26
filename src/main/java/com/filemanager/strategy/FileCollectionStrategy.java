@@ -387,6 +387,12 @@ public class FileCollectionStrategy extends IAppStrategy {
             return Collections.emptyList();
         }
 
+        // 检查组件是否已初始化
+        if (determinationAlgorithm == null || clusteringAlgorithm == null) {
+            app.log("⚠️ 文件归类策略：组件未初始化，跳过处理");
+            return Collections.emptyList();
+        }
+
         // 检查当前文件是否符合目标类型
         if (!isFileTypeMatch(currentFile)) {
             return Collections.emptyList();
@@ -462,6 +468,12 @@ public class FileCollectionStrategy extends IAppStrategy {
 
         // 对目录下的文件进行聚类
         app.log("📁 文件归类策略：开始对目录 " + parentDir.getAbsolutePath() + " 下的文件进行聚类");
+
+        if (clusteringAlgorithm == null) {
+            app.log("⚠️ 文件归类策略：clusteringAlgorithm 未初始化，跳过处理");
+            parentDirClusters.put(parentDir, Collections.emptyMap());
+            return Collections.emptyList();
+        }
 
         List<File> files = dirRecords.stream()
                 .map(ChangeRecord::getFileHandle)
@@ -579,6 +591,9 @@ public class FileCollectionStrategy extends IAppStrategy {
      * 检查文件是否已经在合集文件夹中
      */
     private boolean isInCollectionFolder(File file) {
+        if (determinationAlgorithm == null) {
+            return false;
+        }
         return determinationAlgorithm.isInCollectionFolder(file);
     }
 
@@ -586,6 +601,9 @@ public class FileCollectionStrategy extends IAppStrategy {
      * 检查文件是否本身就是合集文件夹
      */
     private boolean isCollectionFolder(File file) {
+        if (determinationAlgorithm == null) {
+            return false;
+        }
         return determinationAlgorithm.isCollectionFolder(file);
     }
 
@@ -593,6 +611,10 @@ public class FileCollectionStrategy extends IAppStrategy {
      * 检查文件是否应该被添加到现有集合中
      */
     private boolean shouldAddToExistingCollection(File file, File collectionDir, ChangeRecord record) {
+        if (determinationAlgorithm == null || similarityCalculator == null) {
+            return false;
+        }
+
         if (!determinationAlgorithm.isValidFile(file)) {
             return false;
         }
@@ -650,6 +672,11 @@ public class FileCollectionStrategy extends IAppStrategy {
     private List<ChangeRecord> addFilesToExistingCollections(List<ChangeRecord> inputRecords, List<File> rootDirs, File parentDir) {
         List<ChangeRecord> changeRecords = new ArrayList<>();
 
+        // 检查组件是否已初始化
+        if (determinationAlgorithm == null) {
+            return changeRecords;
+        }
+
         // 获取父目录下的所有现有集合文件夹
         List<File> existingCollections = Arrays.stream(parentDir.listFiles(File::isDirectory))
                 .filter(this::isCollectionFolder)
@@ -696,6 +723,10 @@ public class FileCollectionStrategy extends IAppStrategy {
      */
     private boolean isMostlySingleCollection(List<ChangeRecord> records) {
         if (records.size() < 2) {
+            return false;
+        }
+
+        if (clusteringAlgorithm == null) {
             return false;
         }
 
