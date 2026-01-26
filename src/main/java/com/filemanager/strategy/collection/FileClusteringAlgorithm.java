@@ -471,8 +471,10 @@ public class FileClusteringAlgorithm {
         // 5. 提取最长公共前缀
         String longestCommonPrefix = findLongestCommonPrefix(filenames);
         if (longestCommonPrefix.length() >= 5) {
+            // 清理合集名称，去除不必要的前缀和后缀
+            String cleanedPrefix = cleanCollectionName(longestCommonPrefix);
             // 尝试修复不完整的括号
-            String fixedPrefix = fixIncompleteBrackets(longestCommonPrefix);
+            String fixedPrefix = fixIncompleteBrackets(cleanedPrefix);
             return fixedPrefix.trim();
         }
 
@@ -821,6 +823,86 @@ public class FileClusteringAlgorithm {
         }
 
         return input;
+    }
+
+    private String cleanCollectionName(String name) {
+        if (name == null || name.isEmpty()) {
+            return name;
+        }
+
+        // 去除常见的不必要前缀
+        String[] prefixesToRemove = {
+            "缇ゆ槦\\.",
+            "缇ゆ槦",
+            "滚石合集\\.",
+            "滚石合集",
+            "滚石\\.",
+            "滚石",
+            "龙音唱片\\.-\\.",
+            "龙音唱片\\.-",
+            "龙音唱片\\.",
+            "龙音唱片",
+            "龙音\\.",
+            "龙音",
+            "合集\\.",
+            "合集",
+            "Collection\\.",
+            "Collection",
+            "缇\\.",
+            "缇",
+            "唱片\\.",
+            "唱片",
+            "唱片公司\\.",
+            "唱片公司",
+            "音乐\\.",
+            "音乐",
+            "专辑\\.",
+            "专辑"
+        };
+
+        for (String prefix : prefixesToRemove) {
+            if (name.matches(prefix + ".*")) {
+                name = name.replaceFirst(prefix, "");
+                break;
+            }
+        }
+
+        // 去除年份前缀（如 .2005 - 、 .1998 - 、 2005 - 、 1998 - 等）
+        name = name.replaceAll("^[.\\s]*\\d{4}\\s*-\\s*", "");
+
+        // 去除括号内的内容（包括中文和英文括号）
+        name = name.replaceAll("\\[.*?\\]", "");
+        name = name.replaceAll("\\(.*?\\)", "");
+        name = name.replaceAll("【.*?】", "");
+        name = name.replaceAll("《.*?》", "");
+        name = name.replaceAll("「.*?」", "");
+        name = name.replaceAll("『.*?』", "");
+
+        // 去除常见的不必要后缀
+        String[] suffixesToRemove = {
+            "\\s*CD$",
+            "\\s*CD\\s*$",
+            "\\s*VOL\\.$",
+            "\\s*VOL\\.\\s*$",
+            "\\s*Disc$",
+            "\\s*Disc\\s*$"
+        };
+
+        for (String suffix : suffixesToRemove) {
+            name = name.replaceAll(suffix, "");
+        }
+
+        // 去除多余的空格和特殊字符
+        name = name.trim();
+        name = name.replaceAll("\\s+", " ");
+        name = name.replaceAll("[-_]{2,}", "-");
+
+        // 如果清理后的名称太短或只包含数字，返回原始名称
+        if (name.length() < 3 || name.matches("^\\d+$")) {
+            return name;
+        }
+
+        return name;
     }
 
     private String findLongestCommonPrefix(List<String> strings) {

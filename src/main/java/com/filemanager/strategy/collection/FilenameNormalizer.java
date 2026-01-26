@@ -37,6 +37,15 @@ public class FilenameNormalizer {
     // 宝丽金后缀数字模式（如-1、-2、-3）
     private static final Pattern POLYGRAM_SUFFIX_NUMBER_PATTERN = Pattern.compile("-\\d+$");
     
+    // 龙音港版唱片版本信息模式
+    private static final Pattern LONGYIN_VERSION_PATTERN = Pattern.compile("\\[(?:海文版|龙音海文版|龙音香港版|龙音)(?:\\s*CD-\\d+)?(?:\\s*RA-\\d+)?\\]", Pattern.CASE_INSENSITIVE);
+    
+    // 龙音港版唱片CD序号模式
+    private static final Pattern LONGYIN_CD_PATTERN = Pattern.compile("\\[.*?CD-\\d+\\]", Pattern.CASE_INSENSITIVE);
+    
+    // 龙音港版唱片RA序号模式
+    private static final Pattern LONGYIN_RA_PATTERN = Pattern.compile("\\[.*?RA-\\d+\\]", Pattern.CASE_INSENSITIVE);
+    
     // 古典音乐特有的版本信息模式
     private static final Pattern VERSION_PATTERN = Pattern.compile("\\[(?:\\w+版|\\w+版)\\]");
     
@@ -70,6 +79,9 @@ public class FilenameNormalizer {
 
         // 移除文件类型信息
         result = removeFileType(result);
+        
+        // 移除龙音港版唱片版本信息
+        result = removeLongyinVersionInfo(result);
         
         // 移除宝丽金特定的版本信息
         result = removePolygramVersionInfo(result);
@@ -170,6 +182,14 @@ public class FilenameNormalizer {
      */
     private String removeVersionInfo(String text) {
         Matcher matcher = VERSION_PATTERN.matcher(text);
+        return matcher.replaceAll("");
+    }
+
+    /**
+     * 移除龙音港版唱片版本信息
+     */
+    private String removeLongyinVersionInfo(String text) {
+        Matcher matcher = LONGYIN_VERSION_PATTERN.matcher(text);
         return matcher.replaceAll("");
     }
 

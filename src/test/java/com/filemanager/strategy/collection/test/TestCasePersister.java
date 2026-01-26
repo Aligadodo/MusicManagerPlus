@@ -54,9 +54,10 @@ public class TestCasePersister {
         try {
             String filepath = storageDir + File.separator + filename + ".json";
             String jsonString = JSON.toJSONString(testCase, SerializerFeature.PrettyFormat, SerializerFeature.WriteMapNullValue);
-            FileWriter writer = new FileWriter(filepath);
-            writer.write(jsonString);
-            writer.close();
+            try (java.io.FileOutputStream fos = new java.io.FileOutputStream(filepath);
+                 java.io.OutputStreamWriter writer = new java.io.OutputStreamWriter(fos, "UTF-8")) {
+                writer.write(jsonString);
+            }
             System.out.println("测试用例保存成功: " + filepath);
             return true;
         } catch (IOException e) {
@@ -124,12 +125,16 @@ public class TestCasePersister {
     public boolean saveValidationResult(TestValidationResult validationResult, String filename) {
         try {
             String filepath = storageDir + File.separator + filename + "_result.json";
-            String jsonString = JSON.toJSONString(validationResult, SerializerFeature.PrettyFormat, SerializerFeature.WriteMapNullValue);
-            java.io.FileOutputStream fos = new java.io.FileOutputStream(filepath);
-            java.io.OutputStreamWriter writer = new java.io.OutputStreamWriter(fos, "UTF-8");
-            writer.write(jsonString);
-            writer.close();
-            fos.close();
+            String jsonString = JSON.toJSONString(validationResult, 
+                SerializerFeature.PrettyFormat, 
+                SerializerFeature.WriteMapNullValue, 
+                SerializerFeature.WriteDateUseDateFormat);
+            
+            // 使用UTF-8编码写入文件
+            try (java.io.FileOutputStream fos = new java.io.FileOutputStream(filepath);
+                 java.io.OutputStreamWriter writer = new java.io.OutputStreamWriter(fos, "UTF-8")) {
+                writer.write(jsonString);
+            }
             System.out.println("验证结果保存成功: " + filepath);
             return true;
         } catch (IOException e) {
