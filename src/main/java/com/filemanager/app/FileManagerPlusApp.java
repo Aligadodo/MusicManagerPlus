@@ -278,10 +278,13 @@ public class FileManagerPlusApp extends Application implements IAppController {
         Menu fileMenu = new Menu("配置管理");
         MenuItem loadItem = new MenuItem("加载配置...");
         loadItem.setOnAction(e -> loadConfigAction());
+        
         MenuItem saveItem = new MenuItem("保存配置...");
         saveItem.setOnAction(e -> saveConfigAction());
+        
         MenuItem resetItem = new MenuItem("重置配置");
         resetItem.setOnAction(e -> resetConfigAction());
+        
         fileMenu.getItems().addAll(loadItem, saveItem, resetItem);
         menuBar.getMenus().add(fileMenu);
 
@@ -304,6 +307,30 @@ public class FileManagerPlusApp extends Application implements IAppController {
         btnStop = StyleFactory.createActionButton("停止", "#e74c3c", this::forceStop);
         btnStop.setDisable(true);
         btnExecute.setDisable(true);
+        
+        // 添加提示信息
+        FloatingTooltip.bindToNode(autoRun, "预览成功立即运行", java.util.Arrays.asList(
+                "勾选后，当预览分析完成时",
+                "会自动开始执行流水线任务"
+        ));
+        
+        FloatingTooltip.bindToNode(btnGo, "预览", java.util.Arrays.asList(
+                "开始分析源目录中的文件",
+                "生成预览表格，显示文件变更情况",
+                "不会实际修改文件"
+        ));
+        
+        FloatingTooltip.bindToNode(btnExecute, "执行", java.util.Arrays.asList(
+                "执行流水线中的所有任务",
+                "会实际修改文件，请谨慎操作",
+                "只有在预览完成后才可点击"
+        ));
+        
+        FloatingTooltip.bindToNode(btnStop, "停止", java.util.Arrays.asList(
+                "停止当前正在执行的任务",
+                "任务会被中断，可能导致部分文件未处理",
+                "只有在任务执行中才可点击"
+        ));
         HBox header = new HBox(15);
         header.setPadding(new Insets(10, 20, 10, 20));
         header.setAlignment(Pos.CENTER_LEFT);

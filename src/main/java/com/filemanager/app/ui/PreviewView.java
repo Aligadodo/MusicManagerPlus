@@ -307,6 +307,12 @@ public class PreviewView implements IAutoReloadAble {
         chkUnlimitedExecution.selectedProperty().addListener((obs, oldVal, newVal) -> {
             spGlobalExecutionLimit.setDisable(newVal);
         });
+        
+        // 添加提示信息
+        FloatingTooltip.bindToNode(chkUnlimitedExecution, "不限制执行数量", java.util.Arrays.asList(
+                "取消勾选可设置执行数量上限",
+                "无限制可能会影响性能"
+        ));
 
         // 添加线程和数量限制设置的提示信息
         FloatingTooltip.bindToNode(spPreviewThreads, "预览线程数", java.util.Arrays.asList(
