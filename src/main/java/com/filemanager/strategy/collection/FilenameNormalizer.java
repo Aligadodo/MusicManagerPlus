@@ -83,6 +83,9 @@ public class FilenameNormalizer {
         // 移除龙音港版唱片版本信息
         result = removeLongyinVersionInfo(result);
         
+        // 移除龙音港版唱片曲目名称（保留专辑信息）
+        result = removeLongyinTrackName(result);
+        
         // 移除宝丽金特定的版本信息
         result = removePolygramVersionInfo(result);
         
@@ -191,6 +194,24 @@ public class FilenameNormalizer {
     private String removeLongyinVersionInfo(String text) {
         Matcher matcher = LONGYIN_VERSION_PATTERN.matcher(text);
         return matcher.replaceAll("");
+    }
+
+    /**
+     * 移除龙音港版唱片曲目名称（保留专辑信息）
+     * 龙音文件名格式：[版本信息]曲目名称-艺术家专辑信息
+     * 例如：[海文版 CD-0174]望秦川-王中山古筝专辑之四
+     * 需要提取：王中山古筝专辑之四
+     */
+    private String removeLongyinTrackName(String text) {
+        // 检查是否是龙音格式（包含横线）
+        if (text.contains("-")) {
+            // 提取横线后的内容（专辑信息）
+            String[] parts = text.split("-", 2);
+            if (parts.length == 2) {
+                return parts[1].trim();
+            }
+        }
+        return text;
     }
 
     /**

@@ -24,6 +24,7 @@ public class TextSimilarityCalculator {
             return 1.0;
         }
 
+        // 计算编辑距离相似度
         int distance = levenshteinDistance(s1, s2);
         int maxLength = Math.max(s1.length(), s2.length());
 
@@ -31,7 +32,63 @@ public class TextSimilarityCalculator {
             return 1.0;
         }
 
-        return 1.0 - ((double) distance / maxLength);
+        double levenshteinSimilarity = 1.0 - ((double) distance / maxLength);
+        
+        // 计算最长公共子串相似度
+        double lcsSimilarity = calculateLCSSimilarity(s1, s2);
+        
+        // 综合两种相似度（权重：编辑距离0.3，最长公共子串0.7）
+        return levenshteinSimilarity * 0.3 + lcsSimilarity * 0.7;
+    }
+    
+    /**
+     * 计算最长公共子串相似度
+     */
+    private double calculateLCSSimilarity(String s1, String s2) {
+        if (s1 == null || s2 == null) {
+            return 0.0;
+        }
+        
+        if (s1.isEmpty() || s2.isEmpty()) {
+            return 0.0;
+        }
+        
+        int lcsLength = findLongestCommonSubstring(s1, s2);
+        int minLength = Math.min(s1.length(), s2.length());
+        int maxLength = Math.max(s1.length(), s2.length());
+        
+        // 使用两个字符串的平均长度作为分母，这样更公平
+        double avgLength = (s1.length() + s2.length()) / 2.0;
+        
+        // 同时考虑最短字符串的覆盖率
+        double coverage = (double) lcsLength / minLength;
+        double normalizedLCS = (double) lcsLength / avgLength;
+        
+        // 综合考虑覆盖率和标准化LCS
+        return coverage * 0.6 + normalizedLCS * 0.4;
+    }
+    
+    /**
+     * 查找最长公共子串长度
+     */
+    private int findLongestCommonSubstring(String s1, String s2) {
+        int m = s1.length();
+        int n = s2.length();
+        int[][] dp = new int[m + 1][n + 1];
+        int maxLength = 0;
+        
+        for (int i = 1; i <= m; i++) {
+            for (int j = 1; j <= n; j++) {
+                if (s1.charAt(i - 1) == s2.charAt(j - 1)) {
+                    dp[i][j] = dp[i - 1][j - 1] + 1;
+                    maxLength = Math.max(maxLength, dp[i][j]);
+                } else {
+                    dp[i][j] = 0;
+                }
+            }
+        }
+        
+        return maxLength;
     }
 
     public int levenshteinDistance(String s1, String s2) {

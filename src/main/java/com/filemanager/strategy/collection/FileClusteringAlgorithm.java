@@ -298,6 +298,7 @@ public class FileClusteringAlgorithm {
         
         // 移除版本信息
         normalized = normalized.replaceAll("\\[.*?\\]", "");
+        normalized = normalized.replaceAll("【.*?】", "");
         
         // 移除CD序号
         normalized = normalized.replaceAll("\\s*CD\\s*\\d+\\b", "");
@@ -315,6 +316,12 @@ public class FileClusteringAlgorithm {
         normalized = normalized.replaceAll("\\s*\\[WAV\\]", "");
         normalized = normalized.replaceAll("\\s*\\[FLAC\\]", "");
         normalized = normalized.replaceAll("\\s*\\[MP3\\]", "");
+        normalized = normalized.replaceAll("\\s*WAV\\s*\\+\\s*CUE\\b", "");
+        normalized = normalized.replaceAll("\\s*WAV\\b", "");
+        normalized = normalized.replaceAll("\\s*CUE\\b", "");
+        
+        // 移除常见前缀（如"群星."、"滚石群星."等）
+        normalized = normalized.replaceAll("^(群星\\.|滚石群星\\.|滚石\\.|龙音\\.)", "");
         
         normalized = normalized.trim();
         
@@ -444,6 +451,27 @@ public class FileClusteringAlgorithm {
             return "未命名";
         }
 
+        // 使用通用合集名称生成器（自动识别模式，不依赖硬编码规则）
+        try {
+            UniversalCollectionNameGenerator universalGenerator = 
+                new UniversalCollectionNameGenerator(new TextSimilarityCalculatorAdapter(similarityCalculator));
+            String universalName = universalGenerator.generateCollectionName(filenames);
+            if (universalName != null && !universalName.isEmpty() && !universalName.equals("未命名")) {
+                return universalName;
+            }
+        } catch (Exception e) {
+            // 如果通用生成器失败，回退到传统方法
+            System.err.println("通用合集名称生成失败，使用传统方法: " + e.getMessage());
+        }
+
+        // 回退到传统方法
+        return generateClusterNameTraditional(filenames);
+    }
+    
+    /**
+     * 传统合集名称生成方法（作为回退方案）
+     */
+    private String generateClusterNameTraditional(List<String> filenames) {
         // 1. 尝试提取宝丽金专辑名称（优先级最高）
         String polygramAlbumName = extractPolygramAlbumName(filenames);
         if (!polygramAlbumName.isEmpty()) {
@@ -468,7 +496,7 @@ public class FileClusteringAlgorithm {
             return composerName;
         }
 
-        // 5. 提取最长公共前缀
+        // 5. 提取最长公共前缀（传统方法）
         String longestCommonPrefix = findLongestCommonPrefix(filenames);
         if (longestCommonPrefix.length() >= 5) {
             // 清理合集名称，去除不必要的前缀和后缀

@@ -249,7 +249,9 @@ public class FileCollectionStrategy extends IAppStrategy {
 
         // 检查是否已经处理过这个父目录
         if (parentDirClusters.containsKey(parentDir)) {
-            app.log("ℹ️ 文件归类策略：跳过，父目录已处理 " + parentDir.getAbsolutePath());
+            if (parentDir != null) {
+                app.log("ℹ️ 文件归类策略：跳过，父目录已处理 " + parentDir.getAbsolutePath());
+            }
             return Collections.emptyList();
         }
 
@@ -277,6 +279,10 @@ public class FileCollectionStrategy extends IAppStrategy {
                 })
                 .collect(Collectors.toList());
 
+        if (parentDir == null) {
+            app.log("⚠️ 文件归类策略：父目录为空，跳过处理");
+            return Collections.emptyList();
+        }
         app.log("📁 文件归类策略：在目录 " + parentDir.getAbsolutePath() + " 中找到 " + dirRecords.size() + " 个符合条件的文件");
 
         // 如果目录下的文件数量不足2个，跳过处理
@@ -289,14 +295,16 @@ public class FileCollectionStrategy extends IAppStrategy {
 
         // 检查目录中是否大部分文件已经属于同一合集，如果是则不再执行合并
         if (isMostlySingleCollection(dirRecords)) {
-            app.log("📁 文件归类策略：目录中大部分文件已经属于同一合集，跳过处理 " + parentDir.getAbsolutePath());
+            if (parentDir != null) {
+                app.log("📁 文件归类策略：目录中大部分文件已经属于同一合集，跳过处理 " + parentDir.getAbsolutePath());
+            }
             // 标记此目录已处理
             parentDirClusters.put(parentDir, Collections.emptyMap());
             return Collections.emptyList();
         }
 
         // 检查父目录是否已经是合集文件夹
-        if (isCollectionFolder(parentDir)) {
+        if (parentDir != null && isCollectionFolder(parentDir)) {
             app.log("📁 文件归类策略：父目录已经是合集文件夹，跳过处理 " + parentDir.getAbsolutePath());
             // 标记此目录已处理
             parentDirClusters.put(parentDir, Collections.emptyMap());
@@ -304,7 +312,9 @@ public class FileCollectionStrategy extends IAppStrategy {
         }
 
         // 对目录下的文件进行聚类
-        app.log("📁 文件归类策略：开始对目录 " + parentDir.getAbsolutePath() + " 下的文件进行聚类");
+        if (parentDir != null) {
+            app.log("📁 文件归类策略：开始对目录 " + parentDir.getAbsolutePath() + " 下的文件进行聚类");
+        }
 
         if (clusteringAlgorithm == null) {
             app.log("⚠️ 文件归类策略：clusteringAlgorithm 未初始化，跳过处理");
@@ -362,6 +372,9 @@ public class FileCollectionStrategy extends IAppStrategy {
             String collectionName = entry.getKey();
 
             // 创建目标合集文件夹路径
+            if (parentDir == null) {
+                continue;
+            }
             Path targetDirPath = parentDir.toPath().resolve(collectionName + pCollectionSuffix);
             app.log("📁 文件归类策略：为集群创建合集文件夹 " + targetDirPath.getFileName());
 
@@ -511,9 +524,12 @@ public class FileCollectionStrategy extends IAppStrategy {
         }
 
         // 获取父目录下的所有现有集合文件夹
-        List<File> existingCollections = Arrays.stream(parentDir.listFiles(File::isDirectory))
-                .filter(this::isCollectionFolder)
-                .collect(Collectors.toList());
+        List<File> existingCollections = Collections.emptyList();
+        if (parentDir != null) {
+            existingCollections = Arrays.stream(parentDir.listFiles(File::isDirectory))
+                    .filter(this::isCollectionFolder)
+                    .collect(Collectors.toList());
+        }
 
         // 如果没有现有集合，直接返回
         if (existingCollections.isEmpty()) {

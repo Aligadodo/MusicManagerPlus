@@ -220,9 +220,10 @@ public class TestFramework {
             System.out.println("\n--- 处理文件: " + jsonFile.getName() + " ---");
             
             try {
-                // 读取JSON文件
+                // 读取JSON文件（使用UTF-8编码）
                 StringBuilder sb = new StringBuilder();
-                try (FileReader reader = new FileReader(jsonFile)) {
+                try (java.io.FileInputStream fis = new java.io.FileInputStream(jsonFile);
+                     java.io.InputStreamReader reader = new java.io.InputStreamReader(fis, "UTF-8")) {
                     int ch;
                     while ((ch = reader.read()) != -1) {
                         sb.append((char) ch);
