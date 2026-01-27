@@ -190,7 +190,7 @@ public class UniversalCollectionNameGenerator {
     }
     
     /**
-     * 模板提取算法
+     * 模板提取算法（改进版，更好地提取专辑名称）
      */
     private String generateByTemplateExtraction(List<String> filenames, FilenamePattern pattern) {
         Map<String, Integer> templateMatches = new HashMap<>();
@@ -218,15 +218,21 @@ public class UniversalCollectionNameGenerator {
             }
         }
         
+        // 如果匹配次数足够，返回最佳匹配
         if (maxCount >= filenames.size() * 0.5 && !bestMatch.isEmpty()) {
             return bestMatch;
+        }
+        
+        // 如果没有找到合适的模板，尝试使用共同前缀方法
+        if (bestMatch.length() < 5 || bestMatch.matches("^(CD|Disc|cd|VOL|Vol|\\d+|RC|RA|RB)\\s*$")) {
+            return findCommonPrefixIgnoringDifferences(filenames);
         }
         
         return "";
     }
     
     /**
-     * 根据模式提取名称
+     * 根据模式提取名称（改进版，更好地保留共有元素）
      */
     private String extractByPattern(String filename, String pattern) {
         switch (pattern) {
@@ -235,11 +241,18 @@ public class UniversalCollectionNameGenerator {
                 Matcher bracketMatcher = Pattern.compile("\\[[^\\]]+\\](.+)").matcher(filename);
                 if (bracketMatcher.find()) {
                     String content = bracketMatcher.group(1).trim();
-                    // 如果有横线，取横线前的内容
+                    // 清理CD序号和文件格式信息
+                    content = content.replaceAll("\\s*[Cc][Dd]\\s*\\d+\\b", "");
+                    content = content.replaceAll("\\s*\\d+\\s*[Cc][Dd]\\b", "");
+                    content = content.replaceAll("\\s*[Ww][Aa][Vv]\\s*\\+\\s*[Cc][Uu][Ee]\\b", "");
+                    content = content.replaceAll("\\s*[Ww][Aa][Vv]\\b", "");
+                    content = content.replaceAll("\\s*[Ff][Ll][Aa][Cc]\\b", "");
+                    content = content.trim();
+                    // 如果有横线，取横线后的内容（专辑名称通常在横线后）
                     if (content.contains("-")) {
                         String[] parts = content.split("-");
-                        if (parts.length > 0) {
-                            return parts[0].trim();
+                        if (parts.length > 1) {
+                            return parts[1].trim();
                         }
                     }
                     return content;
@@ -306,7 +319,7 @@ public class UniversalCollectionNameGenerator {
     }
     
     /**
-     * 最长公共子串算法
+     * 最长公共子串算法（改进版，避免提取到CD序号等无意义信息）
      */
     private String generateByLongestCommonSubstring(List<String> filenames) {
         if (filenames.size() < 2) {
@@ -322,7 +335,15 @@ public class UniversalCollectionNameGenerator {
             }
         }
         
-        return cleanName(lcs);
+        String cleaned = cleanName(lcs);
+        cleaned = removeExtraInfo(cleaned);
+        
+        // 如果LCS太短或无意义，尝试找共同前缀
+        if (cleaned.length() < 5 || cleaned.matches("^(CD|Disc|cd|VOL|Vol|\\d+)\\s*$")) {
+            return findCommonPrefixIgnoringDifferences(filenames);
+        }
+        
+        return cleaned;
     }
     
     /**
@@ -350,6 +371,96 @@ public class UniversalCollectionNameGenerator {
         }
         
         return s1.substring(endIndex - maxLength, endIndex);
+    }
+    
+    /**
+     * 找到忽略差异信息的共同前缀
+     * 这个方法会先去除CD序号、年份、文件格式等差异信息，然后找共同前缀
+     */
+    private String findCommonPrefixIgnoringDifferences(List<String> filenames) {
+        if (filenames == null || filenames.isEmpty()) {
+            return "";
+        }
+        
+        // 标准化所有文件名，去除差异信息
+        List<String> normalizedFilenames = new ArrayList<>();
+        for (String filename : filenames) {
+            String normalized = normalizeForPrefixComparison(filename);
+            normalizedFilenames.add(normalized);
+        }
+        
+        // 找到所有标准化文件名的共同前缀
+        String commonPrefix = normalizedFilenames.get(0);
+        for (int i = 1; i < normalizedFilenames.size(); i++) {
+            commonPrefix = findCommonPrefix(commonPrefix, normalizedFilenames.get(i));
+            if (commonPrefix.isEmpty()) {
+                break;
+            }
+        }
+        
+        // 如果共同前缀太短，尝试使用第一个文件名的清理版本
+        if (commonPrefix.length() < 5) {
+            return cleanFilenameLight(filenames.get(0));
+        }
+        
+        return commonPrefix.trim();
+    }
+    
+    /**
+     * 标准化文件名用于前缀比较（去除CD序号、年份、文件格式等差异信息）
+     */
+    private String normalizeForPrefixComparison(String filename) {
+        String normalized = filename;
+        
+        // 去除方括号中的版本号信息（如[龙音香港版 RC-011007-3C]等）
+        normalized = normalized.replaceAll("\\[龙音[海文香港环球]+版\\s*[A-Z]{2,3}-\\d{4,6}-?\\d*[A-Z]?\\]", "");
+        normalized = normalized.replaceAll("\\[龙音[海文香港环球]+版\\s*[A-Z]{2,3}\\s*-\\s*\\d{4,6}\\]", "");
+        
+        // 去除CD序号（包括CD1、CD01、CD 1、cd1、cd2等格式）
+        normalized = normalized.replaceAll("\\s*[Cc][Dd]\\s*\\d+\\b", "");
+        normalized = normalized.replaceAll("\\s*[Dd][Ii][Ss][Cc]\\s*\\d+\\b", "");
+        
+        // 去除CD数量信息（如3CD、2CD等）
+        normalized = normalized.replaceAll("\\s*\\d+\\s*[Cc][Dd]\\b", "");
+        
+        // 去除文件格式信息（包括WAV、FLAC、MP3、DTS、CUE等）
+        normalized = normalized.replaceAll("\\s*[Ww][Aa][Vv]\\s*\\+\\s*[Cc][Uu][Ee]\\b", "");
+        normalized = normalized.replaceAll("\\s*[Ww][Aa][Vv]\\s*\\+\\s*分轨\\b", "");
+        normalized = normalized.replaceAll("\\s*[Ww][Aa][Vv]\\b", "");
+        normalized = normalized.replaceAll("\\s*[Ff][Ll][Aa][Cc]\\b", "");
+        normalized = normalized.replaceAll("\\s*[Mm][Pp]3\\b", "");
+        normalized = normalized.replaceAll("\\s*[Dd][Tt][Ss]\\b", "");
+        normalized = normalized.replaceAll("\\s*[Cc][Uu][Ee]\\b", "");
+        normalized = normalized.replaceAll("\\s*分轨\\b", "");
+        normalized = normalized.replaceAll("\\s*[Aa][Pp][Ee]\\b", "");
+        
+        // 去除年份前缀（如1998、2005等）
+        normalized = normalized.replaceAll("^[.\\s]*\\d{4}\\s*-\\s*", "");
+        normalized = normalized.replaceAll("^[.\\s]*\\d{4}\\s*\\.\\s*", "");
+        
+        // 去除方括号中的CD序号（如[CD1]、[CD2]等）
+        normalized = normalized.replaceAll("\\[\\s*[Cc][Dd]\\s*\\d+\\s*\\]", "");
+        normalized = normalized.replaceAll("\\[\\s*[Dd][Ii][Ss][Cc]\\s*\\d+\\s*\\]", "");
+        
+        // 去除多余空格和特殊字符
+        normalized = normalized.trim();
+        normalized = normalized.replaceAll("\\s+", " ");
+        
+        return normalized;
+    }
+    
+    /**
+     * 找到两个字符串的共同前缀
+     */
+    private String findCommonPrefix(String s1, String s2) {
+        int minLength = Math.min(s1.length(), s2.length());
+        int i = 0;
+        
+        while (i < minLength && s1.charAt(i) == s2.charAt(i)) {
+            i++;
+        }
+        
+        return s1.substring(0, i);
     }
     
     /**
@@ -560,14 +671,24 @@ public class UniversalCollectionNameGenerator {
     }
     
     /**
-     * 优化最终名称
+     * 优化最终名称（改进版，增强兜底策略）
      */
     private String optimizeFinalName(String name, List<String> filenames, FilenamePattern pattern) {
         String optimized = cleanName(name);
         optimized = removeExtraInfo(optimized);
         
-        // 兜底机制：如果优化后的名称太短或为空，使用原始文件名
-        if (optimized == null || optimized.trim().isEmpty() || optimized.trim().length() < 3) {
+        // 兜底机制1：如果优化后的名称太短或为空，使用共同前缀方法
+        if (optimized == null || optimized.trim().isEmpty() || optimized.trim().length() < 5) {
+            String commonPrefix = findCommonPrefixIgnoringDifferences(filenames);
+            if (commonPrefix != null && commonPrefix.length() >= 5) {
+                return commonPrefix.trim();
+            }
+        }
+        
+        // 兜底机制2：如果名称仍然太短或无意义，使用第一个文件名的清理版本
+        if (optimized == null || optimized.trim().isEmpty() || 
+            optimized.trim().length() < 3 || 
+            optimized.matches("^(CD|Disc|cd|VOL|Vol|\\d+)\\s*$")) {
             return getBestOriginalFilename(filenames);
         }
         
@@ -636,22 +757,29 @@ public class UniversalCollectionNameGenerator {
         
         String result = filename;
         
-        // 只去除文件格式信息
-        result = result.replaceAll("\\s*WAV\\s*\\+\\s*CUE\\b", "");
-        result = result.replaceAll("\\s*WAV\\s*\\+\\s*分轨\\b", "");
-        result = result.replaceAll("\\s*WAV\\b", "");
-        result = result.replaceAll("\\s*FLAC\\b", "");
-        result = result.replaceAll("\\s*MP3\\b", "");
-        result = result.replaceAll("\\s*DTS\\b", "");
-        result = result.replaceAll("\\s*CUE\\b", "");
+        // 只去除文件格式信息（保留其他有用信息）
+        result = result.replaceAll("\\s*[Ww][Aa][Vv]\\s*\\+\\s*[Cc][Uu][Ee]\\b", "");
+        result = result.replaceAll("\\s*[Ww][Aa][Vv]\\s*\\+\\s*分轨\\b", "");
+        result = result.replaceAll("\\s*[Ww][Aa][Vv]\\b", "");
+        result = result.replaceAll("\\s*[Ff][Ll][Aa][Cc]\\b", "");
+        result = result.replaceAll("\\s*[Mm][Pp]3\\b", "");
+        result = result.replaceAll("\\s*[Dd][Tt][Ss]\\b", "");
+        result = result.replaceAll("\\s*[Cc][Uu][Ee]\\b", "");
         result = result.replaceAll("\\s*分轨\\b", "");
-        result = result.replaceAll("\\s*APE\\b", "");
+        result = result.replaceAll("\\s*[Aa][Pp][Ee]\\b", "");
         
-        // 去除CD序号
-        result = result.replaceAll("\\s*CD\\s*\\d+\\b", "");
-        result = result.replaceAll("\\s*Disc\\s*\\d+\\b", "");
+        // 去除CD序号（但保留其他数字信息）
+        result = result.replaceAll("\\s*[Cc][Dd]\\s*\\d+\\b", "");
+        result = result.replaceAll("\\s*[Dd][Ii][Ss][Cc]\\s*\\d+\\b", "");
         
-        // 去除年份前缀
+        // 去除CD数量信息（如3CD、2CD等）
+        result = result.replaceAll("\\s*\\d+\\s*[Cc][Dd]\\b", "");
+        
+        // 去除方括号中的CD序号（如[CD1]、[CD2]等）
+        result = result.replaceAll("\\[\\s*[Cc][Dd]\\s*\\d+\\s*\\]", "");
+        result = result.replaceAll("\\[\\s*[Dd][Ii][Ss][Cc]\\s*\\d+\\s*\\]", "");
+        
+        // 去除年份前缀（但保留其他年份信息）
         result = result.replaceAll("^[.\\s]*\\d{4}\\s*-\\s*", "");
         result = result.replaceAll("^[.\\s]*\\d{4}\\s*\\.\\s*", "");
         
@@ -682,34 +810,42 @@ public class UniversalCollectionNameGenerator {
     }
     
     /**
-     * 去除额外信息
+     * 去除额外信息（改进版，保留更多有用信息）
      */
     private String removeExtraInfo(String name) {
         if (name == null || name.isEmpty()) {
             return name;
         }
         
-        // 只去除明显不必要的内容
+        // 只去除明显不必要的内容，保留专辑名称、艺术家信息等
         
         // 1. 去除CD序号（包括CD1、CD01、CD 1等格式）
-        name = name.replaceAll("\\s*CD\\s*\\d+\\b", "");
-        name = name.replaceAll("\\s*Disc\\s*\\d+\\b", "");
+        name = name.replaceAll("\\s*[Cc][Dd]\\s*\\d+\\b", "");
+        name = name.replaceAll("\\s*[Dd][Ii][Ss][Cc]\\s*\\d+\\b", "");
         
-        // 2. 去除文件格式信息（包括WAV、FLAC、MP3、DTS、CUE等）
-        name = name.replaceAll("\\s*WAV\\s*\\+\\s*CUE\\b", "");
-        name = name.replaceAll("\\s*WAV\\s*\\+\\s*分轨\\b", "");
-        name = name.replaceAll("\\s*WAV\\b", "");
-        name = name.replaceAll("\\s*FLAC\\b", "");
-        name = name.replaceAll("\\s*MP3\\b", "");
-        name = name.replaceAll("\\s*DTS\\b", "");
-        name = name.replaceAll("\\s*CUE\\b", "");
+        // 2. 去除CD数量信息（如3CD、2CD等）
+        name = name.replaceAll("\\s*\\d+\\s*[Cc][Dd]\\b", "");
+        
+        // 3. 去除文件格式信息（包括WAV、FLAC、MP3、DTS、CUE等）
+        name = name.replaceAll("\\s*[Ww][Aa][Vv]\\s*\\+\\s*[Cc][Uu][Ee]\\b", "");
+        name = name.replaceAll("\\s*[Ww][Aa][Vv]\\s*\\+\\s*分轨\\b", "");
+        name = name.replaceAll("\\s*[Ww][Aa][Vv]\\b", "");
+        name = name.replaceAll("\\s*[Ff][Ll][Aa][Cc]\\b", "");
+        name = name.replaceAll("\\s*[Mm][Pp]3\\b", "");
+        name = name.replaceAll("\\s*[Dd][Tt][Ss]\\b", "");
+        name = name.replaceAll("\\s*[Cc][Uu][Ee]\\b", "");
         name = name.replaceAll("\\s*分轨\\b", "");
+        name = name.replaceAll("\\s*[Aa][Pp][Ee]\\b", "");
         
-        // 3. 去除特殊字符和多余空格
+        // 4. 去除方括号中的CD序号（如[CD1]、[CD2]等）
+        name = name.replaceAll("\\[\\s*[Cc][Dd]\\s*\\d+\\s*\\]", "");
+        name = name.replaceAll("\\[\\s*[Dd][Ii][Ss][Cc]\\s*\\d+\\s*\\]", "");
+        
+        // 5. 去除特殊字符和多余空格
         name = name.replaceAll("\\s+", " ");
         name = name.trim();
         
-        // 4. 如果清理后的名称太短或只包含无意义字符，返回原始名称
+        // 6. 如果清理后的名称太短或只包含无意义字符，返回原始名称
         if (name.length() < 3 || name.matches("^(WAV|CUE|DTS|MP3|FLAC|分轨|VOL|CD|Disc)\\s*$")) {
             return "";
         }
