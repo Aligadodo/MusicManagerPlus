@@ -160,7 +160,13 @@ public abstract class BaseCollectionNamingStrategy implements ICollectionNamingS
             candidates.add(new CollectionNameCandidate(semanticName, "语义聚合算法", getAlgorithmWeight("semantic", pattern)));
         }
         
-        // 算法5: 模式匹配
+        // 算法5: 模板选择（TEMPLATE策略专用）
+        String templateSelectionName = generateByTemplateSelection(filenames);
+        if (!templateSelectionName.isEmpty()) {
+            candidates.add(new CollectionNameCandidate(templateSelectionName, "模板选择算法", getAlgorithmWeight("template", pattern)));
+        }
+        
+        // 算法6: 模式匹配
         String patternName = generateByPatternMatching(filenames, pattern);
         if (!patternName.isEmpty()) {
             candidates.add(new CollectionNameCandidate(patternName, "模式匹配算法", getAlgorithmWeight("pattern", pattern)));
@@ -621,6 +627,14 @@ public abstract class BaseCollectionNamingStrategy implements ICollectionNamingS
         String cleaned = cleanName(bestFilename);
         cleaned = removeExtraInfo(cleaned);
         return cleaned;
+    }
+    
+    /**
+     * 模板选择算法（由子类重写以实现不同策略）
+     */
+    protected String generateByTemplateSelection(List<String> filenames) {
+        // 默认实现：返回空字符串，由子类重写
+        return "";
     }
     
     /**

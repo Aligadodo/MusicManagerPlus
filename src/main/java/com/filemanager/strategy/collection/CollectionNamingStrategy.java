@@ -12,7 +12,12 @@ public enum CollectionNamingStrategy {
     /**
      * 精确风格：尽可能保留更多有用信息
      */
-    PRECISE("精确风格", "保留年份、专辑类型等重要信息，只去除CD序号、文件格式等差异信息");
+    PRECISE("精确风格", "保留年份、专辑类型等重要信息，只去除CD序号、文件格式等差异信息"),
+    
+    /**
+     * 选取模板：按名称排序后取中间的一个，只做最简单的干扰文本去除
+     */
+    TEMPLATE("选取模板", "按名称排序后取中间的一个，只做最简单的干扰文本去除，保证信息丢失率不超过20%");
     
     private final String displayName;
     private final String description;

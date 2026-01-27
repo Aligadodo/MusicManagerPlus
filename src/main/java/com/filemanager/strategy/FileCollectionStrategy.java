@@ -74,10 +74,70 @@ public class FileCollectionStrategy extends IAppStrategy {
         // 目标类型选择
         cbTargetType = new JFXComboBox<>(FXCollections.observableArrayList(ScanTarget.values()));
         cbTargetType.setValue(ScanTarget.FOLDERS_ONLY); // 默认只对文件夹生效
+        cbTargetType.setCellFactory(param -> new javafx.scene.control.ListCell<ScanTarget>() {
+            @Override
+            protected void updateItem(ScanTarget item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText(item.getDisplayName());
+                }
+            }
+        });
+        cbTargetType.setConverter(new javafx.util.StringConverter<ScanTarget>() {
+            @Override
+            public String toString(ScanTarget target) {
+                return target != null ? target.getDisplayName() : "";
+            }
+            
+            @Override
+            public ScanTarget fromString(String string) {
+                if (string == null || string.isEmpty()) {
+                    return null;
+                }
+                for (ScanTarget target : ScanTarget.values()) {
+                    if (target.getDisplayName().equals(string)) {
+                        return target;
+                    }
+                }
+                return null;
+            }
+        });
 
         // 命名策略选择
         cbNamingStrategy = new JFXComboBox<>(FXCollections.observableArrayList(CollectionNamingStrategy.values()));
         cbNamingStrategy.setValue(CollectionNamingStrategy.PRECISE); // 默认使用精确风格
+        cbNamingStrategy.setCellFactory(param -> new javafx.scene.control.ListCell<CollectionNamingStrategy>() {
+            @Override
+            protected void updateItem(CollectionNamingStrategy item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText(item.getDisplayName());
+                }
+            }
+        });
+        cbNamingStrategy.setConverter(new javafx.util.StringConverter<CollectionNamingStrategy>() {
+            @Override
+            public String toString(CollectionNamingStrategy strategy) {
+                return strategy != null ? strategy.getDisplayName() : "";
+            }
+            
+            @Override
+            public CollectionNamingStrategy fromString(String string) {
+                if (string == null || string.isEmpty()) {
+                    return null;
+                }
+                for (CollectionNamingStrategy strategy : CollectionNamingStrategy.values()) {
+                    if (strategy.getDisplayName().equals(string)) {
+                        return strategy;
+                    }
+                }
+                return null;
+            }
+        });
 
         // 必须包含的关键词
         txtMustContainKeywords = new TextField("CD,系列,合集");
@@ -201,6 +261,9 @@ public class FileCollectionStrategy extends IAppStrategy {
                 break;
             case PRECISE:
                 namingStrategy = new PreciseNamingStrategy(stringSimilarityCalculator);
+                break;
+            case TEMPLATE:
+                namingStrategy = new TemplateNamingStrategy(stringSimilarityCalculator);
                 break;
             default:
                 namingStrategy = new PreciseNamingStrategy(stringSimilarityCalculator);

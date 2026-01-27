@@ -23,7 +23,8 @@
 #### 基础设置
 - `slSimilarityThreshold`: 相似度阈值滑块（0.0-1.0）
 - `txtCollectionSuffix`: 合集文件夹格式（如：【合集】）
-- `cbTargetType`: 目标类型选择（文件夹/文件/全部）
+- `cbTargetType`: 目标类型选择（仅文件/仅文件夹/全部）
+- `cbNamingStrategy`: 命名策略选择（简洁风格/精确风格/选取模板）
 
 #### 关键词过滤
 - `txtMustContainKeywords`: 必须包含的关键词
@@ -34,6 +35,7 @@
 - `pThreshold`: 相似度阈值
 - `pCollectionSuffix`: 合集文件夹后缀
 - `pTargetType`: 目标类型
+- `pNamingStrategy`: 命名策略
 - `pMustContainKeywords`: 必须包含的关键词列表
 - `pMustNotContainKeywords`: 不能包含的关键词列表
 
@@ -118,6 +120,11 @@
 - 基于最长公共前缀
 - 清理不必要的字符
 - 应用合集后缀
+
+**命名策略**:
+- 简洁风格：保留核心关键词，去除年份、文件格式等冗余信息
+- 精确风格：保留年份、专辑类型等重要信息，只去除CD序号、文件格式等差异信息
+- 选取模板：按名称排序后取中间的一个，只做最简单的干扰文本去除，保证信息丢失率不超过20%
 
 ### 3. 关键词过滤
 

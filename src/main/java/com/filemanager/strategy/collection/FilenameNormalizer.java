@@ -37,8 +37,8 @@ public class FilenameNormalizer {
     // 宝丽金后缀数字模式（如-1、-2、-3）
     private static final Pattern POLYGRAM_SUFFIX_NUMBER_PATTERN = Pattern.compile("-\\d+$");
     
-    // 龙音港版唱片版本信息模式
-    private static final Pattern LONGYIN_VERSION_PATTERN = Pattern.compile("\\[(?:海文版|龙音海文版|龙音香港版|龙音)(?:\\s*CD-\\d+)?(?:\\s*RA-\\d+)?\\]", Pattern.CASE_INSENSITIVE);
+    // 龙音港版唱片版本信息模式（只匹配版本信息，不包含系列信息）
+    private static final Pattern LONGYIN_VERSION_PATTERN = Pattern.compile("\\[(?:海文版|龙音海文版|龙音香港版|龙音)(?:\\s*CD-\\d+)?(?:\\s*RA-\\d+)?\\](?!.*系列)", Pattern.CASE_INSENSITIVE);
     
     // 龙音港版唱片CD序号模式
     private static final Pattern LONGYIN_CD_PATTERN = Pattern.compile("\\[.*?CD-\\d+\\]", Pattern.CASE_INSENSITIVE);

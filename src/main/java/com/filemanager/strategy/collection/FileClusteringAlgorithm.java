@@ -113,12 +113,13 @@ public class FileClusteringAlgorithm {
                     adjustedThreshold = Math.max(similarityThreshold, 0.5);
                     isSimilar = similarity >= adjustedThreshold;
                 } else if (hasSameSeries) {
-                    // 如果有相同的系列关键词，使用稍低的阈值
+                    // 如果有相同的系列关键词，使用更低的阈值
                     // 检查核心专辑名称是否相同
                     if (!coreAlbum1.isEmpty() && !coreAlbum2.isEmpty() && coreAlbum1.equals(coreAlbum2)) {
                         adjustedThreshold = Math.max(similarityThreshold, 0.6);
                     } else {
-                        adjustedThreshold = Math.max(similarityThreshold, 0.7);
+                        // 核心专辑名称不同，但是有相同的系列关键词，使用中等阈值
+                        adjustedThreshold = Math.max(similarityThreshold, 0.6);
                     }
                     isSimilar = similarity >= adjustedThreshold;
                 } else {
@@ -399,7 +400,7 @@ public class FileClusteringAlgorithm {
      * 从文件名中提取系列关键词
      */
     private String extractSeriesKeyword(String filename) {
-        // 提取《》中的内容作为系列关键词
+        // 1. 首先尝试提取《》中的内容作为系列关键词
         java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("《([^》]+)》").matcher(filename);
         if (matcher.find()) {
             String series = matcher.group(1);
@@ -411,6 +412,22 @@ public class FileClusteringAlgorithm {
             series = series.trim();
             return series;
         }
+        
+        // 2. 如果没有《》，尝试提取方括号中的系列关键词（如[龙音文采华音版-轻舟随波系列④]）
+        java.util.regex.Matcher bracketMatcher = java.util.regex.Pattern.compile("\\[([^\\]]*系列[^\\]]*)\\]").matcher(filename);
+        if (bracketMatcher.find()) {
+            String series = bracketMatcher.group(1);
+            // 移除CD序号等信息
+            series = series.replaceAll("\\s*CD\\s*\\d+", "");
+            series = series.replaceAll("\\s*cd\\s*\\d+", "");
+            series = series.replaceAll("\\s*Vol\\s*\\d+", "");
+            series = series.replaceAll("\\s*vol\\s*\\d+", "");
+            // 移除圆圈数字序号
+            series = series.replaceAll("[①②③④⑤⑥⑦⑧⑨⑩]", "");
+            series = series.trim();
+            return series;
+        }
+        
         return "";
     }
 
