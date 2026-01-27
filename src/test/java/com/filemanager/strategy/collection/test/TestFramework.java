@@ -1,8 +1,6 @@
 package com.filemanager.strategy.collection.test;
 
-import com.filemanager.strategy.collection.FileClusteringAlgorithm;
-import com.filemanager.strategy.collection.FilenameNormalizer;
-import com.filemanager.strategy.collection.TextSimilarityCalculator;
+import com.filemanager.strategy.collection.*;
 
 import java.io.File;
 import java.io.FileReader;
@@ -20,7 +18,7 @@ public class TestFramework {
     public TestFramework() {
         FilenameNormalizer normalizer = new FilenameNormalizer(false, false);
         TextSimilarityCalculator calculator = new TextSimilarityCalculator(0.7);
-        this.algorithm = new FileClusteringAlgorithm(normalizer, calculator, 0.7, 2);
+        this.algorithm = new FileClusteringAlgorithm(normalizer, calculator, 0.7, 2, null);
         this.similarityCalculator = new TextSimilarityCalculator(0.7);
         this.persister = new TestCasePersister();
     }
@@ -28,7 +26,7 @@ public class TestFramework {
     public TestFramework(double threshold) {
         FilenameNormalizer normalizer = new FilenameNormalizer(false, false);
         TextSimilarityCalculator calculator = new TextSimilarityCalculator(threshold);
-        this.algorithm = new FileClusteringAlgorithm(normalizer, calculator, threshold, 2);
+        this.algorithm = new FileClusteringAlgorithm(normalizer, calculator, threshold, 2, null);
         this.similarityCalculator = new TextSimilarityCalculator(threshold);
         this.persister = new TestCasePersister();
     }
@@ -36,8 +34,16 @@ public class TestFramework {
     public TestFramework(String storageDir) {
         FilenameNormalizer normalizer = new FilenameNormalizer(false, false);
         TextSimilarityCalculator calculator = new TextSimilarityCalculator(0.7);
-        this.algorithm = new FileClusteringAlgorithm(normalizer, calculator, 0.7, 2);
+        this.algorithm = new FileClusteringAlgorithm(normalizer, calculator, 0.7, 2, null);
         this.similarityCalculator = new TextSimilarityCalculator(0.7);
+        this.persister = new TestCasePersister(storageDir);
+    }
+    
+    public TestFramework(double threshold, String storageDir) {
+        FilenameNormalizer normalizer = new FilenameNormalizer(false, false);
+        TextSimilarityCalculator calculator = new TextSimilarityCalculator(threshold);
+        this.algorithm = new FileClusteringAlgorithm(normalizer, calculator, threshold, 2, null);
+        this.similarityCalculator = new TextSimilarityCalculator(threshold);
         this.persister = new TestCasePersister(storageDir);
     }
     
@@ -57,9 +63,39 @@ public class TestFramework {
         System.out.println("\n=== 开始验证测试用例: " + testCase.getTestName() + " ===");
         System.out.println("文件夹数量: " + testCase.getAllFolders().size());
         System.out.println("预期合集数量: " + (testCase.getExpectedCollections() != null ? testCase.getExpectedCollections().size() : 0));
+        System.out.println("命名策略: " + (testCase.getNamingStrategy() != null ? testCase.getNamingStrategy().getDisplayName() : "默认"));
+        
+        // 根据测试用例中指定的命名策略创建相应的命名策略实例
+        StringSimilarityCalculator stringSimilarityCalculator = 
+            new TextSimilarityCalculatorAdapter(similarityCalculator);
+        
+        ICollectionNamingStrategy namingStrategy = null;
+        if (testCase.getNamingStrategy() != null) {
+            switch (testCase.getNamingStrategy()) {
+                case CONCISE:
+                    namingStrategy = new ConciseNamingStrategy(stringSimilarityCalculator);
+                    break;
+                case PRECISE:
+                    namingStrategy = new PreciseNamingStrategy(stringSimilarityCalculator);
+                    break;
+                default:
+                    namingStrategy = new PreciseNamingStrategy(stringSimilarityCalculator);
+                    break;
+            }
+        }
+        
+        // 创建使用指定命名策略的算法实例
+        FilenameNormalizer normalizer = new FilenameNormalizer(false, false);
+        FileClusteringAlgorithm strategyAlgorithm = new FileClusteringAlgorithm(
+            normalizer, 
+            similarityCalculator, 
+            0.7, 
+            2, 
+            namingStrategy
+        );
         
         // 运行算法生成合集
-        Map<String, List<String>> actualCollections = algorithm.clusterFilenames(testCase.getAllFolders());
+        Map<String, List<String>> actualCollections = strategyAlgorithm.clusterFilenames(testCase.getAllFolders());
         System.out.println("算法生成的合集数量: " + actualCollections.size());
         
         // 验证每个预期合集
@@ -331,7 +367,7 @@ public class TestFramework {
     public void setThreshold(double threshold) {
         FilenameNormalizer normalizer = new FilenameNormalizer(false, false);
         TextSimilarityCalculator calculator = new TextSimilarityCalculator(threshold);
-        this.algorithm = new FileClusteringAlgorithm(normalizer, calculator, threshold, 2);
+        this.algorithm = new FileClusteringAlgorithm(normalizer, calculator, threshold, 2, null);
         this.similarityCalculator = new TextSimilarityCalculator(threshold);
     }
     

@@ -10,19 +10,22 @@ public class FileClusteringAlgorithm {
     private final TextSimilarityCalculator similarityCalculator;
     private final double similarityThreshold;
     private final int minClusterSize;
+    private final ICollectionNamingStrategy namingStrategy;
 
     public FileClusteringAlgorithm() {
-        this(new FilenameNormalizer(), new TextSimilarityCalculator(), 0.7, 2);
+        this(new FilenameNormalizer(), new TextSimilarityCalculator(), 0.7, 2, null);
     }
 
     public FileClusteringAlgorithm(FilenameNormalizer normalizer,
                                    TextSimilarityCalculator similarityCalculator,
                                    double similarityThreshold,
-                                   int minClusterSize) {
+                                   int minClusterSize,
+                                   ICollectionNamingStrategy namingStrategy) {
         this.normalizer = normalizer;
         this.similarityCalculator = similarityCalculator;
         this.similarityThreshold = similarityThreshold;
         this.minClusterSize = minClusterSize;
+        this.namingStrategy = namingStrategy;
     }
 
     public Map<String, List<File>> clusterFiles(List<File> files) {
@@ -449,6 +452,19 @@ public class FileClusteringAlgorithm {
     private String generateClusterNameFromFilenames(List<String> filenames) {
         if (filenames == null || filenames.isEmpty()) {
             return "未命名";
+        }
+
+        // 如果配置了命名策略，使用相应的命名策略
+        if (namingStrategy != null) {
+            try {
+                String strategyName = namingStrategy.generateCollectionName(filenames);
+                if (strategyName != null && !strategyName.isEmpty() && !strategyName.equals("未命名")) {
+                    return strategyName;
+                }
+            } catch (Exception e) {
+                // 如果命名策略失败，回退到传统方法
+                System.err.println("命名策略生成失败，使用传统方法: " + e.getMessage());
+            }
         }
 
         // 使用通用合集名称生成器（自动识别模式，不依赖硬编码规则）
@@ -1037,6 +1053,7 @@ public class FileClusteringAlgorithm {
         private TextSimilarityCalculator similarityCalculator = new TextSimilarityCalculator();
         private double similarityThreshold = 0.7;
         private int minClusterSize = 2;
+        private ICollectionNamingStrategy namingStrategy;
 
         public Builder normalizer(FilenameNormalizer normalizer) {
             this.normalizer = normalizer;
@@ -1057,9 +1074,14 @@ public class FileClusteringAlgorithm {
             this.minClusterSize = size;
             return this;
         }
+        
+        public Builder namingStrategy(ICollectionNamingStrategy strategy) {
+            this.namingStrategy = strategy;
+            return this;
+        }
 
         public FileClusteringAlgorithm build() {
-            return new FileClusteringAlgorithm(normalizer, similarityCalculator, similarityThreshold, minClusterSize);
+            return new FileClusteringAlgorithm(normalizer, similarityCalculator, similarityThreshold, minClusterSize, namingStrategy);
         }
     }
 

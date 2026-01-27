@@ -80,6 +80,14 @@ public class TestValidationResult {
         }
     }
     
+    /**
+     * 判断测试是否全部通过
+     * @return 如果匹配率为1.0且没有遗漏和多余合集，返回true
+     */
+    public boolean isAllPassed() {
+        return matchRate == 1.0 && missedCollections == 0 && extraCollections == 0;
+    }
+    
     public String getTestName() {
         return testName;
     }

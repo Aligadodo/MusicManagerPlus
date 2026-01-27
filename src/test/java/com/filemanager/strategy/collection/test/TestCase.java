@@ -1,5 +1,6 @@
 package com.filemanager.strategy.collection.test;
 
+import com.filemanager.strategy.collection.CollectionNamingStrategy;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,11 +13,13 @@ public class TestCase {
     private String description;
     private List<String> allFolders;
     private List<ExpectedCollection> expectedCollections;
+    private CollectionNamingStrategy namingStrategy;
     private long timestamp;
     
     public TestCase() {
         this.allFolders = new ArrayList<>();
         this.expectedCollections = new ArrayList<>();
+        this.namingStrategy = CollectionNamingStrategy.PRECISE;
         this.timestamp = System.currentTimeMillis();
     }
     
@@ -79,12 +82,21 @@ public class TestCase {
         this.timestamp = timestamp;
     }
     
+    public CollectionNamingStrategy getNamingStrategy() {
+        return namingStrategy;
+    }
+    
+    public void setNamingStrategy(CollectionNamingStrategy namingStrategy) {
+        this.namingStrategy = namingStrategy;
+    }
+    
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("=== 测试用例 ===\n");
         sb.append("测试名称: ").append(testName).append("\n");
         sb.append("描述: ").append(description != null ? description : "无").append("\n");
+        sb.append("命名策略: ").append(namingStrategy != null ? namingStrategy.getDisplayName() : "默认").append("\n");
         sb.append("时间戳: ").append(timestamp).append("\n");
         sb.append("总文件夹数量: ").append(allFolders != null ? allFolders.size() : 0).append("\n");
         sb.append("预期合集数量: ").append(expectedCollections != null ? expectedCollections.size() : 0).append("\n");

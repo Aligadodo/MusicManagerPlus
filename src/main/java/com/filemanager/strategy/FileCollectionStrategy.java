@@ -12,10 +12,7 @@ package com.filemanager.strategy;
 import com.filemanager.app.base.IAppStrategy;
 import com.filemanager.app.tools.display.StyleFactory;
 import com.filemanager.model.ChangeRecord;
-import com.filemanager.strategy.collection.CollectionDeterminationAlgorithm;
-import com.filemanager.strategy.collection.FileClusteringAlgorithm;
-import com.filemanager.strategy.collection.FilenameNormalizer;
-import com.filemanager.strategy.collection.TextSimilarityCalculator;
+import com.filemanager.strategy.collection.*;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
@@ -40,6 +37,7 @@ public class FileCollectionStrategy extends IAppStrategy {
     private final Slider slSimilarityThreshold;
     private final TextField txtCollectionSuffix;
     private final JFXComboBox<ScanTarget> cbTargetType;
+    private final JFXComboBox<CollectionNamingStrategy> cbNamingStrategy;
     private final TextField txtMustContainKeywords;
     private final TextField txtMustNotContainKeywords;
 
@@ -47,6 +45,7 @@ public class FileCollectionStrategy extends IAppStrategy {
     private double pThreshold;
     private String pCollectionSuffix;
     private ScanTarget pTargetType;
+    private CollectionNamingStrategy pNamingStrategy;
     private List<String> pMustContainKeywords;
     private List<String> pMustNotContainKeywords;
 
@@ -55,6 +54,7 @@ public class FileCollectionStrategy extends IAppStrategy {
     private TextSimilarityCalculator similarityCalculator;
     private FileClusteringAlgorithm clusteringAlgorithm;
     private CollectionDeterminationAlgorithm determinationAlgorithm;
+    private ICollectionNamingStrategy namingStrategy;
 
     // 内部使用：记录已处理的父目录和对应的文件集群
     private final Map<File, Map<String, List<ChangeRecord>>> parentDirClusters = Collections.synchronizedMap(new HashMap<>());
@@ -74,6 +74,10 @@ public class FileCollectionStrategy extends IAppStrategy {
         // 目标类型选择
         cbTargetType = new JFXComboBox<>(FXCollections.observableArrayList(ScanTarget.values()));
         cbTargetType.setValue(ScanTarget.FOLDERS_ONLY); // 默认只对文件夹生效
+
+        // 命名策略选择
+        cbNamingStrategy = new JFXComboBox<>(FXCollections.observableArrayList(CollectionNamingStrategy.values()));
+        cbNamingStrategy.setValue(CollectionNamingStrategy.PRECISE); // 默认使用精确风格
 
         // 必须包含的关键词
         txtMustContainKeywords = new TextField("CD,系列,合集");
@@ -109,7 +113,8 @@ public class FileCollectionStrategy extends IAppStrategy {
         basicBox.getChildren().addAll(
                 StyleFactory.createParamPairLine("相似度阈值 (0.0-1.0):", slSimilarityThreshold),
                 StyleFactory.createParamPairLine("合集文件夹格式:", txtCollectionSuffix),
-                StyleFactory.createParamPairLine("目标类型:", cbTargetType)
+                StyleFactory.createParamPairLine("目标类型:", cbTargetType),
+                StyleFactory.createParamPairLine("命名策略:", cbNamingStrategy)
         );
         TitledPane basicPane = new TitledPane("基础设置", basicBox);
         basicPane.setCollapsible(false);
@@ -137,6 +142,7 @@ public class FileCollectionStrategy extends IAppStrategy {
         pThreshold = slSimilarityThreshold.getValue();
         pCollectionSuffix = txtCollectionSuffix.getText();
         pTargetType = cbTargetType.getValue();
+        pNamingStrategy = cbNamingStrategy.getValue();
 
         // 处理关键词
         pMustContainKeywords = parseKeywords(txtMustContainKeywords.getText());
@@ -148,6 +154,9 @@ public class FileCollectionStrategy extends IAppStrategy {
         }
         if (pTargetType == null) {
             pTargetType = ScanTarget.FOLDERS_ONLY;
+        }
+        if (pNamingStrategy == null) {
+            pNamingStrategy = CollectionNamingStrategy.PRECISE;
         }
 
         // 初始化模块化组件
@@ -172,6 +181,7 @@ public class FileCollectionStrategy extends IAppStrategy {
                 .normalizer(filenameNormalizer)
                 .similarityCalculator(similarityCalculator)
                 .similarityThreshold(pThreshold)
+                .namingStrategy(namingStrategy)
                 .build();
 
         determinationAlgorithm = CollectionDeterminationAlgorithm.builder()
@@ -180,6 +190,22 @@ public class FileCollectionStrategy extends IAppStrategy {
                 .build();
 
         determinationAlgorithm.setCollectionSuffix(pCollectionSuffix);
+        
+        // 根据命名策略创建相应的命名策略实例
+        StringSimilarityCalculator stringSimilarityCalculator = 
+            new TextSimilarityCalculatorAdapter(similarityCalculator);
+        
+        switch (pNamingStrategy) {
+            case CONCISE:
+                namingStrategy = new ConciseNamingStrategy(stringSimilarityCalculator);
+                break;
+            case PRECISE:
+                namingStrategy = new PreciseNamingStrategy(stringSimilarityCalculator);
+                break;
+            default:
+                namingStrategy = new PreciseNamingStrategy(stringSimilarityCalculator);
+                break;
+        }
     }
 
     /**
@@ -203,6 +229,7 @@ public class FileCollectionStrategy extends IAppStrategy {
         props.setProperty("fcs_threshold", String.valueOf(slSimilarityThreshold.getValue()));
         props.setProperty("fcs_suffix", txtCollectionSuffix.getText());
         props.setProperty("fcs_target_type", cbTargetType.getValue().name());
+        props.setProperty("fcs_naming_strategy", cbNamingStrategy.getValue().name());
         props.setProperty("fcs_must_contain", txtMustContainKeywords.getText());
         props.setProperty("fcs_must_not_contain", txtMustNotContainKeywords.getText());
     }
@@ -217,6 +244,13 @@ public class FileCollectionStrategy extends IAppStrategy {
         }
         if (props.containsKey("fcs_target_type")) {
             cbTargetType.setValue(ScanTarget.valueOf(props.getProperty("fcs_target_type")));
+        }
+        if (props.containsKey("fcs_naming_strategy")) {
+            try {
+                cbNamingStrategy.setValue(CollectionNamingStrategy.valueOf(props.getProperty("fcs_naming_strategy")));
+            } catch (IllegalArgumentException e) {
+                cbNamingStrategy.setValue(CollectionNamingStrategy.PRECISE);
+            }
         }
         if (props.containsKey("fcs_must_contain")) {
             txtMustContainKeywords.setText(props.getProperty("fcs_must_contain"));
