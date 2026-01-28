@@ -12,18 +12,19 @@ package com.filemanager.strategy;
 import com.filemanager.app.base.IAppStrategy;
 import com.filemanager.app.tools.display.StyleFactory;
 import com.filemanager.model.ChangeRecord;
+import com.filemanager.strategy.base.PathSelectionComponent;
+import com.filemanager.strategy.base.ScopeSelectionComponent;
+import com.filemanager.strategy.duplicate.DuplicateStrategyConfig;
+import com.filemanager.strategy.duplicate.DuplicateStrategyManager;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
-import com.filemanager.util.MetadataHelper;
 import com.google.common.collect.Lists;
-import com.jfoenix.controls.JFXButton;
 import javafx.scene.Node;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
-import javafx.stage.DirectoryChooser;
 import com.filemanager.app.tools.display.FloatingTooltip;
 
 import java.io.File;
@@ -32,155 +33,104 @@ import java.nio.file.StandardCopyOption;
 import java.util.*;
 
 public class FileMigrateStrategy extends IAppStrategy {
-    private final TextField txtDestDir;
-    private final ComboBox<String> cbPathPattern;
-    private final TextField txtCustomPattern;
+    private final PathSelectionComponent pathSelectionComponent;
+    private final ScopeSelectionComponent scopeSelectionComponent;
+    private final ComboBox<String> cbOperationMode;
+    private final CheckBox chkOverwriteExisting;
     private final CheckBox chkCleanEmpty;
-    private final CheckBox chkPreserveStructure;
-    private final CheckBox chkCreatePlaylists;
-    private final CheckBox chkSkipExisting;
-    private final CheckBox chkValidateMetadata;
-    private final TextField txtPlaylistName;
+    private final TextField txtFilePattern;
+    private final CheckBox chkRequireFilePattern;
+    private final CheckBox chkExcludeFilePattern;
+    private final DuplicateStrategyConfig duplicateStrategyConfig;
     
-    protected String pDestDir;
-    protected String pPattern;
-    protected boolean pClean;
-    protected boolean pPreserveStructure;
-    protected boolean pCreatePlaylists;
-    protected boolean pSkipExisting;
-    protected boolean pValidateMetadata;
-    protected String pPlaylistName;
+    protected String pOperationMode; // COPY or MOVE
+    protected boolean pOverwriteExisting;
+    protected boolean pCleanEmpty;
+    protected String pFilePattern;
+    protected boolean pRequireFilePattern;
+    protected boolean pExcludeFilePattern;
+    protected DuplicateStrategyManager strategyManager;
 
-    private static final String[] PRESET_PATTERNS = {
-        "%artist%/%year% %album%/%track% - %title%",
-        "%artist%/%album%/%track% - %title%",
-        "%year%/%album%/%track% - %title%",
-        "%genre%/%artist% - %album%/%track% - %title%",
-        "%artist% - %album%/%track% - %title%",
-        "%album%/%track% - %title%",
-        "自定义模板"
+    private static final String[] OPERATION_MODES = {
+        "移动 (MOVE)",
+        "复制 (COPY)"
     };
 
     public FileMigrateStrategy() {
-        txtDestDir = new TextField();
-        txtDestDir.setPromptText("选择目标根目录...");
+        // 路径选择组件
+        pathSelectionComponent = new PathSelectionComponent("fms");
         
-        ArrayList<String> destDirTooltipLines = new ArrayList<>();
-        destDirTooltipLines.add("参数名称：目标根目录");
-        destDirTooltipLines.add("参数用途：用于设置文件移动的目标根目录");
-        destDirTooltipLines.add("示例：");
-        destDirTooltipLines.add("- D:/Music：将文件移动到D盘的Music文件夹");
-        destDirTooltipLines.add("- E:/Media：将文件移动到E盘的Media文件夹");
-        FloatingTooltip.bindToNode(txtDestDir, "文件批量归档设置", destDirTooltipLines);
+        // 生效范围选择组件
+        scopeSelectionComponent = new ScopeSelectionComponent("fms");
         
-        txtCustomPattern = new TextField();
-        txtCustomPattern.setPromptText("输入自定义模板，如: %artist%/%album%/%title%");
-        txtCustomPattern.setDisable(true);
+        // 操作模式选择
+        cbOperationMode = new ComboBox<>();
+        cbOperationMode.getItems().addAll(OPERATION_MODES);
+        cbOperationMode.getSelectionModel().select(0);
         
-        ArrayList<String> customPatternTooltipLines = new ArrayList<>();
-        customPatternTooltipLines.add("参数名称：自定义模板");
-        customPatternTooltipLines.add("参数用途：当选择自定义模板时，在此输入自定义目录结构");
-        customPatternTooltipLines.add("示例：");
-        customPatternTooltipLines.add("- %artist%/%album%/%title%");
-        customPatternTooltipLines.add("- %year%/%album%/%track% - %title%");
-        FloatingTooltip.bindToNode(txtCustomPattern, "文件批量归档设置", customPatternTooltipLines);
+        ArrayList<String> operationModeTooltipLines = new ArrayList<>();
+        operationModeTooltipLines.add("参数名称：操作模式");
+        operationModeTooltipLines.add("参数用途：选择文件的操作方式");
+        operationModeTooltipLines.add("选项：");
+        operationModeTooltipLines.add("- 移动：将文件从源位置移动到目标位置");
+        operationModeTooltipLines.add("- 复制：保留源文件，在目标位置创建副本");
+        FloatingTooltip.bindToNode(cbOperationMode, "文件批量归档设置", operationModeTooltipLines);
         
-        cbPathPattern = new ComboBox<>();
-        cbPathPattern.getItems().addAll(PRESET_PATTERNS);
-        cbPathPattern.getSelectionModel().select(0);
-        cbPathPattern.setOnAction(e -> {
-            if ("自定义模板".equals(cbPathPattern.getValue())) {
-                txtCustomPattern.setDisable(false);
-            } else {
-                txtCustomPattern.setDisable(true);
-                txtCustomPattern.setText(cbPathPattern.getValue());
-            }
-        });
+        // 文件模式输入
+        txtFilePattern = new TextField();
+        txtFilePattern.setPromptText("输入文件模式 (如: *.mp3,*.flac)");
         
-        ArrayList<String> patternTooltipLines = new ArrayList<>();
-        patternTooltipLines.add("参数名称：结构模板");
-        patternTooltipLines.add("参数用途：用于设置文件移动的目录结构模板");
-        patternTooltipLines.add("支持变量：");
-        patternTooltipLines.add("- %artist%：艺术家名称");
-        patternTooltipLines.add("- %album%：专辑名称");
-        patternTooltipLines.add("- %year%：发行年份");
-        patternTooltipLines.add("- %genre%：音乐流派");
-        patternTooltipLines.add("- %track%：音轨编号");
-        patternTooltipLines.add("- %title%：歌曲标题");
-        patternTooltipLines.add("示例：");
-        patternTooltipLines.add("- %artist%/%year% %album%/%track% - %title%");
-        patternTooltipLines.add("- %year%/%album%/%title%");
-        FloatingTooltip.bindToNode(cbPathPattern, "文件批量归档设置", patternTooltipLines);
+        ArrayList<String> filePatternTooltipLines = new ArrayList<>();
+        filePatternTooltipLines.add("参数名称：文件模式");
+        filePatternTooltipLines.add("参数用途：设置前置条件检查的文件模式");
+        filePatternTooltipLines.add("示例：");
+        filePatternTooltipLines.add("- *.mp3,*.flac：匹配MP3和FLAC文件");
+        filePatternTooltipLines.add("- *.jpg：匹配JPG图片文件");
+        FloatingTooltip.bindToNode(txtFilePattern, "前置条件设置", filePatternTooltipLines);
         
-        chkCleanEmpty = new CheckBox("移动后清理源空文件夹");
-        chkCleanEmpty.setSelected(true);
+        // 文件模式检查选项
+        chkRequireFilePattern = new CheckBox("要求存在匹配文件");
+        chkRequireFilePattern.setSelected(false);
+        
+        ArrayList<String> requireTooltipLines = new ArrayList<>();
+        requireTooltipLines.add("参数名称：要求存在匹配文件");
+        requireTooltipLines.add("参数用途：当勾选时，只有当目录中存在匹配文件模式的文件时才执行操作");
+        FloatingTooltip.bindToNode(chkRequireFilePattern, "前置条件设置", requireTooltipLines);
+
+        chkExcludeFilePattern = new CheckBox("排除存在匹配文件");
+        chkExcludeFilePattern.setSelected(false);
+        
+        ArrayList<String> excludeTooltipLines = new ArrayList<>();
+        excludeTooltipLines.add("参数名称：排除存在匹配文件");
+        excludeTooltipLines.add("参数用途：当勾选时，当目录中存在匹配文件模式的文件时不执行操作");
+        FloatingTooltip.bindToNode(chkExcludeFilePattern, "前置条件设置", excludeTooltipLines);
+
+        // 覆盖选项
+        chkOverwriteExisting = new CheckBox("覆盖已存在的文件");
+        chkOverwriteExisting.setSelected(false);
+        
+        ArrayList<String> overwriteTooltipLines = new ArrayList<>();
+        overwriteTooltipLines.add("参数名称：覆盖已存在文件");
+        overwriteTooltipLines.add("参数用途：当目标位置已存在同名文件时的处理方式");
+        overwriteTooltipLines.add("选项：");
+        overwriteTooltipLines.add("- 启用：覆盖已存在的文件");
+        overwriteTooltipLines.add("- 禁用：跳过已存在的文件");
+        FloatingTooltip.bindToNode(chkOverwriteExisting, "文件批量归档设置", overwriteTooltipLines);
+
+        // 清理空文件夹选项
+        chkCleanEmpty = new CheckBox("清理源空文件夹");
+        chkCleanEmpty.setSelected(false);
         
         ArrayList<String> cleanEmptyTooltipLines = new ArrayList<>();
         cleanEmptyTooltipLines.add("参数名称：清理空文件夹");
-        cleanEmptyTooltipLines.add("参数用途：用于设置是否在移动后清理源空文件夹");
-        cleanEmptyTooltipLines.add("示例：");
+        cleanEmptyTooltipLines.add("参数用途：在移动文件后清理源位置的空文件夹");
+        cleanEmptyTooltipLines.add("选项：");
         cleanEmptyTooltipLines.add("- 启用：移动后清理源空文件夹");
         cleanEmptyTooltipLines.add("- 禁用：移动后不清理源空文件夹");
         FloatingTooltip.bindToNode(chkCleanEmpty, "文件批量归档设置", cleanEmptyTooltipLines);
-
-        chkPreserveStructure = new CheckBox("保留原始目录结构");
-        chkPreserveStructure.setSelected(false);
         
-        ArrayList<String> preserveStructureTooltipLines = new ArrayList<>();
-        preserveStructureTooltipLines.add("参数名称：保留原始目录结构");
-        preserveStructureTooltipLines.add("参数用途：在目标目录中保留原始的目录层级");
-        preserveStructureTooltipLines.add("示例：");
-        preserveStructureTooltipLines.add("- 启用：保持原始目录层级");
-        preserveStructureTooltipLines.add("- 禁用：按照模板重新组织目录结构");
-        FloatingTooltip.bindToNode(chkPreserveStructure, "文件批量归档设置", preserveStructureTooltipLines);
-
-        chkCreatePlaylists = new CheckBox("生成播放列表文件");
-        chkCreatePlaylists.setSelected(false);
-        
-        ArrayList<String> createPlaylistsTooltipLines = new ArrayList<>();
-        createPlaylistsTooltipLines.add("参数名称：生成播放列表");
-        createPlaylistsTooltipLines.add("参数用途：为每个专辑或艺术家生成播放列表文件");
-        createPlaylistsTooltipLines.add("示例：");
-        createPlaylistsTooltipLines.add("- 启用：生成 .m3u 或 .pls 播放列表");
-        createPlaylistsTooltipLines.add("- 禁用：不生成播放列表");
-        FloatingTooltip.bindToNode(chkCreatePlaylists, "文件批量归档设置", createPlaylistsTooltipLines);
-
-        chkSkipExisting = new CheckBox("跳过已存在的文件");
-        chkSkipExisting.setSelected(true);
-        
-        ArrayList<String> skipExistingTooltipLines = new ArrayList<>();
-        skipExistingTooltipLines.add("参数名称：跳过已存在文件");
-        skipExistingTooltipLines.add("参数用途：跳过目标目录中已存在的文件");
-        skipExistingTooltipLines.add("示例：");
-        skipExistingTooltipLines.add("- 启用：跳过已存在的文件");
-        skipExistingTooltipLines.add("- 禁用：覆盖已存在的文件");
-        FloatingTooltip.bindToNode(chkSkipExisting, "文件批量归档设置", skipExistingTooltipLines);
-
-        chkValidateMetadata = new CheckBox("验证元数据完整性");
-        chkValidateMetadata.setSelected(true);
-        
-        ArrayList<String> validateMetadataTooltipLines = new ArrayList<>();
-        validateMetadataTooltipLines.add("参数名称：验证元数据");
-        validateMetadataTooltipLines.add("参数用途：检查文件的元数据是否完整，跳过不完整的文件");
-        validateMetadataTooltipLines.add("示例：");
-        validateMetadataTooltipLines.add("- 启用：跳过元数据不完整的文件");
-        validateMetadataTooltipLines.add("- 禁用：处理所有文件");
-        FloatingTooltip.bindToNode(chkValidateMetadata, "文件批量归档设置", validateMetadataTooltipLines);
-
-        txtPlaylistName = new TextField();
-        txtPlaylistName.setPromptText("播放列表名称（可选）");
-        txtPlaylistName.setDisable(true);
-        chkCreatePlaylists.selectedProperty().addListener((obs, oldVal, newVal) -> {
-            txtPlaylistName.setDisable(!newVal);
-        });
-        
-        ArrayList<String> playlistNameTooltipLines = new ArrayList<>();
-        playlistNameTooltipLines.add("参数名称：播放列表名称");
-        playlistNameTooltipLines.add("参数用途：设置生成的播放列表文件名称");
-        playlistNameTooltipLines.add("示例：");
-        playlistNameTooltipLines.add("- MyPlaylist：生成 MyPlaylist.m3u");
-        playlistNameTooltipLines.add("- 留空：使用默认名称");
-        FloatingTooltip.bindToNode(txtPlaylistName, "文件批量归档设置", playlistNameTooltipLines);
+        // 去重策略配置
+        duplicateStrategyConfig = new DuplicateStrategyConfig();
     }
 
     @Override
@@ -195,83 +145,79 @@ public class FileMigrateStrategy extends IAppStrategy {
 
     @Override
     public void captureParams() {
-        pDestDir = txtDestDir.getText();
-        pPattern = "自定义模板".equals(cbPathPattern.getValue()) ? txtCustomPattern.getText() : cbPathPattern.getValue();
-        pClean = chkCleanEmpty.isSelected();
-        pPreserveStructure = chkPreserveStructure.isSelected();
-        pCreatePlaylists = chkCreatePlaylists.isSelected();
-        pSkipExisting = chkSkipExisting.isSelected();
-        pValidateMetadata = chkValidateMetadata.isSelected();
-        pPlaylistName = txtPlaylistName.getText();
+        pathSelectionComponent.captureParams();
+        scopeSelectionComponent.captureParams();
+        duplicateStrategyConfig.captureParams();
+        pOperationMode = cbOperationMode.getValue().contains("移动") ? "MOVE" : "COPY";
+        pOverwriteExisting = chkOverwriteExisting.isSelected();
+        pCleanEmpty = chkCleanEmpty.isSelected();
+        pFilePattern = txtFilePattern.getText();
+        pRequireFilePattern = chkRequireFilePattern.isSelected();
+        pExcludeFilePattern = chkExcludeFilePattern.isSelected();
+        
+        // 获取去重策略管理器
+        strategyManager = duplicateStrategyConfig.getStrategyManager();
     }
 
     @Override
     public String getDescription() {
-        return "智能归档和移动文件，支持多种目录结构模板、元数据验证、播放列表生成等功能。";
+        return "文件批量归档和移动工具，支持复制/移动操作，多种路径模式选择。";
     }
 
     @Override
     public void saveConfig(Properties props) {
-        if (!txtDestDir.getText().isEmpty()) {
-            props.setProperty("fms_dest", txtDestDir.getText());
-        }
-        props.setProperty("fms_pattern", cbPathPattern.getValue());
-        props.setProperty("fms_custom_pattern", txtCustomPattern.getText());
-        props.setProperty("fms_clean", String.valueOf(chkCleanEmpty.isSelected()));
-        props.setProperty("fms_preserve", String.valueOf(chkPreserveStructure.isSelected()));
-        props.setProperty("fms_playlist", String.valueOf(chkCreatePlaylists.isSelected()));
-        props.setProperty("fms_skip", String.valueOf(chkSkipExisting.isSelected()));
-        props.setProperty("fms_validate", String.valueOf(chkValidateMetadata.isSelected()));
-        props.setProperty("fms_playlist_name", txtPlaylistName.getText());
+        pathSelectionComponent.saveConfig(props);
+        scopeSelectionComponent.saveConfig(props);
+        duplicateStrategyConfig.saveConfig(props);
+        props.setProperty("fms_operation_mode", cbOperationMode.getValue());
+        props.setProperty("fms_overwrite", String.valueOf(chkOverwriteExisting.isSelected()));
+        props.setProperty("fms_clean_empty", String.valueOf(chkCleanEmpty.isSelected()));
+        props.setProperty("fms_file_pattern", txtFilePattern.getText());
+        props.setProperty("fms_require_file_pattern", String.valueOf(chkRequireFilePattern.isSelected()));
+        props.setProperty("fms_exclude_file_pattern", String.valueOf(chkExcludeFilePattern.isSelected()));
     }
 
     @Override
     public void loadConfig(Properties props) {
-        if (props.containsKey("fms_dest")) {
-            txtDestDir.setText(props.getProperty("fms_dest"));
+        pathSelectionComponent.loadConfig(props);
+        scopeSelectionComponent.loadConfig(props);
+        duplicateStrategyConfig.loadConfig(props);
+        if (props.containsKey("fms_operation_mode")) {
+            cbOperationMode.getSelectionModel().select(props.getProperty("fms_operation_mode"));
         }
-        if (props.containsKey("fms_pattern")) {
-            cbPathPattern.getSelectionModel().select(props.getProperty("fms_pattern"));
+        if (props.containsKey("fms_overwrite")) {
+            chkOverwriteExisting.setSelected(Boolean.parseBoolean(props.getProperty("fms_overwrite")));
         }
-        if (props.containsKey("fms_custom_pattern")) {
-            txtCustomPattern.setText(props.getProperty("fms_custom_pattern"));
+        if (props.containsKey("fms_clean_empty")) {
+            chkCleanEmpty.setSelected(Boolean.parseBoolean(props.getProperty("fms_clean_empty")));
         }
-        if (props.containsKey("fms_clean")) {
-            chkCleanEmpty.setSelected(Boolean.parseBoolean(props.getProperty("fms_clean")));
+        if (props.containsKey("fms_file_pattern")) {
+            txtFilePattern.setText(props.getProperty("fms_file_pattern"));
         }
-        if (props.containsKey("fms_preserve")) {
-            chkPreserveStructure.setSelected(Boolean.parseBoolean(props.getProperty("fms_preserve")));
+        if (props.containsKey("fms_require_file_pattern")) {
+            chkRequireFilePattern.setSelected(Boolean.parseBoolean(props.getProperty("fms_require_file_pattern")));
         }
-        if (props.containsKey("fms_playlist")) {
-            chkCreatePlaylists.setSelected(Boolean.parseBoolean(props.getProperty("fms_playlist")));
+        if (props.containsKey("fms_exclude_file_pattern")) {
+            chkExcludeFilePattern.setSelected(Boolean.parseBoolean(props.getProperty("fms_exclude_file_pattern")));
         }
-        if (props.containsKey("fms_skip")) {
-            chkSkipExisting.setSelected(Boolean.parseBoolean(props.getProperty("fms_skip")));
-        }
-        if (props.containsKey("fms_validate")) {
-            chkValidateMetadata.setSelected(Boolean.parseBoolean(props.getProperty("fms_validate")));
-        }
-        if (props.containsKey("fms_playlist_name")) {
-            txtPlaylistName.setText(props.getProperty("fms_playlist_name"));
-        }
+        
+        // 获取去重策略管理器
+        strategyManager = duplicateStrategyConfig.getStrategyManager();
     }
 
     @Override
     public Node getConfigNode() {
         VBox box = new VBox(10);
-        JFXButton btn = StyleFactory.createActionButton("浏览目录", "#3498db", () -> {
-            DirectoryChooser dc = new DirectoryChooser();
-            File f = dc.showDialog(null);
-            if (f != null) txtDestDir.setText(f.getAbsolutePath());
-        });
         box.getChildren().addAll(
-                StyleFactory.createParamPairLine("目标根目录:", txtDestDir, btn),
-                StyleFactory.createParamPairLine("结构模板 (/分隔):", cbPathPattern),
-                StyleFactory.createParamPairLine("自定义模板:", txtCustomPattern),
-                StyleFactory.createHBox(chkCleanEmpty, chkPreserveStructure),
-                StyleFactory.createHBox(chkSkipExisting, chkValidateMetadata),
-                StyleFactory.createHBox(chkCreatePlaylists),
-                StyleFactory.createParamPairLine("播放列表名称:", txtPlaylistName)
+                pathSelectionComponent.getConfigNode(),
+                scopeSelectionComponent.getConfigNode(),
+                StyleFactory.createChapter("操作设置"),
+                StyleFactory.createParamPairLine("操作模式:", cbOperationMode),
+                StyleFactory.createHBox(chkOverwriteExisting, chkCleanEmpty),
+                StyleFactory.createChapter("前置条件设置"),
+                StyleFactory.createParamPairLine("文件模式:", txtFilePattern),
+                StyleFactory.createHBox(chkRequireFilePattern, chkExcludeFilePattern),
+                duplicateStrategyConfig.getConfigNode()
         );
         return box;
     }
@@ -281,98 +227,156 @@ public class FileMigrateStrategy extends IAppStrategy {
         if (rec.getOpType() != OperationType.MOVE) {
             return;
         }
-        File s = rec.getFileHandle();
-        File t = new File(rec.getNewPath());
-        if (!t.getParentFile().exists()) {
-            t.getParentFile().mkdirs();
+        File source = rec.getFileHandle();
+        File target = new File(rec.getNewPath());
+        
+        if (!target.getParentFile().exists()) {
+            target.getParentFile().mkdirs();
         }
-        Files.move(s.toPath(), t.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        
+        // 检查目标文件是否存在
+        if (target.exists() && !pOverwriteExisting) {
+            // 使用去重策略处理
+            List<File> duplicates = Arrays.asList(source, target);
+            List<File> processedFiles = strategyManager.processDuplicates(duplicates);
+            
+            // 如果处理后第一个文件不是源文件，则跳过
+            if (!processedFiles.get(0).equals(source)) {
+                log("跳过文件（根据去重策略）: " + source.getName());
+                return;
+            }
+        }
+        
+        if ("MOVE".equals(pOperationMode)) {
+            Files.move(source.toPath(), target.toPath(), 
+                pOverwriteExisting ? StandardCopyOption.REPLACE_EXISTING : StandardCopyOption.ATOMIC_MOVE);
+        } else { // COPY
+            Files.copy(source.toPath(), target.toPath(), 
+                pOverwriteExisting ? StandardCopyOption.REPLACE_EXISTING : StandardCopyOption.COPY_ATTRIBUTES);
+        }
 
-        if (pClean && "true".equals(rec.getExtraParams().get("cleanSource"))) {
-            File p = s.getParentFile();
-            if (p != null && p.isDirectory() && Objects.requireNonNull(p.list()).length == 0) {
-                p.delete();
+        if ("MOVE".equals(pOperationMode) && pCleanEmpty && "true".equals(rec.getExtraParams().get("cleanSource"))) {
+            File parent = source.getParentFile();
+            if (parent != null && parent.isDirectory() && Objects.requireNonNull(parent.list()).length == 0) {
+                parent.delete();
             }
         }
     }
 
     @Override
     public List<ChangeRecord> analyze(ChangeRecord rec, List<ChangeRecord> inputRecords, List<File> rootDirs) {
-        if (pDestDir == null || pDestDir.isEmpty()) {
-            return inputRecords;
+        // 检查生效范围
+        if (!isInScope(rec.getFileHandle())) {
+            return Collections.emptyList();
         }
-
-        File vFile = new File(rec.getNewPath());
-        MetadataHelper.AudioMeta meta = MetadataHelper.getSmartMetadata(rec.getFileHandle(), false);
-
-        if (pValidateMetadata) {
-            if (meta.getArtist().isEmpty() || meta.getArtist().equals("Unknown Artist") ||
-                meta.getTitle().isEmpty() || meta.getTitle().equals("Unknown Title")) {
-                log("跳过文件（元数据不完整）: " + vFile.getName());
-                return Collections.emptyList();
-            }
+        
+        // 检查前置条件
+        if (!checkPreconditions(rec.getFileHandle())) {
+            return Collections.emptyList();
         }
-
-        String relPath;
-        if (pPreserveStructure) {
-            relPath = preserveOriginalStructure(rec.getFileHandle());
-        } else {
-            if (pPattern == null || pPattern.trim().isEmpty()) {
-                pPattern = "%artist%/%year% %album%/%track% - %title%";
-            }
-            relPath = MetadataHelper.format(pPattern, meta).replaceAll("[*?\"<>|]", "_");
+        
+        // 构建目标路径
+        String targetPath = buildTargetPath(rec.getFileHandle());
+        if (targetPath == null) {
+            return Collections.emptyList();
         }
+        
+        File targetFile = new File(targetPath);
 
-        String ext = "";
-        int dot = vFile.getName().lastIndexOf('.');
-        if (dot > 0) {
-            ext = vFile.getName().substring(dot);
-        }
-
-        if (!relPath.toLowerCase().endsWith(ext.toLowerCase())) {
-            relPath += ext;
-        }
-
-        File target = new File(pDestDir, relPath);
-
-        if (pSkipExisting && target.exists()) {
-            log("跳过已存在的文件: " + target.getName());
+        if (!pOverwriteExisting && targetFile.exists()) {
+            log("跳过已存在的文件: " + targetFile.getName());
             return Collections.emptyList();
         }
 
         Map<String, String> extraParams = new HashMap<>();
-        if (pClean) {
+        if ("MOVE".equals(pOperationMode) && pCleanEmpty) {
             extraParams.put("cleanSource", "true");
         }
-        if (pCreatePlaylists) {
-            extraParams.put("createPlaylist", "true");
-            extraParams.put("playlistName", pPlaylistName.isEmpty() ? meta.getAlbum() : pPlaylistName);
-        }
 
-        return Lists.newArrayList(new ChangeRecord(rec.getOriginalName(), target.getName(), rec.getFileHandle(), true,
-                target.getAbsolutePath(), OperationType.MOVE, extraParams, ExecStatus.PENDING));
+        OperationType opType = OperationType.MOVE;
+        return Lists.newArrayList(new ChangeRecord(rec.getOriginalName(), targetFile.getName(), rec.getFileHandle(), true,
+                targetFile.getAbsolutePath(), opType, extraParams, ExecStatus.PENDING));
     }
 
-    private String preserveOriginalStructure(File sourceFile) {
-        File rootDir = new File(pDestDir);
-        File sourceParent = sourceFile.getParentFile();
-        
-        if (sourceParent == null) {
-            return sourceFile.getName();
+    private boolean isInScope(File file) {
+        String scope = scopeSelectionComponent.getScope();
+        if ("全部".equals(scope)) {
+            return true;
+        } else if ("文件".equals(scope)) {
+            return file.isFile();
+        } else if ("文件夹".equals(scope)) {
+            return file.isDirectory();
+        }
+        return true;
+    }
+
+    private boolean checkPreconditions(File file) {
+        File parentDir = file.getParentFile();
+        if (parentDir == null) {
+            parentDir = file.isDirectory() ? file : new File(".");
         }
         
-        String relativePath = sourceParent.getAbsolutePath();
-        String rootPath = new File(".").getAbsolutePath();
-        
-        if (relativePath.startsWith(rootPath)) {
-            relativePath = relativePath.substring(rootPath.length());
+        // 检查文件模式前置条件
+        if (!pFilePattern.isEmpty()) {
+            boolean hasMatchingFile = hasMatchingFiles(parentDir, pFilePattern);
+            
+            if (pRequireFilePattern && !hasMatchingFile) {
+                log("跳过文件（缺少要求的文件模式）: " + file.getName());
+                return false;
+            }
+            
+            if (pExcludeFilePattern && hasMatchingFile) {
+                log("跳过文件（存在排除的文件模式）: " + file.getName());
+                return false;
+            }
         }
         
-        relativePath = relativePath.replace(File.separatorChar, '/');
-        if (relativePath.startsWith("/")) {
-            relativePath = relativePath.substring(1);
+        return true;
+    }
+
+    private boolean hasMatchingFile(File directory, String pattern) {
+        String[] patterns = pattern.split(",");
+        for (String p : patterns) {
+            String trimmedPattern = p.trim();
+            File[] files = directory.listFiles(f -> matchesPattern(f.getName(), trimmedPattern));
+            if (files != null && files.length > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasMatchingFiles(File directory, String pattern) {
+        if (!directory.isDirectory()) {
+            return false;
         }
         
-        return relativePath + "/" + sourceFile.getName();
+        String[] patterns = pattern.split(",");
+        for (String p : patterns) {
+            String trimmedPattern = p.trim();
+            File[] files = directory.listFiles(f -> matchesPattern(f.getName(), trimmedPattern));
+            if (files != null && files.length > 0) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    private boolean matchesPattern(String fileName, String pattern) {
+        // 简单的通配符匹配
+        String regex = pattern.replace(".", "\\.")
+                             .replace("*", ".*")
+                             .replace("?", ".");
+        return fileName.matches(regex);
+    }
+
+    private String buildTargetPath(File sourceFile) {
+        String basePath = pathSelectionComponent.getOutputPath(sourceFile);
+        if (basePath == null || basePath.isEmpty()) {
+            return null;
+        }
+        
+        return new File(basePath, sourceFile.getName()).getAbsolutePath();
     }
 }

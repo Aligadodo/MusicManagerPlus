@@ -145,7 +145,7 @@ public class MetadataScraperStrategyTest {
     }
 
     @Test
-    public void testNonAudioFile() {
+    public void testNonAudioFile() throws IOException {
         System.out.println("=== 测试非音频文件 ===");
         
         File textFile = createTestTextFile("file1.txt");
@@ -159,7 +159,7 @@ public class MetadataScraperStrategyTest {
     }
 
     @Test
-    public void testEmptyFilename() {
+    public void testEmptyFilename() throws IOException {
         System.out.println("=== 测试空文件名 ===");
         
         File audioFile = createTestAudioFile("");
@@ -172,7 +172,7 @@ public class MetadataScraperStrategyTest {
     }
 
     @Test
-    public void testSpecialCharactersInFilename() {
+    public void testSpecialCharactersInFilename() throws IOException {
         System.out.println("=== 测试文件名中的特殊字符 ===");
         
         File audioFile = createTestAudioFile("王菲-天空[1994].mp3");

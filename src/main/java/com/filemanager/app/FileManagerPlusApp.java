@@ -63,6 +63,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -73,7 +74,7 @@ import java.util.function.Consumer;
  * 主程序类，负责核心逻辑、数据持有和控制器实现。
  * 视图逻辑已拆分至 com.filemanager.ui 包。
  */
-public class FileManagerPlusApp extends Application implements IAppController {
+public class FileManagerPlusApp extends Application implements IAppController, IAutoReloadAble {
 
     // --- Core Data ---
     private final ObservableList<File> sourceRoots = FXCollections.observableArrayList();
@@ -129,10 +130,19 @@ public class FileManagerPlusApp extends Application implements IAppController {
 
     // --- UI Controls ---
     private JFXCheckBox autoRun;
+    private JFXCheckBox showTooltips; // 开启使用说明的复选框
 
     @Override
     public JFXCheckBox getAutoRun() {
         return autoRun;
+    }
+
+    /**
+     * 获取开启使用说明的复选框
+     * @return showTooltips 复选框
+     */
+    public JFXCheckBox getShowTooltips() {
+        return showTooltips;
     }
 
     private JFXButton btnGo, btnExecute, btnStop;
@@ -234,7 +244,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
         primaryStage.setScene(scene);
 
         // 5. 加载配置 & 应用外观
-        this.autoReloadNodes = Lists.newArrayList(globalSettingsView, logView, previewView, composeView, currentTheme);
+        this.autoReloadNodes = Lists.newArrayList(globalSettingsView, logView, previewView, composeView, currentTheme, this);
         configManager.loadConfig(lastConfigFile);
         applyAppearance();
 
@@ -292,7 +302,7 @@ public class FileManagerPlusApp extends Application implements IAppController {
         StyleFactory.setMenuStyle(menuBar);
 
         // 添加开启使用说明的开关
-        JFXCheckBox showTooltips = new JFXCheckBox("开启使用说明");
+        showTooltips = new JFXCheckBox("开启使用说明");
         showTooltips.setSelected(true); // 默认勾选即开启提示
         
         // 添加事件监听器，控制提示信息的显示与否
@@ -762,5 +772,45 @@ public class FileManagerPlusApp extends Application implements IAppController {
      */
     public ConfigFileManager getConfigManager() {
         return configManager;
+    }
+
+    // --- IAutoReloadAble Implementation ---
+
+    @Override
+    public void saveConfig(Properties props) {
+        // 保存开启使用说明的状态
+        props.setProperty("showTooltips", String.valueOf(showTooltips.isSelected()));
+        // 保存预览成功立即运行的状态
+        props.setProperty("autoRun", String.valueOf(autoRun.isSelected()));
+    }
+
+    @Override
+    public void loadConfig(Properties props) {
+        // 恢复开启使用说明的状态
+        if (props.containsKey("showTooltips")) {
+            boolean showTooltipsValue = Boolean.parseBoolean(props.getProperty("showTooltips"));
+            showTooltips.setSelected(showTooltipsValue);
+            FloatingTooltip.setShowTooltips(showTooltipsValue);
+        }
+        // 恢复预览成功立即运行的状态
+        if (props.containsKey("autoRun")) {
+            boolean autoRunValue = Boolean.parseBoolean(props.getProperty("autoRun"));
+            autoRun.setSelected(autoRunValue);
+        }
+    }
+
+    @Override
+    public void resetConfig() {
+        // 重置开启使用说明的状态为默认值（选中）
+        showTooltips.setSelected(true);
+        FloatingTooltip.setShowTooltips(true);
+        // 重置预览成功立即运行的状态为默认值（未选中）
+        autoRun.setSelected(false);
+    }
+
+    @Override
+    public void reload() {
+        // 重新加载样式
+        StyleFactory.refreshAllComponents(rootContainer);
     }
 }

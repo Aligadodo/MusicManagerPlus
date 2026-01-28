@@ -1,396 +1,44 @@
 package com.filemanager.strategy;
 
 import com.filemanager.model.ChangeRecord;
+import com.filemanager.strategy.base.PathSelectionComponent;
+import com.filemanager.strategy.base.ScopeSelectionComponent;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.Assert.*;
 
-/**
- * 文件迁移策略测试类
- * 验证FileMigrateStrategy中各个功能模块的效果
- */
 public class FileMigrateStrategyTest {
     private FileMigrateStrategy strategy;
     private File sourceDir;
     private File destDir;
 
     @Before
-    public void setUp() throws IOException {
+    public void setUp() throws Exception {
+        System.out.println("=== 初始化测试环境 ===");
         strategy = new FileMigrateStrategy();
-        
-        sourceDir = new File(System.getProperty("java.io.tmpdir"), "test_migrate_source");
-        destDir = new File(System.getProperty("java.io.tmpdir"), "test_migrate_dest");
-        
-        if (sourceDir.exists()) {
-            deleteDirectory(sourceDir);
-        }
-        if (destDir.exists()) {
-            deleteDirectory(destDir);
-        }
-        
-        sourceDir.mkdirs();
-        destDir.mkdirs();
+        sourceDir = Files.createTempDirectory("source").toFile();
+        destDir = Files.createTempDirectory("dest").toFile();
+        System.out.println("测试环境初始化完成: source=" + sourceDir.getAbsolutePath() + ", dest=" + destDir.getAbsolutePath());
     }
 
-    @Test
-    public void testTemplateArtistAlbum() {
-        System.out.println("=== 测试艺术家/专辑目录结构模板 ===");
-        
-        strategy.pPattern = "艺术家/专辑";
-        strategy.pDestDir = destDir.getAbsolutePath();
-        
-        String artist = "王菲";
-        String album = "天空";
-        
-        String result = generateTargetPath(artist, album, "1994", "流行");
-        
-        System.out.println("模板: " + strategy.pPattern);
-        System.out.println("输入: 艺术家=" + artist + ", 专辑=" + album);
-        System.out.println("输出: " + result);
-        
-        assertTrue("应该包含艺术家目录", result.contains(artist));
-        assertTrue("应该包含专辑目录", result.contains(album));
-        System.out.println("测试结果: 模板正确生成目标路径");
-    }
-
-    @Test
-    public void testTemplateArtistAlbumYear() {
-        System.out.println("=== 测试艺术家/专辑/年份目录结构模板 ===");
-        
-        strategy.pPattern = "艺术家/专辑/年份";
-        strategy.pDestDir = destDir.getAbsolutePath();
-        
-        String artist = "王菲";
-        String album = "天空";
-        String year = "1994";
-        
-        String result = generateTargetPath(artist, album, year, "流行");
-        
-        System.out.println("模板: " + strategy.pPattern);
-        System.out.println("输入: 艺术家=" + artist + ", 专辑=" + album + ", 年份=" + year);
-        System.out.println("输出: " + result);
-        
-        assertTrue("应该包含艺术家目录", result.contains(artist));
-        assertTrue("应该包含专辑目录", result.contains(album));
-        assertTrue("应该包含年份目录", result.contains(year));
-        System.out.println("测试结果: 模板正确生成目标路径");
-    }
-
-    @Test
-    public void testTemplateArtistYearAlbum() {
-        System.out.println("=== 测试艺术家/年份/专辑目录结构模板 ===");
-        
-        strategy.pPattern = "艺术家/年份/专辑";
-        strategy.pDestDir = destDir.getAbsolutePath();
-        
-        String artist = "王菲";
-        String album = "天空";
-        String year = "1994";
-        
-        String result = generateTargetPath(artist, album, year, "流行");
-        
-        System.out.println("模板: " + strategy.pPattern);
-        System.out.println("输入: 艺术家=" + artist + ", 专辑=" + album + ", 年份=" + year);
-        System.out.println("输出: " + result);
-        
-        assertTrue("应该包含艺术家目录", result.contains(artist));
-        assertTrue("应该包含年份目录", result.contains(year));
-        assertTrue("应该包含专辑目录", result.contains(album));
-        System.out.println("测试结果: 模板正确生成目标路径");
-    }
-
-    @Test
-    public void testTemplateGenreArtistAlbum() {
-        System.out.println("=== 测试流派/艺术家/专辑目录结构模板 ===");
-        
-        strategy.pPattern = "流派/艺术家/专辑";
-        strategy.pDestDir = destDir.getAbsolutePath();
-        
-        String artist = "王菲";
-        String album = "天空";
-        String genre = "流行";
-        
-        String result = generateTargetPath(artist, album, "1994", genre);
-        
-        System.out.println("模板: " + strategy.pPattern);
-        System.out.println("输入: 艺术家=" + artist + ", 专辑=" + album + ", 流派=" + genre);
-        System.out.println("输出: " + result);
-        
-        assertTrue("应该包含流派目录", result.contains(genre));
-        assertTrue("应该包含艺术家目录", result.contains(artist));
-        assertTrue("应该包含专辑目录", result.contains(album));
-        System.out.println("测试结果: 模板正确生成目标路径");
-    }
-
-    @Test
-    public void testCustomTemplate() {
-        System.out.println("=== 测试自定义目录结构模板 ===");
-        
-        strategy.pPattern = "{year}/{genre}/{artist}/{album}";
-        strategy.pDestDir = destDir.getAbsolutePath();
-        
-        String artist = "王菲";
-        String album = "天空";
-        String year = "1994";
-        String genre = "流行";
-        
-        String result = generateTargetPath(artist, album, year, genre);
-        
-        System.out.println("模板: " + strategy.pPattern);
-        System.out.println("输入: 艺术家=" + artist + ", 专辑=" + album + ", 年份=" + year + ", 流派=" + genre);
-        System.out.println("输出: " + result);
-        
-        assertTrue("应该包含年份目录", result.contains(year));
-        assertTrue("应该包含流派目录", result.contains(genre));
-        assertTrue("应该包含艺术家目录", result.contains(artist));
-        assertTrue("应该包含专辑目录", result.contains(album));
-        System.out.println("测试结果: 自定义模板正确生成目标路径");
-    }
-
-    @Test
-    public void testMetadataValidation() throws IOException {
-        System.out.println("=== 测试元数据验证 ===");
-        
-        strategy.pValidateMetadata = true;
-        strategy.pDestDir = destDir.getAbsolutePath();
-        
-        File validFile = createTestAudioFile("song1.mp3");
-        File invalidFile = createTestAudioFile("song2.mp3");
-        
-        ChangeRecord validRecord = createChangeRecord(validFile);
-        ChangeRecord invalidRecord = createChangeRecord(invalidFile);
-        
-        List<ChangeRecord> result = strategy.analyze(validRecord, new ArrayList<>(Arrays.asList(validRecord, invalidRecord)), new ArrayList<>(Arrays.asList(sourceDir)));
-        
-        System.out.println("测试结果: 应该跳过元数据不完整的文件");
-        assertNotNull("结果不应为空", result);
-    }
-
-    @Test
-    public void testNoDestinationDirectory() throws IOException {
-        System.out.println("=== 测试未设置目标目录 ===");
-        
-        strategy.pDestDir = null;
-        
-        File testFile = createTestAudioFile("song1.mp3");
-        ChangeRecord record = createChangeRecord(testFile);
-        
-        List<ChangeRecord> result = strategy.analyze(record, new ArrayList<>(Arrays.asList(record)), new ArrayList<>(Arrays.asList(sourceDir)));
-        
-        System.out.println("测试结果: 未设置目标目录应该返回空列表");
-        assertNotNull("结果不应为空", result);
-        assertTrue("应该返回空列表", result.isEmpty());
-    }
-
-    @Test
-    public void testNonAudioFile() throws IOException {
-        System.out.println("=== 测试非音频文件 ===");
-        
-        strategy.pDestDir = destDir.getAbsolutePath();
-        
-        File textFile = createTestTextFile("file1.txt");
-        ChangeRecord record = createChangeRecord(textFile);
-        
-        List<ChangeRecord> result = strategy.analyze(record, new ArrayList<>(Arrays.asList(record)), new ArrayList<>(Arrays.asList(sourceDir)));
-        
-        System.out.println("测试结果: 非音频文件应该被跳过");
-        assertNotNull("结果不应为空", result);
-        assertTrue("应该返回空列表", result.isEmpty());
-    }
-
-    @Test
-    public void testLongPath() {
-        System.out.println("=== 测试长路径 ===");
-        
-        strategy.pPattern = "艺术家/专辑/年份";
-        strategy.pDestDir = destDir.getAbsolutePath();
-        
-        String longArtist = "Very Long Artist Name That Might Exceed Path Limits";
-        String longAlbum = "Very Long Album Name That Might Exceed Path Limits";
-        String year = "1994";
-        
-        String result = generateTargetPath(longArtist, longAlbum, year, "流行");
-        
-        System.out.println("模板: " + strategy.pPattern);
-        System.out.println("输入: 艺术家=" + longArtist + ", 专辑=" + longAlbum + ", 年份=" + year);
-        System.out.println("输出: " + result);
-        System.out.println("输出长度: " + result.length());
-        
-        assertTrue("应该生成路径", result.length() > 0);
-        System.out.println("测试结果: 长路径被正确处理");
-    }
-
-    @Test
-    public void testSpecialCharactersInMetadata() {
-        System.out.println("=== 测试元数据中的特殊字符 ===");
-        
-        strategy.pPattern = "艺术家/专辑";
-        strategy.pDestDir = destDir.getAbsolutePath();
-        
-        String artist = "王菲 (Faye Wong)";
-        String album = "天空 [Sky]";
-        String year = "1994";
-        
-        String result = generateTargetPath(artist, album, year, "流行");
-        
-        System.out.println("模板: " + strategy.pPattern);
-        System.out.println("输入: 艺术家=" + artist + ", 专辑=" + album);
-        System.out.println("输出: " + result);
-        
-        assertTrue("应该生成路径", result.length() > 0);
-        System.out.println("测试结果: 特殊字符被正确处理");
-    }
-
-    @Test
-    public void testPreserveTimestamp() {
-        System.out.println("=== 测试保留时间戳 ===");
-        
-        System.out.println("测试结果: 应该保留原始文件的时间戳");
-        System.out.println("原始时间戳: " + System.currentTimeMillis());
-    }
-
-    @Test
-    public void testGeneratePlaylist() throws IOException {
-        System.out.println("=== 测试生成播放列表 ===");
-        
-        strategy.pCreatePlaylists = true;
-        strategy.pDestDir = destDir.getAbsolutePath();
-        
-        List<File> testFiles = createTestAudioFiles();
-        List<ChangeRecord> records = createChangeRecords(testFiles);
-        
-        List<ChangeRecord> result = strategy.analyze(records.get(0), new ArrayList<>(records), new ArrayList<>(Arrays.asList(sourceDir)));
-        
-        System.out.println("测试结果: 应该生成播放列表");
-        assertNotNull("结果不应为空", result);
-        assertFalse("结果不应为空列表", result.isEmpty());
-    }
-
-    @Test
-    public void testOverwriteExisting() throws IOException {
-        System.out.println("=== 测试覆盖现有文件 ===");
-        
-        strategy.pSkipExisting = false;
-        strategy.pDestDir = destDir.getAbsolutePath();
-        
-        File testFile = createTestAudioFile("song1.mp3");
-        File existingFile = createTestAudioFileInDest("song1.mp3");
-        
-        ChangeRecord record = createChangeRecord(testFile);
-        List<ChangeRecord> result = strategy.analyze(record, new ArrayList<>(Arrays.asList(record)), new ArrayList<>(Arrays.asList(sourceDir)));
-        
-        System.out.println("测试结果: 应该允许覆盖现有文件");
-        assertNotNull("结果不应为空", result);
-        assertFalse("结果不应为空列表", result.isEmpty());
-    }
-
-    @Test
-    public void testSkipExisting() throws IOException {
-        System.out.println("=== 测试跳过现有文件 ===");
-        
-        strategy.pSkipExisting = true;
-        strategy.pDestDir = destDir.getAbsolutePath();
-        
-        File testFile = createTestAudioFile("song1.mp3");
-        File existingFile = createTestAudioFileInDest("song1.mp3");
-        
-        ChangeRecord record = createChangeRecord(testFile);
-        List<ChangeRecord> result = strategy.analyze(record, new ArrayList<>(Arrays.asList(record)), new ArrayList<>(Arrays.asList(sourceDir)));
-        
-        System.out.println("测试结果: 应该跳过现有文件");
-        assertNotNull("结果不应为空", result);
-    }
-
-    @Test
-    public void testKeepOriginalStructure() throws IOException {
-        System.out.println("=== 测试保留原始目录结构 ===");
-        
-        strategy.pPreserveStructure = true;
-        strategy.pDestDir = destDir.getAbsolutePath();
-        
-        File subDir = new File(sourceDir, "subdir");
-        subDir.mkdirs();
-        File testFile = createTestAudioFileInDir(subDir, "song1.mp3");
-        
-        ChangeRecord record = createChangeRecord(testFile);
-        List<ChangeRecord> result = strategy.analyze(record, new ArrayList<>(Arrays.asList(record)), new ArrayList<>(Arrays.asList(sourceDir)));
-        
-        System.out.println("测试结果: 应该保留原始目录结构");
-        assertNotNull("结果不应为空", result);
-        assertFalse("结果不应为空列表", result.isEmpty());
-    }
-
-    private List<File> createTestAudioFiles() throws IOException {
-        List<File> files = new ArrayList<>();
-        for (int i = 1; i <= 5; i++) {
-            File file = createTestAudioFile("song" + i + ".mp3");
-            files.add(file);
-        }
-        return files;
-    }
-
-    private File createTestAudioFile(String fileName) throws IOException {
-        File file = new File(sourceDir, fileName);
-        file.createNewFile();
-        return file;
-    }
-
-    private File createTestAudioFileInDir(File parent, String fileName) throws IOException {
-        File file = new File(parent, fileName);
-        file.createNewFile();
-        return file;
-    }
-
-    private File createTestAudioFileInDest(String fileName) throws IOException {
-        File file = new File(destDir, fileName);
-        file.createNewFile();
-        return file;
-    }
-
-    private File createTestTextFile(String fileName) throws IOException {
-        File file = new File(sourceDir, fileName);
-        file.createNewFile();
-        return file;
-    }
-
-    private List<ChangeRecord> createChangeRecords(List<File> files) {
-        List<ChangeRecord> records = new ArrayList<>();
-        for (File file : files) {
-            records.add(createChangeRecord(file));
-        }
-        return records;
-    }
-
-    private ChangeRecord createChangeRecord(File file) {
-        ChangeRecord record = new ChangeRecord();
-        record.setFileHandle(file);
-        record.setOriginalName(file.getAbsolutePath());
-        record.setNewName(file.getAbsolutePath());
-        record.setNewPath(file.getAbsolutePath());
-        record.setOpType(OperationType.MOVE);
-        record.setStatus(ExecStatus.PENDING);
-        return record;
-    }
-
-    private String generateTargetPath(String artist, String album, String year, String genre) {
-        String template = strategy.pPattern;
-        String result = template
-                .replace("{artist}", artist)
-                .replace("{album}", album)
-                .replace("{year}", year)
-                .replace("{genre}", genre)
-                .replace("{track}", "01");
-        
-        return destDir.getAbsolutePath() + File.separator + result;
+    @After
+    public void tearDown() throws Exception {
+        System.out.println("=== 清理测试环境 ===");
+        deleteDirectory(sourceDir);
+        deleteDirectory(destDir);
+        System.out.println("测试环境清理完成");
     }
 
     private void deleteDirectory(File directory) {
@@ -405,5 +53,224 @@ public class FileMigrateStrategyTest {
             }
         }
         directory.delete();
+    }
+
+    private File createTestAudioFile(String fileName) throws IOException {
+        File file = new File(sourceDir, fileName);
+        file.createNewFile();
+        System.out.println("创建测试文件: " + file.getAbsolutePath());
+        return file;
+    }
+
+    private File createTestAudioFileInDest(String fileName) throws IOException {
+        File file = new File(destDir, fileName);
+        file.createNewFile();
+        System.out.println("在目标目录创建测试文件: " + file.getAbsolutePath());
+        return file;
+    }
+
+    private ChangeRecord createChangeRecord(File file) {
+        return new ChangeRecord(file.getName(), file.getName(), file, true, file.getAbsolutePath(), OperationType.MOVE, null, ExecStatus.PENDING);
+    }
+
+    private void setPathSelectionComponentOutputDirMode(FileMigrateStrategy strategy, String mode) throws Exception {
+        Field pathSelectionField = FileMigrateStrategy.class.getDeclaredField("pathSelectionComponent");
+        pathSelectionField.setAccessible(true);
+        PathSelectionComponent pathSelection = (PathSelectionComponent) pathSelectionField.get(strategy);
+        
+        Field cbOutputDirModeField = PathSelectionComponent.class.getDeclaredField("cbOutputDirMode");
+        cbOutputDirModeField.setAccessible(true);
+        javafx.scene.control.ComboBox<String> cbOutputDirMode = (javafx.scene.control.ComboBox<String>) cbOutputDirModeField.get(pathSelection);
+        cbOutputDirMode.getSelectionModel().select(mode);
+        
+        Field txtPathField = PathSelectionComponent.class.getDeclaredField("txtPath");
+        txtPathField.setAccessible(true);
+        javafx.scene.control.TextField txtPath = (javafx.scene.control.TextField) txtPathField.get(pathSelection);
+        txtPath.setText(destDir.getAbsolutePath());
+        
+        pathSelection.captureParams();
+    }
+
+    @Test
+    public void testMoveOperation() throws Exception {
+        System.out.println("=== 测试移动操作 ===");
+        
+        // 设置路径选择组件
+        setPathSelectionComponentOutputDirMode(strategy, "指定目录");
+        
+        // 直接设置保护成员变量
+        strategy.pOperationMode = "MOVE";
+        strategy.pOverwriteExisting = false;
+        
+        File testFile = createTestAudioFile("song1.mp3");
+        ChangeRecord record = createChangeRecord(testFile);
+        List<ChangeRecord> result = strategy.analyze(record, new ArrayList<>(Arrays.asList(record)), new ArrayList<>(Arrays.asList(sourceDir)));
+        
+        System.out.println("测试结果: 移动操作应该生成MOVE类型的记录");
+        assertNotNull("结果不应为空", result);
+        assertFalse("结果不应为空列表", result.isEmpty());
+        assertEquals("操作类型应该是MOVE", OperationType.MOVE, result.get(0).getOpType());
+    }
+
+    @Test
+    public void testCopyOperation() throws Exception {
+        System.out.println("=== 测试复制操作 ===");
+        
+        // 设置路径选择组件
+        setPathSelectionComponentOutputDirMode(strategy, "指定目录");
+        
+        // 直接设置保护成员变量
+        strategy.pOperationMode = "COPY";
+        strategy.pOverwriteExisting = false;
+        
+        File testFile = createTestAudioFile("song2.mp3");
+        ChangeRecord record = createChangeRecord(testFile);
+        List<ChangeRecord> result = strategy.analyze(record, new ArrayList<>(Arrays.asList(record)), new ArrayList<>(Arrays.asList(sourceDir)));
+        
+        System.out.println("测试结果: 复制操作应该生成MOVE类型的记录（内部使用MOVE类型）");
+        assertNotNull("结果不应为空", result);
+        assertFalse("结果不应为空列表", result.isEmpty());
+        assertEquals("操作类型应该是MOVE", OperationType.MOVE, result.get(0).getOpType());
+    }
+
+    @Test
+    public void testOriginalDirMode() throws Exception {
+        System.out.println("=== 测试原目录模式 ===");
+        
+        // 设置路径选择组件
+        setPathSelectionComponentOutputDirMode(strategy, "原目录");
+        
+        // 直接设置保护成员变量
+        strategy.pOperationMode = "MOVE";
+        
+        File testFile = createTestAudioFile("song3.mp3");
+        ChangeRecord record = createChangeRecord(testFile);
+        List<ChangeRecord> result = strategy.analyze(record, new ArrayList<>(Arrays.asList(record)), new ArrayList<>(Arrays.asList(sourceDir)));
+        
+        System.out.println("测试结果: 原目录模式应该使用源文件所在目录");
+        assertNotNull("结果不应为空", result);
+        assertFalse("结果不应为空列表", result.isEmpty());
+    }
+
+    @Test
+    public void testSubdirMode() throws Exception {
+        System.out.println("=== 测试子目录模式 ===");
+        
+        // 设置路径选择组件
+        setPathSelectionComponentOutputDirMode(strategy, "子目录");
+        
+        // 直接设置保护成员变量
+        strategy.pOperationMode = "MOVE";
+        
+        File testFile = createTestAudioFile("song4.mp3");
+        ChangeRecord record = createChangeRecord(testFile);
+        List<ChangeRecord> result = strategy.analyze(record, new ArrayList<>(Arrays.asList(record)), new ArrayList<>(Arrays.asList(sourceDir)));
+        
+        System.out.println("测试结果: 子目录模式应该在源目录下创建子目录");
+        assertNotNull("结果不应为空", result);
+        assertFalse("结果不应为空列表", result.isEmpty());
+    }
+
+    @Test
+    public void testOverwriteExisting() throws Exception {
+        System.out.println("=== 测试覆盖已存在文件 ===");
+        
+        // 设置路径选择组件
+        setPathSelectionComponentOutputDirMode(strategy, "指定目录");
+        
+        // 直接设置保护成员变量
+        strategy.pOperationMode = "MOVE";
+        strategy.pOverwriteExisting = true;
+        
+        File testFile = createTestAudioFile("song5.mp3");
+        File existingFile = createTestAudioFileInDest("song5.mp3");
+        
+        ChangeRecord record = createChangeRecord(testFile);
+        List<ChangeRecord> result = strategy.analyze(record, new ArrayList<>(Arrays.asList(record)), new ArrayList<>(Arrays.asList(sourceDir)));
+        
+        System.out.println("测试结果: 启用覆盖时应该处理已存在文件");
+        assertNotNull("结果不应为空", result);
+        assertFalse("结果不应为空列表", result.isEmpty());
+    }
+
+    @Test
+    public void testSkipExisting() throws Exception {
+        System.out.println("=== 测试跳过已存在文件 ===");
+        
+        // 设置路径选择组件
+        setPathSelectionComponentOutputDirMode(strategy, "指定目录");
+        
+        // 直接设置保护成员变量
+        strategy.pOperationMode = "MOVE";
+        strategy.pOverwriteExisting = false;
+        
+        File testFile = createTestAudioFile("song6.mp3");
+        File existingFile = createTestAudioFileInDest("song6.mp3");
+        
+        ChangeRecord record = createChangeRecord(testFile);
+        List<ChangeRecord> result = strategy.analyze(record, new ArrayList<>(Arrays.asList(record)), new ArrayList<>(Arrays.asList(sourceDir)));
+        
+        System.out.println("测试结果: 禁用覆盖时应该跳过已存在文件");
+        assertNotNull("结果不应为空", result);
+    }
+
+    @Test
+    public void testCleanEmptyDirectories() throws Exception {
+        System.out.println("=== 测试清理空文件夹 ===");
+        
+        // 设置路径选择组件
+        setPathSelectionComponentOutputDirMode(strategy, "指定目录");
+        
+        // 直接设置保护成员变量
+        strategy.pOperationMode = "MOVE";
+        strategy.pCleanEmpty = true;
+        
+        File testFile = createTestAudioFile("song7.mp3");
+        ChangeRecord record = createChangeRecord(testFile);
+        List<ChangeRecord> result = strategy.analyze(record, new ArrayList<>(Arrays.asList(record)), new ArrayList<>(Arrays.asList(sourceDir)));
+        
+        System.out.println("测试结果: 启用清理时应该在移动后清理空文件夹");
+        assertNotNull("结果不应为空", result);
+        assertFalse("结果不应为空列表", result.isEmpty());
+    }
+
+    @Test
+    public void testFilePatternPrecondition() throws Exception {
+        System.out.println("=== 测试文件模式前置条件 ===");
+        
+        // 设置路径选择组件
+        setPathSelectionComponentOutputDirMode(strategy, "指定目录");
+        
+        // 直接设置保护成员变量
+        strategy.pOperationMode = "MOVE";
+        strategy.pFilePattern = "*.mp3";
+        strategy.pRequireFilePattern = true;
+        
+        File testFile = createTestAudioFile("song8.mp3");
+        ChangeRecord record = createChangeRecord(testFile);
+        List<ChangeRecord> result = strategy.analyze(record, new ArrayList<>(Arrays.asList(record)), new ArrayList<>(Arrays.asList(sourceDir)));
+        
+        System.out.println("测试结果: 当目录中存在匹配文件时应该执行操作");
+        assertNotNull("结果不应为空", result);
+        assertFalse("结果不应为空列表", result.isEmpty());
+    }
+
+    @Test
+    public void testScopeSelection() throws Exception {
+        System.out.println("=== 测试生效范围选择 ===");
+        
+        // 设置路径选择组件
+        setPathSelectionComponentOutputDirMode(strategy, "指定目录");
+        
+        // 直接设置保护成员变量
+        strategy.pOperationMode = "MOVE";
+        
+        File testFile = createTestAudioFile("song9.mp3");
+        ChangeRecord record = createChangeRecord(testFile);
+        List<ChangeRecord> result = strategy.analyze(record, new ArrayList<>(Arrays.asList(record)), new ArrayList<>(Arrays.asList(sourceDir)));
+        
+        System.out.println("测试结果: 应该根据生效范围选择执行操作");
+        assertNotNull("结果不应为空", result);
+        assertFalse("结果不应为空列表", result.isEmpty());
     }
 }

@@ -14,8 +14,7 @@ import com.filemanager.app.components.CleanupUIConfig;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.model.CleanupParams;
 import com.filemanager.strategy.cleanup.CleanupMode;
-import com.filemanager.strategy.cleanup.DeleteMethod;
-import com.filemanager.strategy.cleanup.FileSizeRange;
+import com.filemanager.strategy.duplicate.DuplicateStrategyManager;
 import com.filemanager.tool.file.DeleteExecutor;
 import com.filemanager.tool.file.DuplicateAnalyzer;
 import com.filemanager.type.ScanTarget;
@@ -32,11 +31,12 @@ import java.util.Properties;
  */
 public class FileCleanupStrategy extends IAppStrategy {
 
-    // --- 组件引用 ---
+    // --- 组件引用 --- 
     private final CleanupUIConfig uiConfig;
     private final CleanupParams params;
     private DuplicateAnalyzer analyzer;
     private DeleteExecutor executor;
+    private DuplicateStrategyManager strategyManager;
 
     public FileCleanupStrategy() {
         uiConfig = new CleanupUIConfig();
@@ -70,6 +70,14 @@ public class FileCleanupStrategy extends IAppStrategy {
         analyzer = new DuplicateAnalyzer(params);
         long taskStartTimestamp = app != null ? app.getTaskStartTimStamp() : System.currentTimeMillis();
         executor = new DeleteExecutor(params, taskStartTimestamp);
+        
+        // 初始化去重策略管理器
+        strategyManager = DuplicateStrategyManager.createDefaultManager(
+                params.isKeepLargest(),
+                params.isKeepEarliest(), // 注意：这里使用keepEarliest，与keepNewest相反
+                params.isAudioSpecial(),
+                params.getKeepExt()
+        );
     }
 
     @Override
@@ -84,6 +92,14 @@ public class FileCleanupStrategy extends IAppStrategy {
         analyzer = new DuplicateAnalyzer(params);
         long taskStartTimestamp = app != null ? app.getTaskStartTimStamp() : System.currentTimeMillis();
         executor = new DeleteExecutor(params, taskStartTimestamp);
+        
+        // 初始化去重策略管理器
+        strategyManager = DuplicateStrategyManager.createDefaultManager(
+                params.isKeepLargest(),
+                params.isKeepEarliest(), // 注意：这里使用keepEarliest，与keepNewest相反
+                params.isAudioSpecial(),
+                params.getKeepExt()
+        );
     }
 
     @Override
@@ -105,5 +121,13 @@ public class FileCleanupStrategy extends IAppStrategy {
         }
         // 调用执行器执行删除操作
         executor.execute(rec);
+    }
+
+    /**
+     * 获取去重策略管理器
+     * @return 去重策略管理器
+     */
+    public DuplicateStrategyManager getStrategyManager() {
+        return strategyManager;
     }
 }

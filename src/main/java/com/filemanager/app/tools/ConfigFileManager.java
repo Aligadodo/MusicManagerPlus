@@ -39,6 +39,7 @@ public class ConfigFileManager {
         try (FileOutputStream os = new FileOutputStream(file)) {
             // 1. 保存全局组件配置
             app.getAutoReloadNodes().forEach(node -> node.saveConfig(props));
+            
             // 2. 流水线配置 (核心)
             savePipeline();
             props.store(os, "FileManager Plus Config");
@@ -61,6 +62,7 @@ public class ConfigFileManager {
                     app.logError("配置加载失败: " + ExceptionUtils.getStackTrace(e));
                 }
             });
+            
             // 2. 恢复流水线
             loadPipeline();
             // 3.立即应用外观
