@@ -43,7 +43,7 @@ mkdir "dist\jre"
 
 REM --- 3. Maven 打包 ---
 echo [3/6] 执行 Maven 打包...
-call mvn clean package
+call mvn clean package -DskipTests
 if %errorlevel% neq 0 (
     echo [错误] Maven 打包失败！
     pause

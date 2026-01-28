@@ -291,17 +291,17 @@ public class MetadataScraperStrategy extends IAppStrategy {
                     || tag == null || (hasLyricsField && tag.getFirst(FieldKey.LYRICS).isEmpty());
                 
                 if (processLyrics) {
-                    rec.getExtraParams().put("process_lyrics_start", "开始处理歌词: " + guess.getArtist() + " - " + guess.getTitle());
-                    rec.getExtraParams().put("process_lyrics_source", source.getSourceName());
+                    rec.addProcessInfo("开始处理歌词: " + guess.getArtist() + " - " + guess.getTitle());
+                    rec.addProcessInfo("使用数据源: " + source.getSourceName());
                     
                     if (processor.processLyrics(guess.getArtist(), guess.getTitle(), duration, file)) {
                         rec.setChanged(true);
                         rec.setOpType(OperationType.SCRAPER);
                         rec.getExtraParams().put("scraper_active", "true");
-                        rec.getExtraParams().put("process_lyrics_result", "成功获取歌词");
+                        rec.addProcessInfo("成功获取歌词");
                         rec.setNewName("[更新] " + file.getName());
                     } else {
-                        rec.getExtraParams().put("process_lyrics_result", "未找到歌词");
+                        rec.addProcessInfo("未找到歌词");
                     }
                 }
             }
@@ -312,18 +312,18 @@ public class MetadataScraperStrategy extends IAppStrategy {
                     || !targetCover.exists();
                 
                 if (processCover) {
-                    rec.getExtraParams().put("process_cover_start", "开始处理封面: " + guess.getArtist() + " - " + guess.getAlbum());
-                    rec.getExtraParams().put("process_cover_source", source.getSourceName());
+                    rec.addProcessInfo("开始处理封面: " + guess.getArtist() + " - " + guess.getAlbum());
+                    rec.addProcessInfo("使用数据源: " + source.getSourceName());
                     
                     if (processor.processCover(guess.getArtist(), guess.getAlbum(), parentDir)) {
                         Map<String, String> p = new HashMap<>();
                         p.put("task_type", "DOWNLOAD_COVER");
-                        p.put("process_cover_result", "成功获取封面");
                         ChangeRecord coverRec = new ChangeRecord("下载: 专辑封面", "cover.jpg", parentDir,
                                 true, targetCover.getAbsolutePath(), OperationType.SCRAPER, p, ExecStatus.PENDING);
+                        coverRec.addProcessInfo("成功获取封面");
                         results.add(coverRec);
                     } else {
-                        rec.getExtraParams().put("process_cover_result", "未找到封面");
+                        rec.addProcessInfo("未找到封面");
                     }
                 }
             }
@@ -334,22 +334,23 @@ public class MetadataScraperStrategy extends IAppStrategy {
                     || !targetInfo.exists();
                 
                 if (processInfo) {
-                    rec.getExtraParams().put("process_album_start", "开始处理专辑信息: " + guess.getArtist() + " - " + guess.getAlbum());
-                    rec.getExtraParams().put("process_album_source", source.getSourceName());
+                    rec.addProcessInfo("开始处理专辑信息: " + guess.getArtist() + " - " + guess.getAlbum());
+                    rec.addProcessInfo("使用数据源: " + source.getSourceName());
                     
                     if (processor.processAlbumInfo(guess.getArtist(), guess.getAlbum(), parentDir)) {
                         Map<String, String> p = new HashMap<>();
                         p.put("task_type", "GENERATE_INFO");
-                        p.put("process_album_result", "成功获取专辑信息");
                         ChangeRecord infoRec = new ChangeRecord("生成: 专辑资料", "AlbumInfo.txt", parentDir,
                                 true, targetInfo.getAbsolutePath(), OperationType.SCRAPER, p, ExecStatus.PENDING);
+                        infoRec.addProcessInfo("成功获取专辑信息");
                         results.add(infoRec);
                     } else {
-                        rec.getExtraParams().put("process_album_result", "未找到专辑信息");
+                        rec.addProcessInfo("未找到专辑信息");
                     }
                 }
             }
         } catch (Exception e) {
+            rec.addProcessInfo("处理失败: " + e.getMessage());
             logError("处理文件失败: " + file.getName() + ", 错误: " + e.getMessage());
         }
         
