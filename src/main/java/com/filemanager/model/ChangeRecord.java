@@ -17,6 +17,8 @@ import com.filemanager.type.OperationType;
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author 28667
@@ -45,6 +47,9 @@ public class ChangeRecord {
 
     // 链式处理中的中间状态文件（如果不为空，说明这是上一步产生的临时状态）
     private File intermediateFile;
+
+    // 处理过程信息列表
+    private List<String> processInfo = new ArrayList<>();
 
     public ChangeRecord(String o, String n, File f, boolean c, String p, OperationType op) {
         this.originalName = o;
@@ -184,5 +189,17 @@ public class ChangeRecord {
 
     public void setSelected(boolean selected) {
         this.selected = selected;
+    }
+
+    public List<String> getProcessInfo() {
+        return this.processInfo;
+    }
+
+    public void setProcessInfo(List<String> processInfo) {
+        this.processInfo = processInfo;
+    }
+
+    public void addProcessInfo(String info) {
+        this.processInfo.add(info);
     }
 }

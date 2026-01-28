@@ -12,15 +12,18 @@ package com.filemanager.strategy;
 import com.filemanager.app.base.IAppStrategy;
 import com.filemanager.app.tools.display.StyleFactory;
 import com.filemanager.model.ChangeRecord;
-import com.filemanager.strategy.scraper.LyricsManager;
-import com.filemanager.strategy.scraper.LyricsProvider;
-import com.filemanager.strategy.scraper.MiguLyricsProvider;
-import com.filemanager.strategy.scraper.NeteaseLyricsProvider;
-import com.filemanager.strategy.scraper.ScrapedResult;
+import com.filemanager.strategy.scraper.cache.MetadataCacheManager;
+import com.filemanager.strategy.scraper.config.*;
+import com.filemanager.strategy.scraper.model.*;
+import com.filemanager.strategy.scraper.processor.MetadataScraperProcessor;
+import com.filemanager.strategy.scraper.source.MetadataSource;
+import com.filemanager.strategy.scraper.source.impl.*;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
 import com.filemanager.util.MetadataHelper;
+import com.filemanager.strategy.scraper.ui.ModuleConfigUI;
+import com.filemanager.strategy.scraper.ui.AlbumInfoConfigUI;
 import com.jfoenix.controls.JFXComboBox;
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
@@ -56,141 +59,37 @@ import java.util.stream.Collectors;
 public class MetadataScraperStrategy extends IAppStrategy {
 
     private final JFXComboBox<String> cbSource;
-    private final CheckBox chkUpdateBasicMeta;
-    private final CheckBox chkFetchLyrics;
-    private final CheckBox chkSaveCoverFile;
-    private final CheckBox chkSaveAlbumInfo;
-    private final CheckBox chkScrapeIntro;
-    private final CheckBox chkOverwrite;
-    private final CheckBox chkUseCache;
     private final Spinner<Integer> spThreads;
-    private final TextArea txtPreviewLog;
     
-    private final LyricsManager lyricsManager;
-    private final Set<String> processedAlbumDirs = Collections.synchronizedSet(new HashSet<>());
-    private final Map<String, ScrapedResult> metadataCache = new ConcurrentHashMap<>();
+    private final ModuleConfigUI lyricsConfigUI;
+    private final ModuleConfigUI coverConfigUI;
+    private final AlbumInfoConfigUI albumInfoConfigUI;
+    
+    private final Map<String, MetadataSource> sources;
+    private final MetadataCacheManager cacheManager;
+    private final MetadataScraperProcessor processor;
     
     protected String pSource;
-    protected boolean pUpdateBasic;
-    protected boolean pFetchLyrics;
-    protected boolean pSaveCoverFile;
-    protected boolean pSaveAlbumInfo;
-    protected boolean pScrapeIntro;
-    protected boolean pOverwrite;
-    protected boolean pUseCache;
     protected int pThreads;
+    
+    protected LyricsModuleConfig lyricsConfig;
+    protected CoverModuleConfig coverConfig;
+    protected AlbumInfoModuleConfig albumInfoConfig;
 
     public MetadataScraperStrategy() {
-        cbSource = new JFXComboBox<>(FXCollections.observableArrayList(
-                "iTunes Music API (稳定推荐)",
-                "MusicBrainz (专业数据库)",
-                "Last.fm (社区驱动)",
-                "网易云音乐 (中文歌曲)",
-                "咪咕音乐 (版权歌曲)",
-                "本地推断 (仅生成清单)"
-        ));
+        sources = new LinkedHashMap<>();
+        sources.put("本地推断 (仅生成清单)", new LocalInferenceSource());
+        sources.put("网易云音乐 (中文歌曲)", new NeteaseMusicSource());
+        sources.put("咪咕音乐 (版权歌曲)", new MiguMusicSource());
+        
+        cbSource = new JFXComboBox<>(FXCollections.observableArrayList(sources.keySet()));
         cbSource.getSelectionModel().select(0);
         
-        ArrayList<String> sourceTooltipLines = new ArrayList<>();
-        sourceTooltipLines.add("参数名称：数据源");
-        sourceTooltipLines.add("参数用途：用于设置元数据刮削的数据源");
-        sourceTooltipLines.add("数据源说明：");
-        sourceTooltipLines.add("- iTunes Music API：稳定推荐，数据准确");
-        sourceTooltipLines.add("- MusicBrainz：专业音乐数据库，数据全面");
-        sourceTooltipLines.add("- Last.fm：社区驱动，数据丰富");
-        sourceTooltipLines.add("- 网易云音乐：中文歌曲覆盖广");
-        sourceTooltipLines.add("- 咪咕音乐：版权歌曲多，音质好");
-        sourceTooltipLines.add("- 本地推断：仅基于文件名生成清单");
-        FloatingTooltip.bindToNode(cbSource, "元数据刮削设置", sourceTooltipLines);
-
-        chkUpdateBasicMeta = new CheckBox("更新单曲元数据 (标题/歌手/专辑/内嵌封面)");
-        chkUpdateBasicMeta.setSelected(true);
+        updateSourceTooltip();
         
-        ArrayList<String> basicMetaTooltipLines = new ArrayList<>();
-        basicMetaTooltipLines.add("参数名称：更新单曲元数据");
-        basicMetaTooltipLines.add("参数用途：用于更新单曲的基本元数据信息");
-        basicMetaTooltipLines.add("包含字段：");
-        basicMetaTooltipLines.add("- 标题（Title）：歌曲名称");
-        basicMetaTooltipLines.add("- 歌手（Artist）：艺术家名称");
-        basicMetaTooltipLines.add("- 专辑（Album）：专辑名称");
-        basicMetaTooltipLines.add("- 年份（Year）：发行年份");
-        basicMetaTooltipLines.add("- 流派（Genre）：音乐流派");
-        basicMetaTooltipLines.add("- 内嵌封面：将封面图片嵌入音频文件");
-        FloatingTooltip.bindToNode(chkUpdateBasicMeta, "元数据刮削设置", basicMetaTooltipLines);
-
-        chkFetchLyrics = new CheckBox("下载歌词 (内嵌到音频文件)");
-        chkFetchLyrics.setSelected(true);
-        
-        ArrayList<String> lyricsTooltipLines = new ArrayList<>();
-        lyricsTooltipLines.add("参数名称：下载歌词");
-        lyricsTooltipLines.add("参数用途：用于下载歌词并内嵌到音频文件中");
-        lyricsTooltipLines.add("支持来源：");
-        lyricsTooltipLines.add("- 网易云音乐");
-        lyricsTooltipLines.add("- 咪咕音乐");
-        lyricsTooltipLines.add("歌词格式：LRC格式，包含时间轴");
-        FloatingTooltip.bindToNode(chkFetchLyrics, "元数据刮削设置", lyricsTooltipLines);
-
-        chkSaveCoverFile = new CheckBox("保存专辑封面文件 (cover.jpg 到目录)");
-        chkSaveCoverFile.setSelected(true);
-        
-        ArrayList<String> coverFileTooltipLines = new ArrayList<>();
-        coverFileTooltipLines.add("参数名称：保存专辑封面文件");
-        coverFileTooltipLines.add("参数用途：用于保存专辑封面文件到目录中");
-        coverFileTooltipLines.add("文件规格：");
-        coverFileTooltipLines.add("- 格式：JPEG");
-        coverFileTooltipLines.add("- 尺寸：600x600（推荐）");
-        coverFileTooltipLines.add("- 文件名：cover.jpg");
-        FloatingTooltip.bindToNode(chkSaveCoverFile, "元数据刮削设置", coverFileTooltipLines);
-
-        chkSaveAlbumInfo = new CheckBox("生成专辑资料 (AlbumInfo.txt - 简介+曲目)");
-        chkSaveAlbumInfo.setSelected(true);
-        
-        ArrayList<String> albumInfoTooltipLines = new ArrayList<>();
-        albumInfoTooltipLines.add("参数名称：生成专辑资料");
-        albumInfoTooltipLines.add("参数用途：用于生成专辑资料文件");
-        albumInfoTooltipLines.add("文件内容：");
-        albumInfoTooltipLines.add("- 专辑基本信息（名称、艺术家、年份、流派）");
-        albumInfoTooltipLines.add("- 专辑简介（如果可用）");
-        albumInfoTooltipLines.add("- 曲目列表（包含时长）");
-        albumInfoTooltipLines.add("- 文件名：AlbumInfo.txt");
-        FloatingTooltip.bindToNode(chkSaveAlbumInfo, "元数据刮削设置", albumInfoTooltipLines);
-
-        chkScrapeIntro = new CheckBox("尝试刮削网络简介/版权信息");
-        chkScrapeIntro.setSelected(true);
-        chkScrapeIntro.disableProperty().bind(chkSaveAlbumInfo.selectedProperty().not());
-        
-        ArrayList<String> introTooltipLines = new ArrayList<>();
-        introTooltipLines.add("参数名称：尝试刮削网络简介");
-        introTooltipLines.add("参数用途：用于尝试从网络刮削专辑简介和版权信息");
-        introTooltipLines.add("数据来源：");
-        introTooltipLines.add("- iTunes：版权信息");
-        introTooltipLines.add("- MusicBrainz：专辑简介");
-        introTooltipLines.add("- Last.fm：用户评论和简介");
-        FloatingTooltip.bindToNode(chkScrapeIntro, "元数据刮削设置", introTooltipLines);
-
-        chkOverwrite = new CheckBox("强制覆盖已有信息/文件");
-        chkOverwrite.setSelected(false);
-        
-        ArrayList<String> overwriteTooltipLines = new ArrayList<>();
-        overwriteTooltipLines.add("参数名称：强制覆盖");
-        overwriteTooltipLines.add("参数用途：用于设置是否强制覆盖已有信息和文件");
-        overwriteTooltipLines.add("覆盖策略：");
-        overwriteTooltipLines.add("- 启用：覆盖已有元数据和文件");
-        overwriteTooltipLines.add("- 禁用：仅在无现有信息时添加");
-        overwriteTooltipLines.add("注意：建议先备份重要文件");
-        FloatingTooltip.bindToNode(chkOverwrite, "元数据刮削设置", overwriteTooltipLines);
-
-        chkUseCache = new CheckBox("使用元数据缓存");
-        chkUseCache.setSelected(true);
-        
-        ArrayList<String> useCacheTooltipLines = new ArrayList<>();
-        useCacheTooltipLines.add("参数名称：使用元数据缓存");
-        useCacheTooltipLines.add("参数用途：缓存已刮削的元数据，避免重复请求");
-        useCacheTooltipLines.add("缓存策略：");
-        useCacheTooltipLines.add("- 基于艺术家+标题/专辑名称");
-        useCacheTooltipLines.add("- 提高处理速度");
-        useCacheTooltipLines.add("- 减少网络请求");
-        FloatingTooltip.bindToNode(chkUseCache, "元数据刮削设置", useCacheTooltipLines);
+        cbSource.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
+            updateSourceTooltip();
+        });
 
         spThreads = new Spinner<>(1, 8, 2);
         
@@ -204,14 +103,36 @@ public class MetadataScraperStrategy extends IAppStrategy {
         threadsTooltipLines.add("- 8：多线程，速度快但可能不稳定");
         FloatingTooltip.bindToNode(spThreads, "元数据刮削设置", threadsTooltipLines);
 
-        txtPreviewLog = new TextArea();
-        txtPreviewLog.setPromptText("预览日志区域...");
-        txtPreviewLog.setPrefHeight(100);
-        txtPreviewLog.setEditable(false);
-
-        lyricsManager = new LyricsManager();
-        lyricsManager.register(new NeteaseLyricsProvider());
-        lyricsManager.register(new MiguLyricsProvider());
+        cacheManager = new MetadataCacheManager(true);
+        processor = new MetadataScraperProcessor(cacheManager);
+        
+        lyricsConfig = new LyricsModuleConfig();
+        coverConfig = new CoverModuleConfig();
+        albumInfoConfig = new AlbumInfoModuleConfig();
+        
+        lyricsConfigUI = new ModuleConfigUI(lyricsConfig);
+        coverConfigUI = new ModuleConfigUI(coverConfig);
+        albumInfoConfigUI = new AlbumInfoConfigUI(albumInfoConfig);
+    }
+    
+    private void updateSourceTooltip() {
+        String selectedSource = cbSource.getValue();
+        MetadataSource source = sources.get(selectedSource);
+        
+        if (source != null) {
+            ArrayList<String> tooltipLines = new ArrayList<>();
+            tooltipLines.add("参数名称：数据源");
+            tooltipLines.add("参数用途：用于设置元数据刮削的数据源");
+            tooltipLines.add("数据源说明：");
+            
+            String description = source.getSourceDescription();
+            String[] lines = description.split("\n");
+            for (String line : lines) {
+                tooltipLines.add(line);
+            }
+            
+            FloatingTooltip.bindToNode(cbSource, "元数据刮削设置", tooltipLines);
+        }
     }
 
     @Override
@@ -242,79 +163,94 @@ public class MetadataScraperStrategy extends IAppStrategy {
         grid.add(StyleFactory.createParamLabel("网络并发:"), 0, 1);
         grid.add(spThreads, 1, 1);
 
-        VBox checks = new VBox(8);
-        Label l1 = StyleFactory.createDescLabel("单曲处理:");
-        Label l2 = StyleFactory.createDescLabel("专辑处理 (每个目录一份):");
-        Label l3 = StyleFactory.createDescLabel("高级选项:");
+        TitledPane lyricsPane = new TitledPane("歌词匹配模块", lyricsConfigUI);
+        TitledPane coverPane = new TitledPane("封面匹配模块", coverConfigUI);
+        TitledPane albumInfoPane = new TitledPane("专辑信息模块", albumInfoConfigUI);
+        
+        lyricsPane.setCollapsible(true);
+        coverPane.setCollapsible(true);
+        albumInfoPane.setCollapsible(true);
 
-        checks.getChildren().addAll(
-                l1, chkUpdateBasicMeta, chkFetchLyrics,
-                new Separator(),
-                l2, chkSaveCoverFile, chkSaveAlbumInfo, chkScrapeIntro,
-                new Separator(),
-                l3, chkOverwrite, chkUseCache
-        );
-
-        box.getChildren().addAll(grid, new Separator(), checks, StyleFactory.createParamLabel("实时日志:"), txtPreviewLog);
+        box.getChildren().addAll(grid, new Separator(), lyricsPane, coverPane, albumInfoPane);
         return box;
     }
 
     @Override
     public void captureParams() {
         pSource = cbSource.getValue();
-        pUpdateBasic = chkUpdateBasicMeta.isSelected();
-        pFetchLyrics = chkFetchLyrics.isSelected();
-        pSaveCoverFile = chkSaveCoverFile.isSelected();
-        pSaveAlbumInfo = chkSaveAlbumInfo.isSelected();
-        pScrapeIntro = chkScrapeIntro.isSelected();
-        pOverwrite = chkOverwrite.isSelected();
-        pUseCache = chkUseCache.isSelected();
         pThreads = spThreads.getValue();
+        
+        lyricsConfigUI.captureParams();
+        coverConfigUI.captureParams();
+        albumInfoConfigUI.captureParams();
     }
 
     @Override
     public void saveConfig(Properties props) {
         props.setProperty("meta_source", cbSource.getValue());
-        props.setProperty("meta_basic", String.valueOf(chkUpdateBasicMeta.isSelected()));
-        props.setProperty("meta_lyrics", String.valueOf(chkFetchLyrics.isSelected()));
-        props.setProperty("meta_cover_file", String.valueOf(chkSaveCoverFile.isSelected()));
-        props.setProperty("meta_info_txt", String.valueOf(chkSaveAlbumInfo.isSelected()));
-        props.setProperty("meta_intro", String.valueOf(chkScrapeIntro.isSelected()));
-        props.setProperty("meta_overwrite", String.valueOf(chkOverwrite.isSelected()));
-        props.setProperty("meta_cache", String.valueOf(chkUseCache.isSelected()));
         props.setProperty("meta_threads", String.valueOf(spThreads.getValue()));
+        
+        props.setProperty("meta_lyrics_enabled", String.valueOf(lyricsConfig.isEnabled()));
+        props.setProperty("meta_lyrics_save_mode", lyricsConfig.getSaveMode().name());
+        props.setProperty("meta_lyrics_duplicate", lyricsConfig.getDuplicateMode().name());
+        props.setProperty("meta_lyrics_cache", String.valueOf(lyricsConfig.isUseCache()));
+        
+        props.setProperty("meta_cover_enabled", String.valueOf(coverConfig.isEnabled()));
+        props.setProperty("meta_cover_save_mode", coverConfig.getSaveMode().name());
+        props.setProperty("meta_cover_duplicate", coverConfig.getDuplicateMode().name());
+        props.setProperty("meta_cover_cache", String.valueOf(coverConfig.isUseCache()));
+        
+        props.setProperty("meta_album_enabled", String.valueOf(albumInfoConfig.isEnabled()));
+        props.setProperty("meta_album_save_mode", albumInfoConfig.getSaveMode().name());
+        props.setProperty("meta_album_duplicate", albumInfoConfig.getDuplicateMode().name());
+        props.setProperty("meta_album_cache", String.valueOf(albumInfoConfig.isUseCache()));
     }
 
     @Override
     public void loadConfig(Properties props) {
         if (props.containsKey("meta_source")) cbSource.getSelectionModel().select(props.getProperty("meta_source"));
-        if (props.containsKey("meta_basic"))
-            chkUpdateBasicMeta.setSelected(Boolean.parseBoolean(props.getProperty("meta_basic")));
-        if (props.containsKey("meta_lyrics"))
-            chkFetchLyrics.setSelected(Boolean.parseBoolean(props.getProperty("meta_lyrics")));
-        if (props.containsKey("meta_cover_file"))
-            chkSaveCoverFile.setSelected(Boolean.parseBoolean(props.getProperty("meta_cover_file")));
-        if (props.containsKey("meta_info_txt"))
-            chkSaveAlbumInfo.setSelected(Boolean.parseBoolean(props.getProperty("meta_info_txt")));
-        if (props.containsKey("meta_intro"))
-            chkScrapeIntro.setSelected(Boolean.parseBoolean(props.getProperty("meta_intro")));
-        if (props.containsKey("meta_overwrite"))
-            chkOverwrite.setSelected(Boolean.parseBoolean(props.getProperty("meta_overwrite")));
-        if (props.containsKey("meta_cache"))
-            chkUseCache.setSelected(Boolean.parseBoolean(props.getProperty("meta_cache")));
         if (props.containsKey("meta_threads")) {
             try {
                 spThreads.getValueFactory().setValue(Integer.parseInt(props.getProperty("meta_threads")));
             } catch (Exception e) {
             }
         }
+        
+        if (props.containsKey("meta_lyrics_enabled"))
+            lyricsConfig.setEnabled(Boolean.parseBoolean(props.getProperty("meta_lyrics_enabled")));
+        if (props.containsKey("meta_lyrics_save_mode"))
+            lyricsConfig.setSaveMode(ModuleConfig.SaveMode.valueOf(props.getProperty("meta_lyrics_save_mode")));
+        if (props.containsKey("meta_lyrics_duplicate"))
+            lyricsConfig.setDuplicateMode(ModuleConfig.DuplicateMode.valueOf(props.getProperty("meta_lyrics_duplicate")));
+        if (props.containsKey("meta_lyrics_cache"))
+            lyricsConfig.setUseCache(Boolean.parseBoolean(props.getProperty("meta_lyrics_cache")));
+        
+        if (props.containsKey("meta_cover_enabled"))
+            coverConfig.setEnabled(Boolean.parseBoolean(props.getProperty("meta_cover_enabled")));
+        if (props.containsKey("meta_cover_save_mode"))
+            coverConfig.setSaveMode(ModuleConfig.SaveMode.valueOf(props.getProperty("meta_cover_save_mode")));
+        if (props.containsKey("meta_cover_duplicate"))
+            coverConfig.setDuplicateMode(ModuleConfig.DuplicateMode.valueOf(props.getProperty("meta_cover_duplicate")));
+        if (props.containsKey("meta_cover_cache"))
+            coverConfig.setUseCache(Boolean.parseBoolean(props.getProperty("meta_cover_cache")));
+        
+        if (props.containsKey("meta_album_enabled"))
+            albumInfoConfig.setEnabled(Boolean.parseBoolean(props.getProperty("meta_album_enabled")));
+        if (props.containsKey("meta_album_save_mode"))
+            albumInfoConfig.setSaveMode(ModuleConfig.SaveMode.valueOf(props.getProperty("meta_album_save_mode")));
+        if (props.containsKey("meta_album_duplicate"))
+            albumInfoConfig.setDuplicateMode(ModuleConfig.DuplicateMode.valueOf(props.getProperty("meta_album_duplicate")));
+        if (props.containsKey("meta_album_cache"))
+            albumInfoConfig.setUseCache(Boolean.parseBoolean(props.getProperty("meta_album_cache")));
+        
+        lyricsConfigUI.loadFromConfig(lyricsConfig);
+        coverConfigUI.loadFromConfig(coverConfig);
+        albumInfoConfigUI.loadFromConfig(albumInfoConfig);
     }
 
     @Override
     public List<ChangeRecord> analyze(ChangeRecord rec, List<ChangeRecord> inputRecords, List<File> rootDirs) {
-        processedAlbumDirs.clear();
-        metadataCache.clear();
-        Set<String> supportedExts = new HashSet<>(Arrays.asList("mp3", "flac", "m4a", "ogg", "wav", "dsf", "dff", "ape"));
+        Set<String> supportedExts = new HashSet<>(Arrays.asList("mp3", "flac", "m4a", "ogg", "wav", "dsf", "dff"));
 
         File file = rec.getFileHandle();
         File parentDir = file.getParentFile();
@@ -323,122 +259,100 @@ public class MetadataScraperStrategy extends IAppStrategy {
         if (!supportedExts.contains(ext)) {
             return Collections.emptyList();
         }
-        List<ChangeRecord> results = new ArrayList<>();
         
+        List<ChangeRecord> results = new ArrayList<>();
         MetadataHelper.AudioMeta guess = MetadataHelper.extractFromFileSystem(file);
-        ScrapedResult scraperRes = null;
-        boolean metaChanged = false;
-
-        if (pUpdateBasic || pFetchLyrics) {
-            try {
-                AudioFile f = AudioFileIO.read(file);
-                Tag tag = f.getTag();
-
-                if (pUpdateBasic && (pOverwrite || tag == null || tag.getFirst(FieldKey.ALBUM).isEmpty())) {
-                    String cacheKey = guess.getArtist() + "|" + guess.getTitle();
-                    if (pUseCache && metadataCache.containsKey(cacheKey)) {
-                        scraperRes = metadataCache.get(cacheKey);
-                        log("使用缓存数据: " + cacheKey);
-                    } else {
-                        scraperRes = searchMetadata(guess.getArtist(), guess.getTitle(), false);
-                        if (pUseCache && scraperRes != null) {
-                            metadataCache.put(cacheKey, scraperRes);
-                        }
-                    }
-                }
-
-                Map<String, String> params = new HashMap<>(rec.getExtraParams());
-
-                if (scraperRes != null && pUpdateBasic) {
-                    params.put("meta_title", scraperRes.title);
-                    params.put("meta_artist", scraperRes.artist);
-                    params.put("meta_album", scraperRes.album);
-                    if (scraperRes.year != null) params.put("meta_year", scraperRes.year);
-                    if (scraperRes.genre != null) params.put("meta_genre", scraperRes.genre);
-                    if (scraperRes.coverUrl != null) params.put("meta_cover_url", scraperRes.coverUrl);
-                    metaChanged = true;
-                }
-
-                if (pFetchLyrics && (pOverwrite || tag == null || tag.getFirst(FieldKey.LYRICS).isEmpty())) {
-                    int duration = f.getAudioHeader().getTrackLength();
-                    String lrc = lyricsManager.searchLyrics(guess.getArtist(), guess.getTitle(), duration);
-                    if (lrc != null) {
-                        params.put("meta_lyrics_b64", Base64.getEncoder().encodeToString(lrc.getBytes(StandardCharsets.UTF_8)));
-                        metaChanged = true;
-                    }
-                }
-
-                if (metaChanged) {
-                    rec.setChanged(true);
-                    rec.setOpType(OperationType.SCRAPER);
-                    rec.getExtraParams().putAll(params);
-                    rec.getExtraParams().put("scraper_active", "true");
-                    if (pOverwrite) rec.getExtraParams().put("scraper_overwrite", "true");
-                    rec.setNewName("[更新] " + file.getName());
-                }
-            } catch (Exception e) {
-                logError("处理文件失败: " + file.getName() + ", 错误: " + e.getMessage());
-            }
+        
+        MetadataSource source = sources.get(pSource);
+        if (source == null) {
+            logError("未找到数据源: " + pSource);
+            return Collections.emptyList();
         }
+        
+        processor.setSource(source);
+        processor.setLyricsConfig(lyricsConfig);
+        processor.setCoverConfig(coverConfig);
+        processor.setAlbumInfoConfig(albumInfoConfig);
 
-        String dirPath = parentDir.getAbsolutePath();
-        boolean isFirstVisit = processedAlbumDirs.add(dirPath);
+        try {
+            AudioFile f = AudioFileIO.read(file);
+            Tag tag = f.getTag();
+            int duration = f.getAudioHeader().getTrackLength();
 
-        if (isFirstVisit && (pSaveCoverFile || pSaveAlbumInfo)) {
-            ScrapedResult albumRes = null;
-            if (pSource.contains("iTunes") || pSource.contains("MusicBrainz") || pSource.contains("Last.fm")) {
-                String searchAlbum = guess.getAlbum();
-                if (searchAlbum != null && !searchAlbum.isEmpty() && !searchAlbum.equals("Unknown Album")) {
-                    String cacheKey = guess.getArtist() + "|" + searchAlbum + "|album";
-                    if (pUseCache && metadataCache.containsKey(cacheKey)) {
-                        albumRes = metadataCache.get(cacheKey);
-                        log("使用缓存专辑数据: " + cacheKey);
+            if (lyricsConfig.isEnabled()) {
+                boolean hasLyricsField = true;
+                try {
+                    tag.getFirst(FieldKey.LYRICS);
+                } catch (Exception e) {
+                    hasLyricsField = false;
+                }
+                
+                boolean processLyrics = lyricsConfig.getDuplicateMode() == ModuleConfig.DuplicateMode.OVERWRITE 
+                    || tag == null || (hasLyricsField && tag.getFirst(FieldKey.LYRICS).isEmpty());
+                
+                if (processLyrics) {
+                    rec.getExtraParams().put("process_lyrics_start", "开始处理歌词: " + guess.getArtist() + " - " + guess.getTitle());
+                    rec.getExtraParams().put("process_lyrics_source", source.getSourceName());
+                    
+                    if (processor.processLyrics(guess.getArtist(), guess.getTitle(), duration, file)) {
+                        rec.setChanged(true);
+                        rec.setOpType(OperationType.SCRAPER);
+                        rec.getExtraParams().put("scraper_active", "true");
+                        rec.getExtraParams().put("process_lyrics_result", "成功获取歌词");
+                        rec.setNewName("[更新] " + file.getName());
                     } else {
-                        albumRes = searchMetadata(guess.getArtist(), searchAlbum, true);
-                        if (pUseCache && albumRes != null) {
-                            metadataCache.put(cacheKey, albumRes);
-                        }
+                        rec.getExtraParams().put("process_lyrics_result", "未找到歌词");
                     }
                 }
             }
 
-            if (pSaveCoverFile) {
-                String coverUrl = (albumRes != null) ? albumRes.coverUrl : (scraperRes != null ? scraperRes.coverUrl : null);
-                if (coverUrl != null) {
-                    File targetCover = new File(parentDir, "cover.jpg");
-                    if (pOverwrite || !targetCover.exists()) {
+            if (coverConfig.isEnabled()) {
+                File targetCover = new File(parentDir, "cover.jpg");
+                boolean processCover = coverConfig.getDuplicateMode() == ModuleConfig.DuplicateMode.OVERWRITE 
+                    || !targetCover.exists();
+                
+                if (processCover) {
+                    rec.getExtraParams().put("process_cover_start", "开始处理封面: " + guess.getArtist() + " - " + guess.getAlbum());
+                    rec.getExtraParams().put("process_cover_source", source.getSourceName());
+                    
+                    if (processor.processCover(guess.getArtist(), guess.getAlbum(), parentDir)) {
                         Map<String, String> p = new HashMap<>();
-                        p.put("url", coverUrl);
+                        p.put("task_type", "DOWNLOAD_COVER");
+                        p.put("process_cover_result", "成功获取封面");
                         ChangeRecord coverRec = new ChangeRecord("下载: 专辑封面", "cover.jpg", parentDir,
                                 true, targetCover.getAbsolutePath(), OperationType.SCRAPER, p, ExecStatus.PENDING);
-                        coverRec.getExtraParams().put("task_type", "DOWNLOAD_COVER");
                         results.add(coverRec);
-                    }
-                }
-            }
-
-            if (pSaveAlbumInfo) {
-                File targetInfo = new File(parentDir, "AlbumInfo.txt");
-                if (pOverwrite || !targetInfo.exists()) {
-                    Map<String, String> p = new HashMap<>();
-                    if (albumRes != null) {
-                        p.put("intro", albumRes.intro != null ? albumRes.intro : "");
-                        p.put("album", albumRes.album);
-                        p.put("artist", albumRes.artist);
-                        p.put("year", albumRes.year);
-                        p.put("genre", albumRes.genre);
                     } else {
-                        p.put("album", guess.getAlbum());
-                        p.put("artist", guess.getArtist());
+                        rec.getExtraParams().put("process_cover_result", "未找到封面");
                     }
-
-                    ChangeRecord infoRec = new ChangeRecord("生成: 专辑资料", "AlbumInfo.txt", parentDir,
-                            true, targetInfo.getAbsolutePath(), OperationType.SCRAPER, p, ExecStatus.PENDING);
-                    infoRec.getExtraParams().put("task_type", "GENERATE_INFO");
-                    results.add(infoRec);
                 }
             }
+
+            if (albumInfoConfig.isEnabled()) {
+                File targetInfo = new File(parentDir, "AlbumInfo.txt");
+                boolean processInfo = albumInfoConfig.getDuplicateMode() == ModuleConfig.DuplicateMode.OVERWRITE 
+                    || !targetInfo.exists();
+                
+                if (processInfo) {
+                    rec.getExtraParams().put("process_album_start", "开始处理专辑信息: " + guess.getArtist() + " - " + guess.getAlbum());
+                    rec.getExtraParams().put("process_album_source", source.getSourceName());
+                    
+                    if (processor.processAlbumInfo(guess.getArtist(), guess.getAlbum(), parentDir)) {
+                        Map<String, String> p = new HashMap<>();
+                        p.put("task_type", "GENERATE_INFO");
+                        p.put("process_album_result", "成功获取专辑信息");
+                        ChangeRecord infoRec = new ChangeRecord("生成: 专辑资料", "AlbumInfo.txt", parentDir,
+                                true, targetInfo.getAbsolutePath(), OperationType.SCRAPER, p, ExecStatus.PENDING);
+                        results.add(infoRec);
+                    } else {
+                        rec.getExtraParams().put("process_album_result", "未找到专辑信息");
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logError("处理文件失败: " + file.getName() + ", 错误: " + e.getMessage());
         }
+        
         return results;
     }
 
@@ -565,44 +479,6 @@ public class MetadataScraperStrategy extends IAppStrategy {
     private void setTag(Tag tag, FieldKey key, String val, boolean overwrite) throws Exception {
         if (val != null && !val.isEmpty()) {
             if (overwrite || tag.getFirst(key).isEmpty()) tag.setField(key, val);
-        }
-    }
-
-    private ScrapedResult searchMetadata(String artist, String titleOrAlbum, boolean isAlbumSearch) {
-        String term = artist + " " + titleOrAlbum;
-        String entity = isAlbumSearch ? "album" : "song";
-        String urlStr;
-        try {
-            urlStr = "https://itunes.apple.com/search?term=" + URLEncoder.encode(term, "UTF-8") + "&media=music&entity=" + entity + "&limit=1";
-        } catch (Exception e) {
-            logError("URL编码失败: " + e.getMessage());
-            return null;
-        }
-        
-        try {
-            String json = httpGet(urlStr);
-            if (json == null || !json.contains("resultCount")) return null;
-            
-            ScrapedResult res = new ScrapedResult();
-            res.artist = extractJsonValue(json, "artistName");
-            res.album = extractJsonValue(json, "collectionName");
-            res.genre = extractJsonValue(json, "primaryGenreName");
-            res.title = isAlbumSearch ? null : extractJsonValue(json, "trackName");
-
-            String date = extractJsonValue(json, "releaseDate");
-            if (date != null && date.length() >= 4) res.year = date.substring(0, 4);
-
-            String artwork = extractJsonValue(json, "artworkUrl100");
-            if (artwork != null) res.coverUrl = artwork.replace("100x100", "600x600");
-
-            if (isAlbumSearch) {
-                String copyright = extractJsonValue(json, "copyright");
-                if (copyright != null) res.intro = "Copyright: " + copyright;
-            }
-            return res;
-        } catch (Exception e) {
-            logError("元数据搜索失败: " + e.getMessage());
-            return null;
         }
     }
 
