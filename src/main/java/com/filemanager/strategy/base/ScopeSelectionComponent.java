@@ -88,8 +88,7 @@ public class ScopeSelectionComponent implements IConfigComponent {
         configBox.setSpacing(10);
 
         configBox.getChildren().addAll(
-                StyleFactory.createChapter("生效范围设置"),
-                StyleFactory.createParamPairLine("生效范围:", cbScope)
+                StyleFactory.createParamPairLine("文件选取范围:", cbScope)
         );
 
         return configBox;

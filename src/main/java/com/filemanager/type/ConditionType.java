@@ -42,7 +42,11 @@ public enum ConditionType {
     PARENT_HAS_EXT("父目录包含扩展名 (逗号分隔)"),
     PARENT_NOT_HAS_EXT("父目录不包含扩展名"),
     
-    // --- 7. CUE音轨检查 (新增) ---
+    // --- 7. 目录文件模式检查 (新增) ---
+    DIR_HAS_PATTERN("目录包含匹配文件模式的文件"),
+    DIR_NOT_HAS_PATTERN("目录不包含匹配文件模式的文件"),
+    
+    // --- 8. CUE音轨检查 (新增) ---
     IS_CUE_TRACK("是CUE音轨文件"),
     IS_NOT_CUE_TRACK("不是CUE音轨文件");
 

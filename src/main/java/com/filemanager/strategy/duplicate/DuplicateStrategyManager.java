@@ -81,7 +81,7 @@ public class DuplicateStrategyManager {
      * @param keepLargest 是否保留最大文件
      * @param keepNewest 是否保留最新文件
      * @param audioSpecial 是否对音频文件进行特殊处理
-     * @param keepExt 优先保留的文件扩展名
+     * @param keepExt 文件类型优先级顺序
      * @return 默认的策略管理器
      */
     public static DuplicateStrategyManager createDefaultManager(

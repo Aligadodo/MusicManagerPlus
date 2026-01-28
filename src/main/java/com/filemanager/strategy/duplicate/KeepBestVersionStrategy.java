@@ -117,15 +117,26 @@ public class KeepBestVersionStrategy implements DuplicateStrategy {
      */
     private class FileQualityComparator implements Comparator<File> {
         @Override
-        public int compare(File f1, File f2) {
-            // 1. 优先比较文件扩展名
-            if (keepExt != null && !keepExt.isEmpty()) {
-                boolean k1 = f1.getName().toLowerCase().endsWith("." + keepExt.toLowerCase());
-                boolean k2 = f2.getName().toLowerCase().endsWith("." + keepExt.toLowerCase());
-                if (k1 != k2) {
-                    return k1 ? -1 : 1; // 优先保留指定扩展名
+            public int compare(File f1, File f2) {
+                // 1. 优先比较文件扩展名（支持优先级顺序）
+                if (keepExt != null && !keepExt.isEmpty()) {
+                    List<String> extPriorities = new ArrayList<>();
+                    for (String ext : keepExt.split(",")) {
+                        extPriorities.add(ext.trim().toLowerCase());
+                    }
+                    
+                    String ext1 = getFileExtension(f1);
+                    String ext2 = getFileExtension(f2);
+                    
+                    int idx1 = extPriorities.indexOf(ext1);
+                    int idx2 = extPriorities.indexOf(ext2);
+                    
+                    if (idx1 != idx2) {
+                        if (idx1 == -1) return 1; // f1不在优先级列表，f2优先
+                        if (idx2 == -1) return -1; // f2不在优先级列表，f1优先
+                        return Integer.compare(idx1, idx2); // 索引小的优先级高
+                    }
                 }
-            }
             
             // 2. 检查是否是音频文件
             String ext1 = getFileExtension(f1);

@@ -119,7 +119,13 @@ public class RuleCondition {
                 case PARENT_NOT_HAS_EXT:
                     return checkParentHasExtension(f, value, false);
                 
-                // 7. CUE音轨检查
+                // 7. 目录文件模式检查
+                case DIR_HAS_PATTERN:
+                    return checkDirectoryHasPattern(f, value, true);
+                case DIR_NOT_HAS_PATTERN:
+                    return checkDirectoryHasPattern(f, value, false);
+                
+                // 8. CUE音轨检查
                 case IS_CUE_TRACK:
                     return isCueTrackFile(f);
                 case IS_NOT_CUE_TRACK:
@@ -195,6 +201,48 @@ public class RuleCondition {
         
         // 没有找到匹配的文件
         return !matchIfFound;
+    }  
+
+    /**
+     * 检查目录下是否包含匹配文件模式的文件
+     * @param f 待检测的文件对象
+     * @param pattern 文件模式（如 *.mp3,*.flac）
+     * @param matchIfFound 如果找到匹配的文件是否返回true
+     * @return 是否满足条件
+     */
+    private boolean checkDirectoryHasPattern(File f, String pattern, boolean matchIfFound) {
+        if (f == null || pattern == null || pattern.isEmpty()) return false;
+        
+        // 获取父目录
+        File parentDir = f.getParentFile();
+        if (parentDir == null || !parentDir.isDirectory()) return false;
+        
+        // 解析文件模式列表
+        String[] patterns = pattern.split(",");
+        for (String p : patterns) {
+            String trimmedPattern = p.trim();
+            File[] files = parentDir.listFiles(file -> matchesPattern(file.getName(), trimmedPattern));
+            if (files != null && files.length > 0) {
+                return matchIfFound;
+            }
+        }
+        
+        // 没有找到匹配的文件
+        return !matchIfFound;
+    }
+
+    /**
+     * 检查文件名是否匹配通配符模式
+     * @param fileName 文件名
+     * @param pattern 文件模式（如 *.mp3）
+     * @return 是否匹配
+     */
+    private boolean matchesPattern(String fileName, String pattern) {
+        // 简单的通配符匹配
+        String regex = pattern.replace(".", "\\.")
+                             .replace("*", ".*")
+                             .replace("?", ".");
+        return fileName.matches(regex);
     }  
 
     /**

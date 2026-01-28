@@ -12,18 +12,18 @@ package com.filemanager.strategy;
 import com.filemanager.app.base.IAppStrategy;
 import com.filemanager.app.tools.display.StyleFactory;
 import com.filemanager.model.ChangeRecord;
+import com.filemanager.model.RuleCondition;
 import com.filemanager.strategy.base.PathSelectionComponent;
 import com.filemanager.strategy.base.ScopeSelectionComponent;
 import com.filemanager.strategy.duplicate.DuplicateStrategyConfig;
 import com.filemanager.strategy.duplicate.DuplicateStrategyManager;
+import com.filemanager.type.ConditionType;
 import com.filemanager.type.ExecStatus;
 import com.filemanager.type.OperationType;
 import com.filemanager.type.ScanTarget;
 import com.google.common.collect.Lists;
 import javafx.scene.Node;
-import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
-import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
 import com.filemanager.app.tools.display.FloatingTooltip;
 
@@ -36,19 +36,9 @@ public class FileMigrateStrategy extends IAppStrategy {
     private final PathSelectionComponent pathSelectionComponent;
     private final ScopeSelectionComponent scopeSelectionComponent;
     private final ComboBox<String> cbOperationMode;
-    private final CheckBox chkOverwriteExisting;
-    private final CheckBox chkCleanEmpty;
-    private final TextField txtFilePattern;
-    private final CheckBox chkRequireFilePattern;
-    private final CheckBox chkExcludeFilePattern;
     private final DuplicateStrategyConfig duplicateStrategyConfig;
     
     protected String pOperationMode; // COPY or MOVE
-    protected boolean pOverwriteExisting;
-    protected boolean pCleanEmpty;
-    protected String pFilePattern;
-    protected boolean pRequireFilePattern;
-    protected boolean pExcludeFilePattern;
     protected DuplicateStrategyManager strategyManager;
 
     private static final String[] OPERATION_MODES = {
@@ -76,59 +66,6 @@ public class FileMigrateStrategy extends IAppStrategy {
         operationModeTooltipLines.add("- 复制：保留源文件，在目标位置创建副本");
         FloatingTooltip.bindToNode(cbOperationMode, "文件批量归档设置", operationModeTooltipLines);
         
-        // 文件模式输入
-        txtFilePattern = new TextField();
-        txtFilePattern.setPromptText("输入文件模式 (如: *.mp3,*.flac)");
-        
-        ArrayList<String> filePatternTooltipLines = new ArrayList<>();
-        filePatternTooltipLines.add("参数名称：文件模式");
-        filePatternTooltipLines.add("参数用途：设置前置条件检查的文件模式");
-        filePatternTooltipLines.add("示例：");
-        filePatternTooltipLines.add("- *.mp3,*.flac：匹配MP3和FLAC文件");
-        filePatternTooltipLines.add("- *.jpg：匹配JPG图片文件");
-        FloatingTooltip.bindToNode(txtFilePattern, "前置条件设置", filePatternTooltipLines);
-        
-        // 文件模式检查选项
-        chkRequireFilePattern = new CheckBox("要求存在匹配文件");
-        chkRequireFilePattern.setSelected(false);
-        
-        ArrayList<String> requireTooltipLines = new ArrayList<>();
-        requireTooltipLines.add("参数名称：要求存在匹配文件");
-        requireTooltipLines.add("参数用途：当勾选时，只有当目录中存在匹配文件模式的文件时才执行操作");
-        FloatingTooltip.bindToNode(chkRequireFilePattern, "前置条件设置", requireTooltipLines);
-
-        chkExcludeFilePattern = new CheckBox("排除存在匹配文件");
-        chkExcludeFilePattern.setSelected(false);
-        
-        ArrayList<String> excludeTooltipLines = new ArrayList<>();
-        excludeTooltipLines.add("参数名称：排除存在匹配文件");
-        excludeTooltipLines.add("参数用途：当勾选时，当目录中存在匹配文件模式的文件时不执行操作");
-        FloatingTooltip.bindToNode(chkExcludeFilePattern, "前置条件设置", excludeTooltipLines);
-
-        // 覆盖选项
-        chkOverwriteExisting = new CheckBox("覆盖已存在的文件");
-        chkOverwriteExisting.setSelected(false);
-        
-        ArrayList<String> overwriteTooltipLines = new ArrayList<>();
-        overwriteTooltipLines.add("参数名称：覆盖已存在文件");
-        overwriteTooltipLines.add("参数用途：当目标位置已存在同名文件时的处理方式");
-        overwriteTooltipLines.add("选项：");
-        overwriteTooltipLines.add("- 启用：覆盖已存在的文件");
-        overwriteTooltipLines.add("- 禁用：跳过已存在的文件");
-        FloatingTooltip.bindToNode(chkOverwriteExisting, "文件批量归档设置", overwriteTooltipLines);
-
-        // 清理空文件夹选项
-        chkCleanEmpty = new CheckBox("清理源空文件夹");
-        chkCleanEmpty.setSelected(false);
-        
-        ArrayList<String> cleanEmptyTooltipLines = new ArrayList<>();
-        cleanEmptyTooltipLines.add("参数名称：清理空文件夹");
-        cleanEmptyTooltipLines.add("参数用途：在移动文件后清理源位置的空文件夹");
-        cleanEmptyTooltipLines.add("选项：");
-        cleanEmptyTooltipLines.add("- 启用：移动后清理源空文件夹");
-        cleanEmptyTooltipLines.add("- 禁用：移动后不清理源空文件夹");
-        FloatingTooltip.bindToNode(chkCleanEmpty, "文件批量归档设置", cleanEmptyTooltipLines);
-        
         // 去重策略配置
         duplicateStrategyConfig = new DuplicateStrategyConfig();
     }
@@ -149,11 +86,6 @@ public class FileMigrateStrategy extends IAppStrategy {
         scopeSelectionComponent.captureParams();
         duplicateStrategyConfig.captureParams();
         pOperationMode = cbOperationMode.getValue().contains("移动") ? "MOVE" : "COPY";
-        pOverwriteExisting = chkOverwriteExisting.isSelected();
-        pCleanEmpty = chkCleanEmpty.isSelected();
-        pFilePattern = txtFilePattern.getText();
-        pRequireFilePattern = chkRequireFilePattern.isSelected();
-        pExcludeFilePattern = chkExcludeFilePattern.isSelected();
         
         // 获取去重策略管理器
         strategyManager = duplicateStrategyConfig.getStrategyManager();
@@ -170,11 +102,6 @@ public class FileMigrateStrategy extends IAppStrategy {
         scopeSelectionComponent.saveConfig(props);
         duplicateStrategyConfig.saveConfig(props);
         props.setProperty("fms_operation_mode", cbOperationMode.getValue());
-        props.setProperty("fms_overwrite", String.valueOf(chkOverwriteExisting.isSelected()));
-        props.setProperty("fms_clean_empty", String.valueOf(chkCleanEmpty.isSelected()));
-        props.setProperty("fms_file_pattern", txtFilePattern.getText());
-        props.setProperty("fms_require_file_pattern", String.valueOf(chkRequireFilePattern.isSelected()));
-        props.setProperty("fms_exclude_file_pattern", String.valueOf(chkExcludeFilePattern.isSelected()));
     }
 
     @Override
@@ -184,21 +111,6 @@ public class FileMigrateStrategy extends IAppStrategy {
         duplicateStrategyConfig.loadConfig(props);
         if (props.containsKey("fms_operation_mode")) {
             cbOperationMode.getSelectionModel().select(props.getProperty("fms_operation_mode"));
-        }
-        if (props.containsKey("fms_overwrite")) {
-            chkOverwriteExisting.setSelected(Boolean.parseBoolean(props.getProperty("fms_overwrite")));
-        }
-        if (props.containsKey("fms_clean_empty")) {
-            chkCleanEmpty.setSelected(Boolean.parseBoolean(props.getProperty("fms_clean_empty")));
-        }
-        if (props.containsKey("fms_file_pattern")) {
-            txtFilePattern.setText(props.getProperty("fms_file_pattern"));
-        }
-        if (props.containsKey("fms_require_file_pattern")) {
-            chkRequireFilePattern.setSelected(Boolean.parseBoolean(props.getProperty("fms_require_file_pattern")));
-        }
-        if (props.containsKey("fms_exclude_file_pattern")) {
-            chkExcludeFilePattern.setSelected(Boolean.parseBoolean(props.getProperty("fms_exclude_file_pattern")));
         }
         
         // 获取去重策略管理器
@@ -211,12 +123,7 @@ public class FileMigrateStrategy extends IAppStrategy {
         box.getChildren().addAll(
                 pathSelectionComponent.getConfigNode(),
                 scopeSelectionComponent.getConfigNode(),
-                StyleFactory.createChapter("操作设置"),
                 StyleFactory.createParamPairLine("操作模式:", cbOperationMode),
-                StyleFactory.createHBox(chkOverwriteExisting, chkCleanEmpty),
-                StyleFactory.createChapter("前置条件设置"),
-                StyleFactory.createParamPairLine("文件模式:", txtFilePattern),
-                StyleFactory.createHBox(chkRequireFilePattern, chkExcludeFilePattern),
                 duplicateStrategyConfig.getConfigNode()
         );
         return box;
@@ -235,7 +142,7 @@ public class FileMigrateStrategy extends IAppStrategy {
         }
         
         // 检查目标文件是否存在
-        if (target.exists() && !pOverwriteExisting) {
+        if (target.exists()) {
             // 使用去重策略处理
             List<File> duplicates = Arrays.asList(source, target);
             List<File> processedFiles = strategyManager.processDuplicates(duplicates);
@@ -248,18 +155,9 @@ public class FileMigrateStrategy extends IAppStrategy {
         }
         
         if ("MOVE".equals(pOperationMode)) {
-            Files.move(source.toPath(), target.toPath(), 
-                pOverwriteExisting ? StandardCopyOption.REPLACE_EXISTING : StandardCopyOption.ATOMIC_MOVE);
+            Files.move(source.toPath(), target.toPath(), StandardCopyOption.ATOMIC_MOVE);
         } else { // COPY
-            Files.copy(source.toPath(), target.toPath(), 
-                pOverwriteExisting ? StandardCopyOption.REPLACE_EXISTING : StandardCopyOption.COPY_ATTRIBUTES);
-        }
-
-        if ("MOVE".equals(pOperationMode) && pCleanEmpty && "true".equals(rec.getExtraParams().get("cleanSource"))) {
-            File parent = source.getParentFile();
-            if (parent != null && parent.isDirectory() && Objects.requireNonNull(parent.list()).length == 0) {
-                parent.delete();
-            }
+            Files.copy(source.toPath(), target.toPath(), StandardCopyOption.COPY_ATTRIBUTES);
         }
     }
 
@@ -267,11 +165,6 @@ public class FileMigrateStrategy extends IAppStrategy {
     public List<ChangeRecord> analyze(ChangeRecord rec, List<ChangeRecord> inputRecords, List<File> rootDirs) {
         // 检查生效范围
         if (!isInScope(rec.getFileHandle())) {
-            return Collections.emptyList();
-        }
-        
-        // 检查前置条件
-        if (!checkPreconditions(rec.getFileHandle())) {
             return Collections.emptyList();
         }
         
@@ -283,19 +176,14 @@ public class FileMigrateStrategy extends IAppStrategy {
         
         File targetFile = new File(targetPath);
 
-        if (!pOverwriteExisting && targetFile.exists()) {
+        if (targetFile.exists()) {
             log("跳过已存在的文件: " + targetFile.getName());
             return Collections.emptyList();
         }
 
-        Map<String, String> extraParams = new HashMap<>();
-        if ("MOVE".equals(pOperationMode) && pCleanEmpty) {
-            extraParams.put("cleanSource", "true");
-        }
-
         OperationType opType = OperationType.MOVE;
         return Lists.newArrayList(new ChangeRecord(rec.getOriginalName(), targetFile.getName(), rec.getFileHandle(), true,
-                targetFile.getAbsolutePath(), opType, extraParams, ExecStatus.PENDING));
+                targetFile.getAbsolutePath(), opType, new HashMap<>(), ExecStatus.PENDING));
     }
 
     private boolean isInScope(File file) {
@@ -308,67 +196,6 @@ public class FileMigrateStrategy extends IAppStrategy {
             return file.isDirectory();
         }
         return true;
-    }
-
-    private boolean checkPreconditions(File file) {
-        File parentDir = file.getParentFile();
-        if (parentDir == null) {
-            parentDir = file.isDirectory() ? file : new File(".");
-        }
-        
-        // 检查文件模式前置条件
-        if (!pFilePattern.isEmpty()) {
-            boolean hasMatchingFile = hasMatchingFiles(parentDir, pFilePattern);
-            
-            if (pRequireFilePattern && !hasMatchingFile) {
-                log("跳过文件（缺少要求的文件模式）: " + file.getName());
-                return false;
-            }
-            
-            if (pExcludeFilePattern && hasMatchingFile) {
-                log("跳过文件（存在排除的文件模式）: " + file.getName());
-                return false;
-            }
-        }
-        
-        return true;
-    }
-
-    private boolean hasMatchingFile(File directory, String pattern) {
-        String[] patterns = pattern.split(",");
-        for (String p : patterns) {
-            String trimmedPattern = p.trim();
-            File[] files = directory.listFiles(f -> matchesPattern(f.getName(), trimmedPattern));
-            if (files != null && files.length > 0) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean hasMatchingFiles(File directory, String pattern) {
-        if (!directory.isDirectory()) {
-            return false;
-        }
-        
-        String[] patterns = pattern.split(",");
-        for (String p : patterns) {
-            String trimmedPattern = p.trim();
-            File[] files = directory.listFiles(f -> matchesPattern(f.getName(), trimmedPattern));
-            if (files != null && files.length > 0) {
-                return true;
-            }
-        }
-        
-        return false;
-    }
-
-    private boolean matchesPattern(String fileName, String pattern) {
-        // 简单的通配符匹配
-        String regex = pattern.replace(".", "\\.")
-                             .replace("*", ".*")
-                             .replace("?", ".");
-        return fileName.matches(regex);
     }
 
     private String buildTargetPath(File sourceFile) {

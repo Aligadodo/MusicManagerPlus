@@ -153,8 +153,7 @@ public class PathSelectionComponent implements IConfigComponent {
         pathLine.managedProperty().bind(pathLine.visibleProperty());
 
         configBox.getChildren().addAll(
-                StyleFactory.createChapter("输出设置"),
-                StyleFactory.createParamPairLine("输出目录模式:", cbOutputDirMode),
+                StyleFactory.createParamPairLine("目标路径模式:", cbOutputDirMode),
                 pathLine
         );
 

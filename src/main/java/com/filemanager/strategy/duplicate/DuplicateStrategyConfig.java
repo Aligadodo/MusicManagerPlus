@@ -75,7 +75,7 @@ public class DuplicateStrategyConfig {
         FloatingTooltip.bindToNode(chkKeepNewest, "去重策略设置", keepNewestTooltipLines);
         
         // 音频文件特殊处理
-        chkAudioSpecial = new CheckBox("音频文件特殊处理");
+        chkAudioSpecial = new CheckBox("音频文件自动选择最优音质");
         chkAudioSpecial.setSelected(true);
         
         ArrayList<String> audioSpecialTooltipLines = new ArrayList<>();
@@ -83,17 +83,22 @@ public class DuplicateStrategyConfig {
         audioSpecialTooltipLines.add("参数用途：对音频文件进行特殊处理，根据码率等因素选择最佳版本");
         FloatingTooltip.bindToNode(chkAudioSpecial, "去重策略设置", audioSpecialTooltipLines);
         
-        // 优先保留的扩展名
+        // 文件类型优先级顺序
         txtKeepExt = new JFXTextField();
-        txtKeepExt.setPromptText("优先保留的文件扩展名 (如: flac,mp3)");
+        txtKeepExt.setPromptText("文件类型优先级顺序 (如: flac,mp3,wav)");
         
         ArrayList<String> keepExtTooltipLines = new ArrayList<>();
-        keepExtTooltipLines.add("参数名称：优先保留的扩展名");
-        keepExtTooltipLines.add("参数用途：在选择最佳版本时，优先保留指定扩展名的文件");
+        keepExtTooltipLines.add("参数名称：文件类型优先级顺序");
+        keepExtTooltipLines.add("参数用途：在选择最佳版本时，按照优先级顺序保留文件类型");
         keepExtTooltipLines.add("示例：");
-        keepExtTooltipLines.add("- flac：优先保留FLAC文件");
-        keepExtTooltipLines.add("- mp3：优先保留MP3文件");
+        keepExtTooltipLines.add("- flac,mp3,wav：优先保留FLAC，其次MP3，最后WAV");
+        keepExtTooltipLines.add("- jpg,png,gif：优先保留JPG，其次PNG，最后GIF");
         FloatingTooltip.bindToNode(txtKeepExt, "去重策略设置", keepExtTooltipLines);
+        
+        // 添加策略选择监听器
+        cbStrategy.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
+            updateUIForStrategy(newVal);
+        });
         
         // 初始化策略管理器
         this.strategyManager = DuplicateStrategyManager.createDefaultManager(
@@ -110,14 +115,58 @@ public class DuplicateStrategyConfig {
      */
     public Node getConfigNode() {
         VBox box = new VBox(10);
-        box.getChildren().addAll(
-                StyleFactory.createChapter("去重策略设置"),
-                StyleFactory.createParamPairLine("去重策略:", cbStrategy),
+        
+        // 去重策略设置
+        VBox strategyBox = new VBox(10);
+        strategyBox.getChildren().addAll(
+                StyleFactory.createParamPairLine("重复文件模式:", cbStrategy)
+        );
+        
+        // 子参数设置框
+        VBox subParamsBox = new VBox(10);
+        subParamsBox.getChildren().addAll(
                 StyleFactory.createHBox(chkKeepLargest, chkKeepNewest),
                 StyleFactory.createHBox(chkAudioSpecial),
-                StyleFactory.createParamPairLine("优先保留的扩展名:", txtKeepExt)
+                StyleFactory.createParamPairLine("文件类型优先级顺序:", txtKeepExt)
         );
+        
+        box.getChildren().addAll(
+                strategyBox,
+                subParamsBox
+        );
+        
+        // 初始化UI状态
+        updateUIForStrategy(cbStrategy.getValue());
+        
         return box;
+    }
+    
+    /**
+     * 根据选择的策略更新UI
+     * @param strategy 策略名称
+     */
+    private void updateUIForStrategy(String strategy) {
+        if ("添加序号".equals(strategy)) {
+            // 添加序号策略时隐藏这些选项
+            chkKeepLargest.setVisible(false);
+            chkKeepLargest.setManaged(false);
+            chkKeepNewest.setVisible(false);
+            chkKeepNewest.setManaged(false);
+            chkAudioSpecial.setVisible(false);
+            chkAudioSpecial.setManaged(false);
+            txtKeepExt.setVisible(false);
+            txtKeepExt.setManaged(false);
+        } else {
+            // 保留最佳版本策略时显示这些选项
+            chkKeepLargest.setVisible(true);
+            chkKeepLargest.setManaged(true);
+            chkKeepNewest.setVisible(true);
+            chkKeepNewest.setManaged(true);
+            chkAudioSpecial.setVisible(true);
+            chkAudioSpecial.setManaged(true);
+            txtKeepExt.setVisible(true);
+            txtKeepExt.setManaged(true);
+        }
     }
     
     /**
