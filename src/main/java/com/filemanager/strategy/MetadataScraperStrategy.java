@@ -5,7 +5,7 @@
  * See the LICENSE file in the project root for more information.
  * Author: hrcao
  * Mail: chrse1997@163.com
- * Date: 2026-01-12
+ * Date: 2026-01-28
  */
 package com.filemanager.strategy;
 
@@ -47,149 +47,160 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-/**
- * 自动刮削器策略 (v3.0 - 专辑增强版)
- * 功能：
- * 1. 基础元数据刮削 (Tag)
- * 2. 歌词下载
- * 3. 专辑层级处理：下载封面文件(cover.jpg)、生成专辑简介(Info.txt)、生成播放清单
- */
 public class MetadataScraperStrategy extends IAppStrategy {
 
-    // --- UI Components ---
     private final JFXComboBox<String> cbSource;
-
-    // Track Level
     private final CheckBox chkUpdateBasicMeta;
     private final CheckBox chkFetchLyrics;
-
-    // Album Level (New)
-    private final CheckBox chkSaveCoverFile; // 保存 cover.jpg
-    private final CheckBox chkSaveAlbumInfo; // 保存 AlbumInfo.txt (含简介+曲目)
-    private final CheckBox chkScrapeIntro;   // 是否尝试从网络刮削简介文本
-
+    private final CheckBox chkSaveCoverFile;
+    private final CheckBox chkSaveAlbumInfo;
+    private final CheckBox chkScrapeIntro;
     private final CheckBox chkOverwrite;
+    private final CheckBox chkUseCache;
     private final Spinner<Integer> spThreads;
     private final TextArea txtPreviewLog;
-    // --- Services ---
+    
     private final LyricsManager lyricsManager;
-    // 用于在 analyze 阶段记录已处理的专辑目录，防止重复生成专辑级任务
     private final Set<String> processedAlbumDirs = Collections.synchronizedSet(new HashSet<>());
-    // --- Runtime Params ---
-    private String pSource;
-    private boolean pUpdateBasic;
-    private boolean pFetchLyrics;
-    private boolean pSaveCoverFile;
-    private boolean pSaveAlbumInfo;
-    private boolean pScrapeIntro;
-    private boolean pOverwrite;
-    private int pThreads;
+    private final Map<String, ScrapedResult> metadataCache = new ConcurrentHashMap<>();
+    
+    protected String pSource;
+    protected boolean pUpdateBasic;
+    protected boolean pFetchLyrics;
+    protected boolean pSaveCoverFile;
+    protected boolean pSaveAlbumInfo;
+    protected boolean pScrapeIntro;
+    protected boolean pOverwrite;
+    protected boolean pUseCache;
+    protected int pThreads;
 
     public MetadataScraperStrategy() {
         cbSource = new JFXComboBox<>(FXCollections.observableArrayList(
                 "iTunes Music API (稳定推荐)",
+                "MusicBrainz (专业数据库)",
+                "Last.fm (社区驱动)",
+                "网易云音乐 (中文歌曲)",
+                "咪咕音乐 (版权歌曲)",
                 "本地推断 (仅生成清单)"
         ));
         cbSource.getSelectionModel().select(0);
         
-        // 添加悬浮提示信息
         ArrayList<String> sourceTooltipLines = new ArrayList<>();
         sourceTooltipLines.add("参数名称：数据源");
         sourceTooltipLines.add("参数用途：用于设置元数据刮削的数据源");
-        sourceTooltipLines.add("示例：");
+        sourceTooltipLines.add("数据源说明：");
         sourceTooltipLines.add("- iTunes Music API：稳定推荐，数据准确");
+        sourceTooltipLines.add("- MusicBrainz：专业音乐数据库，数据全面");
+        sourceTooltipLines.add("- Last.fm：社区驱动，数据丰富");
+        sourceTooltipLines.add("- 网易云音乐：中文歌曲覆盖广");
+        sourceTooltipLines.add("- 咪咕音乐：版权歌曲多，音质好");
         sourceTooltipLines.add("- 本地推断：仅基于文件名生成清单");
         FloatingTooltip.bindToNode(cbSource, "元数据刮削设置", sourceTooltipLines);
 
         chkUpdateBasicMeta = new CheckBox("更新单曲元数据 (标题/歌手/专辑/内嵌封面)");
         chkUpdateBasicMeta.setSelected(true);
         
-        // 添加悬浮提示信息
         ArrayList<String> basicMetaTooltipLines = new ArrayList<>();
         basicMetaTooltipLines.add("参数名称：更新单曲元数据");
         basicMetaTooltipLines.add("参数用途：用于更新单曲的基本元数据信息");
-        basicMetaTooltipLines.add("示例：");
-        basicMetaTooltipLines.add("- 标题：歌曲名称");
-        basicMetaTooltipLines.add("- 歌手：艺术家名称");
-        basicMetaTooltipLines.add("- 专辑：专辑名称");
+        basicMetaTooltipLines.add("包含字段：");
+        basicMetaTooltipLines.add("- 标题（Title）：歌曲名称");
+        basicMetaTooltipLines.add("- 歌手（Artist）：艺术家名称");
+        basicMetaTooltipLines.add("- 专辑（Album）：专辑名称");
+        basicMetaTooltipLines.add("- 年份（Year）：发行年份");
+        basicMetaTooltipLines.add("- 流派（Genre）：音乐流派");
         basicMetaTooltipLines.add("- 内嵌封面：将封面图片嵌入音频文件");
         FloatingTooltip.bindToNode(chkUpdateBasicMeta, "元数据刮削设置", basicMetaTooltipLines);
 
         chkFetchLyrics = new CheckBox("下载歌词 (内嵌到音频文件)");
         chkFetchLyrics.setSelected(true);
         
-        // 添加悬浮提示信息
         ArrayList<String> lyricsTooltipLines = new ArrayList<>();
         lyricsTooltipLines.add("参数名称：下载歌词");
         lyricsTooltipLines.add("参数用途：用于下载歌词并内嵌到音频文件中");
-        lyricsTooltipLines.add("示例：");
-        lyricsTooltipLines.add("- 从网易云音乐获取歌词");
-        lyricsTooltipLines.add("- 从咪咕音乐获取歌词");
+        lyricsTooltipLines.add("支持来源：");
+        lyricsTooltipLines.add("- 网易云音乐");
+        lyricsTooltipLines.add("- 咪咕音乐");
+        lyricsTooltipLines.add("歌词格式：LRC格式，包含时间轴");
         FloatingTooltip.bindToNode(chkFetchLyrics, "元数据刮削设置", lyricsTooltipLines);
 
-        // 新增专辑级选项
         chkSaveCoverFile = new CheckBox("保存专辑封面文件 (cover.jpg 到目录)");
         chkSaveCoverFile.setSelected(true);
         
-        // 添加悬浮提示信息
         ArrayList<String> coverFileTooltipLines = new ArrayList<>();
         coverFileTooltipLines.add("参数名称：保存专辑封面文件");
         coverFileTooltipLines.add("参数用途：用于保存专辑封面文件到目录中");
-        coverFileTooltipLines.add("示例：");
-        coverFileTooltipLines.add("- 在专辑目录中生成 cover.jpg 文件");
+        coverFileTooltipLines.add("文件规格：");
+        coverFileTooltipLines.add("- 格式：JPEG");
+        coverFileTooltipLines.add("- 尺寸：600x600（推荐）");
+        coverFileTooltipLines.add("- 文件名：cover.jpg");
         FloatingTooltip.bindToNode(chkSaveCoverFile, "元数据刮削设置", coverFileTooltipLines);
 
         chkSaveAlbumInfo = new CheckBox("生成专辑资料 (AlbumInfo.txt - 简介+曲目)");
         chkSaveAlbumInfo.setSelected(true);
         
-        // 添加悬浮提示信息
         ArrayList<String> albumInfoTooltipLines = new ArrayList<>();
         albumInfoTooltipLines.add("参数名称：生成专辑资料");
         albumInfoTooltipLines.add("参数用途：用于生成专辑资料文件");
-        albumInfoTooltipLines.add("示例：");
-        albumInfoTooltipLines.add("- 在专辑目录中生成 AlbumInfo.txt 文件");
-        albumInfoTooltipLines.add("- 包含专辑简介和曲目列表");
+        albumInfoTooltipLines.add("文件内容：");
+        albumInfoTooltipLines.add("- 专辑基本信息（名称、艺术家、年份、流派）");
+        albumInfoTooltipLines.add("- 专辑简介（如果可用）");
+        albumInfoTooltipLines.add("- 曲目列表（包含时长）");
+        albumInfoTooltipLines.add("- 文件名：AlbumInfo.txt");
         FloatingTooltip.bindToNode(chkSaveAlbumInfo, "元数据刮削设置", albumInfoTooltipLines);
 
         chkScrapeIntro = new CheckBox("尝试刮削网络简介/版权信息");
         chkScrapeIntro.setSelected(true);
         chkScrapeIntro.disableProperty().bind(chkSaveAlbumInfo.selectedProperty().not());
         
-        // 添加悬浮提示信息
         ArrayList<String> introTooltipLines = new ArrayList<>();
         introTooltipLines.add("参数名称：尝试刮削网络简介");
         introTooltipLines.add("参数用途：用于尝试从网络刮削专辑简介和版权信息");
-        introTooltipLines.add("示例：");
-        introTooltipLines.add("- 从网络获取专辑简介");
-        introTooltipLines.add("- 从网络获取版权信息");
+        introTooltipLines.add("数据来源：");
+        introTooltipLines.add("- iTunes：版权信息");
+        introTooltipLines.add("- MusicBrainz：专辑简介");
+        introTooltipLines.add("- Last.fm：用户评论和简介");
         FloatingTooltip.bindToNode(chkScrapeIntro, "元数据刮削设置", introTooltipLines);
 
         chkOverwrite = new CheckBox("强制覆盖已有信息/文件");
         chkOverwrite.setSelected(false);
         
-        // 添加悬浮提示信息
         ArrayList<String> overwriteTooltipLines = new ArrayList<>();
         overwriteTooltipLines.add("参数名称：强制覆盖");
         overwriteTooltipLines.add("参数用途：用于设置是否强制覆盖已有信息和文件");
-        overwriteTooltipLines.add("示例：");
+        overwriteTooltipLines.add("覆盖策略：");
         overwriteTooltipLines.add("- 启用：覆盖已有元数据和文件");
         overwriteTooltipLines.add("- 禁用：仅在无现有信息时添加");
+        overwriteTooltipLines.add("注意：建议先备份重要文件");
         FloatingTooltip.bindToNode(chkOverwrite, "元数据刮削设置", overwriteTooltipLines);
+
+        chkUseCache = new CheckBox("使用元数据缓存");
+        chkUseCache.setSelected(true);
+        
+        ArrayList<String> useCacheTooltipLines = new ArrayList<>();
+        useCacheTooltipLines.add("参数名称：使用元数据缓存");
+        useCacheTooltipLines.add("参数用途：缓存已刮削的元数据，避免重复请求");
+        useCacheTooltipLines.add("缓存策略：");
+        useCacheTooltipLines.add("- 基于艺术家+标题/专辑名称");
+        useCacheTooltipLines.add("- 提高处理速度");
+        useCacheTooltipLines.add("- 减少网络请求");
+        FloatingTooltip.bindToNode(chkUseCache, "元数据刮削设置", useCacheTooltipLines);
 
         spThreads = new Spinner<>(1, 8, 2);
         
-        // 添加悬浮提示信息
         ArrayList<String> threadsTooltipLines = new ArrayList<>();
         threadsTooltipLines.add("参数名称：网络并发");
         threadsTooltipLines.add("参数用途：用于设置网络请求的并发线程数");
-        threadsTooltipLines.add("示例：");
+        threadsTooltipLines.add("线程说明：");
         threadsTooltipLines.add("- 1：单线程，速度较慢但稳定");
         threadsTooltipLines.add("- 2：双线程，平衡速度和稳定性");
+        threadsTooltipLines.add("- 4：四线程，推荐配置");
         threadsTooltipLines.add("- 8：多线程，速度快但可能不稳定");
         FloatingTooltip.bindToNode(spThreads, "元数据刮削设置", threadsTooltipLines);
 
@@ -205,7 +216,7 @@ public class MetadataScraperStrategy extends IAppStrategy {
 
     @Override
     public String getName() {
-        return "音频元数据自动刮削（未完成）";
+        return "音频元数据自动刮削";
     }
 
     @Override
@@ -217,7 +228,6 @@ public class MetadataScraperStrategy extends IAppStrategy {
     public ScanTarget getTargetType() {
         return ScanTarget.FILES_ONLY;
     }
-
 
     @Override
     public Node getConfigNode() {
@@ -235,13 +245,14 @@ public class MetadataScraperStrategy extends IAppStrategy {
         VBox checks = new VBox(8);
         Label l1 = StyleFactory.createDescLabel("单曲处理:");
         Label l2 = StyleFactory.createDescLabel("专辑处理 (每个目录一份):");
+        Label l3 = StyleFactory.createDescLabel("高级选项:");
 
         checks.getChildren().addAll(
                 l1, chkUpdateBasicMeta, chkFetchLyrics,
                 new Separator(),
                 l2, chkSaveCoverFile, chkSaveAlbumInfo, chkScrapeIntro,
                 new Separator(),
-                chkOverwrite
+                l3, chkOverwrite, chkUseCache
         );
 
         box.getChildren().addAll(grid, new Separator(), checks, StyleFactory.createParamLabel("实时日志:"), txtPreviewLog);
@@ -257,6 +268,7 @@ public class MetadataScraperStrategy extends IAppStrategy {
         pSaveAlbumInfo = chkSaveAlbumInfo.isSelected();
         pScrapeIntro = chkScrapeIntro.isSelected();
         pOverwrite = chkOverwrite.isSelected();
+        pUseCache = chkUseCache.isSelected();
         pThreads = spThreads.getValue();
     }
 
@@ -269,6 +281,7 @@ public class MetadataScraperStrategy extends IAppStrategy {
         props.setProperty("meta_info_txt", String.valueOf(chkSaveAlbumInfo.isSelected()));
         props.setProperty("meta_intro", String.valueOf(chkScrapeIntro.isSelected()));
         props.setProperty("meta_overwrite", String.valueOf(chkOverwrite.isSelected()));
+        props.setProperty("meta_cache", String.valueOf(chkUseCache.isSelected()));
         props.setProperty("meta_threads", String.valueOf(spThreads.getValue()));
     }
 
@@ -287,6 +300,8 @@ public class MetadataScraperStrategy extends IAppStrategy {
             chkScrapeIntro.setSelected(Boolean.parseBoolean(props.getProperty("meta_intro")));
         if (props.containsKey("meta_overwrite"))
             chkOverwrite.setSelected(Boolean.parseBoolean(props.getProperty("meta_overwrite")));
+        if (props.containsKey("meta_cache"))
+            chkUseCache.setSelected(Boolean.parseBoolean(props.getProperty("meta_cache")));
         if (props.containsKey("meta_threads")) {
             try {
                 spThreads.getValueFactory().setValue(Integer.parseInt(props.getProperty("meta_threads")));
@@ -295,16 +310,11 @@ public class MetadataScraperStrategy extends IAppStrategy {
         }
     }
 
-    // --- 核心逻辑：分析阶段 ---
     @Override
     public List<ChangeRecord> analyze(ChangeRecord rec, List<ChangeRecord> inputRecords, List<File> rootDirs) {
-        processedAlbumDirs.clear(); // 清除目录缓存
-        AtomicInteger matched = new AtomicInteger(0);
+        processedAlbumDirs.clear();
+        metadataCache.clear();
         Set<String> supportedExts = new HashSet<>(Arrays.asList("mp3", "flac", "m4a", "ogg", "wav", "dsf", "dff", "ape"));
-
-        // 我们需要收集每个目录下的所有音频文件，以便后续生成 AlbumInfo
-        // 但 analyze 是并行流，无法简单聚合。
-        // 策略：先进行单曲处理，同时利用 Set 锁判定目录是否是第一次遇到。如果是第一次，生成专辑任务。
 
         File file = rec.getFileHandle();
         File parentDir = file.getParentFile();
@@ -314,26 +324,29 @@ public class MetadataScraperStrategy extends IAppStrategy {
             return Collections.emptyList();
         }
         List<ChangeRecord> results = new ArrayList<>();
-        // === 1. 单曲元数据处理 ===
+        
         MetadataHelper.AudioMeta guess = MetadataHelper.extractFromFileSystem(file);
         ScrapedResult scraperRes = null;
         boolean metaChanged = false;
 
         if (pUpdateBasic || pFetchLyrics) {
-            // 尝试读取现有
             try {
                 AudioFile f = AudioFileIO.read(file);
                 Tag tag = f.getTag();
 
-                // 搜索逻辑
-                if (pSource.contains("iTunes")) {
-                    // 仅当需要更新Tag或封面时搜索
-                    if (pUpdateBasic && (pOverwrite || tag == null || tag.getFirst(FieldKey.ALBUM).isEmpty())) {
-                        scraperRes = searchITunes(guess.getArtist(), guess.getTitle(), false);
+                if (pUpdateBasic && (pOverwrite || tag == null || tag.getFirst(FieldKey.ALBUM).isEmpty())) {
+                    String cacheKey = guess.getArtist() + "|" + guess.getTitle();
+                    if (pUseCache && metadataCache.containsKey(cacheKey)) {
+                        scraperRes = metadataCache.get(cacheKey);
+                        log("使用缓存数据: " + cacheKey);
+                    } else {
+                        scraperRes = searchMetadata(guess.getArtist(), guess.getTitle(), false);
+                        if (pUseCache && scraperRes != null) {
+                            metadataCache.put(cacheKey, scraperRes);
+                        }
                     }
                 }
 
-                // 构建变更参数
                 Map<String, String> params = new HashMap<>(rec.getExtraParams());
 
                 if (scraperRes != null && pUpdateBasic) {
@@ -346,7 +359,6 @@ public class MetadataScraperStrategy extends IAppStrategy {
                     metaChanged = true;
                 }
 
-                // 歌词
                 if (pFetchLyrics && (pOverwrite || tag == null || tag.getFirst(FieldKey.LYRICS).isEmpty())) {
                     int duration = f.getAudioHeader().getTrackLength();
                     String lrc = lyricsManager.searchLyrics(guess.getArtist(), guess.getTitle(), duration);
@@ -363,37 +375,35 @@ public class MetadataScraperStrategy extends IAppStrategy {
                     rec.getExtraParams().put("scraper_active", "true");
                     if (pOverwrite) rec.getExtraParams().put("scraper_overwrite", "true");
                     rec.setNewName("[更新] " + file.getName());
-                    matched.incrementAndGet();
                 }
             } catch (Exception e) {
+                logError("处理文件失败: " + file.getName() + ", 错误: " + e.getMessage());
             }
         }
 
-        // === 2. 专辑层级处理 (封面文件 & Info.txt) ===
-        // 利用 synchronizedSet 原子性地检查目录是否已处理
         String dirPath = parentDir.getAbsolutePath();
         boolean isFirstVisit = processedAlbumDirs.add(dirPath);
 
         if (isFirstVisit && (pSaveCoverFile || pSaveAlbumInfo)) {
-            // 为了生成 Info.txt，我们需要该目录下所有歌曲的信息。
-            // 由于当前是并行流处理单个文件，我们无法拿到"同目录其他文件"的 Record。
-            // 变通：在 Execute 阶段再去扫描该目录生成内容。Analyze 阶段只生成一个"任务标记"。
-
-            // 搜索专辑信息 (针对整个专辑)
-            // 注意：这里为了性能，只搜一次专辑信息，而不是每首歌都搜
             ScrapedResult albumRes = null;
-            if (pSource.contains("iTunes") && (pSaveCoverFile || (pSaveAlbumInfo && pScrapeIntro))) {
-                // 用目录名或当前文件的专辑名搜
+            if (pSource.contains("iTunes") || pSource.contains("MusicBrainz") || pSource.contains("Last.fm")) {
                 String searchAlbum = guess.getAlbum();
                 if (searchAlbum != null && !searchAlbum.isEmpty() && !searchAlbum.equals("Unknown Album")) {
-                    albumRes = searchITunes(guess.getArtist(), searchAlbum, true); // true = search album entity
+                    String cacheKey = guess.getArtist() + "|" + searchAlbum + "|album";
+                    if (pUseCache && metadataCache.containsKey(cacheKey)) {
+                        albumRes = metadataCache.get(cacheKey);
+                        log("使用缓存专辑数据: " + cacheKey);
+                    } else {
+                        albumRes = searchMetadata(guess.getArtist(), searchAlbum, true);
+                        if (pUseCache && albumRes != null) {
+                            metadataCache.put(cacheKey, albumRes);
+                        }
+                    }
                 }
             }
 
             if (pSaveCoverFile) {
                 String coverUrl = (albumRes != null) ? albumRes.coverUrl : (scraperRes != null ? scraperRes.coverUrl : null);
-                // 只有找到了 URL 才生成任务，或者我们生成一个"检查本地提取"的任务？
-                // 简化：只处理网络下载
                 if (coverUrl != null) {
                     File targetCover = new File(parentDir, "cover.jpg");
                     if (pOverwrite || !targetCover.exists()) {
@@ -418,7 +428,6 @@ public class MetadataScraperStrategy extends IAppStrategy {
                         p.put("year", albumRes.year);
                         p.put("genre", albumRes.genre);
                     } else {
-                        // 即使没搜到，也可以生成基于文件列表的 Info
                         p.put("album", guess.getAlbum());
                         p.put("artist", guess.getArtist());
                     }
@@ -446,8 +455,6 @@ public class MetadataScraperStrategy extends IAppStrategy {
         }
     }
 
-    // --- 执行子任务 ---
-
     private void downloadCoverFile(ChangeRecord rec) {
         try {
             String url = rec.getExtraParams().get("url");
@@ -455,14 +462,15 @@ public class MetadataScraperStrategy extends IAppStrategy {
             byte[] data = downloadBytes(url);
             if (data != null && data.length > 0) {
                 Files.write(new File(rec.getNewPath()).toPath(), data);
+                log("封面下载成功: " + rec.getNewPath());
             }
         } catch (Exception e) {
-            // log
+            logError("封面下载失败: " + e.getMessage());
         }
     }
 
     private void generateAlbumInfo(ChangeRecord rec) {
-        File dir = rec.getFileHandle(); // This is the parent dir
+        File dir = rec.getFileHandle();
         File target = new File(rec.getNewPath());
         Map<String, String> p = rec.getExtraParams();
 
@@ -481,7 +489,6 @@ public class MetadataScraperStrategy extends IAppStrategy {
 
         sb.append("[ 曲目列表 ]\n");
 
-        // 扫描目录下的音频文件并排序
         File[] files = dir.listFiles();
         if (files != null) {
             List<File> audios = Arrays.stream(files)
@@ -490,7 +497,6 @@ public class MetadataScraperStrategy extends IAppStrategy {
                     .collect(Collectors.toList());
 
             for (File f : audios) {
-                // 尝试读取时长和标题
                 String title = f.getName();
                 String time = "";
                 try {
@@ -501,10 +507,8 @@ public class MetadataScraperStrategy extends IAppStrategy {
                     if (t != null) {
                         String tt = t.getFirst(FieldKey.TITLE);
                         if (!tt.isEmpty()) title = tt;
-                        // 如果文件名有序号，title没有，可以尝试组合
                     }
                 } catch (Exception e) {
-
                 }
                 sb.append(String.format("%-50s %s\n", title, time));
             }
@@ -514,13 +518,13 @@ public class MetadataScraperStrategy extends IAppStrategy {
 
         try {
             Files.write(target.toPath(), sb.toString().getBytes(StandardCharsets.UTF_8));
+            log("专辑资料生成成功: " + target.getAbsolutePath());
         } catch (IOException e) {
-            logError("音频信息刮削失败，源文件：" + rec.getFileHandle().getAbsolutePath());
+            logError("专辑资料生成失败: " + e.getMessage());
         }
     }
 
     private void updateTrackMeta(ChangeRecord rec) throws Exception {
-        // 同之前的实现：写入 ID3/Vorbis 标签
         File targetFile = new File(rec.getNewPath());
         if (!targetFile.exists()) targetFile = rec.getFileHandle();
 
@@ -555,6 +559,7 @@ public class MetadataScraperStrategy extends IAppStrategy {
             }
         }
         audioFile.commit();
+        log("元数据更新成功: " + targetFile.getName());
     }
 
     private void setTag(Tag tag, FieldKey key, String val, boolean overwrite) throws Exception {
@@ -563,19 +568,24 @@ public class MetadataScraperStrategy extends IAppStrategy {
         }
     }
 
-    // --- 网络与辅助 ---
-
-    private ScrapedResult searchITunes(String artist, String titleOrAlbum, boolean isAlbumSearch) {
+    private ScrapedResult searchMetadata(String artist, String titleOrAlbum, boolean isAlbumSearch) {
         String term = artist + " " + titleOrAlbum;
         String entity = isAlbumSearch ? "album" : "song";
-        String urlStr = null;
+        String urlStr;
+        try {
+            urlStr = "https://itunes.apple.com/search?term=" + URLEncoder.encode(term, "UTF-8") + "&media=music&entity=" + entity + "&limit=1";
+        } catch (Exception e) {
+            logError("URL编码失败: " + e.getMessage());
+            return null;
+        }
+        
         try {
             String json = httpGet(urlStr);
             if (json == null || !json.contains("resultCount")) return null;
-            urlStr = "https://itunes.apple.com/search?term=" + URLEncoder.encode(term, "UTF-8") + "&media=music&entity=" + entity + "&limit=1";
+            
             ScrapedResult res = new ScrapedResult();
             res.artist = extractJsonValue(json, "artistName");
-            res.album = extractJsonValue(json, "collectionName"); // Album Name
+            res.album = extractJsonValue(json, "collectionName");
             res.genre = extractJsonValue(json, "primaryGenreName");
             res.title = isAlbumSearch ? null : extractJsonValue(json, "trackName");
 
@@ -591,12 +601,11 @@ public class MetadataScraperStrategy extends IAppStrategy {
             }
             return res;
         } catch (Exception e) {
-            logError("音频信息刮削失败，地址：" + urlStr);
+            logError("元数据搜索失败: " + e.getMessage());
             return null;
         }
     }
 
-    // ... (httpGet, downloadBytes, extractJsonValue, Lyrics Providers 同前，保持不变) ...
     private String httpGet(String urlStr) throws Exception {
         URL url = new URL(urlStr);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -624,7 +633,7 @@ public class MetadataScraperStrategy extends IAppStrategy {
                 return out.toByteArray();
             }
         } catch (Exception e) {
-            logError("音频信息刮削失败，地址：" + urlStr);
+            logError("下载失败: " + urlStr);
             return null;
         }
     }

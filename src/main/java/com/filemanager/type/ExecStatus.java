@@ -9,4 +9,26 @@
  */
 package com.filemanager.type;
 
-public enum ExecStatus {PENDING, RUNNING, SUCCESS, FAILED, ANALYZE_FAILED, SKIPPED}
+public enum ExecStatus {
+    PENDING("等待中"),
+    RUNNING("运行中"),
+    SUCCESS("成功"),
+    FAILED("失败"),
+    ANALYZE_FAILED("分析失败"),
+    SKIPPED("已跳过");
+
+    private final String description;
+
+    ExecStatus(String description) {
+        this.description = description;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    @Override
+    public String toString() {
+        return description;
+    }
+}

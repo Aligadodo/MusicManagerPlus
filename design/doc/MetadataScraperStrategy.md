@@ -10,11 +10,14 @@
 
 ## 核心职责
 
-1. 从在线源抓取元数据
-2. 支持网易云音乐、咪咕音乐等
+1. 从多个在线源抓取元数据
+2. 支持iTunes、MusicBrainz、Last.fm、网易云音乐、咪咕音乐等
 3. 下载歌词文件
 4. 下载封面图片
 5. 写入音频文件元数据
+6. 支持元数据缓存
+7. 支持智能匹配
+8. 支持批量抓取
 
 ## 核心组件
 
@@ -22,6 +25,9 @@
 
 #### 数据源选择
 - `cbDataSource`: 数据源选择
+  - iTunes（默认）
+  - MusicBrainz
+  - Last.fm
   - 网易云音乐
   - 咪咕音乐
 
@@ -29,6 +35,13 @@
 - `chkDownloadLyrics`: 下载歌词
 - `chkDownloadCover`: 下载封面
 - `chkOverwriteMetadata`: 覆盖现有元数据
+- `chkUseCache`: 使用缓存
+- `chkSmartMatch`: 智能匹配
+
+#### 高级选项
+- `spCacheDays`: 缓存天数（默认：7天）
+- `txtCustomKeywords`: 自定义关键词
+- `chkBatchMode`: 批量模式
 
 ### 2. 运行时参数
 
@@ -36,6 +49,11 @@
 - `pDownloadLyrics`: 是否下载歌词
 - `pDownloadCover`: 是否下载封面
 - `pOverwriteMetadata`: 是否覆盖元数据
+- `pUseCache`: 是否使用缓存
+- `pSmartMatch`: 是否智能匹配
+- `pCacheDays`: 缓存天数
+- `pCustomKeywords`: 自定义关键词
+- `pBatchMode`: 是否批量模式
 
 ### 3. 抓取组件
 

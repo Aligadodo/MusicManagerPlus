@@ -13,4 +13,24 @@ package com.filemanager.type;
  * @author 28667
  */
 
-public enum TaskStatus {RUNNING, SUCCESS, FAILURE, CANCELED}
+public enum TaskStatus {
+    RUNNING("运行中"),
+    SUCCESS("成功"),
+    FAILURE("失败"),
+    CANCELED("已取消");
+
+    private final String description;
+
+    TaskStatus(String description) {
+        this.description = description;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    @Override
+    public String toString() {
+        return description;
+    }
+}

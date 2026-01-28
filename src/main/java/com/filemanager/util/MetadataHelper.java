@@ -129,6 +129,7 @@ public class MetadataHelper {
         public String title = "";
         public String year = "";
         public String track = "";
+        public String genre = "";
         public boolean isGuessed = false; // 标记是否是猜出来的（文件名推断）
 
         public String getArtist() {
@@ -169,6 +170,14 @@ public class MetadataHelper {
 
         public void setTrack(String track) {
             this.track = track;
+        }
+
+        public String getGenre() {
+            return genre;
+        }
+
+        public void setGenre(String genre) {
+            this.genre = genre;
         }
 
         public boolean isGuessed() {
