@@ -207,6 +207,11 @@ public class RenameRule {
                     }
                     break;
                 }
+                case ADD_NUMBER_PREFIX: {
+                    // 这个操作需要在AdvancedRenameStrategy中批量处理
+                    // 这里只做占位处理
+                    break;
+                }
             }
         } catch (Exception e) {
             // 发生异常时返回原始文件名

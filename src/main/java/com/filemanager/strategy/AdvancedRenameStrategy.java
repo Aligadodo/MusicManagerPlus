@@ -273,6 +273,14 @@ public class AdvancedRenameStrategy extends IAppStrategy {
             return Collections.emptyList();
         }
 
+        // 检查是否有ADD_NUMBER_PREFIX动作类型的规则
+        boolean hasNumberPrefixRule = rules.stream().anyMatch(rule -> rule.actionType == RenameActionType.ADD_NUMBER_PREFIX);
+        
+        // 如果有ADD_NUMBER_PREFIX规则，需要批量处理
+        if (hasNumberPrefixRule && d) {
+            return processNumberPrefixRule(rec, inputRecords, roots, rules, isCopy, pFile, pFolder);
+        }
+
         String currentName = currentVirtualFile.getName();
         boolean appliedAny = false;
         for (RenameRule rule : rules) {
@@ -312,6 +320,130 @@ public class AdvancedRenameStrategy extends IAppStrategy {
             rec.getExtraParams().put("action", "copy");
         }
         return Collections.emptyList();
+    }
+
+    /**
+     * 处理添加序号前缀的规则
+     */
+    private List<ChangeRecord> processNumberPrefixRule(ChangeRecord rec, List<ChangeRecord> inputRecords, List<File> roots, 
+                                                      List<RenameRule> rules, boolean isCopy, boolean pFile, boolean pFolder) {
+        File dir = rec.getFileHandle();
+        if (!dir.isDirectory()) {
+            return Collections.emptyList();
+        }
+
+        // 为当前目录及其子目录分别处理序号前缀
+        processDirectoryRecursively(dir, inputRecords, rules, isCopy, pFile, pFolder);
+
+        return Collections.emptyList();
+    }
+
+    /**
+     * 递归处理目录及其子目录
+     */
+    private void processDirectoryRecursively(File dir, List<ChangeRecord> inputRecords, List<RenameRule> rules, 
+                                           boolean isCopy, boolean pFile, boolean pFolder) {
+        // 收集当前目录下的所有文件（不包括子目录）
+        List<ChangeRecord> fileRecords = new ArrayList<>();
+        collectCurrentDirectoryFiles(dir, fileRecords, inputRecords);
+
+        if (!fileRecords.isEmpty()) {
+            // 按文件类型和文件名排序
+            fileRecords.sort((rec1, rec2) -> {
+                File file1 = rec1.getFileHandle();
+                File file2 = rec2.getFileHandle();
+                
+                // 先按文件类型排序
+                String ext1 = getFileExtension(file1.getName());
+                String ext2 = getFileExtension(file2.getName());
+                int extCompare = ext1.compareTo(ext2);
+                if (extCompare != 0) {
+                    return extCompare;
+                }
+                
+                // 再按文件名排序
+                return file1.getName().compareTo(file2.getName());
+            });
+
+            // 为每个文件生成序号前缀（每个目录独立编号）
+            int counter = 1;
+            for (ChangeRecord fileRec : fileRecords) {
+                File file = fileRec.getFileHandle();
+                String fileName = file.getName();
+                String newName = generateNumberedName(fileName, counter);
+                counter++;
+
+                // 应用其他重命名规则
+                for (RenameRule rule : rules) {
+                    if (rule.actionType != RenameActionType.ADD_NUMBER_PREFIX && rule.matches(newName)) {
+                        newName = rule.apply(newName, file.isDirectory());
+                    }
+                }
+
+                // 设置新名称和路径
+                File parentDir = file.getParentFile();
+                File targetFile = new File(parentDir, newName);
+                OperationType newOp = isCopy ? OperationType.CONVERT : OperationType.RENAME;
+
+                fileRec.setNewName(newName);
+                fileRec.setNewPath(targetFile.getAbsolutePath());
+                fileRec.setChanged(true);
+                fileRec.setOpType(newOp);
+
+                if (newOp == OperationType.CONVERT) {
+                    fileRec.getExtraParams().put("action", "copy");
+                }
+            }
+        }
+
+        // 递归处理子目录
+        File[] subDirs = dir.listFiles(File::isDirectory);
+        if (subDirs != null) {
+            for (File subDir : subDirs) {
+                processDirectoryRecursively(subDir, inputRecords, rules, isCopy, pFile, pFolder);
+            }
+        }
+    }
+
+    /**
+     * 收集当前目录下的所有文件（不包括子目录）
+     */
+    private void collectCurrentDirectoryFiles(File dir, List<ChangeRecord> fileRecords, List<ChangeRecord> inputRecords) {
+        File[] files = dir.listFiles();
+        if (files == null) {
+            return;
+        }
+
+        for (File file : files) {
+            if (file.isFile()) {
+                // 查找对应的ChangeRecord
+                for (ChangeRecord rec : inputRecords) {
+                    if (rec.getFileHandle().equals(file)) {
+                        fileRecords.add(rec);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 获取文件扩展名
+     */
+    private String getFileExtension(String fileName) {
+        int dotIndex = fileName.lastIndexOf('.');
+        if (dotIndex > 0 && dotIndex < fileName.length() - 1) {
+            return fileName.substring(dotIndex + 1).toLowerCase();
+        }
+        return "";
+    }
+
+    /**
+     * 生成带序号前缀的文件名
+     */
+    private String generateNumberedName(String fileName, int number) {
+        String prefix = String.format("%02d. ", number);
+        return prefix + fileName;
     }
 
     public void showRuleEditDialog(RenameRule existingRule) {
@@ -388,6 +520,10 @@ public class AdvancedRenameStrategy extends IAppStrategy {
                 case ADD_LETTER_PREFIX:
                     txtFind.setPromptText("忽略起始词 (可选)");
                     txtReplace.setPromptText("分隔符 (默认 ' - ')");
+                    break;
+                case ADD_NUMBER_PREFIX:
+                    txtFind.setPromptText("起始编号 (默认 1)");
+                    txtReplace.setPromptText("分隔符 (默认 '. ')");
                     break;
                 case CLEAN_NOISE:
                     txtFind.setPromptText("额外干扰词 (逗号分隔)");

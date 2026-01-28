@@ -23,7 +23,6 @@ public class AppStrategyFactory {
         strategyPrototypes.add(new AudioConverterStrategy());
         strategyPrototypes.add(new FileMigrateStrategy());
         strategyPrototypes.add(new AlbumDirNormalizeStrategy());
-        strategyPrototypes.add(new TrackNumberStrategy());
         strategyPrototypes.add(new CueSplitterStrategy());
         strategyPrototypes.add(new MetadataScraperStrategy());
         strategyPrototypes.add(new FileCleanupStrategy());
