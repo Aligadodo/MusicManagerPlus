@@ -68,6 +68,10 @@ public class CueSheet {
         return albumPerformer;
     }
 
+    public Set<String> getAllFiles() {
+        return allFiles;
+    }
+
     public static class CueTrack {
         public int number;
         public String title; // 歌曲名，可能有乱码，需要注意

@@ -10,10 +10,13 @@
 package com.filemanager.model;
 
 import com.filemanager.type.ConditionType;
+import com.filemanager.util.file.CueParserUtil;
+import com.filemanager.model.CueSheet;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -109,6 +112,18 @@ public class RuleCondition {
                     return f.isDirectory();
                 case IS_FILE:
                     return f.isFile();
+                
+                // 6. 父目录文件检查
+                case PARENT_HAS_EXT:
+                    return checkParentHasExtension(f, value, true);
+                case PARENT_NOT_HAS_EXT:
+                    return checkParentHasExtension(f, value, false);
+                
+                // 7. CUE音轨检查
+                case IS_CUE_TRACK:
+                    return isCueTrackFile(f);
+                case IS_NOT_CUE_TRACK:
+                    return !isCueTrackFile(f);
 
                 default:
                     return true;
@@ -142,6 +157,129 @@ public class RuleCondition {
 
         boolean found = targetExts.contains(currentExt);
         return matchIfIn == found;
+    }
+
+    /**
+     * 检查父目录下是否包含指定扩展名的文件
+     * @param f 待检测的文件对象
+     * @param configStr 配置的扩展名列表（逗号分隔）
+     * @param matchIfFound 如果找到匹配的文件是否返回true
+     * @return 是否满足条件
+     */
+    private boolean checkParentHasExtension(File f, String configStr, boolean matchIfFound) {
+        if (f == null || configStr == null || configStr.isEmpty()) return false;
+        
+        // 获取父目录
+        File parentDir = f.getParentFile();
+        if (parentDir == null || !parentDir.isDirectory()) return false;
+        
+        // 解析目标扩展名列表
+        Set<String> targetExts = Arrays.stream(configStr.split("[,，|]"))
+                .map(s -> s.trim().toLowerCase().replace(".", "")) // 允许用户输入 ".mp3" 或 "mp3"
+                .collect(Collectors.toSet());
+        
+        // 遍历父目录下的所有文件（非文件夹）
+        File[] files = parentDir.listFiles(File::isFile);
+        if (files == null) return false;
+        
+        for (File file : files) {
+            // 跳过文件自身
+            if (file.equals(f)) continue;
+            
+            // 检查文件扩展名
+            String fileExt = getExtension(file.getName());
+            if (targetExts.contains(fileExt)) {
+                return matchIfFound;
+            }
+        }
+        
+        // 没有找到匹配的文件
+        return !matchIfFound;
+    }  
+
+    /**
+     * 检查音频文件是否是CUE文件中指定的音轨文件
+     * @param f 待检测的文件对象
+     * @return 如果是CUE音轨文件返回true，否则返回false
+     */
+    private boolean isCueTrackFile(File f) {
+        if (f == null || !f.isFile()) return false;
+        
+        // 检查是否是音频文件
+        String ext = getExtension(f.getName());
+        if (!AUDIO_EXTS.contains(ext)) return false;
+        
+        // 获取当前文件名（不含扩展名）
+        String currentFileName = f.getName();
+        int dotIndex = currentFileName.lastIndexOf('.');
+        if (dotIndex > 0) {
+            currentFileName = currentFileName.substring(0, dotIndex);
+        }
+        
+        // 获取父目录
+        File parentDir = f.getParentFile();
+        if (parentDir == null || !parentDir.isDirectory()) return false;
+        
+        // 查找目录下的所有CUE文件
+        File[] cueFiles = parentDir.listFiles(file -> {
+            return file.isFile() && file.getName().toLowerCase().endsWith(".cue");
+        });
+        
+        if (cueFiles == null || cueFiles.length == 0) return false;
+        
+        // 检查条件1：目录下只有一个音频文件且有cue文件
+        File[] audioFiles = parentDir.listFiles(file -> {
+            if (!file.isFile()) return false;
+            String audioExt = getExtension(file.getName());
+            return AUDIO_EXTS.contains(audioExt);
+        });
+        
+        if (audioFiles != null && audioFiles.length == 1) {
+            return true;
+        }
+        
+        // 检查条件2：音频文件名与cue文件名相同
+        for (File cueFile : cueFiles) {
+            String cueFileName = cueFile.getName();
+            int cueDotIndex = cueFileName.lastIndexOf('.');
+            if (cueDotIndex > 0) {
+                cueFileName = cueFileName.substring(0, cueDotIndex);
+            }
+            
+            if (cueFileName.equals(currentFileName)) {
+                return true;
+            }
+        }
+        
+        // 检查条件3：CUE文件中引用了该音频文件
+        for (File cueFile : cueFiles) {
+            try {
+                // 解析CUE文件
+                CueSheet cueSheet = CueParserUtil.parse(cueFile.toPath());
+                if (cueSheet == null) continue;
+                
+                // 检查CUE文件中引用的所有音频文件
+                for (String audioFileName : cueSheet.getAllFiles()) {
+                    // 获取CUE中引用的文件名（不含扩展名）
+                    String cueFileName = audioFileName;
+                    int cueDotIndex = cueFileName.lastIndexOf('.');
+                    if (cueDotIndex > 0) {
+                        cueFileName = cueFileName.substring(0, cueDotIndex);
+                    }
+                    
+                    // 只比较文件名（不含扩展名）是否相同
+                    if (cueFileName.equals(currentFileName)) {
+                        return true;
+                    }
+                }
+            } catch (Exception e) {
+                // 解析CUE文件失败，继续检查下一个
+                continue;
+            }
+        }
+        
+        // 没有找到任何CUE文件引用该音频文件
+        return false;
     }
 
     @Override

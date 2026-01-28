@@ -36,7 +36,15 @@ public enum ConditionType {
     IS_ARCHIVE("是压缩文件"),
     IS_NOT_ARCHIVE("不是压缩文件"),
     IS_DIRECTORY("是文件夹"),
-    IS_FILE("是文件");
+    IS_FILE("是文件"),
+    
+    // --- 6. 父目录文件检查 (新增) ---
+    PARENT_HAS_EXT("父目录包含扩展名 (逗号分隔)"),
+    PARENT_NOT_HAS_EXT("父目录不包含扩展名"),
+    
+    // --- 7. CUE音轨检查 (新增) ---
+    IS_CUE_TRACK("是CUE音轨文件"),
+    IS_NOT_CUE_TRACK("不是CUE音轨文件");
 
     private final String description;
 
@@ -53,6 +61,7 @@ public enum ConditionType {
     public boolean needsValue() {
         return this != IS_AUDIO && this != IS_NOT_AUDIO &&
                 this != IS_ARCHIVE && this != IS_NOT_ARCHIVE &&
-                this != IS_DIRECTORY && this != IS_FILE;
+                this != IS_DIRECTORY && this != IS_FILE &&
+                this != IS_CUE_TRACK && this != IS_NOT_CUE_TRACK;
     }
 }
