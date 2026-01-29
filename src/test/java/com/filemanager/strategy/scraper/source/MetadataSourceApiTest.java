@@ -32,11 +32,10 @@ public class MetadataSourceApiTest {
     @Parameterized.Parameters
     public static Collection<Object[]> data() {
         return Arrays.asList(new Object[][] {
-            {new NeteaseMusicSource(), "陈奕迅", "天空", "天空"},
-            {new MiguMusicSource(), "陈奕迅", "天空", "天空"},
-            {new MusicBrainzSource(), "Eason Chan", "Sky", "Sky"},
-            {new LastFmSource(), "Eason Chan", "Sky", "Sky"},
-            {new DiscogsSource(), "Eason Chan", "Sky", "Sky"}
+            {new ITunesSource(), "Ed Sheeran", "Shape of You", "Divide"},
+            {new MusicBrainzSource(), "Ed Sheeran", "Shape of You", "Divide"},
+            {new LastFmSource(), "Ed Sheeran", "Shape of You", "Divide"},
+            {new DiscogsSource(), "Ed Sheeran", "Shape of You", "Divide"}
         });
     }
 

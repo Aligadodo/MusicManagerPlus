@@ -71,11 +71,13 @@ public class MetadataHelper {
     public static AudioMeta extractFromFileSystem(File file) {
         AudioMeta meta = new AudioMeta();
         String name = file.getName();
+        
+        // 首先从文件名提取信息
         if (name.matches("^\\d+[.\\s-].*")) {
-            // Split by number followed by any separator pattern, then take the rest as title
+            // Split by number followed by any separator pattern, then take rest as title
             String trackNumber = name.replaceAll("^([\\d]+).*", "$1").trim();
             meta.track = trackNumber;
-            // Remove track number and separator from the beginning of the string
+            // Remove track number and separator from beginning of string
             String titlePart = name.replaceFirst("^\\d+[.\\s-]+", "").trim();
             meta.title = removeExt(titlePart);
         } else if (name.contains(" - ")) {
@@ -89,51 +91,146 @@ public class MetadataHelper {
             meta.title = removeExt(name);
         }
 
+        // 从目录结构提取信息
         File parent = file.getParentFile();
         if (parent != null) {
             String parentName = parent.getName();
-            if (parentName.matches("^\\d{4}\\s+-\\s+.*")) {
-                meta.year = parentName.substring(0, 4);
-                meta.album = parentName.substring(7).trim();
+            
+            // 跳过"Split - WAV"这样的目录，继续向上查找
+            if (parentName.equals("Split - WAV") || parentName.equals("Split - FLAC") || 
+                parentName.equals("Split - MP3") || parentName.equals("Split")) {
+                File grandParent = parent.getParentFile();
+                if (grandParent != null) {
+                    parentName = grandParent.getName();
+                    parent = grandParent;
+                }
+            }
+            
+            // 尝试从父目录名提取年份和专辑
+            if (parentName.matches("^\\d{4}.*")) {
+                // 提取年份
+                String year = parentName.substring(0, 4);
+                if (year.matches("\\d{4}")) {
+                    meta.year = year;
+                }
+                
+                // 提取专辑名（去掉年份和分隔符后的部分）
+                String albumPart = parentName.substring(4).trim();
+                // 去除年份后面的分隔符（如" - "）
+                albumPart = albumPart.replaceFirst("^[-\\s]+", "");
+                // 去除版本信息（如【xxx】[xxx]）
+                albumPart = cleanAlbumName(albumPart);
+                if (!albumPart.isEmpty()) {
+                    meta.album = albumPart;
+                }
             } else if (parentName.contains(" - ")) {
                 String[] parts = parentName.split(" - ", 2);
-                if (!isValid(meta.artist)) {
-                    // For parent directory, prefer the first part as artist
-                    // Only use the second part if the first part looks like a category letter (single character)
-                    String potentialArtist1 = cleanArtistName(parts[0].trim());
-                    String potentialArtist2 = cleanArtistName(parts[1].trim());
+                if (parts.length >= 2) {
+                    // 第一部分可能是年份或艺术家
+                    String firstPart = parts[0].trim();
+                    String secondPart = parts[1].trim();
                     
-                    // If first part is a single character (like "C", "A", etc.), use second part
-                    // Otherwise, prefer the first part as it's usually the artist name
-                    if (potentialArtist1.length() <= 1 && potentialArtist2.length() > 1) {
-                        meta.artist = potentialArtist2;
+                    // 检查是否是"艺术家.年份"格式
+                    if (firstPart.contains(".")) {
+                        String[] firstParts = firstPart.split("\\.", 2);
+                        if (firstParts.length >= 2) {
+                            String artistPart = firstParts[0].trim();
+                            String yearPart = firstParts[1].trim();
+                            
+                            // 如果第二部分是年份格式，提取年份
+                            if (yearPart.matches("^\\d{4}$")) {
+                                meta.year = yearPart;
+                                if (!isValid(meta.artist)) {
+                                    meta.artist = cleanArtistName(artistPart);
+                                }
+                                meta.album = cleanAlbumName(secondPart);
+                            }
+                        }
+                    }
+                    
+                    // 如果第一部分是年份格式，提取年份
+                    if (firstPart.matches("^\\d{4}$")) {
+                        meta.year = firstPart;
+                        meta.album = cleanAlbumName(secondPart);
+                    } else if (firstPart.matches("^\\d{8}\\s+\\d+")) {
+                        // 处理类似 "20151005 02" 的格式
+                        String dateStr = firstPart.substring(0, 8);
+                        if (dateStr.matches("\\d{8}")) {
+                            meta.year = dateStr.substring(0, 4);
+                        }
+                        meta.album = cleanAlbumName(secondPart);
+                    } else if (firstPart.matches("^\\d{8}\\s+.*")) {
+                        // 处理类似 "20151005 02 陈奕迅 最冷一天" 的格式
+                        String dateStr = firstPart.substring(0, 8);
+                        if (dateStr.matches("\\d{8}")) {
+                            meta.year = dateStr.substring(0, 4);
+                        }
+                        // 从第一部分提取专辑名（去掉日期和空格后的部分）
+                        String albumFromFirst = firstPart.substring(8).trim();
+                        // 去除开头的数字和空格（如 "02 "）
+                        albumFromFirst = albumFromFirst.replaceFirst("^\\d+\\s+", "");
+                        // 如果第二部分不为空，合并两部分作为专辑名
+                        if (!secondPart.isEmpty()) {
+                            meta.album = cleanAlbumName(albumFromFirst + " " + secondPart);
+                        } else {
+                            meta.album = cleanAlbumName(albumFromFirst);
+                        }
                     } else {
-                        meta.artist = potentialArtist1;
+                        // 第一部分是艺术家
+                        if (!isValid(meta.artist)) {
+                            meta.artist = cleanArtistName(firstPart);
+                        }
+                        meta.album = cleanAlbumName(secondPart);
                     }
                 }
-                meta.album = parts[1].trim();
             } else {
-                meta.album = parentName;
+                meta.album = cleanAlbumName(parentName);
             }
 
+            // 从祖父目录提取艺术家
             File grandParent = parent.getParentFile();
             if (grandParent != null && !isValid(meta.artist)) {
                 String grandParentName = grandParent.getName();
                 if (grandParentName.contains(" - ")) {
-                    //同样处理祖父目录，尝试从 "C - Artist" 这样的格式中提取艺术家
+                    // 处理 "C - Artist" 这样的格式
                     String[] parts = grandParentName.split(" - ", 2);
                     if (parts.length >= 2) {
-                        //优先选择第二部分作为艺术家，并清理额外信息
+                        // 优先选择第二部分作为艺术家，并清理额外信息
                         meta.artist = cleanArtistName(parts[1].trim());
                     } else {
-                        meta.artist = grandParentName;
+                        meta.artist = cleanArtistName(grandParentName);
                     }
                 } else {
-                    meta.artist = grandParentName;
+                    meta.artist = cleanArtistName(grandParentName);
                 }
             }
         }
+        
         return meta;
+    }
+
+    private static String cleanAlbumName(String albumName) {
+        // 去除版本信息
+        String cleaned = albumName;
+        
+        // 去除【xxx】格式的信息
+        cleaned = cleaned.replaceAll("\\【[^】]*\\】", "");
+        // 去除[xxx]格式的信息
+        cleaned = cleaned.replaceAll("\\[[^\\]]*\\]", "");
+        // 去除格式的信息
+        cleaned = cleaned.replaceAll("\\([^)]*\\)", "");
+        // 去除文件扩展名
+        cleaned = removeExt(cleaned);
+        // 去除年份后面的点号（如.2020）
+        cleaned = cleaned.replaceAll("\\.\\d{4}", "");
+        // 去除格式标识（如WAV、FLAC、MP3等）
+        cleaned = cleaned.replaceAll("\\b(WAV|FLAC|MP3|M4A|OGG|APE|DTS|SACD)\\b", "");
+        // 去除CD标识（如CD01、CD1、CD2等）
+        cleaned = cleaned.replaceAll("\\bCD\\d+\\b", "");
+        // 去除多余空格
+        cleaned = cleaned.trim().replaceAll("\\s+", " ");
+        
+        return cleaned;
     }
 
     private static String cleanArtistName(String artistName) {
