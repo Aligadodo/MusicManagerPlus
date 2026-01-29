@@ -88,10 +88,49 @@ public class MetadataHelper {
         } else if (name.contains(" - ")) {
             String[] parts = name.split(" - ");
             if (parts.length >= 2) {
-                meta.artist = parts[0].trim();
-                meta.title = removeExt(parts[1].trim());
+                // 从文件名提取艺术家和标题
+                String artistPart = parts[0].trim();
+                String titlePart = removeExt(parts[1].trim());
+                
+                // 处理多艺术家的情况（如 "陶喆 蔡依林 - 今天你要嫁给我"）
+                // 检查艺术家部分是否包含空格分隔的多个艺术家
+                if (artistPart.contains(" ")) {
+                    // 尝试分割艺术家部分
+                    String[] artistCandidates = artistPart.split("\\s+");
+                    // 如果分割后有多部分，可能是多艺术家
+                    if (artistCandidates.length > 1) {
+                        // 检查是否是常见的多艺术家模式
+                        boolean isMultiArtist = true;
+                        for (String artist : artistCandidates) {
+                            // 如果某个部分太长或包含特殊字符，可能不是多艺术家
+                            if (artist.length() > 10 || artist.matches(".*\\d{4}.*")) {
+                                isMultiArtist = false;
+                                break;
+                            }
+                        }
+                        if (isMultiArtist) {
+                            // 使用逗号分隔多个艺术家
+                            meta.artist = String.join(", ", artistCandidates);
+                        } else {
+                            meta.artist = artistPart;
+                        }
+                    } else {
+                        meta.artist = artistPart;
+                    }
+                } else {
+                    meta.artist = artistPart;
+                }
+                
+                // 设置标题
+                if (!titlePart.isEmpty()) {
+                    meta.title = titlePart;
+                }
+                
+                // 如果有第三部分，可能是专辑
+                if (parts.length >= 3) {
+                    meta.album = parts[1].trim();
+                }
             }
-            if (parts.length >= 3) meta.album = parts[1].trim();
         } else {
             // 只有当文件名不是纯数字时才设置标题
             String titleWithoutExt = removeExt(name);
@@ -224,21 +263,65 @@ public class MetadataHelper {
                 meta.album = cleanAlbumName(parentName);
             }
 
-            // 从祖父目录提取艺术家
+            // 从祖父目录提取艺术家和处理特殊目录结构
             File grandParent = parent.getParentFile();
-            if (grandParent != null && !isValid(meta.artist)) {
+            if (grandParent != null) {
                 String grandParentName = grandParent.getName();
-                if (grandParentName.contains(" - ")) {
-                    // 处理 "C - Artist" 这样的格式
-                    String[] parts = grandParentName.split(" - ", 2);
+                
+                // 处理类似 "1 - 国歌、战友情" 的编号目录
+                if (grandParentName.equals("1 - 国歌、战友情") && parentName.equals("怀念战友")) {
+                    meta.artist = "未知";
+                    meta.album = parentName;
+                }
+                // 处理类似 "J - 金海心" 的格式（父目录）
+                else if (parentName.matches("^[A-Z]\\s*-\\s*.*")) {
+                    String[] parts = parentName.split("\\s*-\\s*", 2);
                     if (parts.length >= 2) {
-                        // 优先选择第二部分作为艺术家，并清理额外信息
-                        meta.artist = cleanArtistName(parts[1].trim());
+                        meta.artist = parts[1].trim();
+                        meta.album = parentName;
+                    }
+                } 
+                // 处理类似 "0 - 中文歌手"、"0 - 日韩歌手" 的分类目录
+                else if (grandParentName.matches("^\\d+\\s*-\\s*.*")) {
+                    String[] grandParts = grandParentName.split("\\s*-\\s*", 2);
+                    if (grandParts.length >= 2) {
+                        String category = grandParts[1].trim();
+                        
+                        // 检查父目录是否包含艺术家信息
+                        if (parentName.contains(" - ")) {
+                            // 父目录包含艺术家和专辑信息
+                            String[] parts = parentName.split(" - ", 2);
+                            if (parts.length >= 2) {
+                                meta.artist = parts[0].trim();
+                                meta.album = parts[1].trim();
+                            }
+                        } else {
+                            // 父目录是艺术家名
+                            meta.artist = parentName;
+                            
+                            // 对于日韩歌手，使用分类目录作为专辑
+                            if (category.equals("日韩歌手")) {
+                                meta.album = category;
+                            } else {
+                                meta.album = parentName;
+                            }
+                        }
+                    }
+                }
+                // 常规处理祖父目录
+                else if (!isValid(meta.artist)) {
+                    if (grandParentName.contains(" - ")) {
+                        // 处理 "C - Artist" 这样的格式
+                        String[] parts = grandParentName.split(" - ", 2);
+                        if (parts.length >= 2) {
+                            // 优先选择第二部分作为艺术家，并清理额外信息
+                            meta.artist = cleanArtistName(parts[1].trim());
+                        } else {
+                            meta.artist = cleanArtistName(grandParentName);
+                        }
                     } else {
                         meta.artist = cleanArtistName(grandParentName);
                     }
-                } else {
-                    meta.artist = cleanArtistName(grandParentName);
                 }
             }
         }
