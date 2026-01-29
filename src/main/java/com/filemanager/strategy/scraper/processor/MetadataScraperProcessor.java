@@ -47,11 +47,17 @@ public class MetadataScraperProcessor {
      * @param title 歌曲标题
      * @param duration 歌曲时长（秒）
      * @param targetFile 目标文件
+     * @param record 变更记录，用于记录请求信息
      * @return 是否成功处理
      */
-    public boolean processLyrics(String artist, String title, int duration, File targetFile) {
+    public boolean processLyrics(String artist, String title, int duration, File targetFile, com.filemanager.model.ChangeRecord record) {
         if (!lyricsConfig.isEnabled()) {
             return false;
+        }
+        
+        if (record != null) {
+            record.addProcessInfo("开始处理歌词: " + artist + " - " + title);
+            record.addProcessInfo("使用数据源: " + source.getSourceName());
         }
         
         String cacheKey = "lyrics:" + artist + ":" + title;
@@ -59,20 +65,51 @@ public class MetadataScraperProcessor {
         
         if (lyricsConfig.isUseCache()) {
             lyrics = cacheManager.getCachedLyrics(cacheKey);
-        }
-        
-        if (lyrics == null) {
-            lyrics = source.searchLyrics(artist, title, duration);
-            if (lyrics != null && lyricsConfig.isUseCache()) {
-                cacheManager.cacheLyrics(cacheKey, lyrics);
+            if (lyrics != null && record != null) {
+                record.addProcessInfo("从缓存获取歌词");
             }
         }
         
         if (lyrics == null) {
+            if (record != null) {
+                record.addProcessInfo("从数据源搜索歌词");
+                record.addProcessInfo("搜索参数: artist='" + artist + "', title='" + title + "', duration='" + duration + "'");
+            }
+            lyrics = source.searchLyrics(artist, title, duration);
+            if (lyrics != null) {
+                if (record != null) {
+                    record.addProcessInfo("搜索结果: 找到歌词，来源='" + lyrics.getSource() + "', 格式='" + lyrics.getFormat() + "', 验证状态='" + lyrics.isVerified() + "'");
+                }
+                if (lyricsConfig.isUseCache()) {
+                    cacheManager.cacheLyrics(cacheKey, lyrics);
+                    if (record != null) {
+                        record.addProcessInfo("缓存歌词结果");
+                    }
+                }
+            } else {
+                if (record != null) {
+                    record.addProcessInfo("搜索结果: 未找到歌词");
+                }
+            }
+        }
+        
+        if (lyrics == null) {
+            if (record != null) {
+                record.addProcessInfo("未找到歌词");
+            }
             return false;
         }
         
-        return saveLyrics(lyrics, targetFile);
+        if (record != null) {
+            record.addProcessInfo("成功获取歌词，长度: " + lyrics.getContent().length() + " 字符");
+        }
+        
+        boolean saved = saveLyrics(lyrics, targetFile);
+        if (saved && record != null) {
+            record.addProcessInfo("歌词保存成功");
+        }
+        
+        return saved;
     }
     
     /**
@@ -80,11 +117,17 @@ public class MetadataScraperProcessor {
      * @param artist 艺术家
      * @param album 专辑名称
      * @param targetDir 目标目录
+     * @param record 变更记录，用于记录请求信息
      * @return 是否成功处理
      */
-    public boolean processCover(String artist, String album, File targetDir) {
+    public boolean processCover(String artist, String album, File targetDir, com.filemanager.model.ChangeRecord record) {
         if (!coverConfig.isEnabled()) {
             return false;
+        }
+        
+        if (record != null) {
+            record.addProcessInfo("开始处理封面: " + artist + " - " + album);
+            record.addProcessInfo("使用数据源: " + source.getSourceName());
         }
         
         String cacheKey = "cover:" + artist + ":" + album;
@@ -92,20 +135,51 @@ public class MetadataScraperProcessor {
         
         if (coverConfig.isUseCache()) {
             cover = cacheManager.getCachedCover(cacheKey);
-        }
-        
-        if (cover == null) {
-            cover = source.searchCover(artist, album);
-            if (cover != null && coverConfig.isUseCache()) {
-                cacheManager.cacheCover(cacheKey, cover);
+            if (cover != null && record != null) {
+                record.addProcessInfo("从缓存获取封面");
             }
         }
         
         if (cover == null) {
+            if (record != null) {
+                record.addProcessInfo("从数据源搜索封面");
+                record.addProcessInfo("搜索参数: artist='" + artist + "', album='" + album + "'");
+            }
+            cover = source.searchCover(artist, album);
+            if (cover != null) {
+                if (record != null) {
+                    record.addProcessInfo("搜索结果: 找到封面，来源='" + cover.getSource() + "', URL='" + cover.getImageUrl() + "', 格式='" + cover.getFormat() + "', 尺寸='" + cover.getWidth() + "x" + cover.getHeight() + "'");
+                }
+                if (coverConfig.isUseCache()) {
+                    cacheManager.cacheCover(cacheKey, cover);
+                    if (record != null) {
+                        record.addProcessInfo("缓存封面结果");
+                    }
+                }
+            } else {
+                if (record != null) {
+                    record.addProcessInfo("搜索结果: 未找到封面");
+                }
+            }
+        }
+        
+        if (cover == null) {
+            if (record != null) {
+                record.addProcessInfo("未找到封面");
+            }
             return false;
         }
         
-        return saveCover(cover, targetDir);
+        if (record != null) {
+            record.addProcessInfo("成功获取封面，URL: " + cover.getImageUrl());
+        }
+        
+        boolean saved = saveCover(cover, targetDir);
+        if (saved && record != null) {
+            record.addProcessInfo("封面保存成功");
+        }
+        
+        return saved;
     }
     
     /**
@@ -113,11 +187,17 @@ public class MetadataScraperProcessor {
      * @param artist 艺术家
      * @param album 专辑名称
      * @param targetDir 目标目录
+     * @param record 变更记录，用于记录请求信息
      * @return 是否成功处理
      */
-    public boolean processAlbumInfo(String artist, String album, File targetDir) {
+    public boolean processAlbumInfo(String artist, String album, File targetDir, com.filemanager.model.ChangeRecord record) {
         if (!albumInfoConfig.isEnabled()) {
             return false;
+        }
+        
+        if (record != null) {
+            record.addProcessInfo("开始处理专辑信息: " + artist + " - " + album);
+            record.addProcessInfo("使用数据源: " + source.getSourceName());
         }
         
         String cacheKey = "album:" + artist + ":" + album;
@@ -125,20 +205,70 @@ public class MetadataScraperProcessor {
         
         if (albumInfoConfig.isUseCache()) {
             albumInfo = cacheManager.getCachedAlbumInfo(cacheKey);
-        }
-        
-        if (albumInfo == null) {
-            albumInfo = source.searchAlbumInfo(artist, album);
-            if (albumInfo != null && albumInfoConfig.isUseCache()) {
-                cacheManager.cacheAlbumInfo(cacheKey, albumInfo);
+            if (albumInfo != null && record != null) {
+                record.addProcessInfo("从缓存获取专辑信息");
             }
         }
         
         if (albumInfo == null) {
+            if (record != null) {
+                record.addProcessInfo("从数据源搜索专辑信息");
+                record.addProcessInfo("搜索参数: artist='" + artist + "', album='" + album + "'");
+            }
+            albumInfo = source.searchAlbumInfo(artist, album);
+            if (albumInfo != null) {
+                if (record != null) {
+                    record.addProcessInfo("搜索结果: 找到专辑信息，来源='" + albumInfo.getSource() + "', 名称='" + albumInfo.getName() + "', 艺术家='" + albumInfo.getArtist() + "'");
+                    if (albumInfo.getYear() != null) {
+                        record.addProcessInfo("专辑年份: " + albumInfo.getYear());
+                    }
+                    if (albumInfo.getGenre() != null) {
+                        record.addProcessInfo("专辑流派: " + albumInfo.getGenre());
+                    }
+                    if (albumInfo.getDescription() != null) {
+                        record.addProcessInfo("专辑简介长度: " + albumInfo.getDescription().length() + " 字符");
+                    }
+                    if (!albumInfo.getTracks().isEmpty()) {
+                        record.addProcessInfo("曲目数量: " + albumInfo.getTracks().size());
+                    }
+                }
+                if (albumInfoConfig.isUseCache()) {
+                    cacheManager.cacheAlbumInfo(cacheKey, albumInfo);
+                    if (record != null) {
+                        record.addProcessInfo("缓存专辑信息结果");
+                    }
+                }
+            } else {
+                if (record != null) {
+                    record.addProcessInfo("搜索结果: 未找到专辑信息");
+                }
+            }
+        }
+        
+        if (albumInfo == null) {
+            if (record != null) {
+                record.addProcessInfo("未找到专辑信息");
+            }
             return false;
         }
         
-        return saveAlbumInfo(albumInfo, targetDir);
+        if (record != null) {
+            record.addProcessInfo("成功获取专辑信息: " + albumInfo.getName());
+            record.addProcessInfo("专辑艺术家: " + albumInfo.getArtist());
+            if (albumInfo.getYear() != null) {
+                record.addProcessInfo("发行年份: " + albumInfo.getYear());
+            }
+            if (albumInfo.getGenre() != null) {
+                record.addProcessInfo("流派: " + albumInfo.getGenre());
+            }
+        }
+        
+        boolean saved = saveAlbumInfo(albumInfo, targetDir);
+        if (saved && record != null) {
+            record.addProcessInfo("专辑信息保存成功");
+        }
+        
+        return saved;
     }
     
     private boolean saveLyrics(LyricsInfo lyrics, File targetFile) {

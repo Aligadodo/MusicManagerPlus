@@ -148,19 +148,23 @@ public class NcmLyricDownloadStrategy extends NcmBaseStrategy {
                 // 尝试搜索歌曲，获取歌曲ID
                 String songId = null;
                 try {
-                    songId = searchSong(songName, artistName);
+                    songId = searchSong(songName, artistName, record);
                 } catch (Exception e) {
                     logError("搜索歌曲时发生错误: " + e.getMessage());
+                    record.addProcessInfo("搜索歌曲时发生错误: " + e.getMessage());
                 }
                 
                 if (songId != null) {
                     record.getExtraParams().put("songId", songId);
                     log("找到歌曲ID: " + songId + " 对应歌曲: " + songName
                             + (artistName.isEmpty() ? "" : " - " + artistName));
+                    record.addProcessInfo("找到歌曲ID: " + songId + " 对应歌曲: " + songName
+                            + (artistName.isEmpty() ? "" : " - " + artistName));
                     
                     result.add(record);
                 } else {
                     log("未找到对应歌曲: " + songName + (artistName.isEmpty() ? "" : " - " + artistName));
+                    record.addProcessInfo("未找到对应歌曲: " + songName + (artistName.isEmpty() ? "" : " - " + artistName));
                 }
             } else {
                 result.add(record);
@@ -178,6 +182,7 @@ public class NcmLyricDownloadStrategy extends NcmBaseStrategy {
     private void executeLyricDownload(ChangeRecord rec) throws Exception {
         File audioFile = rec.getFileHandle();
         log("开始为音频文件下载歌词: " + audioFile.getName());
+        rec.addProcessInfo("开始为音频文件下载歌词: " + audioFile.getName());
         
         // 从ChangeRecord中获取歌曲信息
         String songName = rec.getExtraParams().get("songName");
@@ -186,16 +191,19 @@ public class NcmLyricDownloadStrategy extends NcmBaseStrategy {
         
         if (songName == null || songName.isEmpty()) {
             logError("无法获取歌曲名称: " + audioFile.getName());
+            rec.addProcessInfo("无法获取歌曲名称: " + audioFile.getName());
             return;
         }
+        
+        rec.addProcessInfo("歌曲信息: " + songName + (artistName.isEmpty() ? "" : " - " + artistName));
         
         String lyricContent = null;
         if (songId != null) {
             // 直接使用歌曲ID获取歌词
-            lyricContent = getLyricById(songId);
+            lyricContent = getLyricById(songId, rec);
         } else {
             // 再次尝试搜索并下载歌词
-            lyricContent = downloadLyric(songName, artistName);
+            lyricContent = downloadLyric(songName, artistName, rec);
         }
         
         if (lyricContent != null && !lyricContent.isEmpty()) {
@@ -252,18 +260,20 @@ public class NcmLyricDownloadStrategy extends NcmBaseStrategy {
         return "";
     }
     
-    private String downloadLyric(String songName, String artistName) throws Exception {
+    private String downloadLyric(String songName, String artistName, ChangeRecord rec) throws Exception {
         log("尝试下载歌曲歌词: " + songName + (artistName.isEmpty() ? "" : " - " + artistName));
+        rec.addProcessInfo("尝试下载歌曲歌词: " + songName + (artistName.isEmpty() ? "" : " - " + artistName));
         
         // 搜索歌曲，获取歌曲ID
-        String songId = searchSong(songName, artistName);
+        String songId = searchSong(songName, artistName, rec);
         if (songId == null) {
             logError("未找到对应歌曲: " + songName + (artistName.isEmpty() ? "" : " - " + artistName));
+            rec.addProcessInfo("未找到对应歌曲: " + songName + (artistName.isEmpty() ? "" : " - " + artistName));
             return null;
         }
         
         // 根据歌曲ID获取歌词
-        return getLyricById(songId);
+        return getLyricById(songId, rec);
     }
     
     /**
@@ -271,20 +281,22 @@ public class NcmLyricDownloadStrategy extends NcmBaseStrategy {
      * 
      * @param songName   歌曲名称
      * @param artistName 艺术家名称
+     * @param record     变更记录，用于记录请求信息
      * @return 歌曲ID
      */
-    private String searchSong(String songName, String artistName) throws Exception {
-        return neteaseApiClient.searchSong(songName, artistName);
+    private String searchSong(String songName, String artistName, ChangeRecord record) throws Exception {
+        return neteaseApiClient.searchSong(songName, artistName, record);
     }
     
     /**
      * 根据歌曲ID获取歌词
      * 
      * @param songId 歌曲ID
+     * @param record 变更记录，用于记录请求信息
      * @return 歌词内容
      */
-    private String getLyricById(String songId) throws Exception {
-        return neteaseApiClient.getLyricById(songId);
+    private String getLyricById(String songId, ChangeRecord record) throws Exception {
+        return neteaseApiClient.getLyricById(songId, record);
     }
     
     @Override

@@ -1139,8 +1139,8 @@ public class PreviewView implements IAutoReloadAble {
                         try {
                             // 获取当前 Stage 实例
                             Stage currentStage = (Stage) previewTable.getScene().getWindow();
-                            // 弹出 JSON 详情窗口
-                            DetailWindowHelper.showJsonDetail(currentStage, item);
+                            // 弹出 JSON 详情窗口，支持 processInfo 多行展示
+                            DetailWindowHelper.showJsonDetailWithProcessInfo(currentStage, item);
                         } catch (Exception e) {
                             // 捕获可能的异常，避免程序崩溃
                             e.printStackTrace();

@@ -186,15 +186,28 @@ public class NeteaseApiClient {
      * 
      * @param songName   歌曲名称
      * @param artistName 艺术家名称
+     * @param record     变更记录，用于记录请求信息
      * @return 歌曲ID
      */
-    public String searchSong(String songName, String artistName) {
+    public String searchSong(String songName, String artistName, com.filemanager.model.ChangeRecord record) {
         try {
             String searchUrl = "http://music.163.com/api/search/get/web?csrf_token=";
             String query = songName + (artistName.isEmpty() ? "" : " " + artistName);
             String data = "s=" + URLEncoder.encode(query, "UTF-8") + "&type=1&offset=0&subType=&limit=10";
             
-            String response = sendPostRequest(searchUrl, data);
+            if (record != null) {
+                record.addProcessInfo("发送搜索歌曲请求: " + searchUrl);
+                record.addProcessInfo("请求参数: " + data);
+            }
+            
+            String response = sendPostRequest(searchUrl, data, record);
+            
+            if (response != null && record != null) {
+                // 记录响应摘要，避免记录过长的响应内容
+                int responseLength = response.length();
+                String responseSummary = responseLength > 500 ? response.substring(0, 500) + "..." : response;
+                record.addProcessInfo("搜索响应摘要: " + responseSummary);
+            }
             
             // 解析JSON响应，获取歌曲ID
             int idStart = response.indexOf("\"id\":");
@@ -202,10 +215,17 @@ public class NeteaseApiClient {
                 idStart += 5;
                 int idEnd = response.indexOf(",", idStart);
                 if (idEnd > idStart) {
-                    return response.substring(idStart, idEnd).trim();
+                    String songId = response.substring(idStart, idEnd).trim();
+                    if (record != null) {
+                        record.addProcessInfo("获取到歌曲ID: " + songId);
+                    }
+                    return songId;
                 }
             }
         } catch (Exception e) {
+            if (record != null) {
+                record.addProcessInfo("搜索歌曲失败: " + e.getMessage());
+            }
             System.err.println("搜索歌曲失败: " + e.getMessage());
         }
         return null;
@@ -215,12 +235,25 @@ public class NeteaseApiClient {
      * 根据歌曲ID获取歌词
      * 
      * @param songId 歌曲ID
+     * @param record 变更记录，用于记录请求信息
      * @return 歌词内容
      */
-    public String getLyricById(String songId) {
+    public String getLyricById(String songId, com.filemanager.model.ChangeRecord record) {
         try {
             String lyricUrl = "http://music.163.com/api/song/lyric?id=" + songId + "&lv=1&tv=-1";
-            String response = sendGetRequest(lyricUrl);
+            
+            if (record != null) {
+                record.addProcessInfo("发送获取歌词请求: " + lyricUrl);
+            }
+            
+            String response = sendGetRequest(lyricUrl, record);
+            
+            if (response != null && record != null) {
+                // 记录响应摘要，避免记录过长的响应内容
+                int responseLength = response.length();
+                String responseSummary = responseLength > 500 ? response.substring(0, 500) + "..." : response;
+                record.addProcessInfo("歌词响应摘要: " + responseSummary);
+            }
             
             // 解析JSON响应，获取歌词
             int lrcStart = response.indexOf("\"lyric\":\"");
@@ -231,10 +264,16 @@ public class NeteaseApiClient {
                     String lyric = response.substring(lrcStart, lrcEnd);
                     // 解码转义字符
                     lyric = lyric.replace("\\n", "\n").replace("\\r", "\r").replace("\\\"", "\"");
+                    if (record != null) {
+                        record.addProcessInfo("成功获取歌词，长度: " + lyric.length() + " 字符");
+                    }
                     return lyric;
                 }
             }
         } catch (Exception e) {
+            if (record != null) {
+                record.addProcessInfo("获取歌词失败: " + e.getMessage());
+            }
             System.err.println("获取歌词失败: " + e.getMessage());
         }
         return null;
@@ -243,10 +282,11 @@ public class NeteaseApiClient {
     /**
      * 发送GET请求
      * 
-     * @param url 请求URL
+     * @param url    请求URL
+     * @param record 变更记录，用于记录请求信息
      * @return 响应内容
      */
-    private String sendGetRequest(String url) throws Exception {
+    private String sendGetRequest(String url, com.filemanager.model.ChangeRecord record) throws Exception {
         URL obj = new URL(url);
         HttpURLConnection con = (HttpURLConnection) obj.openConnection();
         con.setRequestMethod("GET");
@@ -255,8 +295,20 @@ public class NeteaseApiClient {
         con.setRequestProperty("Referer", "http://music.163.com");
         con.setRequestProperty("Host", "music.163.com");
         
+        if (record != null) {
+            record.addProcessInfo("执行GET请求: " + url);
+        }
+        
         int responseCode = con.getResponseCode();
+        
+        if (record != null) {
+            record.addProcessInfo("GET请求响应码: " + responseCode);
+        }
+        
         if (responseCode != HttpURLConnection.HTTP_OK) {
+            if (record != null) {
+                record.addProcessInfo("GET请求失败，响应码: " + responseCode);
+            }
             System.err.println("GET请求失败，响应码: " + responseCode);
             return null;
         }
@@ -276,11 +328,12 @@ public class NeteaseApiClient {
     /**
      * 发送POST请求
      * 
-     * @param url  请求URL
-     * @param data 请求数据
+     * @param url    请求URL
+     * @param data   请求数据
+     * @param record 变更记录，用于记录请求信息
      * @return 响应内容
      */
-    private String sendPostRequest(String url, String data) throws Exception {
+    private String sendPostRequest(String url, String data, com.filemanager.model.ChangeRecord record) throws Exception {
         URL obj = new URL(url);
         HttpURLConnection con = (HttpURLConnection) obj.openConnection();
         con.setRequestMethod("POST");
@@ -291,6 +344,11 @@ public class NeteaseApiClient {
         con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
         con.setRequestProperty("Content-Length", String.valueOf(data.length()));
         
+        if (record != null) {
+            record.addProcessInfo("执行POST请求: " + url);
+            record.addProcessInfo("POST请求数据: " + data);
+        }
+        
         con.setDoOutput(true);
         try (DataOutputStream wr = new DataOutputStream(con.getOutputStream())) {
             wr.writeBytes(data);
@@ -298,7 +356,15 @@ public class NeteaseApiClient {
         }
         
         int responseCode = con.getResponseCode();
+        
+        if (record != null) {
+            record.addProcessInfo("POST请求响应码: " + responseCode);
+        }
+        
         if (responseCode != HttpURLConnection.HTTP_OK) {
+            if (record != null) {
+                record.addProcessInfo("POST请求失败，响应码: " + responseCode);
+            }
             System.err.println("POST请求失败，响应码: " + responseCode);
             return null;
         }

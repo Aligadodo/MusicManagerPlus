@@ -263,14 +263,24 @@ public class MetadataScraperStrategy extends IAppStrategy {
             return Collections.emptyList();
         }
         
+        rec.addProcessInfo("开始元数据刮削分析: " + file.getName());
+        rec.addProcessInfo("文件路径: " + file.getAbsolutePath());
+        rec.addProcessInfo("文件类型: " + ext);
+        
         List<ChangeRecord> results = new ArrayList<>();
         MetadataHelper.AudioMeta guess = MetadataHelper.extractFromFileSystem(file);
+        
+        rec.addProcessInfo("从文件名提取的元数据: 艺术家='" + guess.getArtist() + "', 标题='" + guess.getTitle() + "', 专辑='" + guess.getAlbum() + "'");
         
         MetadataSource source = sources.get(pSource);
         if (source == null) {
             logError("未找到数据源: " + pSource);
+            rec.addProcessInfo("错误: 未找到数据源: " + pSource);
             return Collections.emptyList();
         }
+        
+        rec.addProcessInfo("选定数据源: " + source.getSourceName());
+        rec.addProcessInfo("数据源配置: 歌词=" + lyricsConfig.isEnabled() + ", 封面=" + coverConfig.isEnabled() + ", 专辑信息=" + albumInfoConfig.isEnabled());
         
         processor.setSource(source);
         processor.setLyricsConfig(lyricsConfig);
@@ -278,85 +288,121 @@ public class MetadataScraperStrategy extends IAppStrategy {
         processor.setAlbumInfoConfig(albumInfoConfig);
 
         try {
+            rec.addProcessInfo("开始读取音频文件元数据");
             AudioFile f = AudioFileIO.read(file);
             Tag tag = f.getTag();
             int duration = f.getAudioHeader().getTrackLength();
+            
+            rec.addProcessInfo("音频文件分析结果: 时长=" + duration + "秒, 格式=" + f.getAudioHeader().getFormat() + ", 比特率=" + f.getAudioHeader().getBitRate() + "kbps");
+            rec.addProcessInfo("标签存在: " + (tag != null));
+            if (tag != null) {
+                try {
+                    String title = tag.getFirst(FieldKey.TITLE);
+                    String artist = tag.getFirst(FieldKey.ARTIST);
+                    String album = tag.getFirst(FieldKey.ALBUM);
+                    rec.addProcessInfo("文件标签信息: 艺术家='" + artist + "', 标题='" + title + "', 专辑='" + album + "'");
+                } catch (Exception e) {
+                    rec.addProcessInfo("读取标签信息时出错: " + e.getMessage());
+                }
+            }
 
             if (lyricsConfig.isEnabled()) {
+                rec.addProcessInfo("开始处理歌词配置");
                 boolean hasLyricsField = true;
                 try {
                     tag.getFirst(FieldKey.LYRICS);
                 } catch (Exception e) {
                     hasLyricsField = false;
+                    rec.addProcessInfo("歌词字段不存在: " + e.getMessage());
                 }
                 
                 boolean processLyrics = lyricsConfig.getDuplicateMode() == ModuleConfig.DuplicateMode.OVERWRITE 
                     || tag == null || (hasLyricsField && tag.getFirst(FieldKey.LYRICS).isEmpty());
                 
+                rec.addProcessInfo("歌词处理判断: 重复模式='" + lyricsConfig.getDuplicateMode() + "', 是否处理='" + processLyrics + "'");
+                
                 if (processLyrics) {
-                    rec.addProcessInfo("开始处理歌词: " + guess.getArtist() + " - " + guess.getTitle());
-                    rec.addProcessInfo("使用数据源: " + source.getSourceName());
-                    
-                    if (processor.processLyrics(guess.getArtist(), guess.getTitle(), duration, file)) {
+                    rec.addProcessInfo("开始处理歌词");
+                    if (processor.processLyrics(guess.getArtist(), guess.getTitle(), duration, file, rec)) {
                         rec.setChanged(true);
                         rec.setOpType(OperationType.SCRAPER);
                         rec.getExtraParams().put("scraper_active", "true");
-                        rec.addProcessInfo("成功获取歌词");
                         rec.setNewName("[更新] " + file.getName());
+                        rec.addProcessInfo("歌词处理成功");
                     } else {
-                        rec.addProcessInfo("未找到歌词");
+                        rec.addProcessInfo("歌词处理失败或未找到歌词");
                     }
+                } else {
+                    rec.addProcessInfo("跳过歌词处理: 已存在歌词且重复模式不是覆盖");
                 }
             }
 
             if (coverConfig.isEnabled()) {
+                rec.addProcessInfo("开始处理封面配置");
                 File targetCover = new File(parentDir, "cover.jpg");
+                boolean coverExists = targetCover.exists();
                 boolean processCover = coverConfig.getDuplicateMode() == ModuleConfig.DuplicateMode.OVERWRITE 
-                    || !targetCover.exists();
+                    || !coverExists;
+                
+                rec.addProcessInfo("封面处理判断: 重复模式='" + coverConfig.getDuplicateMode() + "', 封面已存在='" + coverExists + "', 是否处理='" + processCover + "'");
                 
                 if (processCover) {
-                    rec.addProcessInfo("开始处理封面: " + guess.getArtist() + " - " + guess.getAlbum());
-                    rec.addProcessInfo("使用数据源: " + source.getSourceName());
-                    
-                    if (processor.processCover(guess.getArtist(), guess.getAlbum(), parentDir)) {
+                    rec.addProcessInfo("开始处理封面");
+                    if (processor.processCover(guess.getArtist(), guess.getAlbum(), parentDir, rec)) {
                         Map<String, String> p = new HashMap<>();
                         p.put("task_type", "DOWNLOAD_COVER");
                         ChangeRecord coverRec = new ChangeRecord("下载: 专辑封面", "cover.jpg", parentDir,
                                 true, targetCover.getAbsolutePath(), OperationType.SCRAPER, p, ExecStatus.PENDING);
-                        coverRec.addProcessInfo("成功获取封面");
                         results.add(coverRec);
+                        rec.addProcessInfo("封面处理成功，创建下载任务");
                     } else {
-                        rec.addProcessInfo("未找到封面");
+                        rec.addProcessInfo("封面处理失败或未找到封面");
                     }
+                } else {
+                    rec.addProcessInfo("跳过封面处理: 封面已存在且重复模式不是覆盖");
                 }
             }
 
             if (albumInfoConfig.isEnabled()) {
+                rec.addProcessInfo("开始处理专辑信息配置");
                 File targetInfo = new File(parentDir, "AlbumInfo.txt");
+                boolean infoExists = targetInfo.exists();
                 boolean processInfo = albumInfoConfig.getDuplicateMode() == ModuleConfig.DuplicateMode.OVERWRITE 
-                    || !targetInfo.exists();
+                    || !infoExists;
+                
+                rec.addProcessInfo("专辑信息处理判断: 重复模式='" + albumInfoConfig.getDuplicateMode() + "', 专辑信息已存在='" + infoExists + "', 是否处理='" + processInfo + "'");
                 
                 if (processInfo) {
-                    rec.addProcessInfo("开始处理专辑信息: " + guess.getArtist() + " - " + guess.getAlbum());
-                    rec.addProcessInfo("使用数据源: " + source.getSourceName());
-                    
-                    if (processor.processAlbumInfo(guess.getArtist(), guess.getAlbum(), parentDir)) {
+                    rec.addProcessInfo("开始处理专辑信息");
+                    if (processor.processAlbumInfo(guess.getArtist(), guess.getAlbum(), parentDir, rec)) {
                         Map<String, String> p = new HashMap<>();
                         p.put("task_type", "GENERATE_INFO");
                         ChangeRecord infoRec = new ChangeRecord("生成: 专辑资料", "AlbumInfo.txt", parentDir,
                                 true, targetInfo.getAbsolutePath(), OperationType.SCRAPER, p, ExecStatus.PENDING);
-                        infoRec.addProcessInfo("成功获取专辑信息");
                         results.add(infoRec);
+                        rec.addProcessInfo("专辑信息处理成功，创建生成任务");
                     } else {
-                        rec.addProcessInfo("未找到专辑信息");
+                        rec.addProcessInfo("专辑信息处理失败或未找到专辑信息");
                     }
+                } else {
+                    rec.addProcessInfo("跳过专辑信息处理: 专辑信息已存在且重复模式不是覆盖");
                 }
             }
         } catch (Exception e) {
             rec.addProcessInfo("处理失败: " + e.getMessage());
+            rec.addProcessInfo("错误类型: " + e.getClass().getName());
+            
+            // 添加堆栈跟踪信息
+            StringBuilder stackTrace = new StringBuilder();
+            for (StackTraceElement element : e.getStackTrace()) {
+                stackTrace.append(element.toString()).append("\n");
+            }
+            rec.addProcessInfo("堆栈跟踪: " + stackTrace.toString().substring(0, Math.min(stackTrace.length(), 500))); // 限制长度
+            
             logError("处理文件失败: " + file.getName() + ", 错误: " + e.getMessage());
         }
         
+        rec.addProcessInfo("元数据刮削分析完成，生成任务数: " + results.size());
         return results;
     }
 
