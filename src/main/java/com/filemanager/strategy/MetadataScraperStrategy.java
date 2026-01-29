@@ -81,6 +81,9 @@ public class MetadataScraperStrategy extends IAppStrategy {
         sources.put("本地推断 (仅生成清单)", new LocalInferenceSource());
         sources.put("网易云音乐 (中文歌曲)", new NeteaseMusicSource());
         sources.put("咪咕音乐 (版权歌曲)", new MiguMusicSource());
+        sources.put("MusicBrainz (开源数据库)", new MusicBrainzSource());
+        sources.put("Last.fm (全球音乐平台)", new LastFmSource());
+        sources.put("Discogs (音乐数据库)", new DiscogsSource());
         
         cbSource = new JFXComboBox<>(FXCollections.observableArrayList(sources.keySet()));
         cbSource.getSelectionModel().select(0);

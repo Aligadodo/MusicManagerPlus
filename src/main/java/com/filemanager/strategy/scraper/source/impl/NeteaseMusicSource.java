@@ -57,8 +57,8 @@ public class NeteaseMusicSource implements MetadataSource {
     }
     
     @Override
-    public EnumSet<SourceCapabilities> getCapabilities() {
-        return EnumSet.allOf(SourceCapabilities.class);
+    public EnumSet<MetadataSource.SourceCapabilities> getCapabilities() {
+        return EnumSet.allOf(MetadataSource.SourceCapabilities.class);
     }
     
     @Override
