@@ -19,6 +19,9 @@ public class MiguMusicSource implements MetadataSource {
     
     private static final String API_BASE = "https://music.migu.cn/v3/api";
     
+    private String lastRequestUrl;
+    private String lastRequestError;
+    
     @Override
     public String getSourceName() {
         return "咪咕音乐";
@@ -65,6 +68,9 @@ public class MiguMusicSource implements MetadataSource {
     public LyricsInfo searchLyrics(String artist, String title, int duration) {
         try {
             String searchUrl = API_BASE + "/search/song?keyword=" + URLEncoder.encode(artist + " " + title, "UTF-8");
+            lastRequestUrl = searchUrl;
+            lastRequestError = null;
+            
             String searchResult = httpGet(searchUrl);
             
             if (searchResult != null && !searchResult.isEmpty()) {
@@ -76,6 +82,8 @@ public class MiguMusicSource implements MetadataSource {
                     String id = String.valueOf(song.get("id"));
                     
                     String lyricsUrl = API_BASE + "/song/lyric?id=" + id;
+                    lastRequestUrl = lyricsUrl;
+                    
                     String lyricsResult = httpGet(lyricsUrl);
                     
                     if (lyricsResult != null) {
@@ -94,6 +102,7 @@ public class MiguMusicSource implements MetadataSource {
                 }
             }
         } catch (Exception e) {
+            lastRequestError = e.getMessage();
             e.printStackTrace();
         }
         return null;
@@ -103,6 +112,9 @@ public class MiguMusicSource implements MetadataSource {
     public CoverInfo searchCover(String artist, String album) {
         try {
             String searchUrl = API_BASE + "/search/album?keyword=" + URLEncoder.encode(artist + " " + album, "UTF-8");
+            lastRequestUrl = searchUrl;
+            lastRequestError = null;
+            
             String searchResult = httpGet(searchUrl);
             
             if (searchResult != null && !searchResult.isEmpty()) {
@@ -123,6 +135,7 @@ public class MiguMusicSource implements MetadataSource {
                 }
             }
         } catch (Exception e) {
+            lastRequestError = e.getMessage();
             e.printStackTrace();
         }
         return null;
@@ -132,6 +145,9 @@ public class MiguMusicSource implements MetadataSource {
     public AlbumInfo searchAlbumInfo(String artist, String album) {
         try {
             String searchUrl = API_BASE + "/search/album?keyword=" + URLEncoder.encode(artist + " " + album, "UTF-8");
+            lastRequestUrl = searchUrl;
+            lastRequestError = null;
+            
             String searchResult = httpGet(searchUrl);
             
             if (searchResult != null && !searchResult.isEmpty()) {
@@ -150,6 +166,7 @@ public class MiguMusicSource implements MetadataSource {
                 }
             }
         } catch (Exception e) {
+            lastRequestError = e.getMessage();
             e.printStackTrace();
         }
         return null;
@@ -159,6 +176,9 @@ public class MiguMusicSource implements MetadataSource {
     public TrackInfo searchTrackInfo(String artist, String title) {
         try {
             String searchUrl = API_BASE + "/search/song?keyword=" + URLEncoder.encode(artist + " " + title, "UTF-8");
+            lastRequestUrl = searchUrl;
+            lastRequestError = null;
+            
             String searchResult = httpGet(searchUrl);
             
             if (searchResult != null && !searchResult.isEmpty()) {
@@ -182,12 +202,16 @@ public class MiguMusicSource implements MetadataSource {
                 }
             }
         } catch (Exception e) {
+            lastRequestError = e.getMessage();
             e.printStackTrace();
         }
         return null;
     }
     
     private String httpGet(String urlStr) throws Exception {
+        lastRequestUrl = urlStr;
+        lastRequestError = null;
+        
         URL url = new URL(urlStr);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("GET");
@@ -202,9 +226,22 @@ public class MiguMusicSource implements MetadataSource {
                 response.append(line);
             }
             return response.toString();
+        } catch (Exception e) {
+            lastRequestError = e.getMessage();
+            throw e;
         } finally {
             conn.disconnect();
         }
+    }
+    
+    @Override
+    public String getLastRequestUrl() {
+        return lastRequestUrl;
+    }
+    
+    @Override
+    public String getLastRequestError() {
+        return lastRequestError;
     }
     
     private Map<String, Object> parseJson(String json) {

@@ -72,11 +72,12 @@ public class MetadataHelper {
         AudioMeta meta = new AudioMeta();
         String name = file.getName();
         if (name.matches("^\\d+[.\\s-].*")) {
-            String[] parts = name.split("[.\\s-]", 2);
-            if (parts.length > 1) {
-                meta.track = parts[0].trim();
-                meta.title = removeExt(parts[1].trim());
-            }
+            // Split by number followed by any separator pattern, then take the rest as title
+            String trackNumber = name.replaceAll("^([\\d]+).*", "$1").trim();
+            meta.track = trackNumber;
+            // Remove track number and separator from the beginning of the string
+            String titlePart = name.replaceFirst("^\\d+[.\\s-]+", "").trim();
+            meta.title = removeExt(titlePart);
         } else if (name.contains(" - ")) {
             String[] parts = name.split(" - ");
             if (parts.length >= 2) {
@@ -96,16 +97,58 @@ public class MetadataHelper {
                 meta.album = parentName.substring(7).trim();
             } else if (parentName.contains(" - ")) {
                 String[] parts = parentName.split(" - ", 2);
-                if (!isValid(meta.artist)) meta.artist = parts[0].trim();
+                if (!isValid(meta.artist)) {
+                    // For parent directory, prefer the first part as artist
+                    // Only use the second part if the first part looks like a category letter (single character)
+                    String potentialArtist1 = cleanArtistName(parts[0].trim());
+                    String potentialArtist2 = cleanArtistName(parts[1].trim());
+                    
+                    // If first part is a single character (like "C", "A", etc.), use second part
+                    // Otherwise, prefer the first part as it's usually the artist name
+                    if (potentialArtist1.length() <= 1 && potentialArtist2.length() > 1) {
+                        meta.artist = potentialArtist2;
+                    } else {
+                        meta.artist = potentialArtist1;
+                    }
+                }
                 meta.album = parts[1].trim();
             } else {
                 meta.album = parentName;
             }
 
             File grandParent = parent.getParentFile();
-            if (grandParent != null && !isValid(meta.artist)) meta.artist = grandParent.getName();
+            if (grandParent != null && !isValid(meta.artist)) {
+                String grandParentName = grandParent.getName();
+                if (grandParentName.contains(" - ")) {
+                    //同样处理祖父目录，尝试从 "C - Artist" 这样的格式中提取艺术家
+                    String[] parts = grandParentName.split(" - ", 2);
+                    if (parts.length >= 2) {
+                        //优先选择第二部分作为艺术家，并清理额外信息
+                        meta.artist = cleanArtistName(parts[1].trim());
+                    } else {
+                        meta.artist = grandParentName;
+                    }
+                } else {
+                    meta.artist = grandParentName;
+                }
+            }
         }
         return meta;
+    }
+
+    private static String cleanArtistName(String artistName) {
+        // Remove common suffixes and extra information from artist names
+        // Remove patterns like 【xxx】【yyy】
+        String cleaned = artistName.replaceAll("\\【.*?\\】", "");
+        // Remove patterns like [xxx][yyy]
+        cleaned = cleaned.replaceAll("\\[.*?\\]", "");
+        // Remove patterns like (xxx)(yyy)
+        cleaned = cleaned.replaceAll("\\(.*?\\)", "");
+        // Remove file extensions if present
+        cleaned = removeExt(cleaned);
+        // Remove year patterns like .2020, .2021, etc.
+        cleaned = cleaned.replaceAll("\\.\\d{4}", "");
+        return cleaned.trim();
     }
 
     private static String removeExt(String s) {

@@ -25,6 +25,9 @@ public class LastFmSource implements MetadataSource {
     private static final String API_BASE = "http://ws.audioscrobbler.com/2.0/";
     private static final String API_KEY = "YOUR_LASTFM_API_KEY";
     
+    private String lastRequestUrl;
+    private String lastRequestError;
+    
     @Override
     public String getSourceName() {
         return "Last.fm";
@@ -58,6 +61,8 @@ public class LastFmSource implements MetadataSource {
                 "&artist=" + URLEncoder.encode(artist, "UTF-8") +
                 "&track=" + URLEncoder.encode(title, "UTF-8") +
                 "&format=json";
+            lastRequestUrl = searchUrl;
+            lastRequestError = null;
             
             String searchResult = httpGet(searchUrl);
             if (searchResult != null && !searchResult.isEmpty()) {
@@ -74,6 +79,7 @@ public class LastFmSource implements MetadataSource {
                 }
             }
         } catch (Exception e) {
+            lastRequestError = e.getMessage();
             e.printStackTrace();
         }
         return null;
@@ -87,6 +93,8 @@ public class LastFmSource implements MetadataSource {
                 "&artist=" + URLEncoder.encode(artist, "UTF-8") +
                 "&album=" + URLEncoder.encode(album, "UTF-8") +
                 "&format=json";
+            lastRequestUrl = searchUrl;
+            lastRequestError = null;
             
             String searchResult = httpGet(searchUrl);
             if (searchResult != null && !searchResult.isEmpty()) {
@@ -110,6 +118,7 @@ public class LastFmSource implements MetadataSource {
                 }
             }
         } catch (Exception e) {
+            lastRequestError = e.getMessage();
             e.printStackTrace();
         }
         return null;
@@ -123,6 +132,8 @@ public class LastFmSource implements MetadataSource {
                 "&artist=" + URLEncoder.encode(artist, "UTF-8") +
                 "&album=" + URLEncoder.encode(album, "UTF-8") +
                 "&format=json";
+            lastRequestUrl = searchUrl;
+            lastRequestError = null;
             
             String searchResult = httpGet(searchUrl);
             if (searchResult != null && !searchResult.isEmpty()) {
@@ -177,6 +188,7 @@ public class LastFmSource implements MetadataSource {
                 }
             }
         } catch (Exception e) {
+            lastRequestError = e.getMessage();
             e.printStackTrace();
         }
         return null;
@@ -190,6 +202,8 @@ public class LastFmSource implements MetadataSource {
                 "&artist=" + URLEncoder.encode(artist, "UTF-8") +
                 "&track=" + URLEncoder.encode(title, "UTF-8") +
                 "&format=json";
+            lastRequestUrl = searchUrl;
+            lastRequestError = null;
             
             String searchResult = httpGet(searchUrl);
             if (searchResult != null && !searchResult.isEmpty()) {
@@ -240,12 +254,16 @@ public class LastFmSource implements MetadataSource {
                 }
             }
         } catch (Exception e) {
+            lastRequestError = e.getMessage();
             e.printStackTrace();
         }
         return null;
     }
     
     private String httpGet(String urlString) {
+        lastRequestUrl = urlString;
+        lastRequestError = null;
+        
         try {
             URL url = new URL(urlString);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -266,11 +284,35 @@ public class LastFmSource implements MetadataSource {
                 }
                 reader.close();
                 return response.toString();
+            } else {
+                lastRequestError = "HTTP Response Code: " + responseCode;
+                BufferedReader errorReader = new BufferedReader(
+                    new InputStreamReader(conn.getErrorStream(), StandardCharsets.UTF_8));
+                StringBuilder errorResponse = new StringBuilder();
+                String line;
+                while ((line = errorReader.readLine()) != null) {
+                    errorResponse.append(line);
+                }
+                errorReader.close();
+                if (errorResponse.length() > 0) {
+                    lastRequestError += ", Error: " + errorResponse.toString();
+                }
             }
         } catch (Exception e) {
+            lastRequestError = e.getMessage();
             e.printStackTrace();
         }
         return null;
+    }
+    
+    @Override
+    public String getLastRequestUrl() {
+        return lastRequestUrl;
+    }
+    
+    @Override
+    public String getLastRequestError() {
+        return lastRequestError;
     }
     
     private Map<String, Object> parseJson(String json) {

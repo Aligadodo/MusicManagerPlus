@@ -27,6 +27,9 @@ public class DiscogsSource implements MetadataSource {
     private static final String API_SECRET = "YOUR_DISCOGS_SECRET";
     private static final String USER_AGENT = "EchoMusicManager/1.0";
     
+    private String lastRequestUrl;
+    private String lastRequestError;
+    
     @Override
     public String getSourceName() {
         return "Discogs";
@@ -64,6 +67,8 @@ public class DiscogsSource implements MetadataSource {
                 URLEncoder.encode(query, "UTF-8") +
                 "&type=release&per_page=1" +
                 "&key=" + API_KEY + "&secret=" + API_SECRET;
+            lastRequestUrl = searchUrl;
+            lastRequestError = null;
             
             String searchResult = httpGet(searchUrl);
             if (searchResult != null && !searchResult.isEmpty()) {
@@ -97,6 +102,7 @@ public class DiscogsSource implements MetadataSource {
                 }
             }
         } catch (Exception e) {
+            lastRequestError = e.getMessage();
             e.printStackTrace();
         }
         return null;
@@ -110,6 +116,8 @@ public class DiscogsSource implements MetadataSource {
                 URLEncoder.encode(query, "UTF-8") +
                 "&type=release&per_page=1" +
                 "&key=" + API_KEY + "&secret=" + API_SECRET;
+            lastRequestUrl = searchUrl;
+            lastRequestError = null;
             
             String searchResult = httpGet(searchUrl);
             if (searchResult != null && !searchResult.isEmpty()) {
@@ -170,6 +178,7 @@ public class DiscogsSource implements MetadataSource {
                 }
             }
         } catch (Exception e) {
+            lastRequestError = e.getMessage();
             e.printStackTrace();
         }
         return null;
@@ -183,6 +192,8 @@ public class DiscogsSource implements MetadataSource {
                 URLEncoder.encode(query, "UTF-8") +
                 "&type=master&per_page=1" +
                 "&key=" + API_KEY + "&secret=" + API_SECRET;
+            lastRequestUrl = searchUrl;
+            lastRequestError = null;
             
             String searchResult = httpGet(searchUrl);
             if (searchResult != null && !searchResult.isEmpty()) {
@@ -241,12 +252,16 @@ public class DiscogsSource implements MetadataSource {
                 }
             }
         } catch (Exception e) {
+            lastRequestError = e.getMessage();
             e.printStackTrace();
         }
         return null;
     }
     
     private String httpGet(String urlString) {
+        lastRequestUrl = urlString;
+        lastRequestError = null;
+        
         try {
             URL url = new URL(urlString);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -267,11 +282,35 @@ public class DiscogsSource implements MetadataSource {
                 }
                 reader.close();
                 return response.toString();
+            } else {
+                lastRequestError = "HTTP Response Code: " + responseCode;
+                BufferedReader errorReader = new BufferedReader(
+                    new InputStreamReader(conn.getErrorStream(), StandardCharsets.UTF_8));
+                StringBuilder errorResponse = new StringBuilder();
+                String line;
+                while ((line = errorReader.readLine()) != null) {
+                    errorResponse.append(line);
+                }
+                errorReader.close();
+                if (errorResponse.length() > 0) {
+                    lastRequestError += ", Error: " + errorResponse.toString();
+                }
             }
         } catch (Exception e) {
+            lastRequestError = e.getMessage();
             e.printStackTrace();
         }
         return null;
+    }
+    
+    @Override
+    public String getLastRequestUrl() {
+        return lastRequestUrl;
+    }
+    
+    @Override
+    public String getLastRequestError() {
+        return lastRequestError;
     }
     
     private Map<String, Object> parseJson(String json) {

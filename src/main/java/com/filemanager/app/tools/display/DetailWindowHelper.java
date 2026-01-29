@@ -124,15 +124,21 @@ public class DetailWindowHelper {
                 if (processInfoArray.size() > 0) {
                     for (int i = 0; i < processInfoArray.size(); i++) {
                         String info = processInfoArray.get(i).asText();
-                        Label infoLabel = new Label((i + 1) + ". " + info);
-                        infoLabel.setStyle("-fx-font-family: 'Courier New', 'Consolas', monospace; -fx-font-size: 12px; -fx-text-fill: #333; -fx-wrap-text: true;");
-                        infoLabel.setWrapText(true);
-                        processInfoContainer.getChildren().add(infoLabel);
+                        TextArea infoTextArea = new TextArea((i + 1) + ". " + info);
+                        infoTextArea.setEditable(false);
+                        infoTextArea.setWrapText(true);
+                        infoTextArea.setStyle("-fx-font-family: 'Courier New', 'Consolas', monospace; -fx-font-size: 12px; -fx-text-fill: #333;");
+                        infoTextArea.setPrefRowCount(2);
+                        infoTextArea.setMaxHeight(80);
+                        processInfoContainer.getChildren().add(infoTextArea);
                     }
                 } else {
-                    Label emptyLabel = new Label("无处理过程信息");
-                    emptyLabel.setStyle("-fx-font-style: italic; -fx-text-fill: #999;");
-                    processInfoContainer.getChildren().add(emptyLabel);
+                    TextArea emptyTextArea = new TextArea("无处理过程信息");
+                    emptyTextArea.setEditable(false);
+                    emptyTextArea.setWrapText(true);
+                    emptyTextArea.setStyle("-fx-font-style: italic; -fx-text-fill: #999; -fx-font-family: 'Courier New', 'Consolas', monospace; -fx-font-size: 12px;");
+                    emptyTextArea.setPrefRowCount(2);
+                    processInfoContainer.getChildren().add(emptyTextArea);
                 }
 
                 ScrollPane processInfoScroll = new ScrollPane(processInfoContainer);

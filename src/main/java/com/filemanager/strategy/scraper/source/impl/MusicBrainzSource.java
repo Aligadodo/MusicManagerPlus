@@ -25,6 +25,9 @@ public class MusicBrainzSource implements MetadataSource {
     private static final String API_BASE = "https://musicbrainz.org/ws/2";
     private static final String USER_AGENT = "EchoMusicManager/1.0 (chrse1997@163.com)";
     
+    private String lastRequestUrl;
+    private String lastRequestError;
+    
     @Override
     public String getSourceName() {
         return "MusicBrainz";
@@ -56,6 +59,8 @@ public class MusicBrainzSource implements MetadataSource {
                 artist, title);
             String searchUrl = API_BASE + "/recording/?query=" + URLEncoder.encode(query, "UTF-8") + 
                 "&fmt=json&limit=5";
+            lastRequestUrl = searchUrl;
+            lastRequestError = null;
             
             String searchResult = httpGet(searchUrl);
             if (searchResult != null && !searchResult.isEmpty()) {
@@ -67,6 +72,8 @@ public class MusicBrainzSource implements MetadataSource {
                         String recordingId = (String) recording.get("id");
                         
                         String lyricsUrl = API_BASE + "/recording/" + recordingId + "?inc=lyrics-rels&fmt=json";
+                        lastRequestUrl = lyricsUrl;
+                        
                         String lyricsResult = httpGet(lyricsUrl);
                         
                         if (lyricsResult != null) {
@@ -96,6 +103,7 @@ public class MusicBrainzSource implements MetadataSource {
                 }
             }
         } catch (Exception e) {
+            lastRequestError = e.getMessage();
             e.printStackTrace();
         }
         return null;
@@ -108,6 +116,8 @@ public class MusicBrainzSource implements MetadataSource {
                 artist, album);
             String searchUrl = API_BASE + "/release/?query=" + URLEncoder.encode(query, "UTF-8") + 
                 "&fmt=json&limit=5";
+            lastRequestUrl = searchUrl;
+            lastRequestError = null;
             
             String searchResult = httpGet(searchUrl);
             if (searchResult != null && !searchResult.isEmpty()) {
@@ -130,6 +140,7 @@ public class MusicBrainzSource implements MetadataSource {
                 }
             }
         } catch (Exception e) {
+            lastRequestError = e.getMessage();
             e.printStackTrace();
         }
         return null;
@@ -142,6 +153,8 @@ public class MusicBrainzSource implements MetadataSource {
                 artist, album);
             String searchUrl = API_BASE + "/release/?query=" + URLEncoder.encode(query, "UTF-8") + 
                 "&fmt=json&limit=1";
+            lastRequestUrl = searchUrl;
+            lastRequestError = null;
             
             String searchResult = httpGet(searchUrl);
             if (searchResult != null && !searchResult.isEmpty()) {
@@ -190,6 +203,7 @@ public class MusicBrainzSource implements MetadataSource {
                 }
             }
         } catch (Exception e) {
+            lastRequestError = e.getMessage();
             e.printStackTrace();
         }
         return null;
@@ -202,6 +216,8 @@ public class MusicBrainzSource implements MetadataSource {
                 artist, title);
             String searchUrl = API_BASE + "/recording/?query=" + URLEncoder.encode(query, "UTF-8") + 
                 "&fmt=json&limit=1";
+            lastRequestUrl = searchUrl;
+            lastRequestError = null;
             
             String searchResult = httpGet(searchUrl);
             if (searchResult != null && !searchResult.isEmpty()) {
@@ -248,12 +264,16 @@ public class MusicBrainzSource implements MetadataSource {
                 }
             }
         } catch (Exception e) {
+            lastRequestError = e.getMessage();
             e.printStackTrace();
         }
         return null;
     }
     
     private String httpGet(String urlString) {
+        lastRequestUrl = urlString;
+        lastRequestError = null;
+        
         try {
             URL url = new URL(urlString);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -274,11 +294,35 @@ public class MusicBrainzSource implements MetadataSource {
                 }
                 reader.close();
                 return response.toString();
+            } else {
+                lastRequestError = "HTTP Response Code: " + responseCode;
+                BufferedReader errorReader = new BufferedReader(
+                    new InputStreamReader(conn.getErrorStream(), StandardCharsets.UTF_8));
+                StringBuilder errorResponse = new StringBuilder();
+                String line;
+                while ((line = errorReader.readLine()) != null) {
+                    errorResponse.append(line);
+                }
+                errorReader.close();
+                if (errorResponse.length() > 0) {
+                    lastRequestError += ", Error: " + errorResponse.toString();
+                }
             }
         } catch (Exception e) {
+            lastRequestError = e.getMessage();
             e.printStackTrace();
         }
         return null;
+    }
+    
+    @Override
+    public String getLastRequestUrl() {
+        return lastRequestUrl;
+    }
+    
+    @Override
+    public String getLastRequestError() {
+        return lastRequestError;
     }
     
     private Map<String, Object> parseJson(String json) {

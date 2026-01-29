@@ -76,6 +76,18 @@ public class MetadataScraperProcessor {
                 record.addProcessInfo("搜索参数: artist='" + artist + "', title='" + title + "', duration='" + duration + "'");
             }
             lyrics = source.searchLyrics(artist, title, duration);
+            
+            if (record != null) {
+                String requestUrl = source.getLastRequestUrl();
+                String requestError = source.getLastRequestError();
+                if (requestUrl != null) {
+                    record.addProcessInfo("请求URL: " + requestUrl);
+                }
+                if (requestError != null) {
+                    record.addProcessInfo("请求错误: " + requestError);
+                }
+            }
+            
             if (lyrics != null) {
                 if (record != null) {
                     record.addProcessInfo("搜索结果: 找到歌词，来源='" + lyrics.getSource() + "', 格式='" + lyrics.getFormat() + "', 验证状态='" + lyrics.isVerified() + "'");
@@ -146,6 +158,18 @@ public class MetadataScraperProcessor {
                 record.addProcessInfo("搜索参数: artist='" + artist + "', album='" + album + "'");
             }
             cover = source.searchCover(artist, album);
+            
+            if (record != null) {
+                String requestUrl = source.getLastRequestUrl();
+                String requestError = source.getLastRequestError();
+                if (requestUrl != null) {
+                    record.addProcessInfo("请求URL: " + requestUrl);
+                }
+                if (requestError != null) {
+                    record.addProcessInfo("请求错误: " + requestError);
+                }
+            }
+            
             if (cover != null) {
                 if (record != null) {
                     record.addProcessInfo("搜索结果: 找到封面，来源='" + cover.getSource() + "', URL='" + cover.getImageUrl() + "', 格式='" + cover.getFormat() + "', 尺寸='" + cover.getWidth() + "x" + cover.getHeight() + "'");
@@ -216,6 +240,18 @@ public class MetadataScraperProcessor {
                 record.addProcessInfo("搜索参数: artist='" + artist + "', album='" + album + "'");
             }
             albumInfo = source.searchAlbumInfo(artist, album);
+            
+            if (record != null) {
+                String requestUrl = source.getLastRequestUrl();
+                String requestError = source.getLastRequestError();
+                if (requestUrl != null) {
+                    record.addProcessInfo("请求URL: " + requestUrl);
+                }
+                if (requestError != null) {
+                    record.addProcessInfo("请求错误: " + requestError);
+                }
+            }
+            
             if (albumInfo != null) {
                 if (record != null) {
                     record.addProcessInfo("搜索结果: 找到专辑信息，来源='" + albumInfo.getSource() + "', 名称='" + albumInfo.getName() + "', 艺术家='" + albumInfo.getArtist() + "'");

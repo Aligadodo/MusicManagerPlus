@@ -79,7 +79,9 @@ public class FileManagerPlusApp extends Application implements IAppController, I
     // --- Core Data ---
     private final ObservableList<File> sourceRoots = FXCollections.observableArrayList();
     private final ObservableList<IAppStrategy> pipelineStrategies = FXCollections.observableArrayList();
-    private final File lastConfigFile = new File(System.getProperty("user.home"), ".fmplus_config.properties");
+    // 使用项目的 setting 目录存放配置文件
+    private final File settingDir = new File("setting");
+    private final File lastConfigFile = new File(settingDir, "fmplus_config.properties");
     private final ThemeConfig currentTheme = new ThemeConfig();
     @Getter
     private final AtomicBoolean taskRunningStatus = new AtomicBoolean(false);
@@ -244,6 +246,10 @@ public class FileManagerPlusApp extends Application implements IAppController, I
         primaryStage.setScene(scene);
 
         // 5. 加载配置 & 应用外观
+        // 确保 setting 目录存在
+        if (!settingDir.exists()) {
+            settingDir.mkdirs();
+        }
         this.autoReloadNodes = Lists.newArrayList(globalSettingsView, logView, previewView, composeView, currentTheme, this);
         configManager.loadConfig(lastConfigFile);
         applyAppearance();

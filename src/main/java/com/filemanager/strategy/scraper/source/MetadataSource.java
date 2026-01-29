@@ -65,6 +65,18 @@ public interface MetadataSource {
     TrackInfo searchTrackInfo(String artist, String title);
     
     /**
+     * 获取最后一次请求的完整URL
+     * @return 最后一次请求的URL，如果没有请求则返回null
+     */
+    String getLastRequestUrl();
+    
+    /**
+     * 获取最后一次请求的错误信息
+     * @return 最后一次请求的错误信息，如果没有错误则返回null
+     */
+    String getLastRequestError();
+    
+    /**
      * 数据源能力枚举
      */
     enum SourceCapabilities {

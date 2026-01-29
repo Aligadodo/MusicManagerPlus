@@ -82,4 +82,14 @@ public class LocalInferenceSource implements MetadataSource {
         info.setSource(getSourceName());
         return info;
     }
+    
+    @Override
+    public String getLastRequestUrl() {
+        return null; // 本地推断不进行网络请求
+    }
+    
+    @Override
+    public String getLastRequestError() {
+        return null; // 本地推断不进行网络请求
+    }
 }
