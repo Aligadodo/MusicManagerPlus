@@ -2,11 +2,14 @@ package com.filemanager.strategy.scraper.source;
 
 import com.filemanager.strategy.scraper.model.*;
 import com.filemanager.strategy.scraper.source.impl.*;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+
+@Ignore("忽略外部API测试，避免执行过慢")
 
 /**
  * 测试不同国家、语种、风格的流行歌曲元数据刮削

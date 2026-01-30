@@ -1,14 +1,15 @@
 package com.filemanager.strategy.scraper.source;
 
 import com.filemanager.strategy.scraper.source.impl.*;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-
 import java.util.Arrays;
 import java.util.Collection;
-
 import static org.junit.Assert.assertNotNull;
+
+@Ignore("忽略外部API测试，避免执行过慢")
 
 /**
  * 测试所有数据源的API请求路径和参数正确性

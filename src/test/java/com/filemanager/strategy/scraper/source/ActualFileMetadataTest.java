@@ -3,10 +3,13 @@ package com.filemanager.strategy.scraper.source;
 import com.filemanager.strategy.scraper.model.*;
 import com.filemanager.strategy.scraper.source.impl.*;
 import com.filemanager.util.MetadataHelper;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
 import java.util.*;
+
+@Ignore("忽略外部API测试，避免执行过慢")
 
 /**
  * 使用实际文件测试元数据刮削功能
