@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -75,7 +76,7 @@ public class StrategyServiceImpl implements StrategyService {
                     config.setValue("recursive", true);
                     break;
                 case "metadata-scraper":
-                    config.setValue("sources", List.of("discogs", "musicbrainz"));
+                    config.setValue("sources", Arrays.asList("discogs", "musicbrainz"));
                     config.setValue("updateTags", true);
                     break;
                 case "file-cleanup":
@@ -96,7 +97,15 @@ public class StrategyServiceImpl implements StrategyService {
 
     @Override
     public List<ChangeRecord> analyzeFiles(String strategyId, List<String> filePaths, StrategyConfigDTO config) {
-        // 模拟分析结果
+        // 尝试从插件系统获取对应的插件
+        com.filemanager.plugin.IPlugin plugin = pluginRegistry.getPlugin(strategyId);
+        if (plugin != null) {
+            // 转换配置为插件配置
+            com.filemanager.domain.dto.PluginConfigDTO pluginConfig = convertToPluginConfig(config);
+            return plugin.execute(filePaths, pluginConfig, new com.filemanager.plugin.ExecutionContext());
+        }
+        
+        // 如果没有对应的插件，使用默认实现
         List<ChangeRecord> changes = new ArrayList<>();
         for (String filePath : filePaths) {
             ChangeRecord record = new ChangeRecord();
@@ -113,7 +122,20 @@ public class StrategyServiceImpl implements StrategyService {
 
     @Override
     public List<ChangeRecord> executeStrategy(String strategyId, List<String> filePaths, StrategyConfigDTO config) {
-        // 模拟执行结果
+        // 尝试从插件系统获取对应的插件
+        com.filemanager.plugin.IPlugin plugin = pluginRegistry.getPlugin(strategyId);
+        if (plugin != null) {
+            // 转换配置为插件配置
+            com.filemanager.domain.dto.PluginConfigDTO pluginConfig = convertToPluginConfig(config);
+            List<ChangeRecord> changes = plugin.execute(filePaths, pluginConfig, new com.filemanager.plugin.ExecutionContext());
+            // 更新执行状态
+            for (ChangeRecord record : changes) {
+                record.setStatus(ChangeRecord.ExecStatus.SUCCESS);
+            }
+            return changes;
+        }
+        
+        // 如果没有对应的插件，使用默认实现
         List<ChangeRecord> changes = analyzeFiles(strategyId, filePaths, config);
         for (ChangeRecord record : changes) {
             record.setStatus(ChangeRecord.ExecStatus.SUCCESS);
@@ -137,5 +159,15 @@ public class StrategyServiceImpl implements StrategyService {
             default:
                 return filePath;
         }
+    }
+
+    private com.filemanager.domain.dto.PluginConfigDTO convertToPluginConfig(StrategyConfigDTO config) {
+        com.filemanager.domain.dto.PluginConfigDTO pluginConfig = new com.filemanager.domain.dto.PluginConfigDTO();
+        if (config.getConfigValues() != null) {
+            for (Map.Entry<String, Object> entry : config.getConfigValues().entrySet()) {
+                pluginConfig.setValue(entry.getKey(), entry.getValue());
+            }
+        }
+        return pluginConfig;
     }
 }

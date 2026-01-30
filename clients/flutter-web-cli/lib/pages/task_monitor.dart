@@ -16,7 +16,7 @@ class _TaskMonitorPageState extends ConsumerState<TaskMonitorPage> {
   List<TaskStatus> _tasks = [];
   bool _isLoading = false;
   String _errorMessage = '';
-  Map<String, WebSocketChannel> _webSocketChannels = {};
+  final Map<String, WebSocketChannel> _webSocketChannels = {};
 
   @override
   void initState() {
@@ -262,10 +262,10 @@ class _TaskMonitorPageState extends ConsumerState<TaskMonitorPage> {
                                                   onPressed: () {
                                                     _cancelTask(task.taskId);
                                                   },
-                                                  child: const Text('取消'),
                                                   style: ElevatedButton.styleFrom(
                                                     backgroundColor: Colors.orange,
                                                   ),
+                                                  child: const Text('取消'),
                                                 ),
                                             ],
                                         ),

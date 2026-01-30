@@ -4,12 +4,18 @@ import 'package:filemanager_flutter/api/api_client.dart';
 import 'package:filemanager_flutter/api/file_service.dart';
 import 'package:filemanager_flutter/api/strategy_service.dart';
 import 'package:filemanager_flutter/api/task_service.dart';
+import 'package:filemanager_flutter/api/source_directory_service.dart';
+import 'package:filemanager_flutter/api/pipeline_service.dart';
+import 'package:filemanager_flutter/api/thread_pool_service.dart';
 
 // 服务提供者
 final apiClientProvider = Provider((ref) => ApiClient());
 final fileServiceProvider = Provider((ref) => FileService(ref.watch(apiClientProvider)));
 final strategyServiceProvider = Provider((ref) => StrategyService(ref.watch(apiClientProvider)));
 final taskServiceProvider = Provider((ref) => TaskService(ref.watch(apiClientProvider)));
+final sourceDirectoryServiceProvider = Provider((ref) => SourceDirectoryService(ref.watch(apiClientProvider)));
+final pipelineServiceProvider = Provider((ref) => PipelineService(ref.watch(apiClientProvider)));
+final threadPoolServiceProvider = Provider((ref) => ThreadPoolService(ref.watch(apiClientProvider)));
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -70,10 +76,24 @@ class HomePage extends ConsumerWidget {
                 ),
                 _buildFeatureCard(
                   context,
-                  title: '系统设置',
-                  description: '配置系统参数和选项',
-                  icon: Icons.system_settings,
-                  route: '/settings',
+                  title: '源目录管理',
+                  description: '管理文件处理的源目录',
+                  icon: Icons.folder,
+                  route: '/source-directories',
+                ),
+                _buildFeatureCard(
+                  context,
+                  title: '策略流水线',
+                  description: '组合和配置策略流水线',
+                  icon: Icons.linear_scale,
+                  route: '/pipeline-config',
+                ),
+                _buildFeatureCard(
+                  context,
+                  title: '预览分析',
+                  description: '分析和预览文件变更',
+                  icon: Icons.analytics,
+                  route: '/preview',
                 ),
               ],
             ),

@@ -8,11 +8,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/tasks")
+@RequestMapping("/tasks")
 public class TaskController {
 
     @Autowired
@@ -22,7 +23,9 @@ public class TaskController {
     public ResponseEntity<Map<String, String>> createTask(@RequestBody TaskRequestDTO request) {
         try {
             String taskId = taskService.createTask(request);
-            return ResponseEntity.ok(Map.of("taskId", taskId));
+            Map<String, String> result = new HashMap<>();
+            result.put("taskId", taskId);
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
@@ -55,10 +58,10 @@ public class TaskController {
     public ResponseEntity<Map<String, Object>> executeTask(@PathVariable String id) {
         try {
             boolean success = taskService.executeTask(id);
-            return ResponseEntity.ok(Map.of(
-                    "success", success,
-                    "message", "任务开始执行"
-            ));
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", success);
+            result.put("message", "任务开始执行");
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
@@ -68,10 +71,10 @@ public class TaskController {
     public ResponseEntity<Map<String, Object>> cancelTask(@PathVariable String id) {
         try {
             boolean success = taskService.cancelTask(id);
-            return ResponseEntity.ok(Map.of(
-                    "success", success,
-                    "message", "任务已取消"
-            ));
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", success);
+            result.put("message", "任务已取消");
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
@@ -81,10 +84,10 @@ public class TaskController {
     public ResponseEntity<Map<String, Object>> deleteTask(@PathVariable String id) {
         try {
             boolean success = taskService.deleteTask(id);
-            return ResponseEntity.ok(Map.of(
-                    "success", success,
-                    "message", "任务已删除"
-            ));
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", success);
+            result.put("message", "任务已删除");
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }

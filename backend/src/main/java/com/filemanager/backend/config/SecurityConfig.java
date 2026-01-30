@@ -13,12 +13,12 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable())
-            .authorizeHttpRequests(authorize -> authorize
-                .requestMatchers("/api/files/scan", "/api/files/info", "/api/files/exists", "/api/strategies").permitAll()
-                .requestMatchers("/api/**").authenticated()
+            .csrf().disable()
+            .authorizeRequests()
+                .antMatchers("/files/scan", "/files/info", "/files/exists", "/strategies").permitAll()
+                .antMatchers("/files/**", "/strategies/**", "/tasks/**", "/plugins/**").authenticated()
                 .anyRequest().permitAll()
-            )
+            .and()
             .httpBasic();
 
         return http.build();

@@ -9,11 +9,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/plugins")
+@RequestMapping("/plugins")
 public class PluginController {
 
     @Autowired
@@ -53,10 +54,10 @@ public class PluginController {
     public ResponseEntity<Map<String, Object>> updatePluginConfig(@PathVariable String id, @RequestBody PluginConfigDTO config) {
         try {
             boolean success = pluginService.updatePluginConfig(id, config);
-            return ResponseEntity.ok(Map.of(
-                    "success", success,
-                    "message", "配置更新成功"
-            ));
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", success);
+            result.put("message", "配置更新成功");
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
@@ -79,10 +80,10 @@ public class PluginController {
     public ResponseEntity<Map<String, Object>> reloadPlugins() {
         try {
             boolean success = pluginService.reloadPlugins();
-            return ResponseEntity.ok(Map.of(
-                    "success", success,
-                    "message", "插件重载成功"
-            ));
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", success);
+            result.put("message", "插件重载成功");
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }

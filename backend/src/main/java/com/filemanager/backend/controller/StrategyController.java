@@ -9,11 +9,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/strategies")
+@RequestMapping("/strategies")
 public class StrategyController {
 
     @Autowired
@@ -53,10 +54,10 @@ public class StrategyController {
     public ResponseEntity<Map<String, Object>> updateStrategyConfig(@PathVariable String id, @RequestBody StrategyConfigDTO config) {
         try {
             boolean success = strategyService.updateStrategyConfig(id, config);
-            return ResponseEntity.ok(Map.of(
-                    "success", success,
-                    "message", "配置更新成功"
-            ));
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", success);
+            result.put("message", "配置更新成功");
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }

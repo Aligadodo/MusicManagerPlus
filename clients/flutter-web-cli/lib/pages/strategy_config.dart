@@ -119,7 +119,7 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
             // 策略列表
             Container(
               width: 300,
-              padding: const EdgeInsets.right(20),
+              padding: const EdgeInsets.only(right: 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children:
@@ -164,7 +164,7 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
             // 配置区域
             Expanded(
               child: Container(
-                padding: const EdgeInsets.left(20),
+                padding: const EdgeInsets.only(left: 20),
                 decoration: const BoxDecoration(
                   border: Border(
                     left: BorderSide(color: Colors.grey, width: 1),

@@ -7,11 +7,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/files")
+@RequestMapping("/files")
 public class FileController {
 
     @Autowired
@@ -84,10 +85,10 @@ public class FileController {
                     break;
             }
 
-            return ResponseEntity.ok(Map.of(
-                    "success", success,
-                    "message", message
-            ));
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", success);
+            result.put("message", message);
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }

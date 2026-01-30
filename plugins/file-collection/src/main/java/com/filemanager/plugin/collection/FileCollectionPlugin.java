@@ -6,6 +6,7 @@ import com.filemanager.plugin.ExecutionContext;
 import com.filemanager.plugin.IPlugin;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class FileCollectionPlugin implements IPlugin {
@@ -34,8 +35,8 @@ public class FileCollectionPlugin implements IPlugin {
         PluginConfigDTO config = new PluginConfigDTO();
         config.setValue("targetDirectory", "/tmp/collected");
         config.setValue("recursive", true);
-        config.setValue("includePatterns", List.of("*.mp3", "*.wav", "*.flac"));
-        config.setValue("excludePatterns", List.of("*.tmp", "*.log"));
+        config.setValue("includePatterns", Arrays.asList("*.mp3", "*.wav", "*.flac"));
+        config.setValue("excludePatterns", Arrays.asList("*.tmp", "*.log"));
         return config;
     }
 

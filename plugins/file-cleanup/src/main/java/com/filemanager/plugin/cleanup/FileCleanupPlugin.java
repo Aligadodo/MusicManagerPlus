@@ -6,6 +6,7 @@ import com.filemanager.plugin.ExecutionContext;
 import com.filemanager.plugin.IPlugin;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class FileCleanupPlugin implements IPlugin {
@@ -36,7 +37,7 @@ public class FileCleanupPlugin implements IPlugin {
         config.setValue("minFileSizeKB", 0);
         config.setValue("maxFileSizeKB", 10240);
         config.setValue("deleteEmptyDirectories", true);
-        config.setValue("includePatterns", List.of("*.tmp", "*.log", "*.bak"));
+        config.setValue("includePatterns", Arrays.asList("*.tmp", "*.log", "*.bak"));
         return config;
     }
 

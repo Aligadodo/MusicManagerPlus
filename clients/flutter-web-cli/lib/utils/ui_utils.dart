@@ -54,10 +54,10 @@ class UIUtils {
               onPressed: () {
                 Navigator.of(context).pop(true);
               },
-              child: const Text('确认'),
               style: TextButton.styleFrom(
                 foregroundColor: Colors.red,
               ),
+              child: const Text('确认'),
             ),
           ],
         );

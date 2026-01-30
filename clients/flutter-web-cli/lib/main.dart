@@ -4,6 +4,9 @@ import 'package:filemanager_flutter/pages/home_page.dart';
 import 'package:filemanager_flutter/pages/file_browser.dart';
 import 'package:filemanager_flutter/pages/strategy_config.dart';
 import 'package:filemanager_flutter/pages/task_monitor.dart';
+import 'package:filemanager_flutter/pages/source_directories.dart';
+import 'package:filemanager_flutter/pages/pipeline_config.dart';
+import 'package:filemanager_flutter/pages/preview_page.dart';
 
 void main() {
   runApp(
@@ -30,6 +33,9 @@ class FileManagerApp extends StatelessWidget {
         '/file-browser': (context) => const FileBrowserPage(),
         '/strategy-config': (context) => const StrategyConfigPage(),
         '/task-monitor': (context) => const TaskMonitorPage(),
+        '/source-directories': (context) => const SourceDirectoriesPage(),
+        '/pipeline-config': (context) => const PipelineConfigPage(),
+        '/preview': (context) => const PreviewPage(),
       },
     );
   }

@@ -6,6 +6,7 @@ import com.filemanager.plugin.ExecutionContext;
 import com.filemanager.plugin.IPlugin;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class MetadataScraperPlugin implements IPlugin {
@@ -32,7 +33,7 @@ public class MetadataScraperPlugin implements IPlugin {
     @Override
     public PluginConfigDTO getDefaultConfig() {
         PluginConfigDTO config = new PluginConfigDTO();
-        config.setValue("sources", List.of("discogs", "musicbrainz", "local"));
+        config.setValue("sources", Arrays.asList("discogs", "musicbrainz", "local"));
         config.setValue("updateTags", true);
         config.setValue("updateCoverArt", true);
         config.setValue("forceUpdate", false);
