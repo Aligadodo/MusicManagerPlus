@@ -1,0 +1,35 @@
+spring:
+  application:
+    name: filemanager-backend
+  web:
+    cors:
+      allowed-origins: "*"
+      allowed-methods: "GET, POST, PUT, DELETE, OPTIONS"
+      allowed-headers: "*"
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+filemanager:
+  base-dir: /tmp
+  max-file-size: 104857600
+  max-request-size: 104857600
+
+logging:
+  level:
+    com.filemanager: info
+    org.springframework: warn
+
+security:
+  jwt:
+    secret: your-secret-key
+    expiration: 86400000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
