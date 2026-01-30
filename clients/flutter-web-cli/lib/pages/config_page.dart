@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/api_client.dart';
@@ -30,11 +31,11 @@ class _ConfigPageState extends ConsumerState<ConfigPage> {
     });
 
     try {
-      final apiClient = ref.read(apiClientProvider);
+      final apiClient = ApiClient();
       final response = await apiClient.get('/api/config');
       
       setState(() {
-        _config = Map<String, dynamic>.from(response);
+        _config = Map<String, dynamic>.from(jsonDecode(response.body));
         _controllers = {};
         for (var entry in _config.entries) {
           _controllers[entry.key] = TextEditingController(text: entry.value.toString());
@@ -64,8 +65,8 @@ class _ConfigPageState extends ConsumerState<ConfigPage> {
         updatedConfig[entry.key] = _parseValue(entry.value.text);
       }
 
-      final apiClient = ref.read(apiClientProvider);
-      await apiClient.post('/api/config', updatedConfig);
+      final apiClient = ApiClient();
+      await apiClient.post('/api/config', body: updatedConfig);
 
       setState(() {
         _successMessage = '配置保存成功';
@@ -89,7 +90,7 @@ class _ConfigPageState extends ConsumerState<ConfigPage> {
     });
 
     try {
-      final apiClient = ref.read(apiClientProvider);
+      final apiClient = ApiClient();
       await apiClient.delete('/api/config');
       await _loadConfig();
       setState(() {
@@ -159,18 +160,15 @@ class _ConfigPageState extends ConsumerState<ConfigPage> {
   }
 
   dynamic _parseValue(String text) {
-    // 尝试解析为数字
     final intValue = int.tryParse(text);
     if (intValue != null) return intValue;
 
     final doubleValue = double.tryParse(text);
     if (doubleValue != null) return doubleValue;
 
-    // 尝试解析为布尔值
     if (text.toLowerCase() == 'true') return true;
     if (text.toLowerCase() == 'false') return false;
 
-    // 默认为字符串
     return text;
   }
 
@@ -192,7 +190,6 @@ class _ConfigPageState extends ConsumerState<ConfigPage> {
         padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
-            // 操作按钮
             Card(
               elevation: 4,
               margin: const EdgeInsets.only(bottom: 20),
@@ -237,7 +234,6 @@ class _ConfigPageState extends ConsumerState<ConfigPage> {
               ),
             ),
 
-            // 消息显示
             if (_errorMessage.isNotEmpty)
               Container(
                 padding: const EdgeInsets.all(10),
@@ -259,7 +255,6 @@ class _ConfigPageState extends ConsumerState<ConfigPage> {
 
             const SizedBox(height: 20),
 
-            // 配置列表
             const Text(
               '配置项列表',
               style: TextStyle(

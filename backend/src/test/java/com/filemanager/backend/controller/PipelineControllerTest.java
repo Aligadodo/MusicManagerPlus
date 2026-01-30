@@ -1,8 +1,8 @@
 package com.filemanager.backend.controller;
 
-import com.filemanager.domain.dto.StrategyConfigDTO;
+import com.filemanager.domain.dto.PluginConfigDTO;
 import com.filemanager.domain.entity.ChangeRecord;
-import com.filemanager.domain.service.StrategyService;
+import com.filemanager.domain.service.PluginService;
 import com.filemanager.domain.service.TaskService;
 import com.filemanager.domain.dto.TaskRequestDTO;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,7 +26,7 @@ import static org.mockito.Mockito.*;
 public class PipelineControllerTest {
 
     @Mock
-    private StrategyService strategyService;
+    private PluginService pluginService;
 
     @Mock
     private TaskService taskService;
@@ -51,11 +51,11 @@ public class PipelineControllerTest {
     @Test
     public void testUpdatePipeline_Success() {
         List<Map<String, Object>> pipeline = new ArrayList<>();
-        Map<String, Object> strategy = new HashMap<>();
-        strategy.put("strategyId", "rename");
-        strategy.put("name", "重命名策略");
-        strategy.put("config", new HashMap<>());
-        pipeline.add(strategy);
+        Map<String, Object> plugin = new HashMap<>();
+        plugin.put("pluginId", "file-cleanup");
+        plugin.put("name", "文件清理插件");
+        plugin.put("config", new HashMap<>());
+        pipeline.add(plugin);
 
         ResponseEntity<Map<String, Object>> response = pipelineController.updatePipeline(pipeline);
         
@@ -85,10 +85,10 @@ public class PipelineControllerTest {
         request.put("sourceDirectories", sourceDirectories);
         
         List<Map<String, Object>> pipeline = new ArrayList<>();
-        Map<String, Object> strategy = new HashMap<>();
-        strategy.put("strategyId", "rename");
-        strategy.put("config", new HashMap<>());
-        pipeline.add(strategy);
+        Map<String, Object> plugin = new HashMap<>();
+        plugin.put("pluginId", "file-cleanup");
+        plugin.put("config", new HashMap<>());
+        pipeline.add(plugin);
         request.put("pipeline", pipeline);
 
         List<ChangeRecord> mockChanges = new ArrayList<>();
@@ -99,7 +99,7 @@ public class PipelineControllerTest {
         change.setStatus(ChangeRecord.ExecStatus.PENDING);
         mockChanges.add(change);
 
-        when(strategyService.analyzeFiles(anyString(), anyList(), any(StrategyConfigDTO.class)))
+        when(pluginService.previewPlugin(anyString(), anyList(), any(PluginConfigDTO.class)))
             .thenReturn(mockChanges);
 
         ResponseEntity<List<ChangeRecord>> response = pipelineController.analyzePipeline(request);
@@ -112,22 +112,22 @@ public class PipelineControllerTest {
     }
 
     @Test
-    public void testAnalyzePipeline_MultipleStrategies() {
+    public void testAnalyzePipeline_MultiplePlugins() {
         Map<String, Object> request = new HashMap<>();
         List<String> sourceDirectories = new ArrayList<>();
         sourceDirectories.add("/test/path");
         request.put("sourceDirectories", sourceDirectories);
         
         List<Map<String, Object>> pipeline = new ArrayList<>();
-        Map<String, Object> strategy1 = new HashMap<>();
-        strategy1.put("strategyId", "rename");
-        strategy1.put("config", new HashMap<>());
-        pipeline.add(strategy1);
+        Map<String, Object> plugin1 = new HashMap<>();
+        plugin1.put("pluginId", "file-cleanup");
+        plugin1.put("config", new HashMap<>());
+        pipeline.add(plugin1);
         
-        Map<String, Object> strategy2 = new HashMap<>();
-        strategy2.put("strategyId", "move");
-        strategy2.put("config", new HashMap<>());
-        pipeline.add(strategy2);
+        Map<String, Object> plugin2 = new HashMap<>();
+        plugin2.put("pluginId", "file-rename");
+        plugin2.put("config", new HashMap<>());
+        pipeline.add(plugin2);
         request.put("pipeline", pipeline);
 
         List<ChangeRecord> mockChanges1 = new ArrayList<>();
@@ -146,9 +146,9 @@ public class PipelineControllerTest {
         change2.setStatus(ChangeRecord.ExecStatus.PENDING);
         mockChanges2.add(change2);
 
-        when(strategyService.analyzeFiles(eq("rename"), anyList(), any(StrategyConfigDTO.class)))
+        when(pluginService.previewPlugin(eq("file-cleanup"), anyList(), any(PluginConfigDTO.class)))
             .thenReturn(mockChanges1);
-        when(strategyService.analyzeFiles(eq("move"), anyList(), any(StrategyConfigDTO.class)))
+        when(pluginService.previewPlugin(eq("file-rename"), anyList(), any(PluginConfigDTO.class)))
             .thenReturn(mockChanges2);
 
         ResponseEntity<List<ChangeRecord>> response = pipelineController.analyzePipeline(request);
@@ -166,10 +166,10 @@ public class PipelineControllerTest {
         request.put("sourceDirectories", sourceDirectories);
         
         List<Map<String, Object>> pipeline = new ArrayList<>();
-        Map<String, Object> strategy = new HashMap<>();
-        strategy.put("strategyId", "rename");
-        strategy.put("config", new HashMap<>());
-        pipeline.add(strategy);
+        Map<String, Object> plugin = new HashMap<>();
+        plugin.put("pluginId", "file-cleanup");
+        plugin.put("config", new HashMap<>());
+        pipeline.add(plugin);
         request.put("pipeline", pipeline);
 
         when(taskService.createTask(any(TaskRequestDTO.class))).thenReturn("task-123");
@@ -195,24 +195,22 @@ public class PipelineControllerTest {
         List<Map<String, Object>> pipeline = new ArrayList<>();
         request.put("pipeline", pipeline);
 
-        when(taskService.createTask(any(TaskRequestDTO.class))).thenReturn("task-456");
-
         ResponseEntity<Map<String, Object>> response = pipelineController.executePipeline(request);
         
-        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertTrue((Boolean) response.getBody().get("success"));
-        assertEquals("task-456", response.getBody().get("taskId"));
+        assertFalse((Boolean) response.getBody().get("success"));
+        assertEquals("流水线不能为空", response.getBody().get("message"));
     }
 
     @Test
     public void testGetPipeline_AfterUpdate() {
         List<Map<String, Object>> pipeline = new ArrayList<>();
-        Map<String, Object> strategy = new HashMap<>();
-        strategy.put("strategyId", "rename");
-        strategy.put("name", "重命名策略");
-        strategy.put("config", new HashMap<>());
-        pipeline.add(strategy);
+        Map<String, Object> plugin = new HashMap<>();
+        plugin.put("pluginId", "file-cleanup");
+        plugin.put("name", "文件清理插件");
+        plugin.put("config", new HashMap<>());
+        pipeline.add(plugin);
 
         pipelineController.updatePipeline(pipeline);
         
@@ -221,6 +219,6 @@ public class PipelineControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals(1, response.getBody().size());
-        assertEquals("rename", response.getBody().get(0).get("strategyId"));
+        assertEquals("file-cleanup", response.getBody().get(0).get("pluginId"));
     }
 }

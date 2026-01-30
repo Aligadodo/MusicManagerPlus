@@ -1,5 +1,7 @@
 package com.filemanager.domain.entity;
 
+import java.util.Map;
+
 public class ChangeRecord {
     private String id;
     private String originalName;
@@ -9,6 +11,8 @@ public class ChangeRecord {
     private OperationType operationType;
     private ExecStatus status;
     private String failReason;
+    private String reason;
+    private Map<String, Object> extraParams;
 
     public enum OperationType {
         RENAME,
@@ -16,7 +20,8 @@ public class ChangeRecord {
         DELETE,
         COPY,
         METADATA_UPDATE,
-        CONVERT
+        CONVERT,
+        MERGE
     }
 
     public enum ExecStatus {
@@ -101,5 +106,21 @@ public class ChangeRecord {
 
     public void setFailReason(String failReason) {
         this.failReason = failReason;
+    }
+
+    public String getReason() {
+        return reason;
+    }
+
+    public void setReason(String reason) {
+        this.reason = reason;
+    }
+
+    public Map<String, Object> getExtraParams() {
+        return extraParams;
+    }
+
+    public void setExtraParams(Map<String, Object> extraParams) {
+        this.extraParams = extraParams;
     }
 }

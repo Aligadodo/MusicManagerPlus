@@ -2,6 +2,7 @@ package com.filemanager.backend.service.impl;
 
 import com.filemanager.domain.dto.StrategyInfoDTO;
 import com.filemanager.domain.dto.StrategyConfigDTO;
+import com.filemanager.domain.dto.ConfigFieldDTO;
 import com.filemanager.domain.entity.ChangeRecord;
 import com.filemanager.domain.service.StrategyService;
 import com.filemanager.plugin.PluginRegistry;
@@ -35,6 +36,10 @@ public class StrategyServiceImpl implements StrategyService {
         collectionStrategy.setName("文件收集策略");
         collectionStrategy.setDescription("根据配置规则收集和整理文件");
         collectionStrategy.setEnabled(true);
+        collectionStrategy.setConfigFields(Arrays.asList(
+            new ConfigFieldDTO("targetDirectory", "目标目录", "directory", "/tmp/collected", "文件收集的目标目录", true),
+            new ConfigFieldDTO("recursive", "递归收集", "boolean", true, "是否递归收集子目录中的文件", false)
+        ));
         strategies.put(collectionStrategy.getId(), collectionStrategy);
 
         // 元数据抓取策略
@@ -43,6 +48,10 @@ public class StrategyServiceImpl implements StrategyService {
         metadataStrategy.setName("元数据抓取策略");
         metadataStrategy.setDescription("从网络或本地抓取并更新文件的元数据信息");
         metadataStrategy.setEnabled(true);
+        metadataStrategy.setConfigFields(Arrays.asList(
+            new ConfigFieldDTO("sources", "数据源", "select", "discogs", "元数据数据源", true),
+            new ConfigFieldDTO("updateTags", "更新标签", "boolean", true, "是否更新文件标签", false)
+        ));
         strategies.put(metadataStrategy.getId(), metadataStrategy);
 
         // 文件清理策略
@@ -51,6 +60,10 @@ public class StrategyServiceImpl implements StrategyService {
         cleanupStrategy.setName("文件清理策略");
         cleanupStrategy.setDescription("根据配置规则清理不需要的文件");
         cleanupStrategy.setEnabled(true);
+        cleanupStrategy.setConfigFields(Arrays.asList(
+            new ConfigFieldDTO("maxFileAgeDays", "最大文件天数", "number", 30, "超过此天数的文件将被清理", false),
+            new ConfigFieldDTO("deleteEmptyDirectories", "删除空目录", "boolean", true, "是否删除空目录", false)
+        ));
         strategies.put(cleanupStrategy.getId(), cleanupStrategy);
     }
 

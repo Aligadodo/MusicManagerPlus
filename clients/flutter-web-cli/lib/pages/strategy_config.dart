@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:filemanager_flutter/pages/home_page.dart';
+import 'package:filemanager_flutter/api/api_client.dart';
+import 'package:filemanager_flutter/api/strategy_service.dart';
 import 'package:filemanager_flutter/models/strategy_info.dart';
 import 'package:filemanager_flutter/models/strategy_config.dart';
 
@@ -12,6 +13,8 @@ class StrategyConfigPage extends ConsumerStatefulWidget {
 }
 
 class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
+  late ApiClient _apiClient;
+  late StrategyService _strategyService;
   List<StrategyInfo> _strategies = [];
   bool _isLoading = false;
   String _errorMessage = '';
@@ -21,6 +24,8 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
   @override
   void initState() {
     super.initState();
+    _apiClient = ApiClient();
+    _strategyService = StrategyService(_apiClient);
     _loadStrategies();
   }
 
@@ -31,8 +36,7 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
     });
 
     try {
-      final strategyService = ref.read(strategyServiceProvider);
-      final strategies = await strategyService.getAvailableStrategies();
+      final strategies = await _strategyService.getAvailableStrategies();
       setState(() {
         _strategies = strategies;
       });
@@ -54,9 +58,8 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
     });
 
     try {
-      final strategyService = ref.read(strategyServiceProvider);
-      final strategy = await strategyService.getStrategyInfo(strategyId);
-      final config = await strategyService.getStrategyConfig(strategyId);
+      final strategy = await _strategyService.getStrategyInfo(strategyId);
+      final config = await _strategyService.getStrategyConfig(strategyId);
       setState(() {
         _selectedStrategy = strategy;
         _strategyConfig = config;
@@ -81,8 +84,7 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
     });
 
     try {
-      final strategyService = ref.read(strategyServiceProvider);
-      await strategyService.updateStrategyConfig(
+      await _strategyService.updateStrategyConfig(
         _selectedStrategy!.id,
         _strategyConfig!,
       );

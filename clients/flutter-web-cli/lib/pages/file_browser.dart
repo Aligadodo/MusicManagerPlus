@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:filemanager_flutter/pages/home_page.dart';
+import 'package:filemanager_flutter/api/api_client.dart';
+import 'package:filemanager_flutter/api/file_service.dart';
 import 'package:filemanager_flutter/models/file_info.dart';
 
 class FileBrowserPage extends ConsumerStatefulWidget {
@@ -36,7 +37,8 @@ class _FileBrowserPageState extends ConsumerState<FileBrowserPage> {
     });
 
     try {
-      final fileService = ref.read(fileServiceProvider);
+      final apiClient = ApiClient();
+      final fileService = FileService(apiClient);
       final files = await fileService.scanDirectory(path);
       setState(() {
         _files = files;

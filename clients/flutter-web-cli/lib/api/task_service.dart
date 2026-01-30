@@ -80,8 +80,4 @@ class TaskService {
   WebSocketChannel connectTaskWebSocket(String taskId) {
     return _apiClient.connectWebSocket('/ws/tasks/$taskId');
   }
-
-  WebSocketChannel connectProgressWebSocket() {
-    return _apiClient.connectWebSocket('/ws/progress');
-  }
 }

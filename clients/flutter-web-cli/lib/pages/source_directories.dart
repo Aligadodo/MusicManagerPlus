@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:filemanager_flutter/pages/home_page.dart';
+import 'package:filemanager_flutter/api/api_client.dart';
+import 'package:filemanager_flutter/api/source_directory_service.dart';
+import 'package:filemanager_flutter/models/source_directory.dart';
 
 class SourceDirectoriesPage extends ConsumerStatefulWidget {
   const SourceDirectoriesPage({super.key});
@@ -10,15 +12,19 @@ class SourceDirectoriesPage extends ConsumerStatefulWidget {
 }
 
 class _SourceDirectoriesPageState extends ConsumerState<SourceDirectoriesPage> {
+  late ApiClient _apiClient;
+  late SourceDirectoryService _sourceDirectoryService;
   late TextEditingController _pathController;
   late TextEditingController _threadCountController;
-  List<Map<String, dynamic>> _sourceDirectories = [];
+  List<SourceDirectory> _sourceDirectories = [];
   bool _isLoading = false;
   String _errorMessage = '';
 
   @override
   void initState() {
     super.initState();
+    _apiClient = ApiClient();
+    _sourceDirectoryService = SourceDirectoryService(_apiClient);
     _pathController = TextEditingController();
     _threadCountController = TextEditingController(text: '4');
     _loadSourceDirectories();
@@ -38,8 +44,7 @@ class _SourceDirectoriesPageState extends ConsumerState<SourceDirectoriesPage> {
     });
 
     try {
-      final sourceDirectoryService = ref.read(sourceDirectoryServiceProvider);
-      final directories = await sourceDirectoryService.getSourceDirectories();
+      final directories = await _sourceDirectoryService.getSourceDirectories();
       setState(() {
         _sourceDirectories = directories;
       });
@@ -71,8 +76,8 @@ class _SourceDirectoriesPageState extends ConsumerState<SourceDirectoriesPage> {
         return;
       }
 
-      final sourceDirectoryService = ref.read(sourceDirectoryServiceProvider);
-      await sourceDirectoryService.addSourceDirectory(path, threadCount: threadCount);
+      final directory = SourceDirectory(path: path, threadCount: threadCount);
+      await _sourceDirectoryService.addSourceDirectory(directory);
       await _loadSourceDirectories();
       _pathController.clear();
       _threadCountController.text = '4';
@@ -94,8 +99,7 @@ class _SourceDirectoriesPageState extends ConsumerState<SourceDirectoriesPage> {
     });
 
     try {
-      final sourceDirectoryService = ref.read(sourceDirectoryServiceProvider);
-      await sourceDirectoryService.removeSourceDirectory(path);
+      await _sourceDirectoryService.removeSourceDirectory(path);
       await _loadSourceDirectories();
     } catch (e) {
       setState(() {
@@ -115,8 +119,7 @@ class _SourceDirectoriesPageState extends ConsumerState<SourceDirectoriesPage> {
     });
 
     try {
-      final sourceDirectoryService = ref.read(sourceDirectoryServiceProvider);
-      await sourceDirectoryService.clearSourceDirectories();
+      await _sourceDirectoryService.clearSourceDirectories();
       await _loadSourceDirectories();
     } catch (e) {
       setState(() {
@@ -230,12 +233,12 @@ class _SourceDirectoriesPageState extends ConsumerState<SourceDirectoriesPage> {
                       elevation: 2,
                       margin: const EdgeInsets.only(bottom: 10),
                       child: ListTile(
-                        title: Text(directory['path'] as String),
-                        subtitle: Text('线程数: ${directory['threadCount']}'),
+                        title: Text(directory.path),
+                        subtitle: Text('线程数: ${directory.threadCount}'),
                         trailing: IconButton(
                           icon: const Icon(Icons.delete, color: Colors.red),
                           onPressed: () {
-                            _removeSourceDirectory(directory['path'] as String);
+                            _removeSourceDirectory(directory.path);
                           },
                         ),
                       ),

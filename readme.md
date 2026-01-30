@@ -61,164 +61,158 @@
 
 ## 项目结构
 ```
-src/
-├── main/
-│   ├── java/
-│   │   └── com/
-│   │       └── filemanager/
-│   │           ├── app/                    # 应用核心框架
-│   │           │   ├── base/             # 基础接口定义
-│   │           │   │   ├── IAppController.java
-│   │           │   │   ├── IAppStrategy.java
-│   │           │   │   ├── IConfigManager.java
-│   │           │   │   ├── IDataProvider.java
-│   │           │   │   ├── ITaskManager.java
-│   │           │   │   ├── IUIElementProvider.java
-│   │           │   │   ├── IViewManager.java
-│   │           │   │   └── ...
-│   │           │   ├── components/       # 核心组件
-│   │           │   │   ├── CleanupUIConfig.java
-│   │           │   │   ├── FileScanner.java
-│   │           │   │   └── PipelineManager.java
-│   │           │   ├── tools/           # 工具类
-│   │           │   │   ├── display/     # UI显示工具
-│   │           │   │   │   ├── styles/  # 样式管理
-│   │           │   │   │   ├── StyleFactory.java
-│   │           │   │   │   ├── ComponentFactory.java
-│   │           │   │   │   └── ...
-│   │           │   │   ├── AdvancedFileTypeManager.java
-│   │           │   │   ├── ConfigFileManager.java
-│   │           │   │   └── MultiThreadTaskEstimator.java
-│   │           │   ├── ui/              # 用户界面
-│   │           │   │   ├── AppearanceManager.java
-│   │           │   │   ├── ComposeView.java
-│   │           │   │   ├── GlobalSettingsView.java
-│   │           │   │   ├── LogView.java
-│   │           │   │   └── PreviewView.java
-│   │           │   └── versions/        # 版本管理
-│   │           │       ├── FileManagerAppV14_Stable.java
-│   │           │       ├── FileManagerAppV15.java
-│   │           │       ├── FileManagerAppV16.java
-│   │           │       ├── FileManagerAppV17.java
-│   │           │       └── FileManagerAppV20_Stable.java
-│   │           ├── model/               # 数据模型
-│   │           │   ├── ChangeRecord.java
-│   │           │   ├── CleanupParams.java
-│   │           │   ├── CueSheet.java
-│   │           │   ├── FileStatisticInfo.java
-│   │           │   ├── MusicInfo.java
-│   │           │   ├── RuleCondition.java
-│   │           │   └── RuleConditionGroup.java
-│   │           ├── rule/                # 规则定义
-│   │           ├── strategy/            # 处理策略
-│   │           │   ├── base/            # 策略基础组件
-│   │           │   ├── cleanup/         # 清理策略
-│   │           │   ├── collection/      # 归类策略
-│   │           │   │   ├── FileClusteringAlgorithm.java
-│   │           │   │   ├── FilenameNormalizer.java
-│   │           │   │   ├── CollectionNamingStrategy.java
-│   │           │   │   ├── TextSimilarityCalculator.java
-│   │           │   │   └── ...
-│   │           │   ├── duplicate/       # 重复文件策略
-│   │           │   ├── ncm/            # 网易云音乐策略
-│   │           │   │   ├── model/       # NCM数据模型
-│   │           │   │   ├── tool/        # NCM工具
-│   │           │   │   ├── NcmBaseStrategy.java
-│   │           │   │   ├── NcmConvertStrategy.java
-│   │           │   │   ├── NcmCacheTransStrategy.java
-│   │           │   │   └── NcmLyricDownloadStrategy.java
-│   │           │   ├── rename/          # 重命名策略
-│   │           │   ├── scraper/         # 元数据刮削策略
-│   │           │   │   ├── cache/       # 缓存管理
-│   │           │   │   ├── config/      # 配置管理
-│   │           │   │   ├── model/       # 数据模型
-│   │           │   │   ├── processor/   # 处理器
-│   │           │   │   ├── source/      # 数据源
-│   │           │   │   │   ├── impl/   # 数据源实现
-│   │           │   │   │   │   ├── ITunesSource.java
-│   │           │   │   │   │   ├── NeteaseMusicSource.java
-│   │           │   │   │   │   ├── MiguMusicSource.java
-│   │           │   │   │   │   ├── MusicBrainzSource.java
-│   │           │   │   │   │   ├── LastFmSource.java
-│   │           │   │   │   │   ├── DiscogsSource.java
-│   │           │   │   │   │   └── LocalInferenceSource.java
-│   │           │   │   └── ui/          # UI组件
-│   │           │   ├── AbstractFfmpegStrategy.java
-│   │           │   ├── AdvancedRenameStrategy.java
-│   │           │   ├── AlbumDirNormalizeStrategy.java
-│   │           │   ├── AudioConverterStrategy.java
-│   │           │   ├── CueFileRenameStrategy.java
-│   │           │   ├── CueSplitterStrategy.java
-│   │           │   ├── FileCleanupStrategy.java
-│   │           │   ├── FileCollectionStrategy.java
-│   │           │   ├── FileMigrateStrategy.java
-│   │           │   ├── FileTypeFixStrategy.java
-│   │           │   ├── FileUnzipStrategy.java
-│   │           │   ├── MetadataScraperStrategy.java
-│   │           │   └── NcmIntegratedStrategy.java
-│   │           ├── tool/                # 工具集合
-│   │           │   ├── backup/         # 文件处理工具
-│   │           │   ├── file/           # 文件操作工具
-│   │           │   ├── log/            # 日志工具
-│   │           │   ├── unzip/          # 解压工具
-│   │           │   ├── ThreadPoolManager.java
-│   │           │   └── RetryableThreadPool.java
-│   │           ├── type/                # 类型定义
-│   │           │   ├── ActionType.java
-│   │           │   ├── ConditionType.java
-│   │           │   ├── ExecStatus.java
-│   │           │   ├── OperationType.java
-│   │           │   ├── ScanTarget.java
-│   │           │   └── TaskStatus.java
-│   │           └── util/                # 通用工具
-│   │               ├── file/           # 文件工具
-│   │               ├── MetadataHelper.java
-│   │               ├── StringUtils.java
-│   │               ├── FileUtil.java
-│   │               └── ...
-│   └── resources/                      # 资源文件
-│       ├── jdk17/                      # JDK17环境配置
-│       ├── jdk8/                       # JDK8环境配置
-│       └── style.css                   # 样式文件
-├── design/                            # 设计文档
-│   ├── doc/                           # 策略类文档
-│   ├── review/                        # 迭代总结
-│   ├── skill/                         # 实践技巧
-│   ├── problem/                       # 问题记录
-│   └── command/                       # 命令说明
-├── metadata-test/                      # 元数据测试项目
-├── .gitignore                         # Git忽略文件
-├── build_dist.bat                      # 构建脚本
-├── pom.xml                            # Maven配置
-└── readme.md                          # 项目说明
+FileManagerPlus/
+├── backend/                          # 后端服务（Spring Boot）
+│   ├── src/
+│   │   ├── main/
+│   │   │   ├── java/
+│   │   │   │   └── com/
+│   │   │   │       └── filemanager/
+│   │   │   │           └── backend/
+│   │   │   │               ├── config/              # 配置类
+│   │   │   │               ├── controller/          # REST控制器
+│   │   │   │               │   └── ws/              # WebSocket处理器
+│   │   │   │               └── service/             # 服务实现
+│   │   │   └── resources/
+│   │   │       └── application.yml
+│   │   └── test/                      # 测试用例
+│   └── pom.xml
+├── clients/                          # 客户端应用
+│   └── flutter-web-cli/              # Flutter Web客户端
+│       ├── lib/
+│       │   ├── api/                  # API客户端
+│       │   ├── models/               # 数据模型
+│       │   ├── pages/                # 页面组件
+│       │   └── utils/                # 工具类
+│       ├── web/                      # Web资源
+│       └── pubspec.yaml
+├── plugins/                          # 插件系统
+│   ├── base/                         # 插件基础接口
+│   ├── file-collection/              # 文件收集插件
+│   ├── metadata-scraper/             # 元数据抓取插件
+│   ├── file-cleanup/                 # 文件清理插件
+│   ├── audio-converter/              # 音频转换插件
+│   ├── file-rename/                  # 文件重命名插件
+│   └── pom.xml
+├── shared-domain/                    # 共享领域模块
+│   ├── src/
+│   │   └── main/
+│   │       └── java/
+│   │           └── com/
+│   │               └── filemanager/
+│   │                   └── domain/
+│   │                       ├── dto/  # 数据传输对象
+│   │                       ├── entity/  # 领域实体
+│   │                       └── service/  # 服务接口
+│   └── pom.xml
+├── src/                              # 原JavaFX应用（保留）
+│   └── main/
+│       └── java/
+│           └── com/
+│               └── filemanager/
+│                   ├── app/          # 应用核心框架
+│                   ├── model/        # 数据模型
+│                   ├── strategy/     # 处理策略
+│                   ├── tool/         # 工具集合
+│                   ├── type/         # 类型定义
+│                   └── util/         # 通用工具
+├── design/                           # 设计文档
+│   ├── doc/                          # 策略类文档
+│   ├── docV2/                        # 新架构文档
+│   ├── review/                       # 迭代总结
+│   ├── skill/                        # 实践技巧
+│   ├── problem/                      # 问题记录
+│   ├── command/                      # 命令说明
+│   └── tech-migration/               # 技术迁移文档
+├── metadata-test/                    # 元数据测试项目
+├── .gitignore                        # Git忽略文件
+├── build_dist.bat                     # 构建脚本
+├── pom.xml                           # Maven配置
+└── readme.md                         # 项目说明
 ```
 
 ## 技术架构
 
+### 新架构设计
+项目已从单机JavaFX应用迁移到前后端分离架构：
+- **后端**：Spring Boot 3.2+ + Java 21+，提供RESTful API和WebSocket支持
+- **前端**：Flutter 3.16+ Web应用，支持跨平台访问
+- **插件系统**：基于Java SPI机制的插件化架构，支持动态加载和扩展
+
 ### 核心设计模式
 - **策略模式**：所有文件处理操作都实现为策略，支持灵活组合
+- **插件模式**：基于Java SPI的插件系统，支持动态加载和扩展
 - **工厂模式**：策略工厂负责创建和管理策略实例
 - **观察者模式**：UI组件监听数据变化并实时更新
 - **建造者模式**：复杂对象的创建使用建造者模式
+- **RESTful API**：前后端通过RESTful API进行通信
+- **WebSocket**：实时推送任务进度和状态更新
 
 ### 技术栈
-- **Java**: 核心开发语言
-- **JavaFX**: 图形用户界面
-- **Maven**: 项目构建和依赖管理
+**后端**：
+- **Java 21+**: 核心开发语言
+- **Spring Boot 3.2+**: 后端框架
+- **Maven 3.9+**: 项目构建和依赖管理
 - **jaudiotagger**: 音频元数据处理
 - **ffmpeg**: 音频格式转换
-- **FastJSON**: JSON序列化
+- **Jackson**: JSON序列化
+
+**前端**：
+- **Flutter 3.16+**: 前端框架
+- **Dart 3.2+**: 前端开发语言
+- **Riverpod**: 状态管理
+- **HTTP**: API通信
+
+**插件系统**：
+- **Java SPI**: 插件发现和加载机制
+- **PluginRegistry**: 插件注册表
+- **IPlugin**: 插件核心接口
 
 ### 关键特性
+- **前后端分离**：前后端独立开发和部署，提高开发效率
 - **多线程处理**：支持并发处理，提高处理效率
+- **实时预览**：所有操作支持预览，避免误操作
+- **WebSocket实时更新**：实时推送任务进度和状态
+- **插件化架构**：支持动态加载和扩展插件
 - **缓存机制**：元数据缓存，减少网络请求
 - **配置持久化**：支持配置保存和加载
-- **实时预览**：所有操作支持预览，避免误操作
 - **日志记录**：详细的操作日志，便于问题排查
+- **跨平台支持**：Flutter Web支持多平台访问
 
 ## 部署与使用
 
-### 运行方式
+### 新架构部署方式
+
+#### 后端部署
+```bash
+# 构建后端
+cd backend
+mvn clean package
+
+# 运行后端
+java -jar target/backend-1.0.0-SNAPSHOT.jar
+
+# 或者使用Maven运行
+mvn spring-boot:run
+```
+
+#### 前端部署
+```bash
+# 构建前端
+cd clients/flutter-web-cli
+flutter build web
+
+# 运行开发服务器
+flutter run -d chrome
+```
+
+#### 完整部署
+1. 启动后端服务（默认端口：8080）
+2. 构建前端应用：`flutter build web`
+3. 将前端构建产物部署到Web服务器
+4. 访问前端应用
+
+### 原JavaFX应用部署（保留）
 直接将 `dist` 文件夹压缩成 ZIP 发送给用户。用户解压后，双击 `EchoMusicManager.bat` 即可运行，无需安装任何 Java 环境。
 
 ### 目录结构
@@ -234,28 +228,55 @@ dist/
 ```
 
 ### 开发环境
-- **JDK**: JDK 8 或 JDK 17
-- **构建工具**: Maven 3.6+
+- **JDK**: JDK 21（后端）或 JDK 8/17（原JavaFX应用）
+- **构建工具**: Maven 3.9+（后端）、Flutter CLI（前端）
 - **IDE**: IntelliJ IDEA 或 Eclipse
 
 ### 构建项目
 ```bash
-# 编译项目
+# 编译后端
+cd backend
 mvn clean compile
 
-# 运行测试
+# 运行后端测试
 mvn test
 
-# 打包项目
+# 打包后端
 mvn clean package
 
-# 构建发布包
+# 编译前端
+cd clients/flutter-web-cli
+flutter build web
+
+# 运行前端测试
+flutter test
+
+# 构建原JavaFX应用发布包
 build_dist.bat
 ```
 
 ## 文档
 
-### 设计文档
+### 新架构文档（docV2）
+- [插件系统设计](design/docV2/plugin-system.md)
+- [API端点文档](design/docV2/api-endpoints.md)
+- [迁移架构文档](design/docV2/migration-architecture.md)
+- [迁移计划](design/docV2/migration-plan.md)
+- [插件实现文档](design/docV2/plugin-implementation.md)
+- [服务接口文档](design/docV2/service-interfaces.md)
+- [测试指南](design/docV2/testing-guide.md)
+- [Flutter Web扩展设计](design/docV2/flutter-web-extension-design.md)
+
+### 技术迁移文档
+- [完整迁移计划](design/tech-migration/complete-migration-plan.md)
+- [后端API设计](design/tech-migration/backend-api-design.md)
+- [Flutter Web架构](design/tech-migration/flutter-web-architecture.md)
+- [客户端并行设计](design/tech-migration/client-parallel-design.md)
+- [插件系统设计](design/tech-migration/plugin-system-design.md)
+- [实现检查清单](design/tech-migration/implementation-checklist.md)
+- [JavaFX到Web迁移报告](design/tech-migration/javaFx-to-web-migration-report.md)
+
+### 原JavaFX设计文档
 - [策略总览](design/doc/strategy-overview.md)
 - [IAppStrategy接口设计](design/doc/iappstrategy-interface-design.md)
 - [UI系统设计](design/doc/ui-overview.md)
@@ -304,6 +325,6 @@ build_dist.bat
 
 ---
 
-**项目版本**: 2.0  
-**最后更新**: 2026-01-30  
+**项目版本**: 3.0 (新架构) / 2.0 (原JavaFX)  
+**最后更新**: 2026-01-31  
 **维护者**: hrcao

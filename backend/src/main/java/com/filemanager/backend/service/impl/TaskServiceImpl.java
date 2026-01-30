@@ -145,6 +145,7 @@ public class TaskServiceImpl implements TaskService {
                         request.getStrategyConfig()
                 ));
 
+                status.setChanges(results);
                 status.setStatus(TaskStatusDTO.TaskStatus.SUCCESS);
                 status.setProgress(1.0);
                 status.setMessage("Task completed successfully");

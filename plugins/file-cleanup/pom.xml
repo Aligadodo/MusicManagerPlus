@@ -24,6 +24,11 @@
             <artifactId>plugin-base</artifactId>
             <version>1.0.0</version>
         </dependency>
+        <dependency>
+            <groupId>com.filemanager</groupId>
+            <artifactId>shared-domain</artifactId>
+            <version>1.0.0</version>
+        </dependency>
     </dependencies>
 
     <build>

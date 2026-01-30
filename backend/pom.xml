@@ -53,6 +53,11 @@
             <artifactId>plugin-base</artifactId>
             <version>1.0.0</version>
         </dependency>
+        <dependency>
+            <groupId>com.filemanager</groupId>
+            <artifactId>plugin-file-cleanup</artifactId>
+            <version>1.0.0</version>
+        </dependency>
 
         <!-- 工具依赖 -->
         <dependency>

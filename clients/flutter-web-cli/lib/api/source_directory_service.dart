@@ -1,16 +1,18 @@
 import 'dart:convert';
 import 'package:filemanager_flutter/api/api_client.dart';
+import 'package:filemanager_flutter/models/source_directory.dart';
 
 class SourceDirectoryService {
   final ApiClient _apiClient;
 
   SourceDirectoryService(this._apiClient);
 
-  Future<List<Map<String, dynamic>>> getSourceDirectories() async {
+  Future<List<SourceDirectory>> getSourceDirectories() async {
     try {
       final response = await _apiClient.get('/source-directories');
       if (response.statusCode == 200) {
-        return List<Map<String, dynamic>>.from(json.decode(response.body));
+        final List<dynamic> jsonList = json.decode(response.body);
+        return jsonList.map((json) => SourceDirectory.fromJson(json as Map<String, dynamic>)).toList();
       } else {
         throw Exception('Failed to get source directories: ${response.statusCode}');
       }
@@ -19,14 +21,11 @@ class SourceDirectoryService {
     }
   }
 
-  Future<Map<String, dynamic>> addSourceDirectory(String path, {int threadCount = 4}) async {
+  Future<SourceDirectory> addSourceDirectory(SourceDirectory directory) async {
     try {
-      final response = await _apiClient.post('/source-directories', body: {
-        'path': path,
-        'threadCount': threadCount,
-      });
+      final response = await _apiClient.post('/source-directories', body: directory.toJson());
       if (response.statusCode == 200) {
-        return Map<String, dynamic>.from(json.decode(response.body));
+        return SourceDirectory.fromJson(json.decode(response.body) as Map<String, dynamic>);
       } else {
         throw Exception('Failed to add source directory: ${response.statusCode}');
       }

@@ -1,8 +1,8 @@
 package com.filemanager.backend.controller;
 
-import com.filemanager.domain.dto.StrategyConfigDTO;
+import com.filemanager.domain.dto.PluginConfigDTO;
 import com.filemanager.domain.entity.ChangeRecord;
-import com.filemanager.domain.service.StrategyService;
+import com.filemanager.domain.service.PluginService;
 import com.filemanager.domain.service.TaskService;
 import com.filemanager.domain.dto.TaskRequestDTO;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,7 +23,7 @@ public class PipelineController {
     private final Map<String, List<Map<String, Object>>> pipelines = new ConcurrentHashMap<>();
 
     @Autowired
-    private StrategyService strategyService;
+    private PluginService pluginService;
 
     @Autowired
     private TaskService taskService;
@@ -31,7 +31,6 @@ public class PipelineController {
     @GetMapping
     public ResponseEntity<List<Map<String, Object>>> getPipeline() {
         try {
-            // 从默认管道获取，实际应用中可能需要从数据库或配置文件加载
             List<Map<String, Object>> pipeline = pipelines.getOrDefault("default", new ArrayList<>());
             return ResponseEntity.ok(pipeline);
         } catch (Exception e) {
@@ -60,24 +59,32 @@ public class PipelineController {
 
             List<ChangeRecord> allChanges = new ArrayList<>();
 
-            // 对每个策略执行分析
-            for (Map<String, Object> strategyConfig : pipeline) {
-                String strategyId = (String) strategyConfig.get("strategyId");
-                Map<String, Object> configMap = (Map<String, Object>) strategyConfig.get("config");
+            if (sourceDirectories == null || sourceDirectories.isEmpty()) {
+                return ResponseEntity.badRequest().body(allChanges);
+            }
 
-                StrategyConfigDTO config = new StrategyConfigDTO();
+            if (pipeline == null || pipeline.isEmpty()) {
+                return ResponseEntity.badRequest().body(allChanges);
+            }
+
+            for (Map<String, Object> pluginConfig : pipeline) {
+                String pluginId = (String) pluginConfig.get("pluginId");
+                Map<String, Object> configMap = (Map<String, Object>) pluginConfig.get("config");
+
+                PluginConfigDTO config = new PluginConfigDTO();
                 if (configMap != null) {
                     for (Map.Entry<String, Object> entry : configMap.entrySet()) {
                         config.setValue(entry.getKey(), entry.getValue());
                     }
                 }
 
-                List<ChangeRecord> changes = strategyService.analyzeFiles(strategyId, sourceDirectories, config);
+                List<ChangeRecord> changes = pluginService.previewPlugin(pluginId, sourceDirectories, config);
                 allChanges.addAll(changes);
             }
 
             return ResponseEntity.ok(allChanges);
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
@@ -88,11 +95,42 @@ public class PipelineController {
             List<String> sourceDirectories = (List<String>) request.get("sourceDirectories");
             List<Map<String, Object>> pipeline = (List<Map<String, Object>>) request.get("pipeline");
 
-            // 创建任务请求
+            if (sourceDirectories == null || sourceDirectories.isEmpty()) {
+                Map<String, Object> result = new HashMap<>();
+                result.put("success", false);
+                result.put("message", "源目录不能为空");
+                return ResponseEntity.badRequest().body(result);
+            }
+
+            if (pipeline == null || pipeline.isEmpty()) {
+                Map<String, Object> result = new HashMap<>();
+                result.put("success", false);
+                result.put("message", "流水线不能为空");
+                return ResponseEntity.badRequest().body(result);
+            }
+
+            List<ChangeRecord> allChanges = new ArrayList<>();
+
+            for (Map<String, Object> pluginConfig : pipeline) {
+                String pluginId = (String) pluginConfig.get("pluginId");
+                Map<String, Object> configMap = (Map<String, Object>) pluginConfig.get("config");
+
+                PluginConfigDTO config = new PluginConfigDTO();
+                if (configMap != null) {
+                    for (Map.Entry<String, Object> entry : configMap.entrySet()) {
+                        config.setValue(entry.getKey(), entry.getValue());
+                    }
+                }
+
+                List<ChangeRecord> changes = pluginService.executePlugin(pluginId, sourceDirectories, config);
+                allChanges.addAll(changes);
+            }
+
             TaskRequestDTO taskRequest = new TaskRequestDTO();
-            taskRequest.setFilePaths(sourceDirectories);
-            // 这里简化处理，实际应用中可能需要更复杂的任务创建逻辑
             taskRequest.setStrategyId("pipeline");
+            taskRequest.setFilePaths(sourceDirectories);
+            taskRequest.setTaskName("Pipeline Execution");
+            taskRequest.setDescription("Execute pipeline with " + pipeline.size() + " plugins");
 
             String taskId = taskService.createTask(taskRequest);
             taskService.executeTask(taskId);
@@ -100,8 +138,10 @@ public class PipelineController {
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
             result.put("taskId", taskId);
+            result.put("changeCount", allChanges.size());
             return ResponseEntity.ok(result);
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
