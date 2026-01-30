@@ -20,12 +20,27 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import com.filemanager.tool.rate.RateLimiter;
 
 /**
  * 网易云API客户端
  * 负责与网易云API交互获取歌曲信息
  */
 public class NeteaseApiClient {
+    
+    private final RateLimiter rateLimiter;
+    
+    public NeteaseApiClient() {
+        this.rateLimiter = RateLimiter.getDefaultInstance();
+    }
+    
+    public NeteaseApiClient(int maxRequests, long periodMs) {
+        this.rateLimiter = RateLimiter.getInstance("netease_api", maxRequests, periodMs);
+    }
+    
+    public RateLimiter getRateLimiter() {
+        return rateLimiter;
+    }
     
     /**
      * 从网易云API获取歌曲信息
@@ -35,6 +50,9 @@ public class NeteaseApiClient {
      */
     public SongInfo getSongInfo(String songId, File infoFile) {
         try {
+            // 限流保护
+            rateLimiter.acquire();
+            
             URL url = new URL("http://music.163.com/api/song/detail/?id=" + songId + "&ids=%5B" + songId + "%5D");
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
@@ -287,6 +305,9 @@ public class NeteaseApiClient {
      * @return 响应内容
      */
     private String sendGetRequest(String url, com.filemanager.model.ChangeRecord record) throws Exception {
+        // 限流保护
+        rateLimiter.acquire();
+        
         URL obj = new URL(url);
         HttpURLConnection con = (HttpURLConnection) obj.openConnection();
         con.setRequestMethod("GET");
@@ -334,6 +355,9 @@ public class NeteaseApiClient {
      * @return 响应内容
      */
     private String sendPostRequest(String url, String data, com.filemanager.model.ChangeRecord record) throws Exception {
+        // 限流保护
+        rateLimiter.acquire();
+        
         URL obj = new URL(url);
         HttpURLConnection con = (HttpURLConnection) obj.openConnection();
         con.setRequestMethod("POST");

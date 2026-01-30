@@ -55,6 +55,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import com.filemanager.tool.rate.RateLimiter;
+import com.filemanager.tool.rate.config.RateLimiterConfig;
+
 
 public class MetadataScraperStrategy extends IAppStrategy {
 
@@ -75,7 +78,11 @@ public class MetadataScraperStrategy extends IAppStrategy {
     protected LyricsModuleConfig lyricsConfig;
     protected CoverModuleConfig coverConfig;
     protected AlbumInfoModuleConfig albumInfoConfig;
-
+    
+    // 限流配置组件
+    private final RateLimiterConfig rateLimiterConfig;
+    private RateLimiter rateLimiter;
+    
     public MetadataScraperStrategy() {
         sources = new LinkedHashMap<>();
         sources.put("本地推断 (仅生成清单)", new LocalInferenceSource());
@@ -85,6 +92,10 @@ public class MetadataScraperStrategy extends IAppStrategy {
         sources.put("iTunes (苹果音乐)", new ITunesSource());
         sources.put("Last.fm (全球音乐平台) (不完善)", new LastFmSource());
         sources.put("Discogs (音乐数据库) (不完善)", new DiscogsSource());
+        
+        // 初始化限流配置组件
+        rateLimiterConfig = new RateLimiterConfig();
+        rateLimiter = RateLimiter.getInstance("metadata_scraper", rateLimiterConfig.getMaxRequests(), rateLimiterConfig.getPeriodMs());
         
         cbSource = new JFXComboBox<>(FXCollections.observableArrayList(sources.keySet()));
         cbSource.getSelectionModel().select(0);
@@ -170,12 +181,14 @@ public class MetadataScraperStrategy extends IAppStrategy {
         TitledPane lyricsPane = new TitledPane("歌词匹配模块", lyricsConfigUI);
         TitledPane coverPane = new TitledPane("封面匹配模块", coverConfigUI);
         TitledPane albumInfoPane = new TitledPane("专辑信息模块", albumInfoConfigUI);
+        TitledPane rateLimiterPane = new TitledPane("API限流配置", rateLimiterConfig.getConfigNode());
         
         lyricsPane.setCollapsible(true);
         coverPane.setCollapsible(true);
         albumInfoPane.setCollapsible(true);
+        rateLimiterPane.setCollapsible(true);
 
-        box.getChildren().addAll(grid, new Separator(), lyricsPane, coverPane, albumInfoPane);
+        box.getChildren().addAll(grid, new Separator(), lyricsPane, coverPane, albumInfoPane, rateLimiterPane);
         return box;
     }
 
@@ -187,6 +200,10 @@ public class MetadataScraperStrategy extends IAppStrategy {
         lyricsConfigUI.captureParams();
         coverConfigUI.captureParams();
         albumInfoConfigUI.captureParams();
+        rateLimiterConfig.captureParams();
+        
+        // 更新限流实例参数
+        rateLimiter = RateLimiter.getInstance("metadata_scraper", rateLimiterConfig.getMaxRequests(), rateLimiterConfig.getPeriodMs());
     }
 
     @Override
@@ -208,6 +225,9 @@ public class MetadataScraperStrategy extends IAppStrategy {
         props.setProperty("meta_album_save_mode", albumInfoConfig.getSaveMode().name());
         props.setProperty("meta_album_duplicate", albumInfoConfig.getDuplicateMode().name());
         props.setProperty("meta_album_cache", String.valueOf(albumInfoConfig.isUseCache()));
+        
+        // 保存限流配置
+        rateLimiterConfig.saveConfig(props);
     }
 
     @Override
@@ -250,6 +270,10 @@ public class MetadataScraperStrategy extends IAppStrategy {
         lyricsConfigUI.loadFromConfig(lyricsConfig);
         coverConfigUI.loadFromConfig(coverConfig);
         albumInfoConfigUI.loadFromConfig(albumInfoConfig);
+        
+        // 加载限流配置
+        rateLimiterConfig.loadConfig(props);
+        rateLimiter = RateLimiter.getInstance("metadata_scraper", rateLimiterConfig.getMaxRequests(), rateLimiterConfig.getPeriodMs());
     }
 
     @Override
@@ -534,6 +558,9 @@ public class MetadataScraperStrategy extends IAppStrategy {
     }
 
     private String httpGet(String urlStr) throws Exception {
+        // 限流保护
+        rateLimiter.acquire();
+        
         URL url = new URL(urlStr);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setConnectTimeout(3000);
@@ -549,6 +576,9 @@ public class MetadataScraperStrategy extends IAppStrategy {
 
     private byte[] downloadBytes(String urlStr) {
         try {
+            // 限流保护
+            rateLimiter.acquire();
+            
             URL url = new URL(urlStr);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setConnectTimeout(5000);

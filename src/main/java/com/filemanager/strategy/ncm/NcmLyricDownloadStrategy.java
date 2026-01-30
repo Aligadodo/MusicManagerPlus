@@ -13,6 +13,7 @@ import com.filemanager.app.tools.display.FloatingTooltip;
 import com.filemanager.app.tools.display.StyleFactory;
 import com.filemanager.model.ChangeRecord;
 import com.filemanager.strategy.ncm.tool.NeteaseApiClient;
+import com.filemanager.tool.rate.config.RateLimiterConfig;
 import com.filemanager.type.OperationType;
 import com.jfoenix.controls.JFXCheckBox;
 
@@ -42,11 +43,20 @@ public class NcmLyricDownloadStrategy extends NcmBaseStrategy {
     // API客户端
     private final NeteaseApiClient neteaseApiClient;
     
+    // 限流配置组件
+    private final RateLimiterConfig rateLimiterConfig;
+    
     public NcmLyricDownloadStrategy() {
         super("ncm_lyric");
         
+        // 初始化限流配置组件
+        rateLimiterConfig = new RateLimiterConfig();
+        
         // 初始化API客户端
-        neteaseApiClient = new NeteaseApiClient();
+        neteaseApiClient = new NeteaseApiClient(
+            rateLimiterConfig.getMaxRequests(), 
+            rateLimiterConfig.getPeriodMs()
+        );
         
         // 歌词下载选项
         chkOverwriteExisting = new JFXCheckBox("覆盖已存在的歌词文件");
@@ -88,7 +98,10 @@ public class NcmLyricDownloadStrategy extends NcmBaseStrategy {
         configBox.getChildren().addAll(
             StyleFactory.createChapter("歌词下载选项"),
             chkOverwriteExisting,
-            chkPreMatchLyric
+            chkPreMatchLyric,
+            
+            StyleFactory.createChapter("API限流配置"),
+            rateLimiterConfig.getConfigNode()
         );
         
         return configBox;
@@ -99,6 +112,7 @@ public class NcmLyricDownloadStrategy extends NcmBaseStrategy {
         pOverwriteExisting = chkOverwriteExisting.isSelected();
         pPreMatchLyric = chkPreMatchLyric.isSelected();
         pathSelection.captureParams();
+        rateLimiterConfig.captureParams();
     }
     
     @Override
@@ -106,6 +120,7 @@ public class NcmLyricDownloadStrategy extends NcmBaseStrategy {
         pathSelection.saveConfig(props);
         props.setProperty("ncm_lyric_overwrite_existing", String.valueOf(chkOverwriteExisting.isSelected()));
         props.setProperty("ncm_lyric_pre_match_lyric", String.valueOf(chkPreMatchLyric.isSelected()));
+        rateLimiterConfig.saveConfig(props);
     }
     
     @Override
@@ -117,6 +132,7 @@ public class NcmLyricDownloadStrategy extends NcmBaseStrategy {
         if (props.containsKey("ncm_lyric_pre_match_lyric")) {
             chkPreMatchLyric.setSelected(Boolean.parseBoolean(props.getProperty("ncm_lyric_pre_match_lyric")));
         }
+        rateLimiterConfig.loadConfig(props);
     }
     
     @Override

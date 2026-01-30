@@ -101,6 +101,11 @@ public class PreviewView implements IAutoReloadAble {
     private Spinner<Integer> spGlobalExecutionLimit;
     private JFXCheckBox chkUnlimitedPreview;
     private JFXCheckBox chkUnlimitedExecution;
+    // 超时设置配置UI
+    private Spinner<Integer> spPreviewTimeout;
+    private Spinner<Integer> spExecutionTimeout;
+    private JFXCheckBox chkUnlimitedPreviewTimeout;
+    private JFXCheckBox chkUnlimitedExecutionTimeout;
     // 根路径线程数配置UI
     private VBox rootPathThreadConfigBox;
     // 自动刷新相关
@@ -304,8 +309,44 @@ public class PreviewView implements IAutoReloadAble {
 
         chkUnlimitedExecution = new JFXCheckBox("不限制");
         chkUnlimitedExecution.setSelected(true);
+        chkUnlimitedExecution.setTooltip(new Tooltip("不限制执行数量"));
         chkUnlimitedExecution.selectedProperty().addListener((obs, oldVal, newVal) -> {
             spGlobalExecutionLimit.setDisable(newVal);
+        });
+        
+        // 超时设置初始化
+        spPreviewTimeout = new Spinner<>(1, 300, 30);
+        spPreviewTimeout.setEditable(true);
+        spPreviewTimeout.setPrefWidth(60);
+        spPreviewTimeout.setTooltip(new Tooltip("预览超时时间(秒)"));
+        spPreviewTimeout.focusedProperty().addListener((observable, oldValue, newValue) -> {
+            if (Boolean.FALSE.equals(newValue)) { // 当失去焦点时
+                spPreviewTimeout.increment(0); // 这是一个小技巧：触发一次位移为0的增量，强制同步文本
+            }
+        });
+        
+        spExecutionTimeout = new Spinner<>(1, 300, 60);
+        spExecutionTimeout.setEditable(true);
+        spExecutionTimeout.setPrefWidth(60);
+        spExecutionTimeout.setTooltip(new Tooltip("执行超时时间(秒)"));
+        spExecutionTimeout.focusedProperty().addListener((observable, oldValue, newValue) -> {
+            if (Boolean.FALSE.equals(newValue)) { // 当失去焦点时
+                spExecutionTimeout.increment(0); // 这是一个小技巧：触发一次位移为0的增量，强制同步文本
+            }
+        });
+        
+        chkUnlimitedPreviewTimeout = new JFXCheckBox("不限制");
+        chkUnlimitedPreviewTimeout.setSelected(true);
+        chkUnlimitedPreviewTimeout.setTooltip(new Tooltip("不限制预览超时时间"));
+        chkUnlimitedPreviewTimeout.selectedProperty().addListener((obs, oldVal, newVal) -> {
+            spPreviewTimeout.setDisable(newVal);
+        });
+        
+        chkUnlimitedExecutionTimeout = new JFXCheckBox("不限制");
+        chkUnlimitedExecutionTimeout.setSelected(true);
+        chkUnlimitedExecutionTimeout.setTooltip(new Tooltip("不限制执行超时时间"));
+        chkUnlimitedExecutionTimeout.selectedProperty().addListener((obs, oldVal, newVal) -> {
+            spExecutionTimeout.setDisable(newVal);
         });
         
         // 添加提示信息
@@ -665,23 +706,37 @@ public class PreviewView implements IAutoReloadAble {
         limitParamsRow.getChildren().addAll(previewLimitBox, executionLimitBox);
         limitParamsRow.setMinWidth(500);
 
-        // 创建一个包含所有参数的单行布局
-        HBox allParamsRow = new HBox(15);
-        allParamsRow.setAlignment(Pos.CENTER_LEFT);
-        allParamsRow.setFillHeight(false);
+        // 创建预览参数行
+        HBox previewParamsRow = new HBox(15);
+        previewParamsRow.setAlignment(Pos.CENTER_LEFT);
+        previewParamsRow.setFillHeight(false);
 
-        allParamsRow.getChildren().addAll(
+        previewParamsRow.getChildren().addAll(
                 StyleFactory.createParamPairLine("预览线程数:", spPreviewThreads),
-                StyleFactory.createParamPairLine("执行线程数:", spExecutionThreads),
-                StyleFactory.createParamPairLine("线程池模式:", cbThreadPoolMode),
                 StyleFactory.createParamPairLine("预览数量:", spGlobalPreviewLimit),
                 chkUnlimitedPreview,
+                StyleFactory.createParamPairLine("预览超时:", spPreviewTimeout),
+                chkUnlimitedPreviewTimeout,
+                StyleFactory.createSpacer(),
+                StyleFactory.createParamPairLine("线程池模式:", cbThreadPoolMode)
+        );
+
+        // 创建执行参数行
+        HBox executionParamsRow = new HBox(15);
+        executionParamsRow.setAlignment(Pos.CENTER_LEFT);
+        executionParamsRow.setFillHeight(false);
+
+        executionParamsRow.getChildren().addAll(
+                StyleFactory.createParamPairLine("执行线程数:", spExecutionThreads),
                 StyleFactory.createParamPairLine("执行数量:", spGlobalExecutionLimit),
-                chkUnlimitedExecution
+                chkUnlimitedExecution,
+                StyleFactory.createParamPairLine("执行超时:", spExecutionTimeout),
+                chkUnlimitedExecutionTimeout
         );
 
         globalParamsBox.getChildren().addAll(
-                allParamsRow
+                previewParamsRow,
+                executionParamsRow
         );
 
         globalParamsContent.getChildren().addAll(globalParamsBox);
@@ -817,78 +872,54 @@ public class PreviewView implements IAutoReloadAble {
         setupPreviewRows();
 
         // 设置根路径线程配置面板的垂直增长优先级
-        VBox.setVgrow(rootPathThreadConfigBox, Priority.NEVER);
-        // 设置表格的垂直增长优先级为最高
+        VBox.setVgrow(rootPathThreadConfigBox, Priority.ALWAYS);
+
+        // 过滤条件配置伸缩框
+        TitledPane filterTitledPane = new TitledPane();
+        filterTitledPane.setText("筛选条件");
+        filterTitledPane.setExpanded(true);
+        filterTitledPane.setStyle(String.format(
+                "-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: %s; -fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f;",
+                theme.getTextPrimaryColor(), panelBgColor, theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius()
+        ));
+        VBox filterContent = new VBox(10);
+        filterContent.setPadding(new Insets(10));
+        filterContent.getChildren().addAll(filterBox, actionBox);
+        filterTitledPane.setContent(filterContent);
+
+        // 顶部信息区域
+        VBox topInfoBox = new VBox(5);
+        topInfoBox.getChildren().add(runningLabel);
+
+        // 底部信息区域
+        VBox bottomInfoBox = new VBox(5);
+        bottomInfoBox.getChildren().add(statsLabel);
+
+        // 构建新的布局
+        viewNode.getChildren().addAll(
+                configPane,
+                filterTitledPane,
+                progressBox,
+                topInfoBox,  // 将runningLabel移到进度条下方
+                previewTable,
+                bottomInfoBox
+        );
+
+        // 设置垂直增长优先级
         VBox.setVgrow(previewTable, Priority.ALWAYS);
-
-        HBox status = StyleFactory.createHBoxPanel(StyleFactory.createChapter("[运行状态]  "), runningLabel);
-        HBox status2 = StyleFactory.createHBoxPanel(StyleFactory.createChapter("[统计信息]  "), statsLabel);
-        viewNode.getChildren().addAll(configPane, progressBox, status, status2, filterBox, actionBox, previewTable);
-    }
-
-    public void updateRunningProgress(String msg) {
-        Platform.runLater(() -> {
-            runningLabel.textProperty().unbind();
-            runningLabel.setText(msg);
-        });
-    }
-
-    public void bindProgress(Task<?> task) {
-        mainProgressBar.progressProperty().bind(task.progressProperty());
-    }
-
-    public void updateStatsDisplay(long t, long c, long s, long f, String tm) {
-        Platform.runLater(() -> statsLabel.setText(String.format("文件总数:%d 需要变更:%d 操作成功:%d 操作失败:%d 过程耗时:%s", t, c, s, f, tm)));
-    }
-
-    /**
-     * 更新所有根路径的执行进度
-     */
-    public void updateRootPathProgress() {
-        Platform.runLater(() -> {
-            FileManagerPlusApp app = (FileManagerPlusApp) getApp();
-            // 遍历所有根路径，更新进度
-            for (String rootPath : rootPathProgressBars.keySet()) {
-                MultiThreadTaskEstimator estimator = app.getRootPathEstimator(rootPath);
-                ProgressBar progressBar = rootPathProgressBars.get(rootPath);
-                Label progressLabel = rootPathProgressLabels.get(rootPath);
-
-                if (estimator != null) {
-                    double progress = estimator.getProgress();
-                    String displayInfo = estimator.getDisplayInfo();
-                    progressBar.setProgress(progress);
-                    progressLabel.setText(displayInfo);
-                } else {
-                    // 如果没有估算器，根据实际执行情况计算进度
-                    long totalCount = app.getFullChangeList().stream()
-                            .filter(record -> record.getOriginalName().startsWith(rootPath))
-                            .count();
-
-                    long completedCount = app.getFullChangeList().stream()
-                            .filter(record -> record.getOriginalName().startsWith(rootPath) &&
-                                    (record.getStatus() == ExecStatus.SUCCESS || record.getStatus() == ExecStatus.FAILED))
-                            .count();
-
-                    if (totalCount > 0) {
-                        double progress = (double) completedCount / totalCount;
-                        progressBar.setProgress(progress);
-                        progressLabel.setText(String.format("%.0f%% (%d/%d)", progress * 100, completedCount, totalCount));
-                    } else {
-                        // 如果没有文件，显示0%
-                        progressBar.setProgress(0);
-                        progressLabel.setText("0% (0/0)");
-                    }
-                }
-            }
-        });
+        VBox.setVgrow(configPane, Priority.NEVER);
+        VBox.setVgrow(filterTitledPane, Priority.NEVER);
+        VBox.setVgrow(topInfoBox, Priority.NEVER);
+        VBox.setVgrow(bottomInfoBox, Priority.NEVER);
     }
 
     private void setupPreviewColumns() {
         // 添加选择列
         TreeTableColumn<ChangeRecord, Boolean> selectionColumn = new TreeTableColumn<>();
-        selectionColumn.setPrefWidth(30);
-        selectionColumn.setMinWidth(30);
-        selectionColumn.setMaxWidth(30);
+        selectionColumn.setPrefWidth(40);
+        selectionColumn.setMinWidth(40);
+        selectionColumn.setMaxWidth(40);
+        selectionColumn.setResizable(false);
         selectionColumn.setCellValueFactory(p -> {
             ChangeRecord record = p.getValue().getValue();
             return new javafx.beans.property.SimpleBooleanProperty(record.isSelected());
@@ -928,13 +959,22 @@ public class PreviewView implements IAutoReloadAble {
             }
         });
 
-        TreeTableColumn<ChangeRecord, String> c1 = StyleFactory.createTreeTableColumn("原始文件", false, 220, 120, 300);
-        c1.setCellValueFactory(p -> new SimpleStringProperty(p.getValue().getValue().getOriginalName()));
-        TreeTableColumn<ChangeRecord, String> cS = StyleFactory.createTreeTableColumn("文件大小", false, 60, 60, 60);
-        cS.setCellValueFactory(p -> new SimpleStringProperty(FileSizeFormatUtil.formatFileSize(p.getValue().getValue().getFileHandle())));
-        TreeTableColumn<ChangeRecord, String> c2 = StyleFactory.createTreeTableColumn("目标文件", false, 220, 120, 300);
-        c2.setCellValueFactory(p -> new SimpleStringProperty(p.getValue().getValue().getNewName()));
-        c2.setCellFactory(c -> new TreeTableCell<ChangeRecord, String>() {
+        // 原始文件列
+        TreeTableColumn<ChangeRecord, String> originalNameColumn = StyleFactory.createTreeTableColumn("原始文件", true, 250, 100, 500);
+        originalNameColumn.setCellValueFactory(p -> new SimpleStringProperty(p.getValue().getValue().getOriginalName()));
+        originalNameColumn.setResizable(true);
+        originalNameColumn.setSortable(true);
+
+        // 原始文件大小列
+        TreeTableColumn<ChangeRecord, String> originalSizeColumn = StyleFactory.createTreeTableColumn("文件大小", false, 80, 60, 120);
+        originalSizeColumn.setCellValueFactory(p -> new SimpleStringProperty(FileSizeFormatUtil.formatFileSize(p.getValue().getValue().getFileHandle())));
+        originalSizeColumn.setResizable(true);
+        originalSizeColumn.setSortable(true);
+
+        // 目标文件列
+        TreeTableColumn<ChangeRecord, String> newNameColumn = StyleFactory.createTreeTableColumn("目标文件", true, 250, 100, 500);
+        newNameColumn.setCellValueFactory(p -> new SimpleStringProperty(p.getValue().getValue().getNewName()));
+        newNameColumn.setCellFactory(c -> new TreeTableCell<ChangeRecord, String>() {
             @Override
             protected void updateItem(String i, boolean e) {
                 super.updateItem(i, e);
@@ -956,8 +996,12 @@ public class PreviewView implements IAutoReloadAble {
                 }
             }
         });
-        TreeTableColumn<ChangeRecord, String> cS2 = StyleFactory.createTreeTableColumn("目标文件大小", false, 60, 60, 60);
-        cS2.setCellValueFactory(p -> {
+        newNameColumn.setResizable(true);
+        newNameColumn.setSortable(true);
+
+        // 目标文件大小列
+        TreeTableColumn<ChangeRecord, String> newSizeColumn = StyleFactory.createTreeTableColumn("目标大小", false, 80, 60, 120);
+        newSizeColumn.setCellValueFactory(p -> {
             try {
                 if (p.getValue() != null && p.getValue().getValue() != null && p.getValue().getValue().getNewPath() != null) {
                     return new SimpleStringProperty(FileSizeFormatUtil.formatFileSize(new File(p.getValue().getValue().getNewPath())));
@@ -967,9 +1011,12 @@ public class PreviewView implements IAutoReloadAble {
             }
             return new SimpleStringProperty("");
         });
-        TreeTableColumn<ChangeRecord, String> c3 = StyleFactory.createTreeTableColumn(
-                "运行状态", false, 60, 60, 60);
-        c3.setCellValueFactory(p -> {
+        newSizeColumn.setResizable(true);
+        newSizeColumn.setSortable(true);
+
+        // 运行状态列
+        TreeTableColumn<ChangeRecord, String> statusColumn = StyleFactory.createTreeTableColumn("运行状态", false, 100, 80, 150);
+        statusColumn.setCellValueFactory(p -> {
             try {
                 if (p.getValue() != null && p.getValue().getValue() != null && p.getValue().getValue().getStatus() != null) {
                     return new SimpleStringProperty(p.getValue().getValue().getStatus().toString());
@@ -980,7 +1027,7 @@ public class PreviewView implements IAutoReloadAble {
             return new SimpleStringProperty("");
         });
         // 为状态列添加颜色标识
-        c3.setCellFactory(c -> new TreeTableCell<ChangeRecord, String>() {
+        statusColumn.setCellFactory(c -> new TreeTableCell<ChangeRecord, String>() {
             @Override
             protected void updateItem(String i, boolean e) {
                 super.updateItem(i, e);
@@ -1017,9 +1064,42 @@ public class PreviewView implements IAutoReloadAble {
                 }
             }
         });
-        TreeTableColumn<ChangeRecord, String> c4 = StyleFactory.createTreeTableColumn(
-                "目标文件路径", true, 250, 150, 600);
-        c4.setCellValueFactory(p -> {
+        statusColumn.setResizable(true);
+        statusColumn.setSortable(true);
+
+        // 分析时间列
+        TreeTableColumn<ChangeRecord, String> analyzeTimeColumn = StyleFactory.createTreeTableColumn("分析耗时(ms)", false, 120, 80, 180);
+        analyzeTimeColumn.setCellValueFactory(p -> {
+            try {
+                if (p.getValue() != null && p.getValue().getValue() != null) {
+                    return new SimpleStringProperty(String.valueOf(p.getValue().getValue().getAnalyzeTime()));
+                }
+            } catch (Exception e) {
+                // 捕获可能的异常，避免程序崩溃
+            }
+            return new SimpleStringProperty("");
+        });
+        analyzeTimeColumn.setResizable(true);
+        analyzeTimeColumn.setSortable(true);
+
+        // 执行时间列
+        TreeTableColumn<ChangeRecord, String> executeTimeColumn = StyleFactory.createTreeTableColumn("执行耗时(ms)", false, 120, 80, 180);
+        executeTimeColumn.setCellValueFactory(p -> {
+            try {
+                if (p.getValue() != null && p.getValue().getValue() != null) {
+                    return new SimpleStringProperty(String.valueOf(p.getValue().getValue().getExecuteTime()));
+                }
+            } catch (Exception e) {
+                // 捕获可能的异常，避免程序崩溃
+            }
+            return new SimpleStringProperty("");
+        });
+        executeTimeColumn.setResizable(true);
+        executeTimeColumn.setSortable(true);
+
+        // 目标文件路径列
+        TreeTableColumn<ChangeRecord, String> newPathColumn = StyleFactory.createTreeTableColumn("目标文件路径", true, 300, 150, 800);
+        newPathColumn.setCellValueFactory(p -> {
             try {
                 if (p.getValue() != null && p.getValue().getValue() != null && p.getValue().getValue().getNewPath() != null) {
                     return new SimpleStringProperty(p.getValue().getValue().getNewPath());
@@ -1029,7 +1109,21 @@ public class PreviewView implements IAutoReloadAble {
             }
             return new SimpleStringProperty("");
         });
-        previewTable.getColumns().setAll(selectionColumn, c1, cS, c2, cS2, c3, c4);
+        newPathColumn.setResizable(true);
+        newPathColumn.setSortable(true);
+
+        // 添加所有列到表格
+        previewTable.getColumns().setAll(
+                selectionColumn, 
+                originalNameColumn, 
+                originalSizeColumn, 
+                newNameColumn, 
+                newSizeColumn, 
+                statusColumn, 
+                analyzeTimeColumn, 
+                executeTimeColumn, 
+                newPathColumn
+        );
 
     }
 
@@ -1060,345 +1154,404 @@ public class PreviewView implements IAutoReloadAble {
                             bgColor = bgColor + alphaHex;
                         }
 
-                        // 检查行是否被选中
-                        if (this.isSelected()) {
-                            // 如果选中，添加边框和阴影效果，而不是改变背景色
-                            setStyle(String.format(
-                                    "-fx-background-color: %s; " +
-                                            "-fx-border-width: 2; -fx-border-color: %s; " +
-                                            "-fx-effect: dropshadow(three-pass-box, rgba(52, 152, 219, 0.5), 10, 0, 0, 0);",
-                                    bgColor, theme.getAccentColor()
-                            ));
-                        } else {
-                            // 如果未选中，只设置背景色
-                            setStyle("-fx-background-color: " + bgColor + ";");
-                        }
+                        setStyle(String.format("-fx-background-color: %s;", bgColor));
                     }
                 }
             };
-            ContextMenu cm = new ContextMenu();
-            MenuItem i1 = new MenuItem("打开原始文件");
-            i1.setOnAction(e -> {
-                ChangeRecord item = row.getItem();
-                if (item != null && item.getFileHandle() != null) {
-                    app.openFileInSystem(item.getFileHandle());
-                }
-            });
-            MenuItem i2 = new MenuItem("打开原始目录");
-            i2.setOnAction(e -> {
-                ChangeRecord item = row.getItem();
-                if (item != null && item.getFileHandle() != null) {
-                    app.openParentDirectory(item.getFileHandle());
-                }
-            });
-            MenuItem i3 = new MenuItem("打开目标文件");
-            i3.setOnAction(e -> {
-                ChangeRecord item = row.getItem();
-                if (item != null && item.getNewPath() != null) {
-                    try {
-                        app.openFileInSystem(new File(item.getNewPath()));
-                    } catch (Exception ex) {
-                        // 捕获可能的异常
+
+            // 添加选中行样式
+            row.selectedProperty().addListener((obs, oldVal, newVal) -> {
+                if (newVal && !row.isEmpty()) {
+                    ThemeConfig theme = app.getCurrentTheme();
+                    String selectedColor = theme.getListRowSelectedBgColor();
+                    if (selectedColor.startsWith("#") && selectedColor.length() == 7) {
+                        int alpha = (int) (theme.getGlassOpacity() * 255);
+                        String alphaHex = String.format("%02x", alpha);
+                        selectedColor = selectedColor + alphaHex;
                     }
-                }
-            });
-            MenuItem i4 = new MenuItem("打开目标目录");
-            i4.setOnAction(e -> {
-                ChangeRecord item = row.getItem();
-                if (item != null && item.getNewPath() != null) {
-                    try {
-                        File newFile = new File(item.getNewPath());
-                        File parentFile = newFile.getParentFile();
-                        if (parentFile != null) {
-                            app.openParentDirectory(parentFile);
-                        }
-                    } catch (Exception ex) {
-                        // 捕获可能的异常
-                    }
+                    row.setStyle(String.format("-fx-background-color: %s;", selectedColor));
                 }
             });
 
-            // 添加执行该任务菜单项
-            MenuItem i5 = new MenuItem("执行该任务");
-            i5.setOnAction(e -> {
-                ChangeRecord item = row.getItem();
-                if (item != null) {
-                    executeSingleRecord(item);
-                }
-            });
-
-            cm.getItems().addAll(i1, i2, i3, i4, i5);
-            row.contextMenuProperty().bind(javafx.beans.binding.Bindings.when(row.emptyProperty()).then((ContextMenu) null).otherwise(cm));
-            // 支持双击查看详情数据
-            row.setOnMouseClicked(event -> {
-                // 检查双击且行非空
-                if (event.getClickCount() > 1 && !row.isEmpty()) {
-                    ChangeRecord item = row.getItem();
-                    // 添加额外的空值检查，确保安全
-                    if (item != null) {
-                        try {
-                            // 获取当前 Stage 实例
-                            Stage currentStage = (Stage) previewTable.getScene().getWindow();
-                            // 弹出 JSON 详情窗口，支持 processInfo 多行展示
-                            DetailWindowHelper.showJsonDetailWithProcessInfo(currentStage, item);
-                        } catch (Exception e) {
-                            // 捕获可能的异常，避免程序崩溃
-                            e.printStackTrace();
-                        }
-                    }
-                }
-            });
             return row;
         });
     }
 
     /**
-     * 刷新列表
+     * 刷新预览表格
      */
     public void refresh() {
-        List<ChangeRecord> fullChangeList = app.getFullChangeList();
-        if (fullChangeList.isEmpty()) return;
-        String s = getTxtSearchFilter().getText().toLowerCase();
-        String st = getCbStatusFilter().getValue();
-        String opType = getCbOperationTypeFilter().getValue();
-        boolean h = getChkHideUnchanged().isSelected();
-
-        Task<TreeItem<ChangeRecord>> t = new Task<TreeItem<ChangeRecord>>() {
-            @Override
-            protected TreeItem<ChangeRecord> call() {
-                TreeItem<ChangeRecord> root = new TreeItem<>(new ChangeRecord());
-                root.setExpanded(true);
-                int limit = numberDisplay.getValue();
-
-                // 构建筛选条件
-                Predicate<ChangeRecord> hideUnchangedPredicate = r -> !h || r.isChanged() || r.getStatus() == ExecStatus.FAILED;
-                Predicate<ChangeRecord> searchPredicate = r -> {
-                    if (s.isEmpty()) return true;
-                    // 检查原始文件名
-                    if (r.getOriginalName() != null && r.getOriginalName().toLowerCase().contains(s)) return true;
-                    // 检查目标文件名
-                    if (r.getNewName() != null && r.getNewName().toLowerCase().contains(s)) return true;
-                    // 检查目标文件路径
-                    if (r.getNewPath() != null && r.getNewPath().toLowerCase().contains(s)) return true;
-                    // 检查错误信息
-                    return r.getFailReason() != null && r.getFailReason().toLowerCase().contains(s);
-                };
-                Predicate<ChangeRecord> statusPredicate = r -> {
-                    if ("全部".equals(st)) return true;
-                    if ("执行中".equals(st)) return r.getStatus() == ExecStatus.RUNNING;
-                    if ("成功".equals(st)) return r.getStatus() == ExecStatus.SUCCESS;
-                    if ("失败".equals(st)) return r.getStatus() == ExecStatus.FAILED;
-                    if ("跳过".equals(st)) return r.getStatus() == ExecStatus.SKIPPED;
-                    return true;
-                };
-                Predicate<ChangeRecord> operationTypePredicate = r -> {
-                    if ("全部".equals(opType)) return true;
-                    return r.getOpType() != null && opType.equals(r.getOpType().name);
-                };
-
-                // 组合所有筛选条件
-                Predicate<ChangeRecord> allPredicates = hideUnchangedPredicate
-                        .and(searchPredicate)
-                        .and(statusPredicate)
-                        .and(operationTypePredicate);
-
-                // 使用并行流处理，优化性能
-                List<ChangeRecord> filteredList = fullChangeList.parallelStream()
-                        .filter(allPredicates)
-                        .limit(limit)
-                        .collect(Collectors.toList());
-
-                // 如果超过限制，记录日志
-                if (filteredList.size() >= limit) {
-                    app.log("注意：实时预览数据限制为" + limit + "条！");
-                }
-
-                // 将筛选结果添加到树结构中
-                for (ChangeRecord r : filteredList) {
-                    root.getChildren().add(new TreeItem<>(r));
-                }
-
-                return root;
-            }
-        };
-        t.setOnSucceeded(e -> {
-            getPreviewTable().setRoot(t.getValue());
-            // 更新按钮状态
-            updateDeleteButtonsState();
-        });
-        t.setOnFailed(e -> {
-            getPreviewTable().setRoot(t.getValue());
-            // 更新按钮状态
-            updateDeleteButtonsState();
-        });
-        new Thread(t).start();
-        // 顺便也刷新下统计
-        updateStats();
-    }
-
-    /**
-     * 更新统计信息
-     */
-    /**
-     * 更新删除按钮和全选按钮的状态
-     */
-    private void updateDeleteButtonsState() {
-        TreeTableView<ChangeRecord> tableView = getPreviewTable();
-        boolean hasData = tableView != null && tableView.getRoot() != null && !tableView.getRoot().getChildren().isEmpty();
-
-        // 禁用或启用按钮
-        btnDeleteOriginal.setDisable(!hasData);
-        btnDeleteTarget.setDisable(!hasData);
-        chkSelectAll.setDisable(!hasData);
-    }
-
-    public void updateStats() {
-        List<ChangeRecord> fullChangeList = app.getFullChangeList();
-        long startT = app.getTaskStartTimStamp();
-        long t = fullChangeList.size(),
-                c = fullChangeList.stream().filter(ChangeRecord::isChanged).count(),
-                s = fullChangeList.stream().filter(r -> r.getStatus() == ExecStatus.SUCCESS).count(),
-                f = fullChangeList.stream().filter(r -> r.getStatus() == ExecStatus.FAILED).count();
-
-        // 计算执行时间
-        String duration;
-        if (app instanceof com.filemanager.app.FileManagerPlusApp) {
-            com.filemanager.app.FileManagerPlusApp fileManagerApp = (com.filemanager.app.FileManagerPlusApp) app;
-            Long endT = fileManagerApp.getTaskEndTimestamp();
-            if (endT != null) {
-                // 任务已结束，使用固化的结束时间
-                duration = MultiThreadTaskEstimator.formatDuration(endT - startT);
-            } else {
-                // 任务进行中，实时计算
-                duration = MultiThreadTaskEstimator.formatDuration(System.currentTimeMillis() - startT);
-            }
-        } else {
-            // 任务进行中，实时计算
-            duration = MultiThreadTaskEstimator.formatDuration(System.currentTimeMillis() - startT);
+        if (!app.getTaskRunningStatus().get()) {
+            app.refreshPreviewTableFilter();
         }
+    }
 
-        this.updateStatsDisplay(t, c, s, f, duration);
+    @Override
+    public void saveConfig(Properties props) {
+        // 保存配置
+        props.setProperty("preview.showUnchanged", String.valueOf(!chkHideUnchanged.isSelected()));
+        props.setProperty("preview.autoRefresh", String.valueOf(chkAutoRefresh.isSelected()));
+        props.setProperty("preview.threads", String.valueOf(spPreviewThreads.getValue()));
+        props.setProperty("preview.execThreads", String.valueOf(spExecutionThreads.getValue()));
+        props.setProperty("preview.threadPoolMode", cbThreadPoolMode.getValue());
+    }
+
+    @Override
+    public void loadConfig(Properties props) {
+        // 加载配置
+        chkHideUnchanged.setSelected(!Boolean.parseBoolean(props.getProperty("preview.showUnchanged", "false")));
+        chkAutoRefresh.setSelected(Boolean.parseBoolean(props.getProperty("preview.autoRefresh", "true")));
+        try {
+            spPreviewThreads.getValueFactory().setValue(Integer.parseInt(props.getProperty("preview.threads", "10")));
+            spExecutionThreads.getValueFactory().setValue(Integer.parseInt(props.getProperty("preview.execThreads", "4")));
+        } catch (NumberFormatException e) {
+            // 忽略格式错误
+        }
+        String threadPoolMode = props.getProperty("preview.threadPoolMode", ThreadPoolManager.MODE_GLOBAL);
+        cbThreadPoolMode.setValue(threadPoolMode);
+    }
+
+    @Override
+    public void reload() {
+        // 重新加载样式
+        ThemeConfig theme = app.getCurrentTheme();
+        String tableBgColor = theme.getListBgColor();
+        if (tableBgColor.startsWith("#") && tableBgColor.length() == 7) {
+            int alpha = (int) (theme.getGlassOpacity() * 200);
+            String alphaHex = String.format("%02x", alpha);
+            tableBgColor = tableBgColor + alphaHex;
+        }
+        previewTable.setStyle(String.format(
+                "-fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-background-radius: %.1f; -fx-border-radius: %.1f;",
+                tableBgColor, theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius(), theme.getCornerRadius()
+        ));
+        // 刷新表格
+        previewTable.refresh();
     }
 
     /**
      * 删除选中的文件
      *
-     * @param deleteOriginal 是否删除原始文件（true）还是目标文件（false）
+     * @param isOriginal 是否删除原始文件
      */
-    private void deleteSelectedFiles(boolean deleteOriginal) {
-        TreeTableView<ChangeRecord> tableView = getPreviewTable();
-        if (tableView != null && tableView.getRoot() != null) {
+    private void deleteSelectedFiles(boolean isOriginal) {
+        List<ChangeRecord> selectedRecords = app.getFullChangeList().stream()
+                .filter(ChangeRecord::isSelected)
+                .collect(Collectors.toList());
+
+        if (selectedRecords.isEmpty()) {
+            FXDialogUtils.showToast(app.getPrimaryStage(), "请先选择要删除的文件！", FXDialogUtils.ToastType.INFO);
+            return;
+        }
+
+        String confirmMessage = isOriginal ? "确定要删除选中的原始文件吗？此操作不可恢复！" : "确定要删除选中的目标文件吗？此操作不可恢复！";
+        boolean confirmed = FXDialogUtils.showConfirm("删除确认", confirmMessage);
+        if (confirmed) {
             AtomicInteger deletedCount = new AtomicInteger(0);
             AtomicInteger failedCount = new AtomicInteger(0);
 
             Task<Void> deleteTask = new Task<Void>() {
                 @Override
                 protected Void call() {
-                    Platform.runLater(() -> {
-                        app.updateRunningProgress("正在准备删除文件...");
-                    });
+                    for (ChangeRecord record : selectedRecords) {
+                        try {
+                            File fileToDelete;
+                            if (isOriginal) {
+                                fileToDelete = record.getFileHandle();
+                            } else {
+                                fileToDelete = new File(record.getNewPath());
+                            }
 
-                    for (TreeItem<ChangeRecord> item : tableView.getRoot().getChildren()) {
-                        ChangeRecord record = item.getValue();
-                        if (record != null && record.isSelected()) {
-                            try {
-                                File fileToDelete;
-                                if (deleteOriginal) {
-                                    fileToDelete = record.getFileHandle();
-                                } else {
-                                    fileToDelete = new File(record.getNewPath());
-                                }
-
-                                if (fileToDelete.exists()) {
-                                    if (fileToDelete.delete()) {
-                                        deletedCount.incrementAndGet();
-                                    } else {
-                                        failedCount.incrementAndGet();
-                                    }
-                                } else {
-                                    failedCount.incrementAndGet();
-                                }
-
-                                // 处理中间文件
-                                if (record.getIntermediateFile() != null && record.getIntermediateFile().exists()) {
-                                    record.getIntermediateFile().delete();
-                                }
-                            } catch (Exception e) {
+                            if (fileToDelete.exists() && fileToDelete.delete()) {
+                                deletedCount.incrementAndGet();
+                            } else {
                                 failedCount.incrementAndGet();
                             }
+                        } catch (Exception e) {
+                            failedCount.incrementAndGet();
                         }
                     }
-
                     return null;
                 }
 
                 @Override
                 protected void succeeded() {
                     super.succeeded();
-                    Platform.runLater(() -> {
-                        app.updateRunningProgress(String.format("文件删除完成：成功删除 %d 个文件，失败 %d 个文件", deletedCount.get(), failedCount.get()));
-                        // 刷新表格
-                        refresh();
-                    });
+                    FXDialogUtils.showToast(app.getPrimaryStage(), 
+                            String.format("删除完成！成功: %d, 失败: %d", deletedCount.get(), failedCount.get()), 
+                            FXDialogUtils.ToastType.SUCCESS);
+                    // 刷新预览列表
+                    app.refreshPreviewTableFilter();
                 }
             };
 
-            // 运行删除任务
             new Thread(deleteTask).start();
         }
     }
 
     /**
-     * 执行单个ChangeRecord
-     */
-    private void executeSingleRecord(ChangeRecord record) {
-        if (record == null || !record.isChanged() || record.getOpType() == OperationType.NONE || record.getStatus() != ExecStatus.PENDING) {
-            return;
-        }
-
-        // 调用IAppController的方法执行单个任务
-        app.runPipelineExecution(record);
-    }
-
-    /**
-     * 执行选中的ChangeRecord
+     * 执行选中的记录
      */
     private void executeSelectedRecords() {
-        TreeTableView<ChangeRecord> tableView = getPreviewTable();
-        if (tableView == null || tableView.getRoot() == null) {
-            return;
-        }
-
-        List<ChangeRecord> selectedRecords = tableView.getRoot().getChildren().stream()
-                .map(TreeItem::getValue)
-                .filter(record -> record != null && record.isSelected() && record.isChanged() && record.getOpType() != OperationType.NONE && record.getStatus() == ExecStatus.PENDING)
+        List<ChangeRecord> selectedRecords = app.getFullChangeList().stream()
+                .filter(ChangeRecord::isSelected)
                 .collect(Collectors.toList());
 
         if (selectedRecords.isEmpty()) {
+            FXDialogUtils.showToast(app.getPrimaryStage(), "请先选择要执行的文件！", FXDialogUtils.ToastType.INFO);
             return;
         }
 
-        // 确认执行
-        boolean confirm = FXDialogUtils.showConfirm("确认执行", "确定要执行 " + selectedRecords.size() + " 个任务吗？");
-        if (!confirm) {
-            return;
-        }
-
-        // 调用IAppController的方法执行选中的任务
+        // 执行选中的记录
         app.runPipelineExecution(selectedRecords);
     }
 
-
-    // Getters
-    public Node getViewNode() {
-        return viewNode;
+    /**
+     * 更新删除按钮状态
+     */
+    private void updateDeleteButtonsState() {
+        boolean hasSelected = app.getFullChangeList().stream().anyMatch(ChangeRecord::isSelected);
+        btnDeleteOriginal.setDisable(!hasSelected);
+        btnDeleteTarget.setDisable(!hasSelected);
+        btnExecuteSelected.setDisable(!hasSelected);
     }
 
+    /**
+     * 更新运行进度
+     *
+     * @param msg 进度消息
+     */
+    public void updateRunningProgress(String msg) {
+        // 这里可以添加更新进度的逻辑，例如更新状态标签或进度条
+        Platform.runLater(() -> {
+            // 示例：如果有状态标签，可以更新它
+            // statusLabel.setText(msg);
+        });
+    }
+
+    /**
+     * 获取筛选条件
+     *
+     * @return 筛选条件
+     */
+    public Predicate<ChangeRecord> getFilterPredicate() {
+        String searchText = txtSearchFilter.getText().toLowerCase();
+        String statusFilter = cbStatusFilter.getValue();
+        String operationTypeFilter = cbOperationTypeFilter.getValue();
+        boolean hideUnchanged = chkHideUnchanged.isSelected();
+
+        return record -> {
+            // 仅显示变更
+            if (hideUnchanged && !record.isChanged()) {
+                return false;
+            }
+
+            // 搜索过滤
+            if (!searchText.isEmpty()) {
+                boolean matchesOriginalName = record.getOriginalName().toLowerCase().contains(searchText);
+                boolean matchesNewName = record.getNewName().toLowerCase().contains(searchText);
+                boolean matchesNewPath = record.getNewPath() != null && record.getNewPath().toLowerCase().contains(searchText);
+                if (!matchesOriginalName && !matchesNewName && !matchesNewPath) {
+                    return false;
+                }
+            }
+
+            // 状态过滤
+            if (!"全部".equals(statusFilter)) {
+                ExecStatus status = record.getStatus();
+                if (status == null) {
+                    return false;
+                }
+
+                switch (statusFilter) {
+                    case "执行中":
+                        if (status != ExecStatus.RUNNING) return false;
+                        break;
+                    case "成功":
+                        if (status != ExecStatus.SUCCESS) return false;
+                        break;
+                    case "失败":
+                        if (status != ExecStatus.FAILED) return false;
+                        break;
+                    case "跳过":
+                        if (status != ExecStatus.SKIPPED) return false;
+                        break;
+                    case "无需处理":
+                        if (status != ExecStatus.PENDING) return false;
+                        break;
+                }
+            }
+
+            // 操作类型过滤
+            if (!"全部".equals(operationTypeFilter)) {
+                OperationType type = record.getOpType();
+                if (type == null || !type.name.equals(operationTypeFilter)) {
+                    return false;
+                }
+            }
+
+            return true;
+        };
+    }
+
+    /**
+     * 获取预览表格
+     *
+     * @return 预览表格
+     */
+    public TreeTableView<ChangeRecord> getTreeTableView() {
+        return previewTable;
+    }
+
+    /**
+     * 获取Tab
+     *
+     * @return Tab
+     */
     public Tab getTab() {
         return tabPreview;
     }
 
-    // 获取全局预览数量上限
+    /**
+     * 获取搜索文本框
+     *
+     * @return 搜索文本框
+     */
+    public JFXTextField getTxtSearchFilter() {
+        return txtSearchFilter;
+    }
+
+    /**
+     * 获取状态筛选下拉框
+     *
+     * @return 状态筛选下拉框
+     */
+    public JFXComboBox<String> getCbStatusFilter() {
+        return cbStatusFilter;
+    }
+
+    /**
+     * 获取操作类型筛选下拉框
+     *
+     * @return 操作类型筛选下拉框
+     */
+    public JFXComboBox<String> getCbOperationTypeFilter() {
+        return cbOperationTypeFilter;
+    }
+
+    /**
+     * 获取仅显示变更复选框
+     *
+     * @return 仅显示变更复选框
+     */
+    public JFXCheckBox getChkHideUnchanged() {
+        return chkHideUnchanged;
+    }
+
+    /**
+     * 获取显示数量下拉框
+     *
+     * @return 显示数量下拉框
+     */
+    public JFXComboBox<Integer> getNumberDisplay() {
+        return numberDisplay;
+    }
+
+    /**
+     * 获取预览线程数Spinner
+     *
+     * @return 预览线程数Spinner
+     */
+    public Spinner<Integer> getSpPreviewThreads() {
+        return spPreviewThreads;
+    }
+
+    /**
+     * 获取执行线程数Spinner
+     *
+     * @return 执行线程数Spinner
+     */
+    public Spinner<Integer> getSpExecutionThreads() {
+        return spExecutionThreads;
+    }
+
+    /**
+     * 获取全局预览数量上限Spinner
+     *
+     * @return 全局预览数量上限Spinner
+     */
+    public Spinner<Integer> getSpGlobalPreviewLimit() {
+        return spGlobalPreviewLimit;
+    }
+
+    /**
+     * 获取全局执行数量上限Spinner
+     *
+     * @return 全局执行数量上限Spinner
+     */
+    public Spinner<Integer> getSpGlobalExecutionLimit() {
+        return spGlobalExecutionLimit;
+    }
+
+    /**
+     * 获取不限制预览数量复选框
+     *
+     * @return 不限制预览数量复选框
+     */
+    public JFXCheckBox getChkUnlimitedPreview() {
+        return chkUnlimitedPreview;
+    }
+
+    /**
+     * 获取不限制执行数量复选框
+     *
+     * @return 不限制执行数量复选框
+     */
+    public JFXCheckBox getChkUnlimitedExecution() {
+        return chkUnlimitedExecution;
+    }
+
+    /**
+     * 获取预览超时时间Spinner
+     *
+     * @return 预览超时时间Spinner
+     */
+    public Spinner<Integer> getSpPreviewTimeout() {
+        return spPreviewTimeout;
+    }
+
+    /**
+     * 获取执行超时时间Spinner
+     *
+     * @return 执行超时时间Spinner
+     */
+    public Spinner<Integer> getSpExecutionTimeout() {
+        return spExecutionTimeout;
+    }
+
+    /**
+     * 获取不限制预览超时时间复选框
+     *
+     * @return 不限制预览超时时间复选框
+     */
+    public JFXCheckBox getChkUnlimitedPreviewTimeout() {
+        return chkUnlimitedPreviewTimeout;
+    }
+
+    /**
+     * 获取不限制执行超时时间复选框
+     *
+     * @return 不限制执行超时时间复选框
+     */
+    public JFXCheckBox getChkUnlimitedExecutionTimeout() {
+        return chkUnlimitedExecutionTimeout;
+    }
+
+    /**
+     * 获取全局预览数量上限
+     *
+     * @return 全局预览数量上限
+     */
     public int getGlobalPreviewLimit() {
         if (chkUnlimitedPreview.isSelected()) {
             return Integer.MAX_VALUE;
@@ -1406,7 +1559,41 @@ public class PreviewView implements IAutoReloadAble {
         return spGlobalPreviewLimit.getValue();
     }
 
-    // 获取全局执行数量上限
+    /**
+     * 获取根路径预览数量上限
+     *
+     * @param rootPath 根路径
+     * @return 根路径预览数量上限
+     */
+    public int getRootPathPreviewLimit(String rootPath) {
+        JFXCheckBox unlimited = rootPathUnlimitedPreview.get(rootPath);
+        if (unlimited != null && unlimited.isSelected()) {
+            return Integer.MAX_VALUE;
+        }
+        Spinner<Integer> spinner = rootPathPreviewLimits.get(rootPath);
+        if (spinner != null) {
+            return spinner.getValue();
+        }
+        return getGlobalPreviewLimit();
+    }
+
+    /**
+     * 获取全局预览超时时间
+     *
+     * @return 全局预览超时时间
+     */
+    public int getGlobalPreviewTimeout() {
+        if (chkUnlimitedPreviewTimeout.isSelected()) {
+            return Integer.MAX_VALUE;
+        }
+        return spPreviewTimeout.getValue();
+    }
+
+    /**
+     * 获取全局执行数量上限
+     *
+     * @return 全局执行数量上限
+     */
     public int getGlobalExecutionLimit() {
         if (chkUnlimitedExecution.isSelected()) {
             return Integer.MAX_VALUE;
@@ -1414,230 +1601,184 @@ public class PreviewView implements IAutoReloadAble {
         return spGlobalExecutionLimit.getValue();
     }
 
-    // 是否不限制预览数量
-    private boolean isUnlimitedPreview() {
-        return chkUnlimitedPreview.isSelected();
-    }
-
-    // 是否不限制执行数量
-    private boolean isUnlimitedExecution() {
-        return chkUnlimitedExecution.isSelected();
-    }
-
-    // 获取指定根路径的预览数量上限
-    public int getRootPathPreviewLimit(String rootPath) {
-        if (isRootPathUnlimitedPreview(rootPath)) {
-            return Integer.MAX_VALUE;
-        }
-        Spinner<Integer> spinner = rootPathPreviewLimits.get(rootPath);
-        return spinner != null ? spinner.getValue() : getGlobalPreviewLimit();
-    }
-
-    // 获取指定根路径的执行数量上限
+    /**
+     * 获取根路径执行数量上限
+     *
+     * @param rootPath 根路径
+     * @return 根路径执行数量上限
+     */
     public int getRootPathExecutionLimit(String rootPath) {
-        if (isRootPathUnlimitedExecution(rootPath)) {
+        JFXCheckBox unlimited = rootPathUnlimitedExecution.get(rootPath);
+        if (unlimited != null && unlimited.isSelected()) {
             return Integer.MAX_VALUE;
         }
         Spinner<Integer> spinner = rootPathExecutionLimits.get(rootPath);
-        return spinner != null ? spinner.getValue() : getGlobalExecutionLimit();
+        if (spinner != null) {
+            return spinner.getValue();
+        }
+        return getGlobalExecutionLimit();
     }
 
-    // 指定根路径是否不限制预览数量
-    private boolean isRootPathUnlimitedPreview(String rootPath) {
-        JFXCheckBox checkBox = rootPathUnlimitedPreview.get(rootPath);
-        return checkBox != null ? checkBox.isSelected() : isUnlimitedPreview();
+    /**
+     * 获取全局执行超时时间
+     *
+     * @return 全局执行超时时间
+     */
+    public int getGlobalExecutionTimeout() {
+        if (chkUnlimitedExecutionTimeout.isSelected()) {
+            return Integer.MAX_VALUE;
+        }
+        return spExecutionTimeout.getValue();
     }
 
-    // 指定根路径是否不限制执行数量
-    private boolean isRootPathUnlimitedExecution(String rootPath) {
-        JFXCheckBox checkBox = rootPathUnlimitedExecution.get(rootPath);
-        return checkBox != null ? checkBox.isSelected() : isUnlimitedExecution();
-    }
-
-    @Override
-    public void saveConfig(Properties props) {
-        props.setProperty("preview_threads", String.valueOf(spPreviewThreads.getValue()));
-        props.setProperty("execution_threads", String.valueOf(spExecutionThreads.getValue()));
-        props.setProperty("thread_pool_mode", cbThreadPoolMode.getValue());
-
-        // 保存全局数量上限配置
-        props.setProperty("global_preview_limit", String.valueOf(spGlobalPreviewLimit.getValue()));
-        props.setProperty("global_execution_limit", String.valueOf(spGlobalExecutionLimit.getValue()));
-        props.setProperty("unlimited_preview", String.valueOf(chkUnlimitedPreview.isSelected()));
-        props.setProperty("unlimited_execution", String.valueOf(chkUnlimitedExecution.isSelected()));
-
-        // 保存根路径线程配置
-        for (java.util.Map.Entry<String, Spinner<Integer>> entry : rootPathSpinners.entrySet()) {
-            String key = "root_thread_" + entry.getKey().replaceAll("\\\\", "_");
-            props.setProperty(key, String.valueOf(entry.getValue().getValue()));
-        }
-
-        // 保存根路径数量上限配置
-        for (java.util.Map.Entry<String, Spinner<Integer>> entry : rootPathPreviewLimits.entrySet()) {
-            String key = "root_preview_limit_" + entry.getKey().replaceAll("\\\\", "_");
-            props.setProperty(key, String.valueOf(entry.getValue().getValue()));
-        }
-        for (java.util.Map.Entry<String, Spinner<Integer>> entry : rootPathExecutionLimits.entrySet()) {
-            String key = "root_execution_limit_" + entry.getKey().replaceAll("\\\\", "_");
-            props.setProperty(key, String.valueOf(entry.getValue().getValue()));
-        }
-        for (java.util.Map.Entry<String, JFXCheckBox> entry : rootPathUnlimitedPreview.entrySet()) {
-            String key = "root_unlimited_preview_" + entry.getKey().replaceAll("\\\\", "_");
-            props.setProperty(key, String.valueOf(entry.getValue().isSelected()));
-        }
-        for (java.util.Map.Entry<String, JFXCheckBox> entry : rootPathUnlimitedExecution.entrySet()) {
-            String key = "root_unlimited_execution_" + entry.getKey().replaceAll("\\\\", "_");
-            props.setProperty(key, String.valueOf(entry.getValue().isSelected()));
-        }
-    }
-
-    @Override
-    public void loadConfig(Properties props) {
-        if (props.containsKey("preview_threads")) {
-            spPreviewThreads.getValueFactory().setValue(Integer.parseInt(props.getProperty("preview_threads")));
-        }
-        if (props.containsKey("execution_threads")) {
-            spExecutionThreads.getValueFactory().setValue(Integer.parseInt(props.getProperty("execution_threads")));
-        }
-        // 加载线程池模式
-        if (props.containsKey("thread_pool_mode")) {
-            cbThreadPoolMode.setValue(props.getProperty("thread_pool_mode"));
-        }
-        // 兼容旧配置
-        if (props.containsKey("global_threads")) {
-            int globalThreads = Integer.parseInt(props.getProperty("global_threads"));
-            spPreviewThreads.getValueFactory().setValue(globalThreads);
-            spExecutionThreads.getValueFactory().setValue(globalThreads);
-        }
-
-        // 加载全局数量上限配置
-        if (props.containsKey("global_preview_limit")) {
-            spGlobalPreviewLimit.getValueFactory().setValue(Integer.parseInt(props.getProperty("global_preview_limit")));
-        }
-        if (props.containsKey("global_execution_limit")) {
-            spGlobalExecutionLimit.getValueFactory().setValue(Integer.parseInt(props.getProperty("global_execution_limit")));
-        }
-        if (props.containsKey("unlimited_preview")) {
-            chkUnlimitedPreview.setSelected(Boolean.parseBoolean(props.getProperty("unlimited_preview")));
-            spGlobalPreviewLimit.setDisable(chkUnlimitedPreview.isSelected());
-        }
-        if (props.containsKey("unlimited_execution")) {
-            chkUnlimitedExecution.setSelected(Boolean.parseBoolean(props.getProperty("unlimited_execution")));
-            spGlobalExecutionLimit.setDisable(chkUnlimitedExecution.isSelected());
-        }
-
-        // 加载根路径线程配置
-        FileManagerPlusApp fileManagerApp = (FileManagerPlusApp) app;
-        for (File root : app.getSourceRoots()) {
-            String rootPath = root.getAbsolutePath();
-            String key = "root_thread_" + rootPath.replaceAll("\\\\", "_");
-            if (props.containsKey(key)) {
-                int threads = Integer.parseInt(props.getProperty(key));
-                fileManagerApp.setRootPathExecutionThreads(rootPath, threads);
-            }
-
-            // 加载预览线程数配置
-            String previewKey = "root_preview_thread_" + rootPath.replaceAll("\\\\", "_");
-            if (props.containsKey(previewKey)) {
-                int previewThreads = Integer.parseInt(props.getProperty(previewKey));
-                fileManagerApp.setRootPathPreviewThreads(rootPath, previewThreads);
-            }
-        }
-
-        // 更新UI显示
-        updateRootPathThreadConfigUI();
-
-        // 加载根路径数量上限配置（需要在UI更新后进行，因为spinners在此时才创建）
-        for (File root : app.getSourceRoots()) {
-            String rootPath = root.getAbsolutePath();
-
-            // 加载预览数量上限
-            String previewLimitKey = "root_preview_limit_" + rootPath.replaceAll("\\\\", "_");
-            if (props.containsKey(previewLimitKey) && rootPathPreviewLimits.containsKey(rootPath)) {
-                int limit = Integer.parseInt(props.getProperty(previewLimitKey));
-                rootPathPreviewLimits.get(rootPath).getValueFactory().setValue(limit);
-            }
-
-            // 加载执行数量上限
-            String executionLimitKey = "root_execution_limit_" + rootPath.replaceAll("\\\\", "_");
-            if (props.containsKey(executionLimitKey) && rootPathExecutionLimits.containsKey(rootPath)) {
-                int limit = Integer.parseInt(props.getProperty(executionLimitKey));
-                rootPathExecutionLimits.get(rootPath).getValueFactory().setValue(limit);
-            }
-
-            // 加载预览不限制
-            String unlimitedPreviewKey = "root_unlimited_preview_" + rootPath.replaceAll("\\\\", "_");
-            if (props.containsKey(unlimitedPreviewKey) && rootPathUnlimitedPreview.containsKey(rootPath)) {
-                boolean unlimited = Boolean.parseBoolean(props.getProperty(unlimitedPreviewKey));
-                JFXCheckBox checkBox = rootPathUnlimitedPreview.get(rootPath);
-                Spinner<Integer> spinner = rootPathPreviewLimits.get(rootPath);
-                checkBox.setSelected(unlimited);
-                if (spinner != null) {
-                    spinner.setDisable(unlimited);
-                }
-            }
-
-            // 加载执行不限制
-            String unlimitedExecutionKey = "root_unlimited_execution_" + rootPath.replaceAll("\\\\", "_");
-            if (props.containsKey(unlimitedExecutionKey) && rootPathUnlimitedExecution.containsKey(rootPath)) {
-                boolean unlimited = Boolean.parseBoolean(props.getProperty(unlimitedExecutionKey));
-                JFXCheckBox checkBox = rootPathUnlimitedExecution.get(rootPath);
-                Spinner<Integer> spinner = rootPathExecutionLimits.get(rootPath);
-                checkBox.setSelected(unlimited);
-                if (spinner != null) {
-                    spinner.setDisable(unlimited);
+    /**
+     * 更新根路径进度
+     */
+    public void updateRootPathProgress() {
+        // 实现根路径进度更新逻辑
+        for (Map.Entry<String, ProgressBar> entry : rootPathProgressBars.entrySet()) {
+            String rootPath = entry.getKey();
+            ProgressBar progressBar = entry.getValue();
+            Label progressLabel = rootPathProgressLabels.get(rootPath);
+            
+            if (progressBar != null && progressLabel != null) {
+                // 计算该根路径下的文件总数和已完成数量
+                long totalCount = app.getFullChangeList().stream()
+                        .filter(record -> record.getOriginalName().startsWith(rootPath))
+                        .count();
+                
+                long completedCount = app.getFullChangeList().stream()
+                        .filter(record -> record.getOriginalName().startsWith(rootPath) && 
+                                (record.getStatus() == ExecStatus.SUCCESS || record.getStatus() == ExecStatus.FAILED))
+                        .count();
+                
+                double progress = totalCount > 0 ? (double) completedCount / totalCount : 0;
+                progressBar.setProgress(progress);
+                
+                if (progressLabel != null) {
+                    progressLabel.setText(String.format("%.1f%% (%d/%d)", progress * 100, completedCount, totalCount));
                 }
             }
         }
     }
 
-    public void reload() {
-        // 更新所有TitledPane的样式
-        if (configPane != null) {
-            configPane.setStyle(String.format(
-                    "-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: %s; -fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f;",
-                    app.getCurrentTheme().getTextPrimaryColor(), app.getCurrentTheme().getPanelBgColor(), app.getCurrentTheme().getBorderColor(), app.getCurrentTheme().getBorderWidth(), app.getCurrentTheme().getCornerRadius()
-            ));
-        }
-
-        if (globalParamsPane != null) {
-            globalParamsPane.setStyle(String.format(
-                    "-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: %s; -fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f;",
-                    app.getCurrentTheme().getTextPrimaryColor(), app.getCurrentTheme().getPanelBgColor(), app.getCurrentTheme().getBorderColor(), app.getCurrentTheme().getBorderWidth(), app.getCurrentTheme().getCornerRadius()
-            ));
-        }
-
-        if (localParamsPane != null) {
-            localParamsPane.setStyle(String.format(
-                    "-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: %s; -fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f;",
-                    app.getCurrentTheme().getTextPrimaryColor(), app.getCurrentTheme().getPanelBgColor(), app.getCurrentTheme().getBorderColor(), app.getCurrentTheme().getBorderWidth(), app.getCurrentTheme().getCornerRadius()
-            ));
-        }
-
-        // 更新根路径配置的TitledPane样式
-        if (rootPathThreadConfigBox != null) {
-            for (Node node : rootPathThreadConfigBox.getChildren()) {
-                if (node instanceof TitledPane) {
-                    TitledPane tp = (TitledPane) node;
-                    tp.setStyle(String.format(
-                            "-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: %s; -fx-background-color: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f;",
-                            app.getCurrentTheme().getTextPrimaryColor(), app.getCurrentTheme().getPanelBgColor(), app.getCurrentTheme().getBorderColor(), app.getCurrentTheme().getBorderWidth(), app.getCurrentTheme().getCornerRadius()
-                    ));
-                }
+    /**
+     * 更新统计信息
+     */
+    public void updateStats() {
+        // 在后台线程中执行耗时计算
+        new Thread(() -> {
+            List<ChangeRecord> records = app.getFullChangeList();
+            String statsText;
+            
+            if (records == null || records.isEmpty()) {
+                statsText = "暂无统计信息";
+            } else {
+                long total = records.size();
+                long changed = records.stream().filter(ChangeRecord::isChanged).count();
+                long success = records.stream().filter(r -> r.getStatus() == ExecStatus.SUCCESS).count();
+                long failed = records.stream().filter(r -> r.getStatus() == ExecStatus.FAILED).count();
+                long pending = records.stream().filter(r -> r.getStatus() == ExecStatus.PENDING).count();
+                
+                statsText = String.format("总计: %d, 变更: %d, 成功: %d, 失败: %d, 待处理: %d", 
+                        total, changed, success, failed, pending);
             }
-        }
+            
+            // 在UI线程中更新标签
+            final String finalStatsText = statsText;
+            Platform.runLater(() -> {
+                statsLabel.setText(finalStatsText);
+            });
+        }).start();
+    }
 
-        // 更新参数面板样式
-        if (configContent != null) {
-            for (Node node : configContent.getChildren()) {
-                if (node instanceof VBox) {
-                    VBox vbox = (VBox) node;
-                    vbox.setStyle(String.format(
-                            "-fx-background-color: %s; -fx-border-radius: %.1f; -fx-border-color: %s; -fx-padding: 10;",
-                            app.getCurrentTheme().getPanelBgColor(), app.getCurrentTheme().getCornerRadius(), app.getCurrentTheme().getBorderColor()
-                    ));
-                }
-            }
-        }
+    /**
+     * 获取根路径预览数量上限Map
+     *
+     * @return 根路径预览数量上限Map
+     */
+    public Map<String, Spinner<Integer>> getRootPathPreviewLimits() {
+        return rootPathPreviewLimits;
+    }
+
+    /**
+     * 获取根路径执行数量上限Map
+     *
+     * @return 根路径执行数量上限Map
+     */
+    public Map<String, Spinner<Integer>> getRootPathExecutionLimits() {
+        return rootPathExecutionLimits;
+    }
+
+    /**
+     * 获取根路径不限制预览数量Map
+     *
+     * @return 根路径不限制预览数量Map
+     */
+    public Map<String, JFXCheckBox> getRootPathUnlimitedPreview() {
+        return rootPathUnlimitedPreview;
+    }
+
+    /**
+     * 获取根路径不限制执行数量Map
+     *
+     * @return 根路径不限制执行数量Map
+     */
+    public Map<String, JFXCheckBox> getRootPathUnlimitedExecution() {
+        return rootPathUnlimitedExecution;
+    }
+
+    /**
+     * 获取根路径进度条Map
+     *
+     * @return 根路径进度条Map
+     */
+    public Map<String, ProgressBar> getRootPathProgressBars() {
+        return rootPathProgressBars;
+    }
+
+    /**
+     * 获取根路径进度标签Map
+     *
+     * @return 根路径进度标签Map
+     */
+    public Map<String, Label> getRootPathProgressLabels() {
+        return rootPathProgressLabels;
+    }
+
+    /**
+     * 获取运行标签
+     *
+     * @return 运行标签
+     */
+    public Label getRunningLabel() {
+        return runningLabel;
+    }
+
+    /**
+     * 获取统计标签
+     *
+     * @return 统计标签
+     */
+    public Label getStatsLabel() {
+        return statsLabel;
+    }
+
+    /**
+     * 获取主进度条
+     *
+     * @return 主进度条
+     */
+    public ProgressBar getMainProgressBar() {
+        return mainProgressBar;
+    }
+
+    /**
+     * 获取自动刷新复选框
+     *
+     * @return 自动刷新复选框
+     */
+    public JFXCheckBox getChkAutoRefresh() {
+        return chkAutoRefresh;
     }
 }

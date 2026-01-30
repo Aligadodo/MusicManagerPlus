@@ -50,7 +50,11 @@ public class ChangeRecord {
 
     // 处理过程信息列表
     private List<String> processInfo = new ArrayList<>();
-
+    
+    // 耗时统计
+    private long analyzeTime; // 分析阶段耗时（毫秒）
+    private long executeTime; // 执行阶段耗时（毫秒）
+    
     public ChangeRecord(String o, String n, File f, boolean c, String p, OperationType op) {
         this.originalName = o;
         this.newName = n;
@@ -197,6 +201,23 @@ public class ChangeRecord {
 
     public void setProcessInfo(List<String> processInfo) {
         this.processInfo = processInfo;
+    }
+    
+    // 耗时统计相关方法
+    public long getAnalyzeTime() {
+        return this.analyzeTime;
+    }
+    
+    public void setAnalyzeTime(long analyzeTime) {
+        this.analyzeTime = analyzeTime;
+    }
+    
+    public long getExecuteTime() {
+        return this.executeTime;
+    }
+    
+    public void setExecuteTime(long executeTime) {
+        this.executeTime = executeTime;
     }
 
     public void addProcessInfo(String info) {
