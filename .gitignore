@@ -40,3 +40,6 @@ build/
 /.idea/
 /dependency-reduced-pom.xml
 /logs/
+
+### Local File ###
+/setting/fmplus_config.properties
