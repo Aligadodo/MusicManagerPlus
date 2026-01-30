@@ -11,6 +11,7 @@ package com.filemanager.strategy.ncm;
 
 import com.filemanager.app.base.IAppStrategy;
 import com.filemanager.model.ChangeRecord;
+import com.filemanager.strategy.base.IPersistableConfig;
 import com.filemanager.strategy.base.PathSelectionComponent;
 import javafx.scene.Node;
 
@@ -22,7 +23,7 @@ import java.util.Properties;
  * NCM基础策略类
  * 提供通用的功能和方法，供具体的NCM功能策略继承
  */
-public abstract class NcmBaseStrategy extends IAppStrategy implements IConfigComponent {
+public abstract class NcmBaseStrategy extends IAppStrategy implements IPersistableConfig {
     protected PathSelectionComponent pathSelection;
     
     public NcmBaseStrategy(String propPrefix) {

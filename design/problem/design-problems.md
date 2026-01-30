@@ -66,7 +66,18 @@ public interface IConfigComponent {
 高 - 影响代码可维护性和扩展性
 
 ### 状态
-待处理
+✅ 已解决 (2026-01-30)
+
+### 解决方案
+1. **统一接口定义**：将`com.filemanager.strategy.base.IConfigComponent`作为基础接口，只包含getConfigNode()和captureParams()方法
+2. **创建扩展接口**：新增`IPersistableConfig`接口，继承`IConfigComponent`，添加saveConfig()和loadConfig()方法
+3. **更新引用**：将`NcmBaseStrategy`的实现从`ncm.IConfigComponent`改为`IPersistableConfig`
+4. **删除重复接口**：删除`com.filemanager.strategy.ncm.IConfigComponent`接口
+
+### 验证结果
+- 编译成功，无错误
+- 接口层次清晰，职责明确
+- 向后兼容，不影响现有功能
 
 ---
 
@@ -197,7 +208,34 @@ strategy目录下有26个策略类，包括：
 低 - 功能正常，但影响可维护性
 
 ### 状态
-待处理
+🔄 部分完成 (2026-01-30)
+
+### 解决方案
+1. **策略分类**：按功能领域对策略进行分类
+   - `strategy/rename/` - 重命名相关策略
+   - `strategy/conversion/` - 格式转换策略
+   - `strategy/metadata/` - 元数据处理策略
+   - `strategy/cleanup/` - 清理策略
+   - `strategy/collection/` - 归类策略
+   - `strategy/duplicate/` - 重复文件处理策略
+2. **策略组合**：将功能相似的小策略合并为一个大策略
+3. **策略模板**：提供策略模板，简化新策略的开发
+
+### 已完成工作
+1. 重构FileCollectionStrategy类，创建了FileCollectionConfig和FileCollectionValidator
+2. 重构MetadataScraperStrategy类，创建了MetadataScraperConfig
+3. 重构AdvancedRenameStrategy类，创建了AdvancedRenameConfig
+4. 已有部分策略类按功能分类（collection, duplicate, cleanup, rename, scraper等）
+
+### 待完成工作
+1. 继续重构其他大型策略类
+2. 完善策略类的分类组织
+3. 建立策略模板
+
+### 验证结果
+- 已完成部分策略类的重构
+- 配置类和验证类已创建
+- 编译通过
 
 ---
 
@@ -265,7 +303,22 @@ strategy目录下有26个策略类，包括：
 高 - 影响代码质量和项目稳定性
 
 ### 状态
-待处理
+✅ 已解决 (2026-01-30)
+
+### 解决方案
+1. **建立测试框架**：项目已配置JUnit 4.13.2测试框架
+2. **编写核心模块测试**：为以下策略类编写了基础测试用例：
+   - FileCleanupStrategyTest（文件清理策略）
+   - FileTypeFixStrategyTest（文件类型修复策略）
+   - FileMigrateStrategyTest（文件迁移策略）
+   - AudioConverterStrategyTest（音频转换策略）
+3. **测试覆盖**：每个测试类包含策略初始化、配置持久化、分析功能等基础测试
+4. **JavaFX环境处理**：由于JavaFX UI组件在测试环境中无法初始化，测试用例中跳过了UI相关测试，保留了核心功能测试
+
+### 验证结果
+- 所有新增测试用例编译通过
+- 测试执行成功，无错误
+- 测试框架已建立，可继续扩展测试覆盖
 
 ---
 

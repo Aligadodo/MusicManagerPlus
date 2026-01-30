@@ -9,25 +9,26 @@
  */
 package com.filemanager.strategy.base;
 
-import com.filemanager.app.base.IAutoReloadAble;
-import javafx.scene.Node;
+import java.util.Properties;
 
 /**
- * 可配置组件接口
- * 定义了组件的配置UI、参数捕获等基础能力
+ * 可持久化配置组件接口
+ * 扩展了IConfigComponent，添加了配置持久化能力
  *
  * @author hrcao
  */
-public interface IConfigComponent extends IAutoReloadAble {
+public interface IPersistableConfig extends IConfigComponent {
     /**
-     * 获取配置节点
+     * 保存配置
      *
-     * @return 配置节点
+     * @param props 属性对象
      */
-    Node getConfigNode();
+    void saveConfig(Properties props);
 
     /**
-     * 捕获参数
+     * 加载配置
+     *
+     * @param props 属性对象
      */
-    void captureParams();
+    void loadConfig(Properties props);
 }
