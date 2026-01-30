@@ -594,17 +594,10 @@ public class ComponentFactory {
         p.setSpacing(theme.getMediumSpacing());
         p.setPadding(new Insets(theme.getLargeSpacing()));
 
-        // 应用玻璃效果透明度
-        String bgColor = theme.getPanelBgColor();
-        if (bgColor.startsWith("#") && bgColor.length() == 7) {
-            int alpha = (int) (theme.getGlassOpacity() * 255);
-            String alphaHex = String.format("%02x", alpha);
-            bgColor = bgColor + alphaHex;
-        }
-
+        // 使用透明背景
         p.setStyle(String.format(
-                "-fx-background-color: %s; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f;",
-                bgColor, theme.getCornerRadius(), theme.getTextPrimaryColor(), theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius()
+                "-fx-background-color: transparent; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f;",
+                theme.getCornerRadius(), theme.getTextPrimaryColor(), theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius()
         ));
 
         return p;
@@ -636,17 +629,10 @@ public class ComponentFactory {
         p.setPadding(new Insets(5, 5, 5, 5));
         p.setSpacing(5);
 
-        // 应用玻璃效果透明度
-        String bgColor = theme.getPanelBgColor();
-        if (bgColor.startsWith("#") && bgColor.length() == 7) {
-            int alpha = (int) (theme.getGlassOpacity() * 255);
-            String alphaHex = String.format("%02x", alpha);
-            bgColor = bgColor + alphaHex;
-        }
-
+        // 使用透明背景
         p.setStyle(String.format(
-                "-fx-background-color: %s; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f;",
-                bgColor, theme.getCornerRadius(), theme.getTextPrimaryColor(), theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius()
+                "-fx-background-color: transparent; -fx-background-radius: %.1f; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-text-fill: %s; -fx-border-color: %s; -fx-border-width: %.1f; -fx-border-radius: %.1f;",
+                theme.getCornerRadius(), theme.getTextPrimaryColor(), theme.getBorderColor(), theme.getBorderWidth(), theme.getCornerRadius()
         ));
 
         return p;

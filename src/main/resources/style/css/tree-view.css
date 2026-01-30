@@ -1,0 +1,57 @@
+/* TreeView 基础样式 */
+.tree-view {
+    -fx-background-color: transparent;
+    -fx-border-color: #e0e0e0;
+    -fx-border-width: 1.0;
+    -fx-background-radius: 5.0;
+    -fx-border-radius: 5.0;
+}
+
+/* 树节点样式 */
+.tree-view .tree-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #1e1b4b;
+    -fx-font-family: 'Segoe UI, Arial, sans-serif';
+    -fx-padding: 6 10;
+}
+
+.tree-view .tree-cell:filled:selected {
+    -fx-background-color: #e3f2fd;
+    -fx-text-fill: #2c3e50;
+}
+
+.tree-view .tree-cell:filled:hover {
+    -fx-background-color: #f5f5f5;
+    -fx-text-fill: #1e1b4b;
+}
+
+/* 滚动条样式 */
+.tree-view .virtual-flow .scroll-bar:vertical,
+.tree-view .virtual-flow .scroll-bar:horizontal {
+    -fx-background-color: transparent;
+}
+
+.tree-view .virtual-flow .scroll-bar .thumb {
+    -fx-background-color: #a78bfa;
+    -fx-background-radius: 4;
+}
+
+.tree-view .virtual-flow .scroll-bar .track {
+    -fx-background-color: transparent;
+}
+
+/* 复选框样式 */
+.tree-view .check-box {
+    -fx-text-fill: #1e1b4b;
+}
+
+.tree-view .check-box .box {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #e0e0e0;
+    -fx-border-width: 1.0;
+    -fx-border-radius: 3;
+}
+
+.tree-view .check-box:selected .mark {
+    -fx-background-color: #6366f1;
+}

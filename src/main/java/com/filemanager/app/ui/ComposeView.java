@@ -347,14 +347,20 @@ public class ComposeView implements IAutoReloadAble {
         VBox.setVgrow(rightPanel, Priority.ALWAYS);
 
         configContainer = new VBox(10);
-        // 使用面板背景色，而不是透明背景
-        configContainer.setStyle("-fx-background-color: " + app.getCurrentTheme().getPanelBgColor() + ";");
+        // 使用透明背景，与其他面板保持一致
+        String bgColor = app.getCurrentTheme().getPanelBgColor();
+        if (bgColor.startsWith("#") && bgColor.length() == 7) {
+            int alpha = (int) (app.getCurrentTheme().getGlassOpacity() * 255);
+            String alphaHex = String.format("%02x", alpha);
+            bgColor = bgColor + alphaHex;
+        }
+        configContainer.setStyle("-fx-background-color: " + bgColor + "; -fx-border-color: " + app.getCurrentTheme().getBorderColor() + "; -fx-border-width: " + app.getCurrentTheme().getBorderWidth() + "; -fx-border-radius: " + app.getCurrentTheme().getCornerRadius() + ";");
 
         ScrollPane sc = new ScrollPane(configContainer);
         sc.setFitToWidth(true);
         sc.setFitToHeight(true);
-        // 使用面板背景色，确保一致的显示效果
-        sc.setStyle("-fx-background: " + app.getCurrentTheme().getPanelBgColor() + "; -fx-background-color: " + app.getCurrentTheme().getPanelBgColor() + ";");
+        // 使用透明背景，确保一致的显示效果
+        sc.setStyle("-fx-background: transparent; -fx-background-color: transparent; -fx-border-color: transparent;");
 
         VBox.setVgrow(sc, Priority.ALWAYS);
         rightPanel.getChildren().add(sc);
@@ -586,9 +592,15 @@ public class ComposeView implements IAutoReloadAble {
             StyleFactory.updateNodeStyle(tpFilters);
         }
 
-        // 更新配置容器的背景色
+        // 更新配置容器的背景色，使用透明背景
         if (configContainer != null) {
-            configContainer.setStyle("-fx-background-color: " + app.getCurrentTheme().getPanelBgColor() + ";");
+            String bgColor = app.getCurrentTheme().getPanelBgColor();
+            if (bgColor.startsWith("#") && bgColor.length() == 7) {
+                int alpha = (int) (app.getCurrentTheme().getGlassOpacity() * 255);
+                String alphaHex = String.format("%02x", alpha);
+                bgColor = bgColor + alphaHex;
+            }
+            configContainer.setStyle("-fx-background-color: " + bgColor + "; -fx-border-color: " + app.getCurrentTheme().getBorderColor() + "; -fx-border-width: " + app.getCurrentTheme().getBorderWidth() + "; -fx-border-radius: " + app.getCurrentTheme().getCornerRadius() + ";");
         }
 
         // 更新所有主要面板的样式

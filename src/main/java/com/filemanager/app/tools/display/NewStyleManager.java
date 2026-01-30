@@ -11,6 +11,7 @@ package com.filemanager.app.tools.display;
 
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -77,17 +78,8 @@ public class NewStyleManager {
      * 初始化样式模板
      */
     private void initStyleTemplates() {
-        // 初始化各种组件的样式模板
-        initTabPaneTemplate();
-        initListViewTemplate();
-        initTableViewTemplate();
-        initTreeTableViewTemplate();
-        initTreeViewTemplate();
-        initTitledPaneTemplate();
-        initTextAreaTemplate();
-        initButtonTemplate();
-        initTextFieldTemplate();
-        initLayoutTemplate();
+        // 从CSS文件加载样式，不再需要初始化样式模板
+        // 样式模板系统保留，用于支持自定义样式
     }
 
     /**
@@ -561,6 +553,9 @@ public class NewStyleManager {
     public void applyStyle(Node node, StylePriority priority) {
         if (node == null) return;
 
+        // 从CSS文件加载样式
+        loadStyleFromCssFile(node);
+
         // 获取组件类型
         String componentType = node.getClass().getSimpleName();
         StyleTemplate template = styleTemplates.get(componentType);
@@ -592,6 +587,37 @@ public class NewStyleManager {
             }
         }
     }
+    
+    /**
+     * 从CSS文件加载样式
+     * @param node 组件节点
+     */
+    private void loadStyleFromCssFile(Node node) {
+        if (node == null || node.getScene() == null) {
+            return;
+        }
+        
+        // 加载所有CSS文件
+        String[] cssFiles = {
+            "/style/css/tree-view.css",
+            "/style/css/list-view.css",
+            "/style/css/table-view.css",
+            "/style/css/text-area.css",
+            "/style/css/tree-table-view.css",
+            "/style/css/components.css"
+        };
+        
+        Scene scene = node.getScene();
+        for (String cssFile : cssFiles) {
+            java.net.URL cssUrl = NewStyleManager.class.getResource(cssFile);
+            if (cssUrl != null) {
+                String cssUrlString = cssUrl.toExternalForm();
+                if (!scene.getStylesheets().contains(cssUrlString)) {
+                    scene.getStylesheets().add(cssUrlString);
+                }
+            }
+        }
+    }
 
     /**
      * 应用默认样式
@@ -611,7 +637,12 @@ public class NewStyleManager {
         // 检查是否有自定义样式，如果没有则应用主题内联样式
         if (!customStyles.containsKey(node)) {
             String style = template.styleTemplate.apply(theme);
-            node.setStyle(style);
+            // 确保样式字符串不包含*号前缀
+            String trimmedStyle = style.trim();
+            if (trimmedStyle.startsWith("*")) {
+                trimmedStyle = trimmedStyle.substring(1).trim();
+            }
+            node.setStyle(trimmedStyle);
         }
     }
 

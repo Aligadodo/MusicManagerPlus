@@ -1,0 +1,166 @@
+/* TabPane 样式 */
+.tab-pane {
+    -fx-background-color: transparent;
+    -fx-border-color: #e0e0e0;
+    -fx-border-width: 1.0;
+    -fx-tab-min-height: 50.0;
+    -fx-tab-max-height: 50.0;
+    -fx-tab-min-width: 120.0;
+    -fx-tab-max-width: 220.0;
+    -fx-text-fill: #1e1b4b;
+}
+
+/* 表头区域样式 */
+.tab-pane > .tab-header-area {
+    -fx-background-color: transparent;
+    -fx-padding: 0 10 0 10;
+}
+
+/* 表头背景样式 */
+.tab-pane > .tab-header-area > .tab-header-background {
+    -fx-background-color: transparent;
+    -fx-border-color: #e0e0e0;
+    -fx-border-width: 0 0 1.0 0;
+}
+
+/* 标签基础样式 */
+.tab-pane > .tab-header-area > .headers-region > .tab {
+    -fx-background-color: transparent;
+    -fx-border-color: #e0e0e0;
+    -fx-border-width: 1.0 1.0 0 1.0;
+    -fx-border-radius: 5.0 5.0 0 0;
+    -fx-cursor: hand;
+}
+
+/* 悬停标签样式 */
+.tab-pane > .tab-header-area > .headers-region > .tab:hover {
+    -fx-background-color: transparent;
+}
+
+/* 选中标签样式 */
+.tab-pane > .tab-header-area > .headers-region > .tab:selected {
+    -fx-background-color: transparent;
+    -fx-border-color: #6366f1 #6366f1 transparent #6366f1;
+    -fx-border-width: 1.0 1.0 0 1.0;
+}
+
+/* 标签文本样式 */
+.tab-pane > .tab-header-area > .headers-region > .tab > .tab-container > .tab-label {
+    -fx-text-fill: #64748b;
+    -fx-font-family: 'Segoe UI, Arial, sans-serif';
+    -fx-font-size: 15.0px;
+    -fx-font-weight: normal;
+    -fx-alignment: center;
+    -fx-padding: 5 10;
+}
+
+/* 悬停标签的文本样式 */
+.tab-pane > .tab-header-area > .headers-region > .tab:hover > .tab-container > .tab-label {
+    -fx-text-fill: #1e1b4b;
+    -fx-font-weight: 500;
+}
+
+/* 选中标签的文本样式 */
+.tab-pane > .tab-header-area > .headers-region > .tab:selected > .tab-container > .tab-label {
+    -fx-text-fill: #6366f1;
+    -fx-font-weight: bold;
+    -fx-padding: 5 10;
+}
+
+/* 内容区域样式 */
+.tab-pane > .tab-content-area {
+    -fx-background-color: transparent;
+    -fx-border-color: #e0e0e0;
+    -fx-border-width: 1.0;
+    -fx-border-radius: 0 5.0 5.0 5.0;
+}
+
+/* TitledPane 样式 */
+.titled-pane {
+    -fx-background-color: transparent;
+    -fx-border-color: #e0e0e0;
+    -fx-border-width: 1.0;
+    -fx-border-radius: 5.0;
+    -fx-background-radius: 5.0;
+}
+
+.titled-pane > .title {
+    -fx-background-color: transparent;
+    -fx-text-fill: #1e1b4b;
+    -fx-font-family: 'Segoe UI, Arial, sans-serif';
+    -fx-font-size: 14.0px;
+    -fx-font-weight: bold;
+    -fx-padding: 10 15 10 15;
+    -fx-border-width: 0 0 1.0 0;
+    -fx-border-color: #e0e0e0;
+}
+
+.titled-pane > .title > .arrow-button {
+    -fx-background-color: transparent;
+}
+
+.titled-pane > .title > .arrow-button .arrow {
+    -fx-background-color: #1e1b4b;
+    -fx-effect: none;
+}
+
+.titled-pane > .content {
+    -fx-background-color: transparent;
+    -fx-border-width: 0;
+    -fx-background-radius: 0 0 5.0 5.0;
+}
+
+/* ComboBox 样式 */
+.comboBox {
+    -fx-text-fill: #1e1b4b;
+    -fx-font-family: 'Segoe UI, Arial, sans-serif';
+    -fx-background-color: transparent;
+    -fx-border-color: #e0e0e0;
+    -fx-border-radius: 5.0;
+    -fx-background-radius: 5.0;
+}
+
+/* CheckBox 样式 */
+.check-box {
+    -fx-text-fill: #1e1b4b;
+    -fx-font-family: 'Segoe UI, Arial, sans-serif';
+    -fx-background-color: transparent;
+}
+
+.check-box .box {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #e0e0e0;
+    -fx-border-width: 1.0;
+    -fx-border-radius: 3;
+}
+
+.check-box:selected .mark {
+    -fx-background-color: #6366f1;
+}
+
+/* RadioButton 样式 */
+.radio-button {
+    -fx-text-fill: #1e1b4b;
+    -fx-font-family: 'Segoe UI, Arial, sans-serif';
+    -fx-background-color: transparent;
+}
+
+/* ToggleButton 样式 */
+.toggle-button {
+    -fx-text-fill: #1e1b4b;
+    -fx-font-family: 'Segoe UI, Arial, sans-serif';
+    -fx-background-color: transparent;
+}
+
+/* 分隔线样式 */
+.separator {
+    -fx-background-color: #e0e0e0;
+}
+
+/* 进度条样式 */
+.progress-bar {
+    -fx-accent: #6366f1;
+    -fx-background-color: transparent;
+    -fx-border-color: #e0e0e0;
+    -fx-border-width: 1.0;
+}

@@ -1,0 +1,88 @@
+/* TableView 基础样式 */
+.table-view {
+    -fx-background-color: transparent;
+    -fx-border-color: #e0e0e0;
+    -fx-border-width: 1.0;
+    -fx-background-radius: 5.0;
+    -fx-border-radius: 5.0;
+}
+
+/* 表头背景样式 */
+.table-view .column-header-background {
+    -fx-background-color: transparent;
+    -fx-border-color: #e0e0e0;
+    -fx-border-width: 0 0 1.0 0;
+    -fx-background-radius: 5.0 5.0 0 0;
+}
+
+.column-header-background .filler {
+    -fx-background-color: transparent;
+}
+
+/* 列头样式 */
+.table-view .column-header {
+    -fx-background-color: transparent;
+    -fx-border-color: #e0e0e0;
+    -fx-border-width: 0 1.0 0 0;
+}
+
+.column-header .label {
+    -fx-text-fill: #1e1b4b;
+    -fx-font-family: 'Segoe UI, Arial, sans-serif';
+    -fx-font-weight: bold;
+    -fx-padding: 12 10;
+}
+
+/* 行样式 */
+.table-view .table-row-cell {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-border-width: 1 0 0 0;
+}
+
+.table-view .table-row-cell:filled {
+    -fx-background-color: transparent;
+}
+
+.table-view .table-row-cell:filled:selected {
+    -fx-background-color: #e3f2fdb7;
+    -fx-table-cell-border-color: transparent;
+    -fx-border-color: #e0e0e0;
+    -fx-border-width: 2;
+    -fx-border-radius: 5.0;
+}
+
+.table-view .table-row-cell:filled:hover {
+    -fx-background-color: #f5f5f589;
+    -fx-table-cell-border-color: transparent;
+    -fx-border-color: transparent;
+}
+
+/* 单元格样式 */
+.table-view .table-cell {
+    -fx-text-fill: #1e1b4b;
+    -fx-font-family: 'Segoe UI, Arial, sans-serif';
+    -fx-padding: 10 10;
+    -fx-border-color: transparent;
+    -fx-alignment: center-left;
+}
+
+.table-view .table-cell:selected {
+    -fx-text-fill: #1e1b4b;
+    -fx-background-color: transparent;
+}
+
+/* 滚动条样式 */
+.table-view .virtual-flow .scroll-bar:vertical,
+.table-view .virtual-flow .scroll-bar:horizontal {
+    -fx-background-color: transparent;
+}
+
+.table-view .virtual-flow .scroll-bar .thumb {
+    -fx-background-color: #a78bfa;
+    -fx-background-radius: 4;
+}
+
+.table-view .virtual-flow .scroll-bar .track {
+    -fx-background-color: transparent;
+}

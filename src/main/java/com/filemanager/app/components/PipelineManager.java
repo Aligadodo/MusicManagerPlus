@@ -30,6 +30,11 @@ import org.apache.commons.lang3.exception.ExceptionUtils;
 import java.io.File;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -513,6 +518,10 @@ public class PipelineManager {
                 rec.setFailReason("没找到对应的执行节点，请检查代码实现！！！");
                 rec.setStatus(ExecStatus.SKIPPED);
             }
+        } catch (TimeoutException e) {
+            rec.setStatus(ExecStatus.FAILED);
+            rec.setFailReason("Execution timeout: " + e.getMessage());
+            app.logError("⏰ 执行超时: " + rec.getFileHandle().getAbsolutePath() + ",原因" + e.getMessage());
         } catch (Exception e) {
             rec.setStatus(ExecStatus.FAILED);
             rec.setFailReason(ExceptionUtils.getStackTrace(e));

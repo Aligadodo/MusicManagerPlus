@@ -10,6 +10,9 @@
 package com.filemanager.app.tools.display.styles;
 
 import com.filemanager.app.tools.display.ThemeConfig;
+
+import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.TreeTableView;
 
 /**
@@ -31,18 +34,31 @@ public class TreeTableViewStyle {
             return;
         }
 
-        // 构建各个模块的样式
-        String baseStyle = buildBaseStyle(theme);
-        String headerStyle = buildHeaderStyle(theme);
-        String rowStyle = buildRowStyle(theme);
-        String cellStyle = buildCellStyle(theme);
-        String scrollBarStyle = buildScrollBarStyle(theme);
-
-        // 拼接所有样式
-        String completeStyle = String.join("\n", baseStyle, headerStyle, rowStyle, cellStyle, scrollBarStyle);
-
-        // 应用样式
-        treeTableView.setStyle(completeStyle);
+        // 从CSS文件加载样式
+        loadStyleFromCssFile(treeTableView, "/style/css/tree-table-view.css");
+    }
+    
+    /**
+     * 从CSS文件加载样式
+     * @param node 组件节点
+     * @param cssFilePath CSS文件路径
+     */
+    private static void loadStyleFromCssFile(Node node, String cssFilePath) {
+        if (node == null || node.getScene() == null) {
+            return;
+        }
+        
+        // 获取CSS文件的URL
+        java.net.URL cssUrl = TreeTableViewStyle.class.getResource(cssFilePath);
+        if (cssUrl != null) {
+            String cssUrlString = cssUrl.toExternalForm();
+            Scene scene = node.getScene();
+            
+            // 检查样式表是否已经加载
+            if (!scene.getStylesheets().contains(cssUrlString)) {
+                scene.getStylesheets().add(cssUrlString);
+            }
+        }
     }
 
     /**
@@ -52,7 +68,8 @@ public class TreeTableViewStyle {
      * @return 基础样式字符串
      */
     private static String buildBaseStyle(ThemeConfig theme) {
-        String listBgColor = theme.getListBgColorWithOpacity();
+        // 使用透明背景
+        String listBgColor = "transparent";
         return BaseStyleUtils.buildBaseStyle(
                 theme,
                 listBgColor,
@@ -69,7 +86,8 @@ public class TreeTableViewStyle {
      * @return 表头样式字符串
      */
     private static String buildHeaderStyle(ThemeConfig theme) {
-        String headerBgColor = theme.getTableHeaderBgColorWithOpacity();
+        // 使用透明背景
+        String headerBgColor = "transparent";
         double cornerRadius = theme.getCornerRadius();
 
         StringBuilder styleBuilder = new StringBuilder();

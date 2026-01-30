@@ -520,7 +520,11 @@ public class FileManagerPlusApp extends Application implements IAppController, I
 
     @Override
     public void refreshPreviewTableFilter() {
-        previewView.refresh();
+        // 直接刷新表格过滤器，而不是调用previewView.refresh()来避免循环调用
+        if (previewView != null && previewView.getTreeTableView() != null) {
+            previewView.getTreeTableView().refresh();
+        }
+        updateStats();
     }
 
     @Override
