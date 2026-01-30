@@ -15,7 +15,8 @@ public class ChangeRecord {
         MOVE,
         DELETE,
         COPY,
-        METADATA_UPDATE
+        METADATA_UPDATE,
+        CONVERT
     }
 
     public enum ExecStatus {

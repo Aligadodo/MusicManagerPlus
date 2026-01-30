@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/files")
+@RequestMapping("/api/files")
 public class FileController {
 
     @Autowired

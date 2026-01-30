@@ -78,6 +78,16 @@ public class PluginServiceImpl implements PluginService {
     }
 
     @Override
+    public List<ChangeRecord> previewPlugin(String pluginId, List<String> filePaths, PluginConfigDTO config) {
+        IPlugin plugin = pluginRegistry.getPlugin(pluginId);
+        if (plugin == null) {
+            return new ArrayList<>();
+        }
+        
+        return plugin.preview(filePaths, config, new com.filemanager.plugin.ExecutionContext());
+    }
+
+    @Override
     public List<ChangeRecord> executePlugin(String pluginId, List<String> filePaths, PluginConfigDTO config) {
         IPlugin plugin = pluginRegistry.getPlugin(pluginId);
         if (plugin == null) {

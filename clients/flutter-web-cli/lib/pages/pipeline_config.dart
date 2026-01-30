@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:filemanager_flutter/pages/home_page.dart';
+import '../api/api_client.dart';
+import '../api/plugin_service.dart';
+import '../api/pipeline_service.dart';
+import '../models/plugin_info.dart';
 
 class PipelineConfigPage extends ConsumerStatefulWidget {
   const PipelineConfigPage({super.key});
@@ -10,14 +13,10 @@ class PipelineConfigPage extends ConsumerStatefulWidget {
 }
 
 class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
+  final PluginService _pluginService = PluginService(ApiClient());
+  final PipelineService _pipelineService = PipelineService(ApiClient());
   List<Map<String, dynamic>> _pipeline = [];
-  List<Map<String, dynamic>> _availableStrategies = [
-    {'id': 'rename', 'name': '重命名策略'},
-    {'id': 'move', 'name': '移动策略'},
-    {'id': 'copy', 'name': '复制策略'},
-    {'id': 'delete', 'name': '删除策略'},
-    {'id': 'metadata', 'name': '元数据策略'},
-  ];
+  List<PluginInfo> _availablePlugins = [];
   bool _isLoading = false;
   String _errorMessage = '';
 
@@ -25,6 +24,7 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
   void initState() {
     super.initState();
     _loadPipeline();
+    _loadAvailablePlugins();
   }
 
   Future<void> _loadPipeline() async {
@@ -34,8 +34,7 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
     });
 
     try {
-      final pipelineService = ref.read(pipelineServiceProvider);
-      final pipeline = await pipelineService.getPipeline();
+      final pipeline = await _pipelineService.getPipeline();
       setState(() {
         _pipeline = pipeline;
       });
@@ -50,6 +49,19 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
     }
   }
 
+  Future<void> _loadAvailablePlugins() async {
+    try {
+      final plugins = await _pluginService.getPlugins();
+      setState(() {
+        _availablePlugins = plugins;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = '加载插件失败: $e';
+      });
+    }
+  }
+
   Future<void> _updatePipeline() async {
     setState(() {
       _isLoading = true;
@@ -57,8 +69,7 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
     });
 
     try {
-      final pipelineService = ref.read(pipelineServiceProvider);
-      await pipelineService.updatePipeline(_pipeline);
+      await _pipelineService.updatePipeline(_pipeline);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('流水线更新成功')),
       );
@@ -73,26 +84,23 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
     }
   }
 
-  void _addStrategy(String strategyId) {
+  void _addPlugin(PluginInfo plugin) {
     setState(() {
-      final strategyName = _availableStrategies
-          .firstWhere((s) => s['id'] == strategyId, orElse: () => {'name': '未知策略'})
-          ['name'];
       _pipeline.add({
-        'strategyId': strategyId,
-        'name': strategyName,
+        'pluginId': plugin.id,
+        'name': plugin.name,
         'config': {},
       });
     });
   }
 
-  void _removeStrategy(int index) {
+  void _removePlugin(int index) {
     setState(() {
       _pipeline.removeAt(index);
     });
   }
 
-  void _moveStrategyUp(int index) {
+  void _movePluginUp(int index) {
     if (index > 0) {
       setState(() {
         final temp = _pipeline[index];
@@ -102,7 +110,7 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
     }
   }
 
-  void _moveStrategyDown(int index) {
+  void _movePluginDown(int index) {
     if (index < _pipeline.length - 1) {
       setState(() {
         final temp = _pipeline[index];
@@ -116,7 +124,7 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('策略流水线配置'),
+        title: const Text('插件流水线配置'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
@@ -136,23 +144,26 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
                 child: Column(
                   children: [
                     const Text(
-                      '可用策略',
+                      '可用插件',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: 16),
-                    Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      children: _availableStrategies.map((strategy) {
-                        return ElevatedButton(
-                          onPressed: () => _addStrategy(strategy['id'] as String),
-                          child: Text(strategy['name'] as String),
-                        );
-                      }).toList(),
-                    ),
+                    if (_availablePlugins.isEmpty)
+                      const Text('加载插件中...')
+                    else
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: _availablePlugins.map((plugin) {
+                          return ElevatedButton(
+                            onPressed: () => _addPlugin(plugin),
+                            child: Text(plugin.name),
+                          );
+                        }).toList(),
+                      ),
                   ],
                 ),
               ),
@@ -171,7 +182,7 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  '策略流水线',
+                  '插件流水线',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -190,14 +201,14 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
               )
             else if (_pipeline.isEmpty)
               const Center(
-                child: Text('暂无策略，从上方添加'),
+                child: Text('暂无插件，从上方添加'),
               )
             else
               Expanded(
                 child: ListView.builder(
                   itemCount: _pipeline.length,
                   itemBuilder: (context, index) {
-                    final strategy = _pipeline[index];
+                    final plugin = _pipeline[index];
                     return Card(
                       elevation: 2,
                       margin: const EdgeInsets.only(bottom: 10),
@@ -210,7 +221,7 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  strategy['name'] as String,
+                                  plugin['name'] as String,
                                   style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
@@ -218,16 +229,16 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
                                 ),
                                 IconButton(
                                   icon: const Icon(Icons.delete, color: Colors.red),
-                                  onPressed: () => _removeStrategy(index),
+                                  onPressed: () => _removePlugin(index),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 8),
-                            Text('策略ID: ${strategy['strategyId']}'),
+                            Text('插件ID: ${plugin['pluginId']}'),
                             const SizedBox(height: 16),
                             const Text('配置:', style: TextStyle(fontWeight: FontWeight.bold)),
                             const SizedBox(height: 8),
-                            // 这里可以添加配置表单，根据策略类型动态生成
+                            // 这里可以添加配置表单，根据插件类型动态生成
                             const TextField(
                               decoration: InputDecoration(
                                 labelText: '配置项',
@@ -239,12 +250,12 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
                               children: [
                                 IconButton(
                                   icon: const Icon(Icons.arrow_upward),
-                                  onPressed: index > 0 ? () => _moveStrategyUp(index) : null,
+                                  onPressed: index > 0 ? () => _movePluginUp(index) : null,
                                   disabledColor: Colors.grey,
                                 ),
                                 IconButton(
                                   icon: const Icon(Icons.arrow_downward),
-                                  onPressed: index < _pipeline.length - 1 ? () => _moveStrategyDown(index) : null,
+                                  onPressed: index < _pipeline.length - 1 ? () => _movePluginDown(index) : null,
                                   disabledColor: Colors.grey,
                                 ),
                               ],

@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/strategies")
+@RequestMapping("/api/strategies")
 public class StrategyController {
 
     @Autowired

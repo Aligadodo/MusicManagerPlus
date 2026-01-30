@@ -11,6 +11,7 @@ public interface PluginService {
     PluginInfoDTO getPluginInfo(String pluginId);
     PluginConfigDTO getPluginConfig(String pluginId);
     boolean updatePluginConfig(String pluginId, PluginConfigDTO config);
+    List<ChangeRecord> previewPlugin(String pluginId, List<String> filePaths, PluginConfigDTO config);
     List<ChangeRecord> executePlugin(String pluginId, List<String> filePaths, PluginConfigDTO config);
     boolean reloadPlugins();
 }

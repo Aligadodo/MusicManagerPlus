@@ -8,7 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/config")
+@RequestMapping("/api/config")
 public class ConfigController {
 
     // 简单的内存配置存储

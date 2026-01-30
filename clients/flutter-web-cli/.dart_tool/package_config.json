@@ -332,6 +332,12 @@
       "languageVersion": "3.2"
     },
     {
+      "name": "mockito",
+      "rootUri": "file:///Users/hrcao/.pub-cache/hosted/pub.flutter-io.cn/mockito-5.6.3",
+      "packageUri": "lib/",
+      "languageVersion": "3.7"
+    },
+    {
       "name": "native_toolchain_c",
       "rootUri": "file:///Users/hrcao/.pub-cache/hosted/pub.flutter-io.cn/native_toolchain_c-0.17.4",
       "packageUri": "lib/",

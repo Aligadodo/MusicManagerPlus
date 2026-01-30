@@ -11,7 +11,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @RestController
-@RequestMapping("/logs")
+@RequestMapping("/api/logs")
 public class LogController {
 
     private static class LogEntry {

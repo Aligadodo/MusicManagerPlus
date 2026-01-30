@@ -1,6 +1,9 @@
 package com.filemanager.plugin.collection;
 
 import com.filemanager.domain.dto.PluginConfigDTO;
+import com.filemanager.domain.dto.PluginParameterDTO;
+import com.filemanager.domain.dto.PreconditionDTO;
+import com.filemanager.domain.dto.PreconditionGroupDTO;
 import com.filemanager.domain.entity.ChangeRecord;
 import com.filemanager.plugin.ExecutionContext;
 import com.filemanager.plugin.IPlugin;
@@ -37,7 +40,80 @@ public class FileCollectionPlugin implements IPlugin {
         config.setValue("recursive", true);
         config.setValue("includePatterns", Arrays.asList("*.mp3", "*.wav", "*.flac"));
         config.setValue("excludePatterns", Arrays.asList("*.tmp", "*.log"));
+        config.setParameters(getParameters());
+        config.setPreconditionGroups(getDefaultPreconditionGroups());
         return config;
+    }
+
+    @Override
+    public List<PluginParameterDTO> getParameters() {
+        List<PluginParameterDTO> parameters = new ArrayList<>();
+        
+        parameters.add(new PluginParameterDTO(
+            "targetDirectory",
+            "目标目录",
+            "文件收集的目标目录",
+            "directory",
+            "/tmp/collected",
+            true
+        ));
+        
+        parameters.add(new PluginParameterDTO(
+            "recursive",
+            "递归收集",
+            "是否递归收集子目录中的文件",
+            "boolean",
+            true,
+            false
+        ));
+        
+        parameters.add(new PluginParameterDTO(
+            "includePatterns",
+            "包含模式",
+            "要收集的文件模式列表，多个模式用逗号分隔",
+            "text",
+            "*.mp3,*.wav,*.flac",
+            false
+        ));
+        
+        parameters.add(new PluginParameterDTO(
+            "excludePatterns",
+            "排除模式",
+            "要排除的文件模式列表，多个模式用逗号分隔",
+            "text",
+            "*.tmp,*.log",
+            false
+        ));
+        
+        return parameters;
+    }
+
+    @Override
+    public List<PreconditionGroupDTO> getDefaultPreconditionGroups() {
+        List<PreconditionGroupDTO> groups = new ArrayList<>();
+        
+        // 创建默认前置条件组
+        PreconditionGroupDTO group = new PreconditionGroupDTO();
+        group.setId("default");
+        group.setName("默认条件组");
+        group.setDescription("文件收集的默认前置条件");
+        group.setLogicType(PreconditionGroupDTO.LogicType.AND);
+        
+        List<PreconditionDTO> preconditions = new ArrayList<>();
+        
+        // 添加文件存在前置条件
+        PreconditionDTO existCondition = new PreconditionDTO();
+        existCondition.setId("exist-condition");
+        existCondition.setField("fileExists");
+        existCondition.setOperator(PreconditionDTO.OperatorType.EQUALS);
+        existCondition.setValue(true);
+        existCondition.setDescription("文件存在");
+        preconditions.add(existCondition);
+        
+        group.setPreconditions(preconditions);
+        groups.add(group);
+        
+        return groups;
     }
 
     @Override
@@ -58,6 +134,12 @@ public class FileCollectionPlugin implements IPlugin {
         }
         
         return changes;
+    }
+
+    @Override
+    public List<ChangeRecord> preview(List<String> filePaths, PluginConfigDTO config, ExecutionContext context) {
+        // 预览逻辑与执行逻辑类似，只是不实际执行操作
+        return execute(filePaths, config, context);
     }
 
     private String getTargetPath(String filePath, PluginConfigDTO config) {

@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/plugins")
+@RequestMapping("/api/plugins")
 public class PluginController {
 
     @Autowired
@@ -51,13 +51,23 @@ public class PluginController {
     }
 
     @PostMapping("/{id}/config")
-    public ResponseEntity<Map<String, Object>> updatePluginConfig(@PathVariable String id, @RequestBody PluginConfigDTO config) {
+    public ResponseEntity<PluginConfigDTO> updatePluginConfig(@PathVariable String id, @RequestBody PluginConfigDTO config) {
         try {
-            boolean success = pluginService.updatePluginConfig(id, config);
-            Map<String, Object> result = new HashMap<>();
-            result.put("success", success);
-            result.put("message", "配置更新成功");
-            return ResponseEntity.ok(result);
+            pluginService.updatePluginConfig(id, config);
+            return ResponseEntity.ok(config);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    @PostMapping("/{id}/preview")
+    public ResponseEntity<List<ChangeRecord>> previewPlugin(@PathVariable String id, @RequestBody Map<String, Object> request) {
+        try {
+            List<String> filePaths = (List<String>) request.get("filePaths");
+            PluginConfigDTO config = (PluginConfigDTO) request.get("config");
+
+            List<ChangeRecord> changes = pluginService.previewPlugin(id, filePaths, config);
+            return ResponseEntity.ok(changes);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
@@ -66,10 +76,10 @@ public class PluginController {
     @PostMapping("/{id}/execute")
     public ResponseEntity<List<ChangeRecord>> executePlugin(@PathVariable String id, @RequestBody Map<String, Object> request) {
         try {
-            List<String> files = (List<String>) request.get("files");
+            List<String> filePaths = (List<String>) request.get("filePaths");
             PluginConfigDTO config = (PluginConfigDTO) request.get("config");
 
-            List<ChangeRecord> changes = pluginService.executePlugin(id, files, config);
+            List<ChangeRecord> changes = pluginService.executePlugin(id, filePaths, config);
             return ResponseEntity.ok(changes);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);

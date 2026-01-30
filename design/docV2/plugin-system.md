@@ -1,25 +1,25 @@
-# Plugin System Documentation
+# 插件系统文档
 
-## Overview
+## 概述
 
-The FileManager Plus plugin system provides a flexible and extensible framework for adding new functionality to the application. Plugins can be used to implement custom file processing strategies, integrate with external services, or add new features to the system.
+FileManager Plus插件系统提供了一个灵活可扩展的框架，用于向应用程序添加新功能。插件可用于实现自定义文件处理策略、与外部服务集成或向系统添加新功能。
 
-## Architecture
+## 架构
 
-The plugin system is built on top of Java's ServiceLoader mechanism, which provides a standard way to discover and load services at runtime. This approach allows plugins to be added without modifying the core application code.
+插件系统建立在Java的ServiceLoader机制之上，该机制提供了在运行时发现和加载服务的标准方法。这种方法允许在不修改核心应用程序代码的情况下添加插件。
 
-### Key Components
+### 关键组件
 
-1. **IPlugin Interface**: Defines the standard methods that all plugins must implement
-2. **PluginRegistry**: Manages plugin discovery, registration, and lifecycle
-3. **ExecutionContext**: Provides runtime context for plugin execution
-4. **PluginConfigDTO**: Represents plugin configuration data
+1. **IPlugin接口**：定义所有插件必须实现的标准方法
+2. **PluginRegistry**：管理插件发现、注册和生命周期
+3. **ExecutionContext**：为插件执行提供运行时上下文
+4. **PluginConfigDTO**：表示插件配置数据
 
-## Creating a Plugin
+## 创建插件
 
-To create a new plugin, follow these steps:
+要创建新插件，请按照以下步骤操作：
 
-### 1. Implement the IPlugin Interface
+### 1. 实现IPlugin接口
 
 ```java
 package com.filemanager.plugin.example;
@@ -45,7 +45,7 @@ public class ExamplePlugin implements IPlugin {
 
     @Override
     public String getDescription() {
-        return "An example plugin demonstrating the plugin system";
+        return "演示插件系统的示例插件";
     }
 
     @Override
@@ -63,38 +63,38 @@ public class ExamplePlugin implements IPlugin {
 
     @Override
     public List<ChangeRecord> execute(List<String> filePaths, PluginConfigDTO config, ExecutionContext context) {
-        // Plugin execution logic here
-        // Return list of ChangeRecord objects representing the changes made
+        // 插件执行逻辑
+        // 返回表示所做更改的ChangeRecord对象列表
         return List.of();
     }
 }
 ```
 
-### 2. Register the Plugin
+### 2. 注册插件
 
-Create a service provider configuration file in `src/main/resources/META-INF/services/` named `com.filemanager.plugin.IPlugin` and add the fully qualified class name of your plugin:
+在`src/main/resources/META-INF/services/`中创建一个名为`com.filemanager.plugin.IPlugin`的服务提供者配置文件，并添加插件的完全限定类名：
 
 ```
 com.filemanager.plugin.example.ExamplePlugin
 ```
 
-### 3. Build and Deploy
+### 3. 构建和部署
 
-Build your plugin as a JAR file and place it in the appropriate directory for plugin discovery. The exact location depends on your deployment environment, but typically plugins are placed in a `plugins` directory alongside the main application.
+将插件构建为JAR文件，并将其放置在插件发现的适当目录中。确切位置取决于部署环境，但通常插件放在与主应用程序并排的`plugins`目录中。
 
-## Plugin Lifecycle
+## 插件生命周期
 
-1. **Discovery**: Plugins are discovered during application startup using ServiceLoader
-2. **Registration**: Discovered plugins are registered with the PluginRegistry
-3. **Initialization**: Plugins are initialized with their default configurations
-4. **Execution**: Plugins are executed when requested through the API
-5. **Reloading**: Plugins can be reloaded at runtime using the `/plugins/reload` endpoint
+1. **发现**：在应用程序启动期间使用ServiceLoader发现插件
+2. **注册**：发现的插件向PluginRegistry注册
+3. **初始化**：使用默认配置初始化插件
+4. **执行**：当通过API请求时执行插件
+5. **重新加载**：可以使用`/plugins/reload`端点在运行时重新加载插件
 
-## Plugin Configuration
+## 插件配置
 
-Plugins can define their own configuration options using the `PluginConfigDTO` class. Configuration values are stored in memory and can be updated through the API.
+插件可以使用`PluginConfigDTO`类定义自己的配置选项。配置值存储在内存中，可以通过API更新。
 
-### Example Configuration
+### 示例配置
 
 ```java
 PluginConfigDTO config = new PluginConfigDTO();
@@ -103,43 +103,102 @@ config.setValue("recursive", true);
 config.setValue("filePattern", "*.mp3");
 ```
 
-## Plugin Execution
+## 插件执行
 
-When a plugin is executed, it receives:
+执行插件时，它会接收：
 
-1. **filePaths**: A list of file paths to process
-2. **config**: The current configuration for the plugin
-3. **context**: An execution context providing runtime information
+1. **filePaths**：要处理的文件路径列表
+2. **config**：插件的当前配置
+3. **context**：提供运行时信息的执行上下文
 
-Plugins return a list of `ChangeRecord` objects representing the changes they made to the files.
+插件返回表示它们对文件所做更改的`ChangeRecord`对象列表。
 
-### Example Execution Flow
+### 示例执行流程
 
-1. Client sends a request to execute a plugin
-2. PluginController receives the request
-3. PluginServiceImpl retrieves the plugin from the registry
-4. PluginServiceImpl calls the plugin's execute method
-5. Plugin processes the files and generates change records
-6. PluginServiceImpl returns the change records to the controller
-7. Controller returns the change records to the client
+1. 客户端发送执行插件的请求
+2. PluginController接收请求
+3. PluginServiceImpl从注册表中检索插件
+4. PluginServiceImpl调用插件的execute方法
+5. 插件处理文件并生成更改记录
+6. PluginServiceImpl将更改记录返回给控制器
+7. 控制器将更改记录返回给客户端
 
-## Built-in Plugins
+## 内置插件
 
-FileManager Plus includes several built-in plugins:
+FileManager Plus包含几个内置插件：
 
-| Plugin ID | Name | Description |
-|-----------|------|-------------|
-| `file-collection` | File Collection Plugin | Collects and organizes files based on configuration |
-| `metadata-scraper` | Metadata Scraper Plugin | Scrapes and updates file metadata from external sources |
-| `file-cleanup` | File Cleanup Plugin | Cleans up files based on age, size, and other criteria |
+| 插件ID | 名称 | 描述 |
+|--------|------|------|
+| `file-collection` | 文件收集插件 | 根据配置收集和组织文件 |
+| `metadata-scraper` | 元数据抓取插件 | 从外部源抓取和更新文件元数据 |
+| `file-cleanup` | 文件清理插件 | 根据年龄、大小和其他标准清理文件 |
 
-## Extending the Plugin System
+## 与新功能集成
 
-The plugin system can be extended in several ways:
+插件系统与添加到FileManager Plus的新功能无缝集成：
 
-### 1. Custom Plugin Interfaces
+### 源目录管理
 
-Create specialized plugin interfaces that extend `IPlugin` for specific types of functionality:
+插件可以配置为使用特定的源目录。SourceDirectoryController管理插件处理的目录，允许用户：
+
+- 定义要扫描的目录
+- 配置并行处理的线程数
+- 管理目录生命周期（添加、删除、清除）
+
+### 流水线管理
+
+插件可以在流水线中链接在一起，用于复杂的文件处理工作流。PipelineController允许用户：
+
+- 按顺序组合多个插件
+- 独立配置每个插件
+- 执行前预览更改
+- 在源目录上执行整个流水线
+
+流水线配置示例：
+```json
+[
+  {
+    "strategyId": "file-collection",
+    "name": "文件收集",
+    "config": {
+      "targetDirectory": "/organized",
+      "recursive": true
+    }
+  },
+  {
+    "strategyId": "metadata-scraper",
+    "name": "元数据更新",
+    "config": {
+      "source": "musicbrainz",
+      "overwrite": false
+    }
+  }
+]
+```
+
+### 线程池管理
+
+插件可以利用线程池配置进行并行处理。ThreadPoolController允许用户：
+
+- 配置分析操作的预览线程数
+- 配置实际文件操作的执行线程数
+- 根据系统资源优化性能
+
+线程池配置示例：
+```json
+{
+  "previewThreads": 8,
+  "executionThreads": 16
+}
+```
+
+## 扩展插件系统
+
+插件系统可以通过多种方式扩展：
+
+### 1. 自定义插件接口
+
+创建专门的插件接口，扩展`IPlugin`以获取特定类型的功能：
 
 ```java
 public interface MetadataPlugin extends IPlugin {
@@ -148,48 +207,48 @@ public interface MetadataPlugin extends IPlugin {
 }
 ```
 
-### 2. Plugin Dependencies
+### 2. 插件依赖
 
-Plugins can depend on other plugins or external libraries. When building plugins with dependencies, ensure that all required libraries are included in the plugin JAR or available in the classpath.
+插件可以依赖其他插件或外部库。构建带有依赖项的插件时，确保所有必需的库都包含在插件JAR中或在类路径中可用。
 
-### 3. Plugin Configuration UI
+### 3. 插件配置UI
 
-Create custom configuration UIs for plugins in the client applications. The Flutter Web client can dynamically generate configuration forms based on plugin configuration schemas.
+在客户端应用程序中为插件创建自定义配置UI。Flutter Web客户端可以根据插件配置模式动态生成配置表单。
 
-## Best Practices
+## 最佳实践
 
-### Plugin Development
+### 插件开发
 
-1. **Keep plugins focused**: Each plugin should implement a single, well-defined functionality
-2. **Handle errors gracefully**: Plugins should catch and handle exceptions internally
-3. **Provide clear documentation**: Include documentation for plugin configuration options and usage
-4. **Test thoroughly**: Test plugins with various file types and configurations
-5. **Use logging**: Log important events and errors for debugging
+1. **保持插件专注**：每个插件应实现单个、定义明确的功能
+2. **优雅处理错误**：插件应在内部捕获和处理异常
+3. **提供清晰的文档**：包括插件配置选项和使用的文档
+4. **彻底测试**：使用各种文件类型和配置测试插件
+5. **使用日志记录**：记录重要事件和错误以便调试
 
-### Plugin Security
+### 插件安全
 
-1. **Validate input**: Always validate file paths and configuration values
-2. **Limit file system access**: Only access files that are explicitly provided
-3. **Avoid system commands**: Use Java APIs instead of executing system commands
-4. **Be mindful of resources**: Clean up resources to avoid leaks
-5. **Respect user preferences**: Honor configuration settings and user choices
+1. **验证输入**：始终验证文件路径和配置值
+2. **限制文件系统访问**：仅访问明确提供的文件
+3. **避免系统命令**：使用Java API而不是执行系统命令
+4. **注意资源**：清理资源以避免泄漏
+5. **尊重用户偏好**：遵守配置设置和用户选择
 
-## Troubleshooting
+## 故障排除
 
-### Common Issues
+### 常见问题
 
-1. **Plugin not discovered**: Check that the service provider configuration file is correctly named and located
-2. **Plugin fails to load**: Check for missing dependencies or runtime errors
-3. **Plugin execution errors**: Check plugin logs and error messages
-4. **Configuration not saved**: Ensure that configuration updates are properly handled
+1. **插件未被发现**：检查服务提供者配置文件是否正确命名和定位
+2. **插件加载失败**：检查缺少的依赖项或运行时错误
+3. **插件执行错误**：检查插件日志和错误消息
+4. **配置未保存**：确保配置更新得到正确处理
 
-### Debugging Tips
+### 调试提示
 
-1. **Enable debug logging**: Set logging level to DEBUG for plugin-related classes
-2. **Use the reload endpoint**: Test plugin changes without restarting the application
-3. **Check the plugin registry**: Verify that plugins are properly registered
-4. **Test with sample files**: Use small test files to isolate issues
+1. **启用调试日志**：为插件相关类设置日志级别为DEBUG
+2. **使用重新加载端点**：测试插件更改而无需重新启动应用程序
+3. **检查插件注册表**：验证插件是否正确注册
+4. **使用示例文件测试**：使用小测试文件隔离问题
 
-## Conclusion
+## 结论
 
-The plugin system is a powerful feature of FileManager Plus that allows for extensive customization and extension. By following the guidelines and best practices outlined in this document, you can create powerful plugins that enhance the functionality of the application and provide value to users.
+插件系统是FileManager Plus的强大功能，允许广泛的定制和扩展。通过遵循本文档中概述的指南和最佳实践，您可以创建强大的插件，增强应用程序的功能并为用户提供价值。

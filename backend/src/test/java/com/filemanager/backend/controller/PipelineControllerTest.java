@@ -173,7 +173,6 @@ public class PipelineControllerTest {
         request.put("pipeline", pipeline);
 
         when(taskService.createTask(any(TaskRequestDTO.class))).thenReturn("task-123");
-        doNothing().when(taskService).executeTask("task-123");
 
         ResponseEntity<Map<String, Object>> response = pipelineController.executePipeline(request);
         
@@ -197,7 +196,6 @@ public class PipelineControllerTest {
         request.put("pipeline", pipeline);
 
         when(taskService.createTask(any(TaskRequestDTO.class))).thenReturn("task-456");
-        doNothing().when(taskService).executeTask("task-456");
 
         ResponseEntity<Map<String, Object>> response = pipelineController.executePipeline(request);
         

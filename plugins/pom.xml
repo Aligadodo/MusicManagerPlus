@@ -6,7 +6,7 @@
 
     <groupId>com.filemanager</groupId>
     <artifactId>plugins</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>plugins</name>
@@ -17,6 +17,8 @@
         <module>file-collection</module>
         <module>metadata-scraper</module>
         <module>file-cleanup</module>
+        <module>audio-converter</module>
+        <module>file-rename</module>
     </modules>
 
     <properties>

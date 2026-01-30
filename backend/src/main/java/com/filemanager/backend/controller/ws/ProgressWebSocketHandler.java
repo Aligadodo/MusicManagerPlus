@@ -8,6 +8,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import javax.annotation.PostConstruct;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -23,8 +24,8 @@ public class ProgressWebSocketHandler extends TextWebSocketHandler {
     @Autowired
     private ObjectMapper objectMapper;
 
-    public ProgressWebSocketHandler() {
-        // 启动全局进度监控
+    @PostConstruct
+    public void init() {
         executor.scheduleAtFixedRate(() -> {
             try {
                 Map<String, Object> progressData = new java.util.HashMap<>();

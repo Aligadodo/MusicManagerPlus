@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:filemanager_flutter/pages/home_page.dart';
-import 'package:filemanager_flutter/models/change_record.dart';
+import '../api/api_client.dart';
+import '../api/pipeline_service.dart';
+import '../api/source_directory_service.dart';
+import '../models/change_record.dart';
 
 class PreviewPage extends ConsumerStatefulWidget {
   const PreviewPage({super.key});
@@ -11,6 +13,8 @@ class PreviewPage extends ConsumerStatefulWidget {
 }
 
 class _PreviewPageState extends ConsumerState<PreviewPage> {
+  final PipelineService _pipelineService = PipelineService(ApiClient());
+  final SourceDirectoryService _sourceDirectoryService = SourceDirectoryService(ApiClient());
   List<ChangeRecord> _changeRecords = [];
   List<String> _sourceDirectories = [];
   List<Map<String, dynamic>> _pipeline = [];
@@ -32,13 +36,11 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
 
     try {
       // 加载源目录
-      final sourceDirectoryService = ref.read(sourceDirectoryServiceProvider);
-      final directories = await sourceDirectoryService.getSourceDirectories();
+      final directories = await _sourceDirectoryService.getSourceDirectories();
       _sourceDirectories = directories.map((d) => d['path'] as String).toList();
 
       // 加载流水线
-      final pipelineService = ref.read(pipelineServiceProvider);
-      _pipeline = await pipelineService.getPipeline();
+      _pipeline = await _pipelineService.getPipeline();
     } catch (e) {
       setState(() {
         _errorMessage = '加载数据失败: $e';
@@ -66,13 +68,12 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
 
       if (_pipeline.isEmpty) {
         setState(() {
-          _errorMessage = '请先配置策略流水线';
+          _errorMessage = '请先配置插件流水线';
         });
         return;
       }
 
-      final pipelineService = ref.read(pipelineServiceProvider);
-      final changes = await pipelineService.analyzePipeline(_sourceDirectories, _pipeline);
+      final changes = await _pipelineService.analyzePipeline(_sourceDirectories, _pipeline);
       setState(() {
         _changeRecords = changes;
       });
@@ -103,13 +104,12 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
 
       if (_pipeline.isEmpty) {
         setState(() {
-          _errorMessage = '请先配置策略流水线';
+          _errorMessage = '请先配置插件流水线';
         });
         return;
       }
 
-      final pipelineService = ref.read(pipelineServiceProvider);
-      final result = await pipelineService.executePipeline(_sourceDirectories, _pipeline);
+      final result = await _pipelineService.executePipeline(_sourceDirectories, _pipeline);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('执行任务已创建，任务ID: ${result['taskId']}')),
       );
@@ -170,8 +170,8 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('策略数量:', style: TextStyle(fontWeight: FontWeight.bold)),
-                              Text('${_pipeline.length} 个策略'),
+                              const Text('插件数量:', style: TextStyle(fontWeight: FontWeight.bold)),
+                              Text('${_pipeline.length} 个插件'),
                             ],
                           ),
                         ),
