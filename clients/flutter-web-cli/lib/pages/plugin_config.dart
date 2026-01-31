@@ -187,10 +187,13 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
           hintText: param.description,
           border: const OutlineInputBorder(),
           errorText: param.required && (value == null || value.toString().isEmpty) ? '必填项' : null,
-          suffixIcon: IconButton(
-                  icon: const Icon(Icons.info_outline),
-                  onPressed: () => _showTooltip(param.label, param.description),
-                ),
+          suffixIcon: SizedBox(
+            width: 40,
+            child: IconButton(
+              icon: const Icon(Icons.info_outline),
+              onPressed: () => _showTooltip(param.label, param.description),
+            ),
+          ),
         ),
         onChanged: (v) => _handleParameterChange(param.name, v, param),
       ),
@@ -207,10 +210,13 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
           hintText: param.description,
           border: const OutlineInputBorder(),
           errorText: param.required && (value == null || value.toString().isEmpty) ? '必填项' : null,
-          suffixIcon: IconButton(
-                  icon: const Icon(Icons.info_outline),
-                  onPressed: () => _showTooltip(param.label, param.description),
-                ),
+          suffixIcon: SizedBox(
+            width: 40,
+            child: IconButton(
+              icon: const Icon(Icons.info_outline),
+              onPressed: () => _showTooltip(param.label, param.description),
+            ),
+          ),
         ),
         keyboardType: TextInputType.number,
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -223,15 +229,40 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
     return Card(
       elevation: 2,
       margin: const EdgeInsets.symmetric(vertical: 8.0),
-      child: SwitchListTile(
-        title: Text(param.label),
-        subtitle: Text(param.description),
-        value: value ?? false,
-        onChanged: (v) => _handleParameterChange(param.name, v, param),
-        secondary: IconButton(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    param.label,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    param.description,
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ],
+              ),
+            const SizedBox(width: 12),
+            Switch(
+              value: value ?? false,
+              onChanged: (v) => _handleParameterChange(param.name, v, param),
+            ),
+            const SizedBox(width: 12),
+            SizedBox(
+              width: 50,
+              child: IconButton(
                 icon: const Icon(Icons.info_outline),
                 onPressed: () => _showTooltip(param.label, param.description),
               ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -244,10 +275,13 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
           labelText: param.label,
           hintText: param.description,
           border: const OutlineInputBorder(),
-          suffixIcon: IconButton(
-                  icon: const Icon(Icons.info_outline),
-                  onPressed: () => _showTooltip(param.label, param.description),
-                ),
+          suffixIcon: SizedBox(
+            width: 40,
+            child: IconButton(
+              icon: const Icon(Icons.info_outline),
+              onPressed: () => _showTooltip(param.label, param.description),
+            ),
+          ),
         ),
         initialValue: value?.toString(),
         items: param.options?.map((option) {
@@ -274,10 +308,13 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
                 hintText: param.description,
                 border: const OutlineInputBorder(),
                 errorText: param.required && (value == null || value.toString().isEmpty) ? '必填项' : null,
-                suffixIcon: IconButton(
-                        icon: const Icon(Icons.info_outline),
-                        onPressed: () => _showTooltip(param.label, param.description),
-                      ),
+                suffixIcon: SizedBox(
+                  width: 40,
+                  child: IconButton(
+                    icon: const Icon(Icons.info_outline),
+                    onPressed: () => _showTooltip(param.label, param.description),
+                  ),
+                ),
               ),
               onChanged: (v) => _handleParameterChange(param.name, v, param),
             ),
@@ -305,10 +342,13 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
                 hintText: param.description,
                 border: const OutlineInputBorder(),
                 errorText: param.required && (value == null || value.toString().isEmpty) ? '必填项' : null,
-                suffixIcon: IconButton(
-                        icon: const Icon(Icons.info_outline),
-                        onPressed: () => _showTooltip(param.label, param.description),
-                      ),
+                suffixIcon: SizedBox(
+                  width: 40,
+                  child: IconButton(
+                    icon: const Icon(Icons.info_outline),
+                    onPressed: () => _showTooltip(param.label, param.description),
+                  ),
+                ),
               ),
               onChanged: (v) => _handleParameterChange(param.name, v, param),
             ),
@@ -333,9 +373,11 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          key: ValueKey('list_param_column_${param.name}'),
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              key: ValueKey('list_param_header_row_${param.name}'),
               children: [
                 Expanded(
                   child: Text(
@@ -344,6 +386,7 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
                   ),
                 ),
                 IconButton(
+                  key: ValueKey('list_param_info_button_${param.name}'),
                   icon: const Icon(Icons.info_outline),
                   onPressed: () => _showTooltip(param.label, param.description),
                 ),
@@ -355,6 +398,7 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
             ),
             const SizedBox(height: 8),
             Row(
+              key: ValueKey('list_param_input_row_${param.name}'),
               children: [
                 Expanded(
                   child: TextField(
@@ -390,15 +434,25 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
               ...items.asMap().entries.map((entry) {
                 final index = entry.key;
                 final item = entry.value;
-                return ListTile(
-                  title: Text(item),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: () {
-                      setState(() {
-                        _listValues[param.name] = List.from(items)..removeAt(index);
-                      });
-                    },
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(item),
+                      ),
+                      SizedBox(
+                        width: 50,
+                        child: IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () {
+                            setState(() {
+                              _listValues[param.name] = List.from(items)..removeAt(index);
+                            });
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 );
               }),
@@ -478,13 +532,35 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
   }
 
   Widget _buildPrecondition(Precondition precondition) {
-    return ListTile(
-      title: Text(precondition.field),
-      subtitle: Text('${precondition.operator} ${precondition.value}'),
-      trailing: IconButton(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  precondition.field,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  '${precondition.operator} ${precondition.value}',
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ],
+            ),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 50,
+            child: IconButton(
               icon: const Icon(Icons.info_outline),
               onPressed: () => _showTooltip(precondition.field, precondition.description),
             ),
+          ),
+        ],
+      ),
     );
   }
 

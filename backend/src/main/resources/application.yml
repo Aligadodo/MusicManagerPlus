@@ -21,6 +21,18 @@ logging:
   level:
     com.filemanager: info
     org.springframework: warn
+  file:
+    name: logs/filemanager.log
+    max-size: 50MB
+    max-history: 30
+  logback:
+    rollingpolicy:
+      max-file-size: 50MB
+      max-history: 30
+      file-name-pattern: logs/filemanager_%d{yyyy-MM-dd}.%i.log
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
 
 security:
   jwt:

@@ -228,6 +228,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
 
   Widget _buildActionButtons() {
     return Container(
+      key: const ValueKey('action_buttons_container'),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.9),
@@ -235,9 +236,11 @@ class _ComposePageState extends ConsumerState<ComposePage> {
         border: Border.all(color: Colors.grey.shade300),
       ),
       child: Row(
+        key: const ValueKey('action_buttons_row'),
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           ElevatedButton.icon(
+            key: const ValueKey('preview_button'),
             onPressed: _previewAction,
             icon: const Icon(Icons.visibility),
             label: const Text('预览'),
@@ -248,6 +251,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
           ),
           const SizedBox(width: 10),
           ElevatedButton.icon(
+            key: const ValueKey('run_button'),
             onPressed: _runAction,
             icon: const Icon(Icons.play_arrow),
             label: const Text('运行'),
@@ -258,6 +262,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
           ),
           const SizedBox(width: 10),
           ElevatedButton.icon(
+            key: const ValueKey('abort_button'),
             onPressed: _abortAction,
             icon: const Icon(Icons.stop),
             label: const Text('中止'),
@@ -311,14 +316,17 @@ class _ComposePageState extends ConsumerState<ComposePage> {
 
   Widget _buildSectionHeaders() {
     return Container(
+      key: const ValueKey('section_headers_container'),
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
+        key: const ValueKey('section_headers_row'),
         children: [
           Expanded(
             flex: 1,
             child: _buildSectionHeader(
               'Step1-选择目录',
               '通过弹窗或者拖拽至空白处来添加需要处理的文件或文件夹。',
+              'step1_header',
             ),
           ),
           Expanded(
@@ -326,6 +334,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
             child: _buildSectionHeader(
               'Step2-流水线配置',
               '添加必要的处理流程，可同时应用不同的操作。点击任意项目，可打开详细的配置界面。（同一文件只会被修改一次）。',
+              'step2_header',
             ),
           ),
           Expanded(
@@ -333,6 +342,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
             child: _buildSectionHeader(
               'Step3-参数配置',
               '支持选中步骤并编辑步骤下的参数。支持配置步骤的前置条件，以在满足特定条件下才执行特定操作，用于更精细化的操作控制。',
+              'step3_header',
             ),
           ),
         ],
@@ -340,8 +350,9 @@ class _ComposePageState extends ConsumerState<ComposePage> {
     );
   }
 
-  Widget _buildSectionHeader(String title, String description) {
+  Widget _buildSectionHeader(String title, String description, String key) {
     return Container(
+      key: ValueKey('section_header_$key'),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.9),
@@ -349,6 +360,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
         border: Border.all(color: Colors.grey.shade300),
       ),
       child: Column(
+        key: ValueKey('section_header_column_$key'),
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
@@ -387,8 +399,6 @@ class _ComposePageState extends ConsumerState<ComposePage> {
           Expanded(
             child: _buildSourceList(),
           ),
-          const SizedBox(height: 10),
-          _buildGlobalFilters(),
         ],
       ),
     );
@@ -396,6 +406,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
 
   Widget _buildSourceTools() {
     return Row(
+      key: const ValueKey('source_tools_row'),
       children: [
         ElevatedButton.icon(
           onPressed: _addDirectory,
@@ -449,6 +460,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
 
   Widget _buildSourceListItem(SourceDirectory directory, int index) {
     return Container(
+      key: ValueKey('source_directory_item_$index'),
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
       decoration: BoxDecoration(
         border: Border(
@@ -456,9 +468,11 @@ class _ComposePageState extends ConsumerState<ComposePage> {
         ),
       ),
       child: Row(
+        key: const ValueKey('source_directory_row'),
         children: [
           Expanded(
             child: Column(
+              key: const ValueKey('source_directory_info_column'),
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
@@ -481,217 +495,47 @@ class _ComposePageState extends ConsumerState<ComposePage> {
               ],
             ),
           ),
-          Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_upward, size: 20),
-                onPressed: index > 0
-                    ? () {
-                        setState(() {
-                          final temp = _sourceDirectories[index - 1];
-                          _sourceDirectories[index - 1] = directory;
-                          _sourceDirectories[index] = temp;
-                        });
-                      }
-                    : null,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-              IconButton(
-                icon: const Icon(Icons.arrow_downward, size: 20),
-                onPressed: index < _sourceDirectories.length - 1
-                    ? () {
-                        setState(() {
-                          final temp = _sourceDirectories[index + 1];
-                          _sourceDirectories[index + 1] = directory;
-                          _sourceDirectories[index] = temp;
-                        });
-                      }
-                    : null,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete, size: 20, color: Colors.red),
-                onPressed: () => _removeDirectory(directory),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-            ],
+          const SizedBox(width: 8),
+          IconButton(
+            key: const ValueKey('source_directory_up_button'),
+            icon: const Icon(Icons.arrow_upward, size: 20),
+            onPressed: index > 0
+                ? () {
+                    setState(() {
+                      final temp = _sourceDirectories[index - 1];
+                      _sourceDirectories[index - 1] = directory;
+                      _sourceDirectories[index] = temp;
+                    });
+                  }
+                : null,
+            padding: EdgeInsets.zero,
+          ),
+          IconButton(
+            key: const ValueKey('source_directory_down_button'),
+            icon: const Icon(Icons.arrow_downward, size: 20),
+            onPressed: index < _sourceDirectories.length - 1
+                ? () {
+                    setState(() {
+                      final temp = _sourceDirectories[index + 1];
+                      _sourceDirectories[index + 1] = directory;
+                      _sourceDirectories[index] = temp;
+                    });
+                  }
+                : null,
+            padding: EdgeInsets.zero,
+          ),
+          IconButton(
+            key: const ValueKey('source_directory_delete_button'),
+            icon: const Icon(Icons.delete, size: 20, color: Colors.red),
+            onPressed: () => _removeDirectory(directory),
+            padding: EdgeInsets.zero,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildGlobalFilters() {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            '全局筛选',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 10),
-          _buildFilterField('扫描模式', DropdownButton<String>(
-            items: const [
-              DropdownMenuItem(value: 'all', child: Text('全部文件')),
-              DropdownMenuItem(value: 'current', child: Text('当前目录')),
-              DropdownMenuItem(value: 'specified', child: Text('指定目录层级')),
-              DropdownMenuItem(value: 'range', child: Text('目录层级范围')),
-            ],
-            onChanged: (value) {},
-            isExpanded: true,
-          )),
-          const SizedBox(height: 10),
-          _buildFilterField('扫描层级', TextField(
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            ),
-          )),
-          const SizedBox(height: 10),
-          _buildFilterField('目录层级范围', Row(
-            children: [
-              const Text('最小: '),
-              SizedBox(
-                width: 60,
-                child: TextField(
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              const Text('最大: '),
-              SizedBox(
-                width: 60,
-                child: TextField(
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  ),
-                ),
-              ),
-            ],
-          )),
-          const SizedBox(height: 15),
-          const Text(
-            '文件类型过滤',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 10),
-          _buildFilterField('文件类型', Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              Chip(label: Text('音频')),
-              Chip(label: Text('视频')),
-              Chip(label: Text('图片')),
-              Chip(label: Text('文档')),
-              Chip(label: Text('压缩包')),
-            ],
-          )),
-          const SizedBox(height: 15),
-          const Text(
-            '路径过滤规则',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 10),
-          TextField(
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-              hintText: '输入过滤规则（如：*Convert*），按回车添加',
-              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Container(
-            height: 150,
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: ListView.builder(
-              itemCount: 5,
-              itemBuilder: (context, index) {
-                return Container(
-                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                  decoration: BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(color: Colors.grey.shade300),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text([
-                          '*Convert*',
-                          '*Temp*',
-                          '*Cache*',
-                          '*Log*',
-                          '*/Windows/*'
-                        ][index]),
-                      ),
-                      Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.arrow_upward, size: 16),
-                            onPressed: () {},
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.arrow_downward, size: 16),
-                            onPressed: () {},
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete, size: 16, color: Colors.red),
-                            onPressed: () {},
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildFilterField(String label, Widget child) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 12),
-        ),
-        const SizedBox(height: 5),
-        child,
-      ],
-    );
-  }
 
   Widget _buildMidPanel() {
     return Container(
@@ -716,24 +560,22 @@ class _ComposePageState extends ConsumerState<ComposePage> {
 
   Widget _buildPipelineTools() {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Expanded(
-          child: DropdownButton<StrategyInfo>(
-            hint: const Text('选择功能...'),
-            value: _selectedPipelineStrategy,
-            items: _availableStrategies.map((strategy) {
-              return DropdownMenuItem<StrategyInfo>(
-                value: strategy,
-                child: Text(strategy.name),
-              );
-            }).toList(),
-            onChanged: (value) {
-              setState(() {
-                _selectedPipelineStrategy = value;
-              });
-            },
-            isExpanded: true,
-          ),
+        DropdownButton<StrategyInfo>(
+          hint: const Text('选择功能...'),
+          value: _selectedPipelineStrategy,
+          items: _availableStrategies.map((strategy) {
+            return DropdownMenuItem<StrategyInfo>(
+              value: strategy,
+              child: Text(strategy.name),
+            );
+          }).toList(),
+          onChanged: (value) {
+            setState(() {
+              _selectedPipelineStrategy = value;
+            });
+          },
         ),
         const SizedBox(width: 10),
         ElevatedButton.icon(
@@ -783,50 +625,68 @@ class _ComposePageState extends ConsumerState<ComposePage> {
           color: isSelected ? Colors.blue : Colors.grey.shade300,
         ),
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        leading: CircleAvatar(
-          backgroundColor: Colors.blue,
-          child: Text(
-            '${index + 1}',
-            style: const TextStyle(color: Colors.white),
+      child: InkWell(
+        onTap: () => _loadStrategyConfig(strategy),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: Colors.blue,
+                child: Text(
+                  '${index + 1}',
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      strategy.name,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      strategy.description,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Row(
+                key: ValueKey('pipeline_actions_row_$index'),
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    key: ValueKey('pipeline_up_button_$index'),
+                    icon: const Icon(Icons.arrow_upward, size: 20),
+                    onPressed: index > 0 ? () => _moveStrategy(index, -1) : null,
+                    padding: EdgeInsets.zero,
+                  ),
+                  IconButton(
+                    key: ValueKey('pipeline_down_button_$index'),
+                    icon: const Icon(Icons.arrow_downward, size: 20),
+                    onPressed: index < _pipelineStrategies.length - 1
+                        ? () => _moveStrategy(index, 1)
+                        : null,
+                    padding: EdgeInsets.zero,
+                  ),
+                  IconButton(
+                    key: ValueKey('pipeline_delete_button_$index'),
+                    icon: const Icon(Icons.delete, size: 20, color: Colors.red),
+                    onPressed: () => _removeStrategy(strategy),
+                    padding: EdgeInsets.zero,
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
-        title: Text(
-          strategy.name,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Text(
-          strategy.description,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.arrow_upward, size: 20),
-              onPressed: index > 0 ? () => _moveStrategy(index, -1) : null,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-            ),
-            IconButton(
-              icon: const Icon(Icons.arrow_downward, size: 20),
-              onPressed: index < _pipelineStrategies.length - 1
-                  ? () => _moveStrategy(index, 1)
-                  : null,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-            ),
-            IconButton(
-              icon: const Icon(Icons.delete, size: 20, color: Colors.red),
-              onPressed: () => _removeStrategy(strategy),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-            ),
-          ],
-        ),
-        onTap: () => _loadStrategyConfig(strategy),
       ),
     );
   }
@@ -967,27 +827,31 @@ class _ComposePageState extends ConsumerState<ComposePage> {
         border: Border.all(color: Colors.grey.shade300),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                group.name,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
+          key: ValueKey('precondition_group_column_$index'),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              key: ValueKey('precondition_group_header_row_$index'),
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  group.name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
                 ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red),
-                onPressed: () => _removePreconditionGroup(index),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
+                IconButton(
+                  key: ValueKey('precondition_group_delete_$index'),
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                  onPressed: () => _removePreconditionGroup(index),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              key: ValueKey('precondition_logic_type_row_$index'),
+              children: [
               const Text('逻辑类型:'),
               const SizedBox(width: 10),
               DropdownButton<String>(
@@ -1088,85 +952,86 @@ class _ComposePageState extends ConsumerState<ComposePage> {
         borderRadius: BorderRadius.circular(6),
       ),
       child: Column(
+        key: ValueKey('precondition_column_${groupIndex}_$conditionIndex'),
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            key: ValueKey('precondition_field_row_${groupIndex}_$conditionIndex'),
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Expanded(
-                child: DropdownButton<String>(
-                  value: condition.field,
-                  items: const [
-                    DropdownMenuItem(value: 'file', child: Text('文件')),
-                    DropdownMenuItem(value: 'directory', child: Text('目录')),
-                    DropdownMenuItem(value: 'extension', child: Text('扩展名')),
-                    DropdownMenuItem(value: 'size', child: Text('文件大小')),
-                    DropdownMenuItem(value: 'modified', child: Text('修改时间')),
-                    DropdownMenuItem(value: 'created', child: Text('创建时间')),
-                    DropdownMenuItem(value: 'name', child: Text('文件名')),
-                    DropdownMenuItem(value: 'path', child: Text('文件路径')),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      final group = _preconditionGroups[groupIndex];
-                      final newPreconditions = List<Precondition>.from(group.preconditions);
-                      newPreconditions[conditionIndex] = Precondition(
-                        id: condition.id,
-                        field: value ?? 'file',
-                        operator: condition.operator,
-                        value: condition.value,
-                        description: condition.description,
-                      );
-                      _preconditionGroups[groupIndex] = PreconditionGroup(
-                        id: group.id,
-                        name: group.name,
-                        description: group.description,
-                        logicType: group.logicType,
-                        preconditions: newPreconditions,
-                      );
-                    });
-                  },
-                ),
+              DropdownButton<String>(
+                value: condition.field,
+                items: const [
+                  DropdownMenuItem(value: 'file', child: Text('文件')),
+                  DropdownMenuItem(value: 'directory', child: Text('目录')),
+                  DropdownMenuItem(value: 'extension', child: Text('扩展名')),
+                  DropdownMenuItem(value: 'size', child: Text('文件大小')),
+                  DropdownMenuItem(value: 'modified', child: Text('修改时间')),
+                  DropdownMenuItem(value: 'created', child: Text('创建时间')),
+                  DropdownMenuItem(value: 'name', child: Text('文件名')),
+                  DropdownMenuItem(value: 'path', child: Text('文件路径')),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    final group = _preconditionGroups[groupIndex];
+                    final newPreconditions = List<Precondition>.from(group.preconditions);
+                    newPreconditions[conditionIndex] = Precondition(
+                      id: condition.id,
+                      field: value ?? 'file',
+                      operator: condition.operator,
+                      value: condition.value,
+                      description: condition.description,
+                    );
+                    _preconditionGroups[groupIndex] = PreconditionGroup(
+                      id: group.id,
+                      name: group.name,
+                      description: group.description,
+                      logicType: group.logicType,
+                      preconditions: newPreconditions,
+                    );
+                  });
+                },
               ),
-              Expanded(
-                child: DropdownButton<String>(
-                  value: condition.operator,
-                  items: const [
-                    DropdownMenuItem(value: 'contains', child: Text('包含')),
-                    DropdownMenuItem(value: 'equals', child: Text('等于')),
-                    DropdownMenuItem(value: 'startsWith', child: Text('以...开头')),
-                    DropdownMenuItem(value: 'endsWith', child: Text('以...结尾')),
-                    DropdownMenuItem(value: 'greaterThan', child: Text('大于')),
-                    DropdownMenuItem(value: 'lessThan', child: Text('小于')),
-                    DropdownMenuItem(value: 'greaterThanOrEqual', child: Text('大于等于')),
-                    DropdownMenuItem(value: 'lessThanOrEqual', child: Text('小于等于')),
-                    DropdownMenuItem(value: 'notEquals', child: Text('不等于')),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      final group = _preconditionGroups[groupIndex];
-                      final newPreconditions = List<Precondition>.from(group.preconditions);
-                      newPreconditions[conditionIndex] = Precondition(
-                        id: condition.id,
-                        field: condition.field,
-                        operator: value ?? 'contains',
-                        value: condition.value,
-                        description: condition.description,
-                      );
-                      _preconditionGroups[groupIndex] = PreconditionGroup(
-                        id: group.id,
-                        name: group.name,
-                        description: group.description,
-                        logicType: group.logicType,
-                        preconditions: newPreconditions,
-                      );
-                    });
-                  },
-                ),
+              const SizedBox(width: 10),
+              DropdownButton<String>(
+                value: condition.operator,
+                items: const [
+                  DropdownMenuItem(value: 'contains', child: Text('包含')),
+                  DropdownMenuItem(value: 'equals', child: Text('等于')),
+                  DropdownMenuItem(value: 'startsWith', child: Text('以...开头')),
+                  DropdownMenuItem(value: 'endsWith', child: Text('以...结尾')),
+                  DropdownMenuItem(value: 'greaterThan', child: Text('大于')),
+                  DropdownMenuItem(value: 'lessThan', child: Text('小于')),
+                  DropdownMenuItem(value: 'greaterThanOrEqual', child: Text('大于等于')),
+                  DropdownMenuItem(value: 'lessThanOrEqual', child: Text('小于等于')),
+                  DropdownMenuItem(value: 'notEquals', child: Text('不等于')),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    final group = _preconditionGroups[groupIndex];
+                    final newPreconditions = List<Precondition>.from(group.preconditions);
+                    newPreconditions[conditionIndex] = Precondition(
+                      id: condition.id,
+                      field: condition.field,
+                      operator: value ?? 'contains',
+                      value: condition.value,
+                      description: condition.description,
+                    );
+                    _preconditionGroups[groupIndex] = PreconditionGroup(
+                      id: group.id,
+                      name: group.name,
+                      description: group.description,
+                      logicType: group.logicType,
+                      preconditions: newPreconditions,
+                    );
+                  });
+                },
               ),
             ],
           ),
           const SizedBox(height: 5),
           Row(
+            key: ValueKey('precondition_value_row_${groupIndex}_$conditionIndex'),
             children: [
               Expanded(
                 flex: 3,
@@ -1402,7 +1267,6 @@ class _ComposePageState extends ConsumerState<ComposePage> {
                 icon: const Icon(Icons.folder_open, color: Colors.blue),
                 onPressed: () {},
                 padding: const EdgeInsets.all(8),
-                constraints: const BoxConstraints(),
               ),
             ),
           ],

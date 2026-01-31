@@ -10,9 +10,13 @@ class ApiClient {
 
   ApiClient() : _client = http.Client();
 
-  Future<http.Response> get(String endpoint, {Map<String, String>? headers}) async {
+  Future<http.Response> get(String endpoint, {Map<String, String>? headers, Map<String, String>? queryParams}) async {
+    Uri uri = Uri.parse('$baseUrl$endpoint');
+    if (queryParams != null && queryParams!.isNotEmpty) {
+      uri = uri.replace(queryParameters: queryParams.map((key, value) => MapEntry(key, value)));
+    }
     final response = await _client.get(
-      Uri.parse('$baseUrl$endpoint'),
+      uri,
       headers: headers ?? _getDefaultHeaders(),
     );
     return response;
@@ -25,6 +29,26 @@ class ApiClient {
       body: jsonEncode(body),
     );
     return response;
+  }
+
+  Future<void> logFrontendError({
+    required String action,
+    required String message,
+    String? stackTrace,
+    String? url,
+    String? userAgent,
+  }) async {
+    try {
+      await post('/logs/frontend-error', body: {
+        'action': action,
+        'message': message,
+        if (stackTrace != null && stackTrace.isNotEmpty) 'stackTrace': stackTrace,
+        if (url != null && url.isNotEmpty) 'url': url,
+        if (userAgent != null && userAgent.isNotEmpty) 'userAgent': userAgent,
+      });
+    } catch (e) {
+      print('Failed to log frontend error: $e');
+    }
   }
 
   Future<http.Response> put(String endpoint, {dynamic body, Map<String, String>? headers}) async {

@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'api_client.dart';
+import 'package:filemanager_flutter/api/api_client.dart';
 import '../models/plugin_info.dart';
 import '../models/plugin_config.dart';
 import '../models/change_record.dart';

@@ -1,140 +1,120 @@
 package com.filemanager.backend.controller;
 
+import com.filemanager.backend.logging.UnifiedLogger;
+import com.filemanager.domain.service.LogService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @RestController
 @RequestMapping("/api/logs")
 public class LogController {
 
-    private static class LogEntry {
-        private final long timestamp;
-        private final String level;
-        private final String message;
-        private final String source;
+    @Autowired
+    private LogService logService;
 
-        public LogEntry(String level, String message, String source) {
-            this.timestamp = System.currentTimeMillis();
-            this.level = level;
-            this.message = message;
-            this.source = source;
-        }
+    @PostMapping("/frontend-error")
+    public ResponseEntity<Map<String, Object>> logFrontendError(@RequestBody Map<String, Object> request) {
+        try {
+            String action = (String) request.getOrDefault("action", "unknown");
+            String message = (String) request.getOrDefault("message", "");
+            String stackTrace = (String) request.getOrDefault("stackTrace", "");
+            String url = (String) request.getOrDefault("url", "");
+            String userAgent = (String) request.getOrDefault("userAgent", "");
 
-        public long getTimestamp() {
-            return timestamp;
-        }
+            StringBuilder logMessage = new StringBuilder();
+            logMessage.append("URL: ").append(url);
+            if (userAgent != null && !userAgent.isEmpty()) {
+                logMessage.append(", UserAgent: ").append(userAgent);
+            }
+            logMessage.append(", Message: ").append(message);
+            if (stackTrace != null && !stackTrace.isEmpty()) {
+                logMessage.append("\nStackTrace: ").append(stackTrace);
+            }
 
-        public String getLevel() {
-            return level;
-        }
+            UnifiedLogger.frontendError(action, logMessage.toString(), null);
 
-        public String getMessage() {
-            return message;
-        }
-
-        public String getSource() {
-            return source;
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Frontend error logged successfully");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            UnifiedLogger.error("LOG_CONTROLLER", "Failed to log frontend error", e);
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", "Failed to log frontend error: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
 
-    // 简单的内存日志存储
-    private final List<LogEntry> logs = new ArrayList<>();
-    private final int MAX_LOGS = 1000;
-
-    @GetMapping
-    public ResponseEntity<List<Map<String, Object>>> getLogs(
-            @RequestParam(required = false) String level,
-            @RequestParam(required = false) String source,
-            @RequestParam(required = false, defaultValue = "1") int page,
-            @RequestParam(required = false, defaultValue = "50") int size) {
+    @GetMapping("/files")
+    public ResponseEntity<List<Map<String, Object>>> getLogFiles() {
         try {
-            List<Map<String, Object>> filteredLogs = new ArrayList<>();
-            
-            for (LogEntry entry : logs) {
-                if (level != null && !entry.getLevel().equals(level)) {
-                    continue;
-                }
-                if (source != null && !entry.getSource().equals(source)) {
-                    continue;
-                }
-                
-                Map<String, Object> logMap = new HashMap<>();
-                logMap.put("timestamp", entry.getTimestamp());
-                logMap.put("level", entry.getLevel());
-                logMap.put("message", entry.getMessage());
-                logMap.put("source", entry.getSource());
-                filteredLogs.add(logMap);
-            }
-            
-            // 简单的分页处理
-            int start = (page - 1) * size;
-            int end = Math.min(start + size, filteredLogs.size());
-            if (start < filteredLogs.size()) {
-                filteredLogs = filteredLogs.subList(start, end);
-            }
-            
-            return ResponseEntity.ok(filteredLogs);
+            List<Map<String, Object>> logFiles = logService.getLogFiles();
+            return ResponseEntity.ok(logFiles);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
 
-    @PostMapping
-    public ResponseEntity<Map<String, Object>> addLog(@RequestBody Map<String, Object> logEntry) {
+    @GetMapping("/entries")
+    public ResponseEntity<Map<String, Object>> getLogEntries(
+            @RequestParam String fileName,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "100") int size) {
         try {
-            String level = (String) logEntry.getOrDefault("level", "INFO");
-            String message = (String) logEntry.get("message");
-            String source = (String) logEntry.getOrDefault("source", "api");
-            
-            if (message == null) {
-                return ResponseEntity.badRequest().body(null);
+            Map<String, Object> result = logService.getLogEntries(fileName, keyword, page, size);
+            if ((Boolean) result.getOrDefault("success", false)) {
+                return ResponseEntity.ok(result);
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
             }
-            
-            logs.add(new LogEntry(level, message, source));
-            
-            // 保持日志数量在限制内
-            if (logs.size() > MAX_LOGS) {
-                logs.remove(0);
-            }
-            
-            Map<String, Object> result = new HashMap<>();
-            result.put("success", true);
-            result.put("message", "日志添加成功");
-            return ResponseEntity.ok(result);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", "Failed to get log entries: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
 
-    @DeleteMapping
-    public ResponseEntity<Map<String, Object>> clearLogs() {
+    @GetMapping("/download/{fileName}")
+    public ResponseEntity<Map<String, Object>> downloadLogFile(@PathVariable String fileName) {
         try {
-            logs.clear();
-            Map<String, Object> result = new HashMap<>();
-            result.put("success", true);
-            result.put("message", "日志已清空");
-            return ResponseEntity.ok(result);
+            Map<String, Object> result = logService.downloadLogFile(fileName);
+            if ((Boolean) result.getOrDefault("success", false)) {
+                return ResponseEntity.ok(result);
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(result);
+            }
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", "Failed to download log file: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
 
-    @GetMapping("/count")
-    public ResponseEntity<Map<String, Object>> getLogCount() {
+    @PostMapping("/clear")
+    public ResponseEntity<Map<String, Object>> clearOldLogs(@RequestBody Map<String, Object> request) {
         try {
-            Map<String, Object> result = new HashMap<>();
-            result.put("count", logs.size());
-            result.put("maxCount", MAX_LOGS);
-            return ResponseEntity.ok(result);
+            int days = ((Number) request.getOrDefault("days", 7)).intValue();
+            Map<String, Object> result = logService.clearOldLogs(days);
+            if ((Boolean) result.getOrDefault("success", false)) {
+                return ResponseEntity.ok(result);
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
+            }
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", "Failed to clear old logs: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
 }

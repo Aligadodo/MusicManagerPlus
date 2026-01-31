@@ -54,6 +54,17 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
   int _completedTasks = 0;
   int _totalTasks = 0;
 
+  // 运行参数配置
+  bool _showAdvancedParams = false;
+  int _globalPreviewLimit = 100;
+  int _globalExecutionLimit = 100;
+  bool _unlimitedPreview = false;
+  bool _unlimitedExecution = false;
+  int _previewTimeout = 300;
+  int _executionTimeout = 600;
+  bool _unlimitedPreviewTimeout = false;
+  bool _unlimitedExecutionTimeout = false;
+
   @override
   void initState() {
     super.initState();
@@ -280,10 +291,13 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
   // Header部分 - 包含预览、运行、中止按钮
   Widget _buildHeader() {
     return Card(
+      key: const ValueKey('preview_header_card'),
       elevation: 4,
       child: Padding(
+        key: const ValueKey('preview_header_padding'),
         padding: const EdgeInsets.all(16.0),
         child: Row(
+          key: const ValueKey('preview_header_row'),
           children: [
             const Text(
               '任务预览',
@@ -293,52 +307,49 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
               ),
             ),
             const Spacer(),
-            if (_isAnalyzing)
-              const Row(
-                children: [
-                  SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                  SizedBox(width: 10),
-                  Text('处理中...'),
-                ],
-              )
-            else
-              Row(
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: _analyzePipeline,
-                    icon: const Icon(Icons.visibility),
-                    label: const Text('分析变更'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  ElevatedButton.icon(
-                    onPressed: _executePipeline,
-                    icon: const Icon(Icons.play_arrow),
-                    label: const Text('执行变更'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  ElevatedButton.icon(
-                    onPressed: _stopPipeline,
-                    icon: const Icon(Icons.stop),
-                    label: const Text('中止'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ],
+            if (_isAnalyzing) ...[
+              SizedBox(
+                key: const ValueKey('analyzing_indicator'),
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
               ),
+              const SizedBox(width: 10),
+              Text('处理中...'),
+            ] else ...[
+              ElevatedButton.icon(
+                key: const ValueKey('analyze_button'),
+                onPressed: _analyzePipeline,
+                icon: const Icon(Icons.visibility),
+                label: const Text('分析变更'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 10),
+              ElevatedButton.icon(
+                key: const ValueKey('execute_button'),
+                onPressed: _executePipeline,
+                icon: const Icon(Icons.play_arrow),
+                label: const Text('执行变更'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 10),
+              ElevatedButton.icon(
+                key: const ValueKey('stop_button'),
+                onPressed: _stopPipeline,
+                icon: const Icon(Icons.stop),
+                label: const Text('中止'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -351,9 +362,11 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          key: const ValueKey('filter_bar_column'),
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              key: const ValueKey('filter_bar_search_row'),
               children: [
                 Expanded(
                   child: TextField(
@@ -413,33 +426,39 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
             ),
             const SizedBox(height: 16),
             Row(
+              key: const ValueKey('filter_bar_checkbox_row'),
+              mainAxisSize: MainAxisSize.min,
               children: [
-                CheckboxListTile(
-                  title: const Text('仅显示变更'),
-                  value: _hideUnchanged,
-                  onChanged: (value) {
-                    setState(() {
-                      _hideUnchanged = value ?? true;
-                      _currentPage = 1;
-                    });
-                    _fetchChanges();
-                  },
-                  controlAffinity: ListTileControlAffinity.leading,
-                  contentPadding: EdgeInsets.zero,
-                  visualDensity: VisualDensity.compact,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Checkbox(
+                      value: _hideUnchanged,
+                      onChanged: (value) {
+                        setState(() {
+                          _hideUnchanged = value ?? true;
+                          _currentPage = 1;
+                        });
+                        _fetchChanges();
+                      },
+                    ),
+                    const Text('仅显示变更'),
+                  ],
                 ),
                 const SizedBox(width: 20),
-                CheckboxListTile(
-                  title: const Text('自动刷新'),
-                  value: _autoRefresh,
-                  onChanged: (value) {
-                    setState(() {
-                      _autoRefresh = value ?? true;
-                    });
-                  },
-                  controlAffinity: ListTileControlAffinity.leading,
-                  contentPadding: EdgeInsets.zero,
-                  visualDensity: VisualDensity.compact,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Checkbox(
+                      value: _autoRefresh,
+                      onChanged: (value) {
+                        setState(() {
+                          _autoRefresh = value ?? true;
+                        });
+                      },
+                    ),
+                    const Text('自动刷新'),
+                  ],
                 ),
                 const SizedBox(width: 20),
                 const Text('分页大小:'),
@@ -451,25 +470,26 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
                     DropdownMenuItem(value: 20, child: Text('20')),
                     DropdownMenuItem(value: 50, child: Text('50')),
                     DropdownMenuItem(value: 100, child: Text('100')),
+                    DropdownMenuItem(value: 200, child: Text('200')),
                   ],
                   onChanged: (value) {
                     setState(() {
                       _pageSize = value ?? 20;
                       _currentPage = 1;
-                      _fetchChanges();
                     });
+                    _fetchChanges();
                   },
                 ),
                 const SizedBox(width: 20),
-                const Text('列表刷新间隔:'),
+                const Text('列表刷新间隔(秒):'),
                 const SizedBox(width: 10),
                 DropdownButton<int>(
                   value: _listRefreshInterval,
                   items: const [
-                    DropdownMenuItem(value: 1, child: Text('1秒')),
-                    DropdownMenuItem(value: 2, child: Text('2秒')),
-                    DropdownMenuItem(value: 5, child: Text('5秒')),
-                    DropdownMenuItem(value: 10, child: Text('10秒')),
+                    DropdownMenuItem(value: 1, child: Text('1')),
+                    DropdownMenuItem(value: 2, child: Text('2')),
+                    DropdownMenuItem(value: 5, child: Text('5')),
+                    DropdownMenuItem(value: 10, child: Text('10')),
                   ],
                   onChanged: (value) {
                     setState(() {
@@ -478,14 +498,14 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
                   },
                 ),
                 const SizedBox(width: 20),
-                const Text('进度刷新间隔:'),
+                const Text('进度刷新间隔(秒):'),
                 const SizedBox(width: 10),
                 DropdownButton<int>(
                   value: _progressRefreshInterval,
                   items: const [
-                    DropdownMenuItem(value: 1, child: Text('1秒')),
-                    DropdownMenuItem(value: 2, child: Text('2秒')),
-                    DropdownMenuItem(value: 5, child: Text('5秒')),
+                    DropdownMenuItem(value: 1, child: Text('1')),
+                    DropdownMenuItem(value: 2, child: Text('2')),
+                    DropdownMenuItem(value: 5, child: Text('5')),
                   ],
                   onChanged: (value) {
                     setState(() {
@@ -493,57 +513,252 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
                     });
                   },
                 ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                const Text('预览线程数:'),
-                const SizedBox(width: 10),
-                DropdownButton<int>(
-                  value: _previewThreads,
-                  items: List.generate(16, (index) => index + 1)
-                      .map((value) => DropdownMenuItem(value: value, child: Text('$value')))
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _previewThreads = value ?? 10;
-                    });
-                  },
-                ),
                 const SizedBox(width: 20),
-                const Text('执行线程数:'),
-                const SizedBox(width: 10),
-                DropdownButton<int>(
-                  value: _executionThreads,
-                  items: List.generate(12, (index) => index + 1)
-                      .map((value) => DropdownMenuItem(value: value, child: Text('$value')))
-                      .toList(),
-                  onChanged: (value) {
+                TextButton.icon(
+                  onPressed: () {
                     setState(() {
-                      _executionThreads = value ?? 4;
+                      _showAdvancedParams = !_showAdvancedParams;
                     });
                   },
-                ),
-                const SizedBox(width: 20),
-                const Text('线程池模式:'),
-                const SizedBox(width: 10),
-                DropdownButton<String>(
-                  value: _threadPoolMode,
-                  items: const [
-                    DropdownMenuItem(value: 'GLOBAL', child: Text('全局统一')),
-                    DropdownMenuItem(value: 'ROOT_PATH', child: Text('根路径独立')),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      _threadPoolMode = value ?? 'GLOBAL';
-                    });
-                  },
+                  icon: Icon(_showAdvancedParams ? Icons.expand_less : Icons.expand_more),
+                  label: Text(_showAdvancedParams ? '收起高级参数' : '展开高级参数'),
                 ),
               ],
             ),
+            if (_showAdvancedParams)
+              Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: _buildAdvancedParams(),
+              ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildAdvancedParams() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '线程池配置',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            key: const ValueKey('thread_pool_mode_row'),
+            children: [
+              const Text('线程池模式:'),
+              const SizedBox(width: 10),
+              DropdownButton<String>(
+                value: _threadPoolMode,
+                items: const [
+                  DropdownMenuItem(value: 'GLOBAL', child: Text('全局统一配置')),
+                  DropdownMenuItem(value: 'ROOT_PATH', child: Text('根路径独立配置')),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _threadPoolMode = value ?? 'GLOBAL';
+                  });
+                },
+              ),
+              const SizedBox(width: 20),
+              const Text('预览线程数:'),
+              const SizedBox(width: 10),
+              SizedBox(
+                width: 80,
+                child: TextField(
+                  keyboardType: TextInputType.number,
+                  controller: TextEditingController(text: '$_previewThreads'),
+                  onChanged: (value) {
+                    setState(() {
+                      _previewThreads = int.tryParse(value) ?? 10;
+                    });
+                  },
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 20),
+              const Text('执行线程数:'),
+              const SizedBox(width: 10),
+              SizedBox(
+                width: 80,
+                child: TextField(
+                  keyboardType: TextInputType.number,
+                  controller: TextEditingController(text: '$_executionThreads'),
+                  onChanged: (value) {
+                    setState(() {
+                      _executionThreads = int.tryParse(value) ?? 4;
+                    });
+                  },
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            '数量上限配置',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            key: const ValueKey('preview_limit_row'),
+            children: [
+              const Text('预览数量上限:'),
+              const SizedBox(width: 10),
+              SizedBox(
+                width: 80,
+                child: TextField(
+                  keyboardType: TextInputType.number,
+                  controller: TextEditingController(text: '$_globalPreviewLimit'),
+                  onChanged: (value) {
+                    setState(() {
+                      _globalPreviewLimit = int.tryParse(value) ?? 100;
+                    });
+                  },
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Checkbox(
+                value: _unlimitedPreview,
+                onChanged: (value) {
+                  setState(() {
+                    _unlimitedPreview = value ?? false;
+                  });
+                },
+              ),
+              const Text('无限制'),
+              const SizedBox(width: 20),
+              const Text('执行数量上限:'),
+              const SizedBox(width: 10),
+              SizedBox(
+                width: 80,
+                child: TextField(
+                  keyboardType: TextInputType.number,
+                  controller: TextEditingController(text: '$_globalExecutionLimit'),
+                  onChanged: (value) {
+                    setState(() {
+                      _globalExecutionLimit = int.tryParse(value) ?? 100;
+                    });
+                  },
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Checkbox(
+                value: _unlimitedExecution,
+                onChanged: (value) {
+                  setState(() {
+                    _unlimitedExecution = value ?? false;
+                  });
+                },
+              ),
+              const Text('无限制'),
+            ],
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            '超时配置',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            key: const ValueKey('preview_timeout_row'),
+            children: [
+              const Text('预览超时(秒):'),
+              const SizedBox(width: 10),
+              SizedBox(
+                width: 80,
+                child: TextField(
+                  keyboardType: TextInputType.number,
+                  controller: TextEditingController(text: '$_previewTimeout'),
+                  onChanged: (value) {
+                    setState(() {
+                      _previewTimeout = int.tryParse(value) ?? 300;
+                    });
+                  },
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Checkbox(
+                value: _unlimitedPreviewTimeout,
+                onChanged: (value) {
+                  setState(() {
+                    _unlimitedPreviewTimeout = value ?? false;
+                  });
+                },
+              ),
+              const Text('无限制'),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            key: const ValueKey('execution_timeout_row'),
+            children: [
+              const Text('执行超时(秒):'),
+              const SizedBox(width: 10),
+              SizedBox(
+                width: 80,
+                child: TextField(
+                  keyboardType: TextInputType.number,
+                  controller: TextEditingController(text: '$_executionTimeout'),
+                  onChanged: (value) {
+                    setState(() {
+                      _executionTimeout = int.tryParse(value) ?? 600;
+                    });
+                  },
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Checkbox(
+                value: _unlimitedExecutionTimeout,
+                onChanged: (value) {
+                  setState(() {
+                    _unlimitedExecutionTimeout = value ?? false;
+                  });
+                },
+              ),
+              const Text('无限制'),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -554,6 +769,7 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Row(
+          key: const ValueKey('stats_bar_row'),
           children: [
             Expanded(
               child: _buildStatItem('总记录', '${_changeRecords.length}', Icons.list),
@@ -702,6 +918,7 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
                           ),
                           DataCell(
                             Row(
+                              key: ValueKey('status_cell_${record.id}'),
                               children: [
                                 Icon(
                                   _getStatusIcon(record.status),
@@ -815,7 +1032,7 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
               labelStyle: TextStyle(color: Colors.purple.shade700),
             ),
             Chip(
-              label: Text('分页: $_currentPage/$(_totalPages > 0 ? _totalPages : 1), $(_pageSize)条/页'),
+              label: Text('分页: ${_currentPage}/${_totalPages > 0 ? _totalPages : 1}, ${_pageSize}条/页'),
               backgroundColor: Colors.teal.shade100,
               labelStyle: TextStyle(color: Colors.teal.shade700),
             ),
@@ -848,6 +1065,7 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
         ),
         const SizedBox(height: 8),
         Row(
+          key: const ValueKey('progress_info_row'),
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(

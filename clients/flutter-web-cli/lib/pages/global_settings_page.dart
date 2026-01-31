@@ -1,13 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class GlobalSettingsPage extends StatefulWidget {
+// 文件类型树形结构
+class FileTypeNode {
+  final String name;
+  final String? extension;
+  final List<FileTypeNode> children;
+  bool isSelected;
+
+  FileTypeNode({
+    required this.name,
+    this.extension,
+    required this.children,
+    this.isSelected = false,
+  });
+}
+
+class GlobalSettingsPage extends ConsumerStatefulWidget {
   const GlobalSettingsPage({super.key});
 
   @override
-  State<GlobalSettingsPage> createState() => _GlobalSettingsPageState();
+  ConsumerState<GlobalSettingsPage> createState() => _GlobalSettingsPageState();
 }
 
-class _GlobalSettingsPageState extends State<GlobalSettingsPage> {
+class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
   // 线程池配置
   int _previewThreads = 10;
   int _executionThreads = 4;
@@ -32,6 +48,86 @@ class _GlobalSettingsPageState extends State<GlobalSettingsPage> {
   ];
   String _newFilterRule = '';
 
+  // 初始化文件类型树
+  FileTypeNode _initFileTypeTree() {
+    return FileTypeNode(
+      name: '所有文件类型',
+      children: [
+        FileTypeNode(
+          name: '音频文件',
+          children: [
+            FileTypeNode(name: 'MP3', extension: 'mp3', children: []),
+            FileTypeNode(name: 'WAV', extension: 'wav', children: []),
+            FileTypeNode(name: 'FLAC', extension: 'flac', children: []),
+            FileTypeNode(name: 'AAC', extension: 'aac', children: []),
+            FileTypeNode(name: 'WMA', extension: 'wma', children: []),
+            FileTypeNode(name: 'OGG', extension: 'ogg', children: []),
+          ],
+        ),
+        FileTypeNode(
+          name: '视频文件',
+          children: [
+            FileTypeNode(name: 'MP4', extension: 'mp4', children: []),
+            FileTypeNode(name: 'MKV', extension: 'mkv', children: []),
+            FileTypeNode(name: 'AVI', extension: 'avi', children: []),
+            FileTypeNode(name: 'MOV', extension: 'mov', children: []),
+            FileTypeNode(name: 'WMV', extension: 'wmv', children: []),
+            FileTypeNode(name: 'FLV', extension: 'flv', children: []),
+          ],
+        ),
+        FileTypeNode(
+          name: '图片文件',
+          children: [
+            FileTypeNode(name: 'JPG/JPEG', extension: 'jpg', children: []),
+            FileTypeNode(name: 'PNG', extension: 'png', children: []),
+            FileTypeNode(name: 'GIF', extension: 'gif', children: []),
+            FileTypeNode(name: 'WebP', extension: 'webp', children: []),
+            FileTypeNode(name: 'BMP', extension: 'bmp', children: []),
+            FileTypeNode(name: 'TIFF', extension: 'tiff', children: []),
+          ],
+        ),
+        FileTypeNode(
+          name: '文档文件',
+          children: [
+            FileTypeNode(name: 'PDF', extension: 'pdf', children: []),
+            FileTypeNode(name: 'DOC/DOCX', extension: 'doc', children: []),
+            FileTypeNode(name: 'XLS/XLSX', extension: 'xls', children: []),
+            FileTypeNode(name: 'PPT/PPTX', extension: 'ppt', children: []),
+            FileTypeNode(name: 'TXT', extension: 'txt', children: []),
+            FileTypeNode(name: 'MD', extension: 'md', children: []),
+          ],
+        ),
+        FileTypeNode(
+          name: '压缩文件',
+          children: [
+            FileTypeNode(name: 'ZIP', extension: 'zip', children: []),
+            FileTypeNode(name: 'RAR', extension: 'rar', children: []),
+            FileTypeNode(name: '7Z', extension: '7z', children: []),
+            FileTypeNode(name: 'GZ', extension: 'gz', children: []),
+            FileTypeNode(name: 'TAR', extension: 'tar', children: []),
+          ],
+        ),
+        FileTypeNode(
+          name: '其他文件',
+          children: [
+            FileTypeNode(name: 'EXE', extension: 'exe', children: []),
+            FileTypeNode(name: 'DLL', extension: 'dll', children: []),
+            FileTypeNode(name: 'ISO', extension: 'iso', children: []),
+            FileTypeNode(name: 'IMG', extension: 'img', children: []),
+          ],
+        ),
+      ],
+    );
+  }
+
+  late FileTypeNode _fileTypeTree;
+
+  @override
+  void initState() {
+    super.initState();
+    _fileTypeTree = _initFileTypeTree();
+  }
+
   // 预览配置
   bool _autoRefresh = true;
   int _previewLimit = 200;
@@ -51,6 +147,8 @@ class _GlobalSettingsPageState extends State<GlobalSettingsPage> {
             _buildScanSettingsSection(),
             const SizedBox(height: 30),
             _buildFilterRulesSection(),
+            const SizedBox(height: 30),
+            _buildFileTypeTreeSection(),
             const SizedBox(height: 30),
             _buildPreviewSettingsSection(),
             const SizedBox(height: 30),
@@ -78,6 +176,7 @@ class _GlobalSettingsPageState extends State<GlobalSettingsPage> {
             ),
             const SizedBox(height: 16),
             Row(
+              key: const ValueKey('preview_threads_row'),
               children: [
                 const Text('预览线程数:'),
                 const SizedBox(width: 20),
@@ -100,6 +199,7 @@ class _GlobalSettingsPageState extends State<GlobalSettingsPage> {
             ),
             const SizedBox(height: 16),
             Row(
+              key: const ValueKey('execution_threads_row'),
               children: [
                 const Text('执行线程数:'),
                 const SizedBox(width: 20),
@@ -122,6 +222,7 @@ class _GlobalSettingsPageState extends State<GlobalSettingsPage> {
             ),
             const SizedBox(height: 16),
             Row(
+              key: const ValueKey('thread_pool_mode_row'),
               children: [
                 const Text('线程池模式:'),
                 const SizedBox(width: 20),
@@ -162,6 +263,7 @@ class _GlobalSettingsPageState extends State<GlobalSettingsPage> {
             ),
             const SizedBox(height: 16),
             Row(
+              key: const ValueKey('scan_mode_row'),
               children: [
                 const Text('扫描模式:'),
                 const SizedBox(width: 20),
@@ -212,6 +314,7 @@ class _GlobalSettingsPageState extends State<GlobalSettingsPage> {
                   Padding(
                     padding: const EdgeInsets.only(left: 120, top: 16),
                     child: Row(
+                      key: const ValueKey('recursion_depth_row'),
                       children: [
                         const Text('最小层级:'),
                         const SizedBox(width: 20),
@@ -236,6 +339,7 @@ class _GlobalSettingsPageState extends State<GlobalSettingsPage> {
                   Padding(
                     padding: const EdgeInsets.only(left: 120, top: 16),
                     child: Row(
+                      key: const ValueKey('max_recursion_depth_row'),
                       children: [
                         const Text('最大层级:'),
                         const SizedBox(width: 20),
@@ -282,6 +386,7 @@ class _GlobalSettingsPageState extends State<GlobalSettingsPage> {
             ),
             const SizedBox(height: 16),
             Row(
+              key: const ValueKey('add_filter_rule_row'),
               children: [
                 Expanded(
                   child: TextField(
@@ -321,11 +426,14 @@ class _GlobalSettingsPageState extends State<GlobalSettingsPage> {
                       border: Border.all(color: Colors.grey),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Column(
-                      children: _scanFilterList.asMap().entries.map((entry) {
-                        int index = entry.key;
-                        String rule = entry.value;
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _scanFilterList.length,
+                      itemBuilder: (context, index) {
+                        String rule = _scanFilterList[index];
                         return Row(
+                          key: ValueKey('scan_filter_rule_row_$index'),
                           children: [
                             Expanded(
                               child: Padding(
@@ -343,7 +451,7 @@ class _GlobalSettingsPageState extends State<GlobalSettingsPage> {
                             ),
                           ],
                         );
-                      }).toList(),
+                      },
                     ),
                   ),
                 ],
@@ -352,6 +460,118 @@ class _GlobalSettingsPageState extends State<GlobalSettingsPage> {
         ),
       ),
     );
+  }
+
+  // 构建文件类型树形组件
+  Widget _buildFileTypeTreeSection() {
+    return Card(
+      elevation: 4,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '文件类型筛选',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              height: 400,
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: SingleChildScrollView(
+                child: _buildFileTypeTreeNode(_fileTypeTree, 0),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                ElevatedButton(
+                  onPressed: () {
+                    // 全选
+                    _selectAll(_fileTypeTree, true);
+                    setState(() {});
+                  },
+                  child: const Text('全选'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    // 取消全选
+                    _selectAll(_fileTypeTree, false);
+                    setState(() {});
+                  },
+                  child: const Text('取消全选'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 递归构建树形节点
+  Widget _buildFileTypeTreeNode(FileTypeNode node, int level) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          margin: EdgeInsets.only(left: level * 20.0),
+          child: Row(
+            children: [
+              Checkbox(
+                value: node.isSelected,
+                onChanged: (value) {
+                  setState(() {
+                    node.isSelected = value ?? false;
+                    // 递归更新子节点
+                    _updateChildrenSelection(node, value ?? false);
+                  });
+                },
+              ),
+              Text(node.name),
+              if (node.extension != null)
+                Padding(
+                  padding: const EdgeInsets.only(left: 10),
+                  child: Text(
+                    '(.${node.extension})',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        if (node.children.isNotEmpty)
+          Column(
+            children: node.children
+                .map((child) => _buildFileTypeTreeNode(child, level + 1))
+                .toList(),
+          ),
+      ],
+    );
+  }
+
+  // 更新子节点选择状态
+  void _updateChildrenSelection(FileTypeNode node, bool isSelected) {
+    for (var child in node.children) {
+      child.isSelected = isSelected;
+      _updateChildrenSelection(child, isSelected);
+    }
+  }
+
+  // 全选/取消全选
+  void _selectAll(FileTypeNode node, bool isSelected) {
+    node.isSelected = isSelected;
+    for (var child in node.children) {
+      _selectAll(child, isSelected);
+    }
   }
 
   Widget _buildPreviewSettingsSection() {
@@ -371,6 +591,7 @@ class _GlobalSettingsPageState extends State<GlobalSettingsPage> {
             ),
             const SizedBox(height: 16),
             Row(
+              key: const ValueKey('auto_refresh_row'),
               children: [
                 Checkbox(
                   value: _autoRefresh,
@@ -385,6 +606,7 @@ class _GlobalSettingsPageState extends State<GlobalSettingsPage> {
             ),
             const SizedBox(height: 16),
             Row(
+              key: const ValueKey('preview_limit_row'),
               children: [
                 const Text('预览数量限制:'),
                 const SizedBox(width: 20),
@@ -413,6 +635,7 @@ class _GlobalSettingsPageState extends State<GlobalSettingsPage> {
 
   Widget _buildActionButtons() {
     return Row(
+      key: const ValueKey('action_buttons_row'),
       children: [
         Expanded(
           child: ElevatedButton(
@@ -455,6 +678,8 @@ class _GlobalSettingsPageState extends State<GlobalSettingsPage> {
                 ];
                 _autoRefresh = true;
                 _previewLimit = 200;
+                // 重置文件类型树
+                _fileTypeTree = _initFileTypeTree();
               });
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('配置已重置')),

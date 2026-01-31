@@ -87,7 +87,7 @@ fi
 echo "[4/8] 构建前端应用..."
 export PATH="$FLUTTER_SDK/bin:$PATH"
 cd clients/flutter-web-cli
-flutter build web
+flutter build web --release
 if [ $? -ne 0 ]; then
     echo "[错误] Flutter 构建失败！"
     cd ../..

@@ -172,17 +172,20 @@ class _TaskMonitorPageState extends ConsumerState<TaskMonitorPage> {
                                 Text('额外参数: ${change.extraParams}'),
                             ],
                           ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                _getStatusIcon(change.status),
-                                size: 16,
-                                color: _getChangeStatusColor(change.status),
-                              ),
-                              const SizedBox(width: 4),
-                              Text(change.status),
-                            ],
+                          trailing: SizedBox(
+                            width: 100,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                Icon(
+                                  _getStatusIcon(change.status),
+                                  size: 16,
+                                  color: _getChangeStatusColor(change.status),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(change.status),
+                              ],
+                            ),
                           ),
                         ),
                       );

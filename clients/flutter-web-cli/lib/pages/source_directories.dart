@@ -196,6 +196,7 @@ class _SourceDirectoriesPageState extends ConsumerState<SourceDirectoriesPage> {
                     ),
                     const SizedBox(height: 16),
                     Row(
+                      key: const ValueKey('add_directory_path_row'),
                       children: [
                         Expanded(
                           child: TextField(
@@ -242,6 +243,7 @@ class _SourceDirectoriesPageState extends ConsumerState<SourceDirectoriesPage> {
               ),
             const SizedBox(height: 20),
             Row(
+              key: const ValueKey('source_directories_header_row'),
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
@@ -275,14 +277,39 @@ class _SourceDirectoriesPageState extends ConsumerState<SourceDirectoriesPage> {
                     return Card(
                       elevation: 2,
                       margin: const EdgeInsets.only(bottom: 10),
-                      child: ListTile(
-                        title: Text(directory.path),
-                        subtitle: Text('线程数: ${directory.threadCount}'),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () {
-                            _removeSourceDirectory(directory.path);
-                          },
+                      child: InkWell(
+                        onTap: () {},
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      directory.path,
+                                      style: const TextStyle(fontWeight: FontWeight.bold),
+                                    ),
+                                    Text(
+                                      '线程数: ${directory.threadCount}',
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(
+                                width: 50,
+                                child: IconButton(
+                                  icon: const Icon(Icons.delete, color: Colors.red),
+                                  onPressed: () {
+                                    _removeSourceDirectory(directory.path);
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     );

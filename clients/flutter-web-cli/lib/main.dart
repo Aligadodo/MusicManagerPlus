@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:filemanager_flutter/api/api_client.dart';
@@ -15,11 +16,20 @@ import 'package:filemanager_flutter/pages/log_page.dart';
 import 'package:filemanager_flutter/pages/appearance_page.dart';
 import 'package:filemanager_flutter/pages/global_settings_page.dart';
 
+
+final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());
+
 void main() {
-  runApp(
-    const ProviderScope(
-      child: FileManagerApp(),
+  runZonedGuarded(
+    () => runApp(
+      const ProviderScope(
+        child: FileManagerApp(),
+      ),
     ),
+    (error, stack) {
+      print('Uncaught error: $error');
+      print('Stack trace: $stack');
+    },
   );
 }
 
@@ -205,31 +215,36 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
 
   Widget _buildCheckboxes() {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        CheckboxListTile(
-          title: const Text('开启使用说明'),
-          value: _showTooltips,
-          onChanged: (value) {
-            setState(() {
-              _showTooltips = value ?? true;
-            });
-          },
-          controlAffinity: ListTileControlAffinity.leading,
-          contentPadding: EdgeInsets.zero,
-          visualDensity: VisualDensity.compact,
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Checkbox(
+              value: _showTooltips,
+              onChanged: (value) {
+                setState(() {
+                  _showTooltips = value ?? true;
+                });
+              },
+            ),
+            const Text('开启使用说明'),
+          ],
         ),
         const SizedBox(width: 10),
-        CheckboxListTile(
-          title: const Text('预览成功立即运行'),
-          value: _autoRun,
-          onChanged: (value) {
-            setState(() {
-              _autoRun = value ?? false;
-            });
-          },
-          controlAffinity: ListTileControlAffinity.leading,
-          contentPadding: EdgeInsets.zero,
-          visualDensity: VisualDensity.compact,
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Checkbox(
+              value: _autoRun,
+              onChanged: (value) {
+                setState(() {
+                  _autoRun = value ?? false;
+                });
+              },
+            ),
+            const Text('预览成功立即运行'),
+          ],
         ),
       ],
     );
