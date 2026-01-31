@@ -43,10 +43,9 @@ build/
 
 ### Local File ###
 /setting/fmplus_config.properties
-clients/flutter-web-cli/.dart_tool/package_config.json
-clients/flutter-web-cli/.dart_tool/package_graph.json
-clients/flutter-web-cli/pubspec.lock
-clients/flutter-web-cli/.dart_tool/version
-clients/flutter-web-cli/.dart_tool/package_config.json
-clients/flutter-web-cli/.dart_tool/package_graph.json
-clients/flutter-web-cli/.flutter-plugins-dependencies
+*/package_config.json
+*/package_graph.json
+*/pubspec.lock
+*/version
+*/.flutter-plugins-dependencies
+*/pubspec.lock

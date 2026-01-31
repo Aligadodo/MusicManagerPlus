@@ -81,12 +81,12 @@ cd ..\..
 
 REM --- 5. 复制后端文件 ---
 echo [5/8] 复制后端文件...
-if not exist "backend\target\backend.jar" (
+if not exist "backend\target\backend-1.0.0.jar" (
     echo [错误] backend 目录下没找到 jar 包。
     pause
     exit /b 1
 )
-copy "backend\target\backend.jar" "%BUILD_OUTPUT%\backend\" >nul
+copy "backend\target\backend-1.0.0.jar" "%BUILD_OUTPUT%\backend\" >nul
 
 REM --- 6. 复制前端文件 ---
 echo [6/8] 复制前端文件...
@@ -94,7 +94,7 @@ xcopy /E /I /Q /Y "clients\flutter-web-cli\build\web" "%BUILD_OUTPUT%\frontend" 
 
 REM --- 7. 复制 JDK ---
 echo [7/8] 复制 JDK 运行时...
-xcopy /E /I /Q /Y "%SOURCE_JDK%\jre" "%BUILD_OUTPUT%\jdk" >nul
+xcopy /E /I /Q /Y "%SOURCE_JDK%" "%BUILD_OUTPUT%\jdk" >nul
 
 REM 二次检查复制结果
 if not exist "%BUILD_OUTPUT%\jdk\bin\java.exe" (
@@ -116,7 +116,7 @@ REM 生成后端启动脚本
     echo echo 服务地址: http://localhost:8080
     echo echo 按 Ctrl+C 停止服务
     echo echo.
-    echo "jdk\bin\java.exe" -Xms512m -Xmx1g -jar "backend\backend.jar"
+    echo "jdk\bin\java.exe" -Xms512m -Xmx1g -jar "backend\backend-1.0.0.jar"
 ) > "%BUILD_OUTPUT%\start-backend.bat"
 
 REM 生成前端启动脚本

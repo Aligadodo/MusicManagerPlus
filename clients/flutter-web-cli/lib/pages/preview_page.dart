@@ -435,9 +435,9 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
                       DataCell(Text(record.newName ?? '-')),
                       DataCell(
                         Tooltip(
-                          message: record.filePath,
+                          message: record.filePath ?? '',
                           child: Text(
-                            record.filePath,
+                            record.filePath ?? '',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
