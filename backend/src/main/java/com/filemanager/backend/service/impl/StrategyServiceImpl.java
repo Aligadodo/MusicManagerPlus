@@ -8,6 +8,7 @@ import com.filemanager.domain.service.StrategyService;
 import com.filemanager.plugin.PluginRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import javax.annotation.PostConstruct;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,6 +28,37 @@ public class StrategyServiceImpl implements StrategyService {
     public StrategyServiceImpl() {
         // 初始化内置策略
         initBuiltInStrategies();
+    }
+    
+    @PostConstruct
+    private void initPluginStrategies() {
+        // 从插件注册表加载策略
+        List<com.filemanager.plugin.IPlugin> plugins = pluginRegistry.getAvailablePlugins();
+        for (com.filemanager.plugin.IPlugin plugin : plugins) {
+            StrategyInfoDTO strategy = new StrategyInfoDTO();
+            strategy.setId(plugin.getId());
+            strategy.setName(plugin.getName());
+            strategy.setDescription(plugin.getDescription());
+            strategy.setEnabled(true);
+            
+            // 转换插件参数为策略配置字段
+            List<ConfigFieldDTO> configFields = new ArrayList<>();
+            if (plugin.getParameters() != null) {
+                for (com.filemanager.domain.dto.PluginParameterDTO param : plugin.getParameters()) {
+                    ConfigFieldDTO field = new ConfigFieldDTO(
+                        param.getName(),
+                        param.getLabel(),
+                        param.getType(),
+                        param.getDefaultValue(),
+                        param.getDescription(),
+                        param.isRequired()
+                    );
+                    configFields.add(field);
+                }
+            }
+            strategy.setConfigFields(configFields);
+            strategies.put(strategy.getId(), strategy);
+        }
     }
 
     private void initBuiltInStrategies() {

@@ -1,3 +1,4 @@
+import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:filemanager_flutter/api/api_client.dart';
@@ -55,6 +56,37 @@ class _SourceDirectoriesPageState extends ConsumerState<SourceDirectoriesPage> {
     } finally {
       setState(() {
         _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _pickDirectory() async {
+    try {
+      // 创建一个隐藏的文件输入元素
+      final input = html.InputElement(type: 'file')
+        ..attributes['webkitdirectory'] = 'true'
+        ..attributes['directory'] = 'true'
+        ..multiple = false;
+
+      // 监听文件选择事件
+      input.onChange.listen((event) {
+        if (input.files?.isNotEmpty == true) {
+          final file = input.files![0];
+          // 从文件路径中提取目录路径
+          final path = file.relativePath ?? '';
+          if (path.isNotEmpty) {
+            setState(() {
+              _pathController.text = path;
+            });
+          }
+        }
+      });
+
+      // 触发文件选择对话框
+      input.click();
+    } catch (e) {
+      setState(() {
+        _errorMessage = '选择目录失败: $e';
       });
     }
   }
@@ -163,12 +195,23 @@ class _SourceDirectoriesPageState extends ConsumerState<SourceDirectoriesPage> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    TextField(
-                      controller: _pathController,
-                      decoration: const InputDecoration(
-                        labelText: '目录路径',
-                        border: OutlineInputBorder(),
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _pathController,
+                            decoration: const InputDecoration(
+                              labelText: '目录路径',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        ElevatedButton(
+                          onPressed: _pickDirectory,
+                          child: const Text('选择目录'),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 16),
                     TextField(

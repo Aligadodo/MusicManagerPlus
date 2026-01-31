@@ -12,10 +12,10 @@ echo "==========================================="
 # =================配置区域=================
 # 请根据你的实际情况修改这些路径！！
 # JDK 21 路径 (指向包含 bin 和 lib 文件夹的 jdk 目录)
-SOURCE_JDK="/Library/Java/JavaVirtualMachines/jdk-21.jdk/Contents/Home"
+SOURCE_JDK="/Library/Java/JavaVirtualMachines/openjdk-21.jdk/Contents/Home"
 
 # Flutter SDK 路径
-FLUTTER_SDK="/Users/$(whoami)/flutter"
+FLUTTER_SDK="/Users/hrcao/Documents/flutter"
 
 # 工具文件路径
 SOURCE_TOOLS="/Users/$(whoami)/projects/pack/tools"
@@ -31,7 +31,8 @@ echo "[1/8] 正在检查构建环境..."
 if [ ! -f "$SOURCE_JDK/bin/java" ]; then
     echo "[错误] JDK 路径不存在 java: \"$SOURCE_JDK/bin/java\""
     echo "请修改脚本中的 SOURCE_JDK 变量。"
-    read -p "按 Enter 键退出..."
+    echo "将在 10 秒后自动退出..."
+    sleep 10
     exit 1
 fi
 
@@ -39,21 +40,24 @@ fi
 if [ ! -f "$FLUTTER_SDK/bin/flutter" ]; then
     echo "[错误] Flutter SDK 路径不存在: \"$FLUTTER_SDK/bin/flutter\""
     echo "请修改脚本中的 FLUTTER_SDK 变量。"
-    read -p "按 Enter 键退出..."
+    echo "将在 10 秒后自动退出..."
+    sleep 10
     exit 1
 fi
 
 # 检查 Maven 环境
 if ! command -v mvn &> /dev/null; then
     echo "[错误] Maven 未找到，请确保 Maven 已添加到 PATH。"
-    read -p "按 Enter 键退出..."
+    echo "将在 10 秒后自动退出..."
+    sleep 10
     exit 1
 fi
 
 # 检查 Python 环境
 if ! command -v python3 &> /dev/null; then
     echo "[错误] Python 3 未找到，请确保 Python 3 已安装。"
-    read -p "按 Enter 键退出..."
+    echo "将在 10 秒后自动退出..."
+    sleep 10
     exit 1
 fi
 
@@ -74,7 +78,8 @@ echo "[3/8] 构建后端服务..."
 mvn clean package -DskipTests
 if [ $? -ne 0 ]; then
     echo "[错误] Maven 打包失败！"
-    read -p "按 Enter 键退出..."
+    echo "将在 10 秒后自动退出..."
+    sleep 10
     exit 1
 fi
 
@@ -82,24 +87,26 @@ fi
 echo "[4/8] 构建前端应用..."
 export PATH="$FLUTTER_SDK/bin:$PATH"
 cd clients/flutter-web-cli
-flutter build web --web-renderer html
+flutter build web
 if [ $? -ne 0 ]; then
     echo "[错误] Flutter 构建失败！"
     cd ../..
-    read -p "按 Enter 键退出..."
+    echo "将在 10 秒后自动退出..."
+    sleep 10
     exit 1
 fi
 cd ../..
 
 # --- 5. 复制后端文件 ---
 echo "[5/8] 复制后端文件..."
-if [ ! -f "backend/target/backend.jar" ]; then
+if [ ! -f "backend/target/backend-1.0.0.jar" ]; then
     echo "[错误] backend 目录下没找到 jar 包。"
-    read -p "按 Enter 键退出..."
+    echo "将在 10 秒后自动退出..."
+    sleep 10
     exit 1
 fi
 
-cp "backend/target/backend.jar" "$BUILD_OUTPUT/backend/"
+cp "backend/target/backend-1.0.0.jar" "$BUILD_OUTPUT/backend/backend.jar"
 
 # --- 6. 复制前端文件 ---
 echo "[6/8] 复制前端文件..."
@@ -114,7 +121,8 @@ elif [ -d "$SOURCE_JDK" ]; then
     cp -r "$SOURCE_JDK"/* "$BUILD_OUTPUT/jdk/"
 else
     echo "[错误] 无法找到 JDK 运行时目录。"
-    read -p "按 Enter 键退出..."
+    echo "将在 10 秒后自动退出..."
+    sleep 10
     exit 1
 fi
 
@@ -122,7 +130,8 @@ fi
 if [ ! -f "$BUILD_OUTPUT/jdk/bin/java" ]; then
     echo "[致命错误] JDK 复制失败！$BUILD_OUTPUT/jdk/bin/java 不存在。"
     echo "请检查是否有权限读取源目录。"
-    read -p "按 Enter 键退出..."
+    echo "将在 10 秒后自动退出..."
+    sleep 10
     exit 1
 fi
 
@@ -433,4 +442,5 @@ echo "3. start-all.sh - 一键启动所有服务"
 echo "4. stop-all.sh - 停止所有服务"
 echo "5. restart-all.sh - 重启所有服务"
 echo "==========================================="
-read -p "按 Enter 键退出..."
+echo "将在 10 秒后自动退出..."
+sleep 10

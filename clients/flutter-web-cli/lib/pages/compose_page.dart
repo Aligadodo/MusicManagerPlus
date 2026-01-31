@@ -1,3 +1,4 @@
+import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:filemanager_flutter/api/api_client.dart';
@@ -8,6 +9,8 @@ import 'package:filemanager_flutter/models/source_directory.dart';
 import 'package:filemanager_flutter/models/strategy_info.dart';
 import 'package:filemanager_flutter/models/strategy_config.dart';
 import 'package:filemanager_flutter/models/config_field.dart';
+import 'package:filemanager_flutter/models/precondition.dart';
+import 'package:filemanager_flutter/models/precondition_group.dart';
 
 class ComposePage extends ConsumerStatefulWidget {
   const ComposePage({super.key});
@@ -26,7 +29,10 @@ class _ComposePageState extends ConsumerState<ComposePage> {
   List<StrategyInfo> _pipelineStrategies = [];
   List<StrategyInfo> _availableStrategies = [];
   StrategyInfo? _selectedStrategy;
+  StrategyInfo? _selectedPipelineStrategy; // 保存用户选择的策略
   StrategyConfig? _strategyConfig;
+  List<PreconditionGroup> _preconditionGroups = []; // 前置条件组
+  bool _autoRun = false; // 预览成功后自动运行
 
   bool _isLoading = false;
   String _errorMessage = '';
@@ -68,8 +74,37 @@ class _ComposePageState extends ConsumerState<ComposePage> {
 
   Future<void> _addDirectory() async {
     try {
+      // 打开目录选择对话框
+      final input = html.InputElement(type: 'file')
+        ..attributes['webkitdirectory'] = 'true'
+        ..attributes['directory'] = 'true'
+        ..multiple = false;
+
+      // 监听文件选择事件
+      input.onChange.listen((event) {
+        if (input.files?.isNotEmpty == true) {
+          final file = input.files![0];
+          // 从文件路径中提取目录路径
+          final path = file.relativePath ?? '';
+          if (path.isNotEmpty) {
+            _doAddDirectory(path);
+          }
+        }
+      });
+
+      // 触发文件选择对话框
+      input.click();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('选择目录失败: $e')),
+      );
+    }
+  }
+
+  Future<void> _doAddDirectory(String path) async {
+    try {
       final directory = await _sourceDirectoryService.addSourceDirectory(
-        SourceDirectory(path: '/tmp/test', threadCount: 4),
+        SourceDirectory(path: path, threadCount: 4),
       );
       setState(() {
         _sourceDirectories.add(directory);
@@ -89,12 +124,19 @@ class _ComposePageState extends ConsumerState<ComposePage> {
 
   Future<void> _addStrategyStep() async {
     try {
-      final strategy = _availableStrategies.firstWhere(
-        (s) => s.id == 'file-cleanup',
-        orElse: () => _availableStrategies.first,
-      );
+      StrategyInfo? strategy;
+      if (_selectedPipelineStrategy != null) {
+        // 使用用户选择的策略
+        strategy = _selectedPipelineStrategy;
+      } else if (_availableStrategies.isNotEmpty) {
+        // 如果用户没有选择策略，使用第一个策略
+        strategy = _availableStrategies.first;
+      } else {
+        throw Exception('没有可用的策略');
+      }
+      
       setState(() {
-        _pipelineStrategies.add(strategy);
+        _pipelineStrategies.add(strategy!);
       });
       await _pipelineService.updatePipeline(_pipelineStrategies);
     } catch (e) {
@@ -170,22 +212,105 @@ class _ComposePageState extends ConsumerState<ComposePage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                flex: 3,
+                flex: 1,
                 child: _buildLeftPanel(),
               ),
               Expanded(
-                flex: 35,
+                flex: 2,
                 child: _buildMidPanel(),
               ),
               Expanded(
-                flex: 35,
+                flex: 2,
                 child: _buildRightPanel(),
               ),
             ],
           ),
         ),
+        _buildActionButtons(),
       ],
     );
+  }
+
+  Widget _buildActionButtons() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          ElevatedButton.icon(
+            onPressed: _previewAction,
+            icon: const Icon(Icons.visibility),
+            label: const Text('预览'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: _runAction,
+            icon: const Icon(Icons.play_arrow),
+            label: const Text('运行'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: _abortAction,
+            icon: const Icon(Icons.stop),
+            label: const Text('中止'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _previewAction() async {
+    try {
+      // 实现预览功能
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('预览功能已触发')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('预览失败: $e')),
+      );
+    }
+  }
+
+  Future<void> _runAction() async {
+    try {
+      // 实现运行功能
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('运行功能已触发')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('运行失败: $e')),
+      );
+    }
+  }
+
+  Future<void> _abortAction() async {
+    try {
+      // 实现中止功能
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('中止功能已触发')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('中止失败: $e')),
+      );
+    }
   }
 
   Widget _buildSectionHeaders() {
@@ -194,21 +319,21 @@ class _ComposePageState extends ConsumerState<ComposePage> {
       child: Row(
         children: [
           Expanded(
-            flex: 3,
+            flex: 1,
             child: _buildSectionHeader(
               'Step1-选择目录',
               '通过弹窗或者拖拽至空白处来添加需要处理的文件或文件夹。',
             ),
           ),
           Expanded(
-            flex: 35,
+            flex: 2,
             child: _buildSectionHeader(
               'Step2-流水线配置',
               '添加必要的处理流程，可同时应用不同的操作。点击任意项目，可打开详细的配置界面。（同一文件只会被修改一次）。',
             ),
           ),
           Expanded(
-            flex: 35,
+            flex: 2,
             child: _buildSectionHeader(
               'Step3-参数配置',
               '支持选中步骤并编辑步骤下的参数。支持配置步骤的前置条件，以在满足特定条件下才执行特定操作，用于更精细化的操作控制。',
@@ -504,13 +629,18 @@ class _ComposePageState extends ConsumerState<ComposePage> {
         Expanded(
           child: DropdownButton<StrategyInfo>(
             hint: const Text('选择功能...'),
+            value: _selectedPipelineStrategy,
             items: _availableStrategies.map((strategy) {
               return DropdownMenuItem<StrategyInfo>(
                 value: strategy,
                 child: Text(strategy.name),
               );
             }).toList(),
-            onChanged: (value) {},
+            onChanged: (value) {
+              setState(() {
+                _selectedPipelineStrategy = value;
+              });
+            },
             isExpanded: true,
           ),
         ),
@@ -687,22 +817,280 @@ class _ComposePageState extends ConsumerState<ComposePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            '(点击下方按钮添加条件组)',
-            style: TextStyle(
-              color: Colors.grey,
-              fontSize: 14,
+          if (_preconditionGroups.isEmpty)
+            const Text(
+              '(点击下方按钮添加条件组)',
+              style: TextStyle(
+                color: Colors.grey,
+                fontSize: 14,
+              ),
             ),
-          ),
+          if (_preconditionGroups.isNotEmpty)
+            Column(
+              children: _preconditionGroups.asMap().entries.map((entry) {
+                int index = entry.key;
+                PreconditionGroup group = entry.value;
+                return _buildPreconditionGroup(index, group);
+              }).toList(),
+            ),
           const SizedBox(height: 10),
           ElevatedButton.icon(
-            onPressed: () {},
+            onPressed: _addPreconditionGroup,
             icon: const Icon(Icons.add),
             label: const Text('添加条件组'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.blue,
               foregroundColor: Colors.white,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _addPreconditionGroup() {
+    setState(() {
+      _preconditionGroups.add(PreconditionGroup(
+        id: 'group_${DateTime.now().millisecondsSinceEpoch}',
+        name: '条件组 ${_preconditionGroups.length + 1}',
+        description: '条件组描述',
+        logicType: 'AND',
+        preconditions: [],
+      ));
+    });
+  }
+
+  void _removePreconditionGroup(int index) {
+    setState(() {
+      _preconditionGroups.removeAt(index);
+    });
+  }
+
+  Widget _buildPreconditionGroup(int index, PreconditionGroup group) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                group.name,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete, color: Colors.red),
+                onPressed: () => _removePreconditionGroup(index),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              const Text('逻辑类型:'),
+              const SizedBox(width: 10),
+              DropdownButton<String>(
+                value: group.logicType,
+                items: const [
+                  DropdownMenuItem(value: 'AND', child: Text('AND')),
+                  DropdownMenuItem(value: 'OR', child: Text('OR')),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _preconditionGroups[index] = PreconditionGroup(
+                      id: group.id,
+                      name: group.name,
+                      description: group.description,
+                      logicType: value ?? 'AND',
+                      preconditions: group.preconditions,
+                    );
+                  });
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (group.preconditions.isEmpty)
+            const Text(
+              '暂无条件，点击下方按钮添加',
+              style: TextStyle(
+                color: Colors.grey,
+                fontSize: 12,
+              ),
+            ),
+          if (group.preconditions.isNotEmpty)
+            Column(
+              children: group.preconditions.asMap().entries.map((entry) {
+                int conditionIndex = entry.key;
+                Precondition condition = entry.value;
+                return _buildPrecondition(index, conditionIndex, condition);
+              }).toList(),
+            ),
+          ElevatedButton.icon(
+            onPressed: () => _addPrecondition(index),
+            icon: const Icon(Icons.add, size: 16),
+            label: const Text('添加条件'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              minimumSize: const Size(0, 0),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _addPrecondition(int groupIndex) {
+    setState(() {
+      final group = _preconditionGroups[groupIndex];
+      final newPreconditions = List<Precondition>.from(group.preconditions);
+      newPreconditions.add(Precondition(
+        id: 'condition_${DateTime.now().millisecondsSinceEpoch}',
+        field: 'file',
+        operator: 'contains',
+        value: '',
+        description: '条件描述',
+      ));
+      _preconditionGroups[groupIndex] = PreconditionGroup(
+        id: group.id,
+        name: group.name,
+        description: group.description,
+        logicType: group.logicType,
+        preconditions: newPreconditions,
+      );
+    });
+  }
+
+  void _removePrecondition(int groupIndex, int conditionIndex) {
+    setState(() {
+      final group = _preconditionGroups[groupIndex];
+      final newPreconditions = List<Precondition>.from(group.preconditions);
+      newPreconditions.removeAt(conditionIndex);
+      _preconditionGroups[groupIndex] = PreconditionGroup(
+        id: group.id,
+        name: group.name,
+        description: group.description,
+        logicType: group.logicType,
+        preconditions: newPreconditions,
+      );
+    });
+  }
+
+  Widget _buildPrecondition(int groupIndex, int conditionIndex, Precondition condition) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 5),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: DropdownButton<String>(
+              value: condition.field,
+              items: const [
+                DropdownMenuItem(value: 'file', child: Text('文件')),
+                DropdownMenuItem(value: 'directory', child: Text('目录')),
+                DropdownMenuItem(value: 'extension', child: Text('扩展名')),
+              ],
+              onChanged: (value) {
+                setState(() {
+                  final group = _preconditionGroups[groupIndex];
+                  final newPreconditions = List<Precondition>.from(group.preconditions);
+                  newPreconditions[conditionIndex] = Precondition(
+                    id: condition.id,
+                    field: value ?? 'file',
+                    operator: condition.operator,
+                    value: condition.value,
+                    description: condition.description,
+                  );
+                  _preconditionGroups[groupIndex] = PreconditionGroup(
+                    id: group.id,
+                    name: group.name,
+                    description: group.description,
+                    logicType: group.logicType,
+                    preconditions: newPreconditions,
+                  );
+                });
+              },
+            ),
+          ),
+          Expanded(
+            child: DropdownButton<String>(
+              value: condition.operator,
+              items: const [
+                DropdownMenuItem(value: 'contains', child: Text('包含')),
+                DropdownMenuItem(value: 'equals', child: Text('等于')),
+                DropdownMenuItem(value: 'startsWith', child: Text('以...开头')),
+                DropdownMenuItem(value: 'endsWith', child: Text('以...结尾')),
+              ],
+              onChanged: (value) {
+                setState(() {
+                  final group = _preconditionGroups[groupIndex];
+                  final newPreconditions = List<Precondition>.from(group.preconditions);
+                  newPreconditions[conditionIndex] = Precondition(
+                    id: condition.id,
+                    field: condition.field,
+                    operator: value ?? 'contains',
+                    value: condition.value,
+                    description: condition.description,
+                  );
+                  _preconditionGroups[groupIndex] = PreconditionGroup(
+                    id: group.id,
+                    name: group.name,
+                    description: group.description,
+                    logicType: group.logicType,
+                    preconditions: newPreconditions,
+                  );
+                });
+              },
+            ),
+          ),
+          Expanded(
+            child: TextField(
+              controller: TextEditingController(text: condition.value.toString()),
+              onChanged: (value) {
+                setState(() {
+                  final group = _preconditionGroups[groupIndex];
+                  final newPreconditions = List<Precondition>.from(group.preconditions);
+                  newPreconditions[conditionIndex] = Precondition(
+                    id: condition.id,
+                    field: condition.field,
+                    operator: condition.operator,
+                    value: value,
+                    description: condition.description,
+                  );
+                  _preconditionGroups[groupIndex] = PreconditionGroup(
+                    id: group.id,
+                    name: group.name,
+                    description: group.description,
+                    logicType: group.logicType,
+                    preconditions: newPreconditions,
+                  );
+                });
+              },
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete, color: Colors.red, size: 16),
+            onPressed: () => _removePrecondition(groupIndex, conditionIndex),
           ),
         ],
       ),

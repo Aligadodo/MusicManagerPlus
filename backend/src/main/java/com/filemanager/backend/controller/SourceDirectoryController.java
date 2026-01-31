@@ -11,7 +11,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @RestController
-@RequestMapping("/api/source-directories")
+@RequestMapping("/source-directories")
 public class SourceDirectoryController {
 
     private static class SourceDirectory {
