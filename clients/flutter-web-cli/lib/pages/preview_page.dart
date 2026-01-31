@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:async';
 import '../api/api_client.dart';
 import '../api/pipeline_service.dart';
 import '../api/source_directory_service.dart';
@@ -28,7 +29,18 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
   String _statusFilter = '全部';
   String _operationTypeFilter = '全部';
   bool _hideUnchanged = true;
+  bool _autoRefresh = true;
   int _previewLimit = 200;
+  int _previewThreads = 10;
+  int _executionThreads = 4;
+  String _threadPoolMode = 'GLOBAL';
+
+  // 进度信息
+  double _progress = 0.0;
+  String _remainingTime = '00:00:00';
+  String _progressStatus = '准备就绪';
+  int _completedTasks = 0;
+  int _totalTasks = 0;
 
   @override
   void initState() {
@@ -63,6 +75,16 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
     setState(() {
       _isAnalyzing = true;
       _errorMessage = '';
+      _progress = 0.0;
+      _remainingTime = '计算中...';
+      _progressStatus = '分析中';
+      _completedTasks = 0;
+      _totalTasks = 0;
+    });
+
+    // 定期获取进度
+    final progressTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      _fetchProgress();
     });
 
     try {
@@ -84,12 +106,21 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
       final changes = await _pipelineService.analyzePipeline(sourcePaths, _pipeline);
       setState(() {
         _changeRecords = changes;
+        _progress = 1.0;
+        _remainingTime = '00:00:00';
+        _progressStatus = '分析完成';
+        _completedTasks = changes.length;
+        _totalTasks = changes.length;
       });
     } catch (e) {
       setState(() {
         _errorMessage = '分析流水线失败: $e';
+        _progress = 0.0;
+        _remainingTime = '00:00:00';
+        _progressStatus = '分析失败';
       });
     } finally {
+      progressTimer.cancel();
       setState(() {
         _isAnalyzing = false;
       });
@@ -100,6 +131,16 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
     setState(() {
       _isAnalyzing = true;
       _errorMessage = '';
+      _progress = 0.0;
+      _remainingTime = '计算中...';
+      _progressStatus = '执行中';
+      _completedTasks = 0;
+      _totalTasks = _changeRecords.length;
+    });
+
+    // 定期获取进度
+    final progressTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      _fetchProgress();
     });
 
     try {
@@ -119,16 +160,28 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
 
       final sourcePaths = _sourceDirectories.map((d) => d.path).toList();
       final result = await _pipelineService.executePipeline(sourcePaths, _pipeline);
+      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('执行任务已创建，任务ID: ${result['taskId']}')),
         );
       }
+
+      setState(() {
+        _progress = 1.0;
+        _remainingTime = '00:00:00';
+        _progressStatus = '执行完成';
+        _completedTasks = _totalTasks;
+      });
     } catch (e) {
       setState(() {
         _errorMessage = '执行流水线失败: $e';
+        _progress = 0.0;
+        _remainingTime = '00:00:00';
+        _progressStatus = '执行失败';
       });
     } finally {
+      progressTimer.cancel();
       setState(() {
         _isAnalyzing = false;
       });
@@ -166,7 +219,12 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
         padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
+            // Header部分 - 包含操作按钮
+            _buildHeader(),
+            const SizedBox(height: 20),
             _buildFilterBar(),
+            const SizedBox(height: 20),
+            _buildProgressSection(),
             const SizedBox(height: 20),
             _buildStatsBar(),
             const SizedBox(height: 20),
@@ -179,89 +237,236 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
     );
   }
 
-  Widget _buildFilterBar() {
+  // Header部分 - 包含预览、运行、中止按钮
+  Widget _buildHeader() {
     return Card(
       elevation: 4,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Row(
           children: [
-            Expanded(
-              child: TextField(
-                decoration: const InputDecoration(
-                  labelText: '搜索',
-                  hintText: '请输入关键词进行搜索...',
-                  prefixIcon: Icon(Icons.search),
-                  border: OutlineInputBorder(),
-                ),
-                onChanged: (value) {
-                  setState(() {
-                    _searchFilter = value;
-                  });
-                },
+            const Text(
+              '任务预览',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(width: 16),
-            DropdownButton<String>(
-              value: _statusFilter,
-              items: const [
-                DropdownMenuItem(value: '全部', child: Text('全部')),
-                DropdownMenuItem(value: 'PENDING', child: Text('待执行')),
-                DropdownMenuItem(value: 'SUCCESS', child: Text('成功')),
-                DropdownMenuItem(value: 'FAILED', child: Text('失败')),
-                DropdownMenuItem(value: 'SKIPPED', child: Text('跳过')),
+            const Spacer(),
+            if (_isAnalyzing)
+              const Row(
+                children: [
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  SizedBox(width: 10),
+                  Text('处理中...'),
+                ],
+              )
+            else
+              Row(
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: _analyzePipeline,
+                    icon: const Icon(Icons.visibility),
+                    label: const Text('分析变更'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  ElevatedButton.icon(
+                    onPressed: _executePipeline,
+                    icon: const Icon(Icons.play_arrow),
+                    label: const Text('执行变更'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      // 中止任务功能
+                      setState(() {
+                        _isAnalyzing = false;
+                        _progress = 0.0;
+                        _remainingTime = '00:00:00';
+                        _progressStatus = '已中止';
+                      });
+                    },
+                    icon: const Icon(Icons.stop),
+                    label: const Text('中止'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterBar() {
+    return Card(
+      elevation: 4,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    decoration: const InputDecoration(
+                      labelText: '搜索',
+                      hintText: '请输入关键词进行搜索...',
+                      prefixIcon: Icon(Icons.search),
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (value) {
+                      setState(() {
+                        _searchFilter = value;
+                      });
+                    },
+                  ),
+                ),
+                const SizedBox(width: 16),
+                DropdownButton<String>(
+                  value: _statusFilter,
+                  items: const [
+                    DropdownMenuItem(value: '全部', child: Text('全部')),
+                    DropdownMenuItem(value: 'PENDING', child: Text('待执行')),
+                    DropdownMenuItem(value: 'SUCCESS', child: Text('成功')),
+                    DropdownMenuItem(value: 'FAILED', child: Text('失败')),
+                    DropdownMenuItem(value: 'SKIPPED', child: Text('跳过')),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      _statusFilter = value ?? '全部';
+                    });
+                  },
+                ),
+                const SizedBox(width: 16),
+                DropdownButton<String>(
+                  value: _operationTypeFilter,
+                  items: const [
+                    DropdownMenuItem(value: '全部', child: Text('全部')),
+                    DropdownMenuItem(value: 'RENAME', child: Text('重命名')),
+                    DropdownMenuItem(value: 'MOVE', child: Text('移动')),
+                    DropdownMenuItem(value: 'DELETE', child: Text('删除')),
+                    DropdownMenuItem(value: 'COPY', child: Text('复制')),
+                    DropdownMenuItem(value: 'METADATA_UPDATE', child: Text('元数据更新')),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      _operationTypeFilter = value ?? '全部';
+                    });
+                  },
+                ),
               ],
-              onChanged: (value) {
-                setState(() {
-                  _statusFilter = value ?? '全部';
-                });
-              },
             ),
-            const SizedBox(width: 16),
-            DropdownButton<String>(
-              value: _operationTypeFilter,
-              items: const [
-                DropdownMenuItem(value: '全部', child: Text('全部')),
-                DropdownMenuItem(value: 'RENAME', child: Text('重命名')),
-                DropdownMenuItem(value: 'MOVE', child: Text('移动')),
-                DropdownMenuItem(value: 'DELETE', child: Text('删除')),
-                DropdownMenuItem(value: 'COPY', child: Text('复制')),
-                DropdownMenuItem(value: 'METADATA_UPDATE', child: Text('元数据更新')),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                CheckboxListTile(
+                  title: const Text('仅显示变更'),
+                  value: _hideUnchanged,
+                  onChanged: (value) {
+                    setState(() {
+                      _hideUnchanged = value ?? true;
+                    });
+                  },
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
+                ),
+                const SizedBox(width: 20),
+                CheckboxListTile(
+                  title: const Text('自动刷新'),
+                  value: _autoRefresh,
+                  onChanged: (value) {
+                    setState(() {
+                      _autoRefresh = value ?? true;
+                    });
+                  },
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
+                ),
+                const SizedBox(width: 20),
+                const Text('显示数量限制:'),
+                const SizedBox(width: 10),
+                DropdownButton<int>(
+                  value: _previewLimit,
+                  items: const [
+                    DropdownMenuItem(value: 50, child: Text('50')),
+                    DropdownMenuItem(value: 100, child: Text('100')),
+                    DropdownMenuItem(value: 200, child: Text('200')),
+                    DropdownMenuItem(value: 500, child: Text('500')),
+                    DropdownMenuItem(value: 1000, child: Text('1000')),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      _previewLimit = value ?? 200;
+                    });
+                  },
+                ),
               ],
-              onChanged: (value) {
-                setState(() {
-                  _operationTypeFilter = value ?? '全部';
-                });
-              },
             ),
-            const SizedBox(width: 16),
-            CheckboxListTile(
-              title: const Text('仅显示变更'),
-              value: _hideUnchanged,
-              onChanged: (value) {
-                setState(() {
-                  _hideUnchanged = value ?? true;
-                });
-              },
-              controlAffinity: ListTileControlAffinity.leading,
-              contentPadding: EdgeInsets.zero,
-              visualDensity: VisualDensity.compact,
-            ),
-            const SizedBox(width: 16),
-            DropdownButton<int>(
-              value: _previewLimit,
-              items: const [
-                DropdownMenuItem(value: 50, child: Text('50')),
-                DropdownMenuItem(value: 100, child: Text('100')),
-                DropdownMenuItem(value: 200, child: Text('200')),
-                DropdownMenuItem(value: 500, child: Text('500')),
-                DropdownMenuItem(value: 1000, child: Text('1000')),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                const Text('预览线程数:'),
+                const SizedBox(width: 10),
+                DropdownButton<int>(
+                  value: _previewThreads,
+                  items: List.generate(16, (index) => index + 1)
+                      .map((value) => DropdownMenuItem(value: value, child: Text('$value')))
+                      .toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _previewThreads = value ?? 10;
+                    });
+                  },
+                ),
+                const SizedBox(width: 20),
+                const Text('执行线程数:'),
+                const SizedBox(width: 10),
+                DropdownButton<int>(
+                  value: _executionThreads,
+                  items: List.generate(12, (index) => index + 1)
+                      .map((value) => DropdownMenuItem(value: value, child: Text('$value')))
+                      .toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _executionThreads = value ?? 4;
+                    });
+                  },
+                ),
+                const SizedBox(width: 20),
+                const Text('线程池模式:'),
+                const SizedBox(width: 10),
+                DropdownButton<String>(
+                  value: _threadPoolMode,
+                  items: const [
+                    DropdownMenuItem(value: 'GLOBAL', child: Text('全局统一')),
+                    DropdownMenuItem(value: 'ROOT_PATH', child: Text('根路径独立')),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      _threadPoolMode = value ?? 'GLOBAL';
+                    });
+                  },
+                ),
               ],
-              onChanged: (value) {
-                setState(() {
-                  _previewLimit = value ?? 200;
-                });
-              },
             ),
           ],
         ),
@@ -386,30 +591,6 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
                       SizedBox(width: 10),
                       Text('正在分析...'),
                     ],
-                  )
-                else
-                  Row(
-                    children: [
-                      ElevatedButton.icon(
-                        onPressed: _analyzePipeline,
-                        icon: const Icon(Icons.visibility),
-                        label: const Text('分析变更'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          foregroundColor: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      ElevatedButton.icon(
-                        onPressed: _executePipeline,
-                        icon: const Icon(Icons.play_arrow),
-                        label: const Text('执行变更'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                        ),
-                      ),
-                    ],
                   ),
               ],
             ),
@@ -493,4 +674,143 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
         return Colors.grey;
     }
   }
-}
+
+  // 进度和过滤条件显示区域
+  Widget _buildProgressSection() {
+    return Card(
+      elevation: 4,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 过滤条件显示
+            _buildFilterConditions(),
+            const SizedBox(height: 16),
+            // 进度条和剩余时间
+            _buildProgressBar(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 过滤条件显示
+  Widget _buildFilterConditions() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '当前过滤条件',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+            color: Colors.grey,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 12.0,
+          runSpacing: 8.0,
+          children: [
+            if (_searchFilter.isNotEmpty)
+              Chip(
+                label: Text('搜索: $_searchFilter'),
+                backgroundColor: Colors.blue.shade100,
+                labelStyle: TextStyle(color: Colors.blue.shade700),
+              ),
+            Chip(
+              label: Text('状态: $_statusFilter'),
+              backgroundColor: Colors.green.shade100,
+              labelStyle: TextStyle(color: Colors.green.shade700),
+            ),
+            Chip(
+              label: Text('操作类型: $_operationTypeFilter'),
+              backgroundColor: Colors.orange.shade100,
+              labelStyle: TextStyle(color: Colors.orange.shade700),
+            ),
+            Chip(
+              label: Text(_hideUnchanged ? '仅显示变更' : '显示所有'),
+              backgroundColor: Colors.purple.shade100,
+              labelStyle: TextStyle(color: Colors.purple.shade700),
+            ),
+            Chip(
+              label: Text('显示限制: $_previewLimit'),
+              backgroundColor: Colors.teal.shade100,
+              labelStyle: TextStyle(color: Colors.teal.shade700),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // 进度条和剩余时间显示
+  Widget _buildProgressBar() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '执行进度',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+            color: Colors.grey,
+          ),
+        ),
+        const SizedBox(height: 8),
+        LinearProgressIndicator(
+          value: _isAnalyzing ? null : _progress,
+          backgroundColor: Colors.grey.shade200,
+          valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
+          minHeight: 10,
+          borderRadius: BorderRadius.circular(5),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              _isAnalyzing ? '分析中...' : _progressStatus,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey.shade600,
+              ),
+            ),
+            Text(
+              '剩余时间: ${_isAnalyzing ? '计算中...' : _remainingTime}',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ],
+        ),
+        if (_totalTasks > 0)
+          Text(
+            '已完成: $_completedTasks / $_totalTasks',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade600,
+            ),
+          ),
+      ],
+    );
+  }
+
+  // 模拟从后端获取进度信息
+  Future<void> _fetchProgress() async {
+    // 这里应该是从后端API获取进度信息
+    // 现在使用模拟数据
+    if (_isAnalyzing) {
+      // 模拟进度更新
+      setState(() {
+        _progress = (_changeRecords.length > 0) ? 0.7 : 0.3;
+        _remainingTime = '00:01:30';
+        _progressStatus = '分析中';
+        _completedTasks = (_changeRecords.length * 0.7).round();
+        _totalTasks = _changeRecords.length;
+      });
+    }
+  }
+} 

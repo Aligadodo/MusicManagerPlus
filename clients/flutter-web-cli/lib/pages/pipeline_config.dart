@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/api_client.dart';
 import '../api/plugin_service.dart';
+import '../api/strategy_service.dart';
 import '../api/pipeline_service.dart';
 import '../models/plugin_info.dart';
+import '../models/strategy_info.dart';
 
 class PipelineConfigPage extends ConsumerStatefulWidget {
   const PipelineConfigPage({super.key});
@@ -14,9 +16,11 @@ class PipelineConfigPage extends ConsumerStatefulWidget {
 
 class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
   final PluginService _pluginService = PluginService(ApiClient());
+  final StrategyService _strategyService = StrategyService(ApiClient());
   final PipelineService _pipelineService = PipelineService(ApiClient());
   List<Map<String, dynamic>> _pipeline = [];
   List<PluginInfo> _availablePlugins = [];
+  List<StrategyInfo> _availableStrategies = [];
   bool _isLoading = false;
   String _errorMessage = '';
 
@@ -25,6 +29,20 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
     super.initState();
     _loadPipeline();
     _loadAvailablePlugins();
+    _loadAvailableStrategies();
+  }
+
+  Future<void> _loadAvailableStrategies() async {
+    try {
+      final strategies = await _strategyService.getStrategies();
+      setState(() {
+        _availableStrategies = strategies;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = '加载策略失败: $e';
+      });
+    }
   }
 
   Future<void> _loadPipeline() async {
@@ -89,6 +107,16 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
       _pipeline.add({
         'pluginId': plugin.id,
         'name': plugin.name,
+        'config': {},
+      });
+    });
+  }
+
+  void _addStrategy(StrategyInfo strategy) {
+    setState(() {
+      _pipeline.add({
+        'strategyId': strategy.id,
+        'name': strategy.name,
         'config': {},
       });
     });
@@ -168,6 +196,38 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
                 ),
               ),
             ),
+            Card(
+              elevation: 4,
+              margin: const EdgeInsets.only(bottom: 20),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    const Text(
+                      '可用策略',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    if (_availableStrategies.isEmpty)
+                      const Text('加载策略中...')
+                    else
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: _availableStrategies.map((strategy) {
+                          return ElevatedButton(
+                            onPressed: () => _addStrategy(strategy),
+                            child: Text(strategy.name),
+                          );
+                        }).toList(),
+                      ),
+                  ],
+                ),
+              ),
+            ),
             if (_errorMessage.isNotEmpty)
               Container(
                 padding: const EdgeInsets.all(10),
@@ -234,7 +294,10 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
                               ],
                             ),
                             const SizedBox(height: 8),
-                            Text('插件ID: ${plugin['pluginId']}'),
+                            if (plugin.containsKey('pluginId'))
+                              Text('插件ID: ${plugin['pluginId']}')
+                            else if (plugin.containsKey('strategyId'))
+                              Text('策略ID: ${plugin['strategyId']}'),
                             const SizedBox(height: 16),
                             const Text('配置:', style: TextStyle(fontWeight: FontWeight.bold)),
                             const SizedBox(height: 8),

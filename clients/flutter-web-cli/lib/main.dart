@@ -13,6 +13,7 @@ import 'package:filemanager_flutter/pages/compose_page.dart';
 import 'package:filemanager_flutter/pages/preview_page.dart';
 import 'package:filemanager_flutter/pages/log_page.dart';
 import 'package:filemanager_flutter/pages/appearance_page.dart';
+import 'package:filemanager_flutter/pages/global_settings_page.dart';
 
 void main() {
   runApp(
@@ -60,7 +61,7 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
   }
 
   @override
@@ -287,6 +288,7 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
           Tab(text: '任务编排'),
           Tab(text: '预览执行'),
           Tab(text: '运行日志'),
+          Tab(text: '全局设置'),
           Tab(text: '界面设置'),
         ],
         labelColor: Colors.blue,
@@ -306,6 +308,7 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
             ComposePage(),
             PreviewPage(),
             LogPage(),
+            GlobalSettingsPage(),
             AppearancePage(),
           ],
         ),

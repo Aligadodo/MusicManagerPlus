@@ -11,6 +11,7 @@ import 'package:filemanager_flutter/models/strategy_config.dart';
 import 'package:filemanager_flutter/models/config_field.dart';
 import 'package:filemanager_flutter/models/precondition.dart';
 import 'package:filemanager_flutter/models/precondition_group.dart';
+import 'package:filemanager_flutter/pages/preview_page.dart';
 
 class ComposePage extends ConsumerStatefulWidget {
   const ComposePage({super.key});
@@ -29,10 +30,10 @@ class _ComposePageState extends ConsumerState<ComposePage> {
   List<StrategyInfo> _pipelineStrategies = [];
   List<StrategyInfo> _availableStrategies = [];
   StrategyInfo? _selectedStrategy;
-  StrategyInfo? _selectedPipelineStrategy; // 保存用户选择的策略
+  StrategyInfo? _selectedPipelineStrategy;
   StrategyConfig? _strategyConfig;
-  List<PreconditionGroup> _preconditionGroups = []; // 前置条件组
-  bool _autoRun = false; // 预览成功后自动运行
+  List<PreconditionGroup> _preconditionGroups = [];
+  bool _autoRun = false;
 
   bool _isLoading = false;
   String _errorMessage = '';
@@ -74,17 +75,14 @@ class _ComposePageState extends ConsumerState<ComposePage> {
 
   Future<void> _addDirectory() async {
     try {
-      // 打开目录选择对话框
       final input = html.InputElement(type: 'file')
         ..attributes['webkitdirectory'] = 'true'
         ..attributes['directory'] = 'true'
         ..multiple = false;
 
-      // 监听文件选择事件
       input.onChange.listen((event) {
         if (input.files?.isNotEmpty == true) {
           final file = input.files![0];
-          // 从文件路径中提取目录路径
           final path = file.relativePath ?? '';
           if (path.isNotEmpty) {
             _doAddDirectory(path);
@@ -92,7 +90,6 @@ class _ComposePageState extends ConsumerState<ComposePage> {
         }
       });
 
-      // 触发文件选择对话框
       input.click();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -126,10 +123,8 @@ class _ComposePageState extends ConsumerState<ComposePage> {
     try {
       StrategyInfo? strategy;
       if (_selectedPipelineStrategy != null) {
-        // 使用用户选择的策略
         strategy = _selectedPipelineStrategy;
       } else if (_availableStrategies.isNotEmpty) {
-        // 如果用户没有选择策略，使用第一个策略
         strategy = _availableStrategies.first;
       } else {
         throw Exception('没有可用的策略');
@@ -193,7 +188,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(_errorMessage, style: const TextStyle(color: Colors.red)),
+            SelectableText(_errorMessage, style: const TextStyle(color: Colors.red)),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _loadData,
@@ -206,13 +201,14 @@ class _ComposePageState extends ConsumerState<ComposePage> {
 
     return Column(
       children: [
+        _buildActionButtons(),
         _buildSectionHeaders(),
         Expanded(
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                flex: 1,
+                flex: 4,
                 child: _buildLeftPanel(),
               ),
               Expanded(
@@ -220,13 +216,12 @@ class _ComposePageState extends ConsumerState<ComposePage> {
                 child: _buildMidPanel(),
               ),
               Expanded(
-                flex: 2,
+                flex: 4,
                 child: _buildRightPanel(),
               ),
             ],
           ),
         ),
-        _buildActionButtons(),
       ],
     );
   }
@@ -240,7 +235,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
         border: Border.all(color: Colors.grey.shade300),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.end,
         children: [
           ElevatedButton.icon(
             onPressed: _previewAction,
@@ -251,6 +246,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
               foregroundColor: Colors.white,
             ),
           ),
+          const SizedBox(width: 10),
           ElevatedButton.icon(
             onPressed: _runAction,
             icon: const Icon(Icons.play_arrow),
@@ -260,6 +256,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
               foregroundColor: Colors.white,
             ),
           ),
+          const SizedBox(width: 10),
           ElevatedButton.icon(
             onPressed: _abortAction,
             icon: const Icon(Icons.stop),
@@ -276,9 +273,10 @@ class _ComposePageState extends ConsumerState<ComposePage> {
 
   Future<void> _previewAction() async {
     try {
-      // 实现预览功能
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('预览功能已触发')),
+      // 跳转到预览页面
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const PreviewPage()),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -289,7 +287,6 @@ class _ComposePageState extends ConsumerState<ComposePage> {
 
   Future<void> _runAction() async {
     try {
-      // 实现运行功能
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('运行功能已触发')),
       );
@@ -302,7 +299,6 @@ class _ComposePageState extends ConsumerState<ComposePage> {
 
   Future<void> _abortAction() async {
     try {
-      // 实现中止功能
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('中止功能已触发')),
       );
@@ -546,17 +542,26 @@ class _ComposePageState extends ConsumerState<ComposePage> {
             ),
           ),
           const SizedBox(height: 10),
-          _buildFilterField('递归模式', DropdownButton<String>(
+          _buildFilterField('扫描模式', DropdownButton<String>(
             items: const [
-              DropdownMenuItem(value: 'all', child: Text('全部')),
-              DropdownMenuItem(value: 'files', child: Text('仅文件')),
-              DropdownMenuItem(value: 'directories', child: Text('仅目录')),
+              DropdownMenuItem(value: 'all', child: Text('全部文件')),
+              DropdownMenuItem(value: 'current', child: Text('当前目录')),
+              DropdownMenuItem(value: 'specified', child: Text('指定目录层级')),
+              DropdownMenuItem(value: 'range', child: Text('目录层级范围')),
             ],
             onChanged: (value) {},
             isExpanded: true,
           )),
           const SizedBox(height: 10),
-          _buildFilterField('递归深度', Row(
+          _buildFilterField('扫描层级', TextField(
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            ),
+          )),
+          const SizedBox(height: 10),
+          _buildFilterField('目录层级范围', Row(
             children: [
               const Text('最小: '),
               SizedBox(
@@ -583,6 +588,92 @@ class _ComposePageState extends ConsumerState<ComposePage> {
               ),
             ],
           )),
+          const SizedBox(height: 15),
+          const Text(
+            '文件类型过滤',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 10),
+          _buildFilterField('文件类型', Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              Chip(label: Text('音频')),
+              Chip(label: Text('视频')),
+              Chip(label: Text('图片')),
+              Chip(label: Text('文档')),
+              Chip(label: Text('压缩包')),
+            ],
+          )),
+          const SizedBox(height: 15),
+          const Text(
+            '路径过滤规则',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              hintText: '输入过滤规则（如：*Convert*），按回车添加',
+              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            height: 150,
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: ListView.builder(
+              itemCount: 5,
+              itemBuilder: (context, index) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: Colors.grey.shade300),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text([
+                          '*Convert*',
+                          '*Temp*',
+                          '*Cache*',
+                          '*Log*',
+                          '*/Windows/*'
+                        ][index]),
+                      ),
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.arrow_upward, size: 16),
+                            onPressed: () {},
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.arrow_downward, size: 16),
+                            onPressed: () {},
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete, size: 16, color: Colors.red),
+                            onPressed: () {},
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
         ],
       ),
     );
@@ -996,101 +1087,154 @@ class _ComposePageState extends ConsumerState<ComposePage> {
         color: Colors.grey.shade50,
         borderRadius: BorderRadius.circular(6),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: DropdownButton<String>(
-              value: condition.field,
-              items: const [
-                DropdownMenuItem(value: 'file', child: Text('文件')),
-                DropdownMenuItem(value: 'directory', child: Text('目录')),
-                DropdownMenuItem(value: 'extension', child: Text('扩展名')),
-              ],
-              onChanged: (value) {
-                setState(() {
-                  final group = _preconditionGroups[groupIndex];
-                  final newPreconditions = List<Precondition>.from(group.preconditions);
-                  newPreconditions[conditionIndex] = Precondition(
-                    id: condition.id,
-                    field: value ?? 'file',
-                    operator: condition.operator,
-                    value: condition.value,
-                    description: condition.description,
-                  );
-                  _preconditionGroups[groupIndex] = PreconditionGroup(
-                    id: group.id,
-                    name: group.name,
-                    description: group.description,
-                    logicType: group.logicType,
-                    preconditions: newPreconditions,
-                  );
-                });
-              },
-            ),
-          ),
-          Expanded(
-            child: DropdownButton<String>(
-              value: condition.operator,
-              items: const [
-                DropdownMenuItem(value: 'contains', child: Text('包含')),
-                DropdownMenuItem(value: 'equals', child: Text('等于')),
-                DropdownMenuItem(value: 'startsWith', child: Text('以...开头')),
-                DropdownMenuItem(value: 'endsWith', child: Text('以...结尾')),
-              ],
-              onChanged: (value) {
-                setState(() {
-                  final group = _preconditionGroups[groupIndex];
-                  final newPreconditions = List<Precondition>.from(group.preconditions);
-                  newPreconditions[conditionIndex] = Precondition(
-                    id: condition.id,
-                    field: condition.field,
-                    operator: value ?? 'contains',
-                    value: condition.value,
-                    description: condition.description,
-                  );
-                  _preconditionGroups[groupIndex] = PreconditionGroup(
-                    id: group.id,
-                    name: group.name,
-                    description: group.description,
-                    logicType: group.logicType,
-                    preconditions: newPreconditions,
-                  );
-                });
-              },
-            ),
-          ),
-          Expanded(
-            child: TextField(
-              controller: TextEditingController(text: condition.value.toString()),
-              onChanged: (value) {
-                setState(() {
-                  final group = _preconditionGroups[groupIndex];
-                  final newPreconditions = List<Precondition>.from(group.preconditions);
-                  newPreconditions[conditionIndex] = Precondition(
-                    id: condition.id,
-                    field: condition.field,
-                    operator: condition.operator,
-                    value: value,
-                    description: condition.description,
-                  );
-                  _preconditionGroups[groupIndex] = PreconditionGroup(
-                    id: group.id,
-                    name: group.name,
-                    description: group.description,
-                    logicType: group.logicType,
-                    preconditions: newPreconditions,
-                  );
-                });
-              },
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButton<String>(
+                  value: condition.field,
+                  items: const [
+                    DropdownMenuItem(value: 'file', child: Text('文件')),
+                    DropdownMenuItem(value: 'directory', child: Text('目录')),
+                    DropdownMenuItem(value: 'extension', child: Text('扩展名')),
+                    DropdownMenuItem(value: 'size', child: Text('文件大小')),
+                    DropdownMenuItem(value: 'modified', child: Text('修改时间')),
+                    DropdownMenuItem(value: 'created', child: Text('创建时间')),
+                    DropdownMenuItem(value: 'name', child: Text('文件名')),
+                    DropdownMenuItem(value: 'path', child: Text('文件路径')),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      final group = _preconditionGroups[groupIndex];
+                      final newPreconditions = List<Precondition>.from(group.preconditions);
+                      newPreconditions[conditionIndex] = Precondition(
+                        id: condition.id,
+                        field: value ?? 'file',
+                        operator: condition.operator,
+                        value: condition.value,
+                        description: condition.description,
+                      );
+                      _preconditionGroups[groupIndex] = PreconditionGroup(
+                        id: group.id,
+                        name: group.name,
+                        description: group.description,
+                        logicType: group.logicType,
+                        preconditions: newPreconditions,
+                      );
+                    });
+                  },
+                ),
               ),
-            ),
+              Expanded(
+                child: DropdownButton<String>(
+                  value: condition.operator,
+                  items: const [
+                    DropdownMenuItem(value: 'contains', child: Text('包含')),
+                    DropdownMenuItem(value: 'equals', child: Text('等于')),
+                    DropdownMenuItem(value: 'startsWith', child: Text('以...开头')),
+                    DropdownMenuItem(value: 'endsWith', child: Text('以...结尾')),
+                    DropdownMenuItem(value: 'greaterThan', child: Text('大于')),
+                    DropdownMenuItem(value: 'lessThan', child: Text('小于')),
+                    DropdownMenuItem(value: 'greaterThanOrEqual', child: Text('大于等于')),
+                    DropdownMenuItem(value: 'lessThanOrEqual', child: Text('小于等于')),
+                    DropdownMenuItem(value: 'notEquals', child: Text('不等于')),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      final group = _preconditionGroups[groupIndex];
+                      final newPreconditions = List<Precondition>.from(group.preconditions);
+                      newPreconditions[conditionIndex] = Precondition(
+                        id: condition.id,
+                        field: condition.field,
+                        operator: value ?? 'contains',
+                        value: condition.value,
+                        description: condition.description,
+                      );
+                      _preconditionGroups[groupIndex] = PreconditionGroup(
+                        id: group.id,
+                        name: group.name,
+                        description: group.description,
+                        logicType: group.logicType,
+                        preconditions: newPreconditions,
+                      );
+                    });
+                  },
+                ),
+              ),
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.delete, color: Colors.red, size: 16),
-            onPressed: () => _removePrecondition(groupIndex, conditionIndex),
+          const SizedBox(height: 5),
+          Row(
+            children: [
+              Expanded(
+                flex: 3,
+                child: TextField(
+                  controller: TextEditingController(text: condition.value.toString()),
+                  onChanged: (value) {
+                    setState(() {
+                      final group = _preconditionGroups[groupIndex];
+                      final newPreconditions = List<Precondition>.from(group.preconditions);
+                      newPreconditions[conditionIndex] = Precondition(
+                        id: condition.id,
+                        field: condition.field,
+                        operator: condition.operator,
+                        value: value,
+                        description: condition.description,
+                      );
+                      _preconditionGroups[groupIndex] = PreconditionGroup(
+                        id: group.id,
+                        name: group.name,
+                        description: group.description,
+                        logicType: group.logicType,
+                        preconditions: newPreconditions,
+                      );
+                    });
+                  },
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 5),
+              Expanded(
+                flex: 2,
+                child: TextField(
+                  controller: TextEditingController(text: condition.description),
+                  onChanged: (value) {
+                    setState(() {
+                      final group = _preconditionGroups[groupIndex];
+                      final newPreconditions = List<Precondition>.from(group.preconditions);
+                      newPreconditions[conditionIndex] = Precondition(
+                        id: condition.id,
+                        field: condition.field,
+                        operator: condition.operator,
+                        value: condition.value,
+                        description: value,
+                      );
+                      _preconditionGroups[groupIndex] = PreconditionGroup(
+                        id: group.id,
+                        name: group.name,
+                        description: group.description,
+                        logicType: group.logicType,
+                        preconditions: newPreconditions,
+                      );
+                    });
+                  },
+                  decoration: const InputDecoration(
+                    labelText: '描述',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete, color: Colors.red, size: 16),
+                onPressed: () => _removePrecondition(groupIndex, conditionIndex),
+              ),
+            ],
           ),
         ],
       ),
@@ -1104,7 +1248,14 @@ class _ComposePageState extends ConsumerState<ComposePage> {
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: _selectedStrategy!.configFields.map((field) {
+      children: _selectedStrategy!.configFields.where((field) {
+        // 检查条件参数是否满足
+        if (field.dependsOn != null && field.dependsValue != null) {
+          final dependentValue = _strategyConfig?.getValue(field.dependsOn!);
+          return dependentValue?.toString() == field.dependsValue;
+        }
+        return true;
+      }).map((field) {
         return _buildParameterField(field);
       }).toList(),
     );
@@ -1112,28 +1263,32 @@ class _ComposePageState extends ConsumerState<ComposePage> {
 
   Widget _buildParameterField(ConfigField field) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 15),
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.shade100,
+            blurRadius: 2,
+            offset: Offset(0, 1),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            field.name,
-            style: const TextStyle(
+            field.label,
+            style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 14,
+              color: Colors.grey.shade800,
             ),
           ),
-          if (field.description != null && field.description!.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 5),
-              child: Text(
-                field.description!,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-            ),
+          const SizedBox(height: 8),
           _buildParameterInput(field),
         ],
       ),
@@ -1145,27 +1300,70 @@ class _ComposePageState extends ConsumerState<ComposePage> {
       case 'string':
         return TextField(
           decoration: InputDecoration(
-            border: const OutlineInputBorder(),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(6),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(6),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(6),
+              borderSide: BorderSide(color: Colors.blue, width: 2),
+            ),
             hintText: field.defaultValue?.toString(),
+            hintStyle: TextStyle(color: Colors.grey.shade400),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           ),
-          onChanged: (value) {},
+          onChanged: (value) {
+            _updateConfigValue(field.name, value);
+          },
         );
       case 'number':
         return TextField(
           keyboardType: TextInputType.number,
           decoration: InputDecoration(
-            border: const OutlineInputBorder(),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(6),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(6),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(6),
+              borderSide: BorderSide(color: Colors.blue, width: 2),
+            ),
             hintText: field.defaultValue?.toString(),
+            hintStyle: TextStyle(color: Colors.grey.shade400),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           ),
-          onChanged: (value) {},
+          onChanged: (value) {
+            _updateConfigValue(field.name, int.tryParse(value) ?? 0);
+          },
         );
       case 'boolean':
-        return CheckboxListTile(
-          title: const Text('启用'),
-          value: field.defaultValue == true,
-          onChanged: (value) {},
-          controlAffinity: ListTileControlAffinity.leading,
-          contentPadding: EdgeInsets.zero,
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              Checkbox(
+                value: field.defaultValue == true,
+                onChanged: (value) {
+                  _updateConfigValue(field.name, value ?? false);
+                },
+                activeColor: Colors.blue,
+                checkColor: Colors.white,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '启用',
+                style: TextStyle(color: Colors.grey.shade700),
+              ),
+            ],
+          ),
         );
       case 'directory':
         return Row(
@@ -1173,27 +1371,150 @@ class _ComposePageState extends ConsumerState<ComposePage> {
             Expanded(
               child: TextField(
                 decoration: InputDecoration(
-                  border: const OutlineInputBorder(),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(6),
+                    borderSide: BorderSide(color: Colors.blue, width: 2),
+                  ),
                   hintText: field.defaultValue?.toString(),
+                  hintStyle: TextStyle(color: Colors.grey.shade400),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 ),
-                onChanged: (value) {},
+                onChanged: (value) {
+                  _updateConfigValue(field.name, value);
+                },
               ),
             ),
             const SizedBox(width: 10),
-            IconButton(
-              icon: const Icon(Icons.folder_open),
-              onPressed: () {},
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: IconButton(
+                icon: const Icon(Icons.folder_open, color: Colors.blue),
+                onPressed: () {},
+                padding: const EdgeInsets.all(8),
+                constraints: const BoxConstraints(),
+              ),
             ),
           ],
+        );
+      case 'select':
+        if (field.options != null && field.options!.isNotEmpty) {
+          return Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: DropdownButton<String>(
+              value: field.defaultValue?.toString(),
+              items: field.options!.map((option) {
+                return DropdownMenuItem<String>(
+                  value: option,
+                  child: Text(option, style: TextStyle(color: Colors.grey.shade700)),
+                );
+              }).toList(),
+              onChanged: (value) {
+                _updateConfigValue(field.name, value);
+              },
+              isExpanded: true,
+              underline: const SizedBox(),
+              icon: Icon(Icons.keyboard_arrow_down, color: Colors.grey.shade600),
+              hint: Text('请选择...', style: TextStyle(color: Colors.grey.shade400)),
+            ),
+          );
+        }
+        return TextField(
+          decoration: InputDecoration(
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(6),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(6),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(6),
+              borderSide: BorderSide(color: Colors.blue, width: 2),
+            ),
+            hintText: field.defaultValue?.toString(),
+            hintStyle: TextStyle(color: Colors.grey.shade400),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          ),
+          onChanged: (value) {
+            _updateConfigValue(field.name, value);
+          },
+        );
+      case 'list':
+        return Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '列表项 (${field.defaultValue != null ? (field.defaultValue as List).length : 0})',
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 10),
+              ElevatedButton.icon(
+                onPressed: () {},
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text('添加项目'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  minimumSize: const Size(0, 0),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+              ),
+            ],
+          ),
         );
       default:
         return TextField(
           decoration: InputDecoration(
-            border: const OutlineInputBorder(),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(6),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(6),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(6),
+              borderSide: BorderSide(color: Colors.blue, width: 2),
+            ),
             hintText: field.defaultValue?.toString(),
+            hintStyle: TextStyle(color: Colors.grey.shade400),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           ),
-          onChanged: (value) {},
+          onChanged: (value) {
+            _updateConfigValue(field.name, value);
+          },
         );
     }
+  }
+
+  void _updateConfigValue(String fieldName, dynamic value) {
+    if (_strategyConfig == null) {
+      _strategyConfig = StrategyConfig({});
+    }
+    _strategyConfig!.setValue(fieldName, value);
   }
 }

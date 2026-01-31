@@ -1,5 +1,8 @@
 package com.filemanager.domain.dto;
 
+import java.util.List;
+import java.util.Map;
+
 public class ConfigFieldDTO {
     private String name;
     private String label;
@@ -7,6 +10,16 @@ public class ConfigFieldDTO {
     private Object defaultValue;
     private String description;
     private boolean required;
+    
+    // 条件参数支持
+    private String dependsOn;
+    private String dependsValue;
+    private List<String> options;
+    private Map<String, Object> subFields;
+    
+    // 模块化配置支持
+    private boolean isModule;
+    private String moduleType;
 
     public ConfigFieldDTO() {
     }
@@ -66,5 +79,53 @@ public class ConfigFieldDTO {
 
     public void setRequired(boolean required) {
         this.required = required;
+    }
+    
+    public String getDependsOn() {
+        return dependsOn;
+    }
+    
+    public void setDependsOn(String dependsOn) {
+        this.dependsOn = dependsOn;
+    }
+    
+    public String getDependsValue() {
+        return dependsValue;
+    }
+    
+    public void setDependsValue(String dependsValue) {
+        this.dependsValue = dependsValue;
+    }
+    
+    public List<String> getOptions() {
+        return options;
+    }
+    
+    public void setOptions(List<String> options) {
+        this.options = options;
+    }
+    
+    public Map<String, Object> getSubFields() {
+        return subFields;
+    }
+    
+    public void setSubFields(Map<String, Object> subFields) {
+        this.subFields = subFields;
+    }
+    
+    public boolean isModule() {
+        return isModule;
+    }
+    
+    public void setModule(boolean module) {
+        isModule = module;
+    }
+    
+    public String getModuleType() {
+        return moduleType;
+    }
+    
+    public void setModuleType(String moduleType) {
+        this.moduleType = moduleType;
     }
 }
