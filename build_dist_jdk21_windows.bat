@@ -70,7 +70,7 @@ REM --- 4. 构建前端 ---
 echo [4/8] 构建前端应用...
 set "PATH=%FLUTTER_SDK%\bin;%PATH%"
 cd clients\flutter-web-cli
-call flutter build web --web-renderer html
+call flutter build web
 if %errorlevel% neq 0 (
     echo [错误] Flutter 构建失败！
     cd ..\..

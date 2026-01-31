@@ -21,7 +21,12 @@ public class ChangeRecord {
         COPY,
         METADATA_UPDATE,
         CONVERT,
-        MERGE
+        MERGE,
+        DEDUP,
+        SPLIT,
+        ALBUM_RENAME,
+        FIX_TYPE,
+        UNZIP
     }
 
     public enum ExecStatus {

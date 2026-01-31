@@ -19,12 +19,12 @@
         <dependency>
             <groupId>com.filemanager</groupId>
             <artifactId>plugin-base</artifactId>
-            <version>${project.version}</version>
+            <version>1.0.0</version>
         </dependency>
         <dependency>
             <groupId>com.filemanager</groupId>
-            <artifactId>domain</artifactId>
-            <version>${project.version}</version>
+            <artifactId>shared-domain</artifactId>
+            <version>1.0.0</version>
         </dependency>
     </dependencies>
 

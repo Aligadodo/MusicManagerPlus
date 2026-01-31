@@ -141,7 +141,7 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
     if (_searchFilter.isNotEmpty) {
       records = records.where((r) =>
           r.originalName.toLowerCase().contains(_searchFilter.toLowerCase()) ||
-          r.filePath.toLowerCase().contains(_searchFilter.toLowerCase())).toList();
+          (r.filePath != null && r.filePath!.toLowerCase().contains(_searchFilter.toLowerCase()))).toList();
     }
 
     if (_statusFilter != '全部') {
