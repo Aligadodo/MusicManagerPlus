@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
+import 'dart:convert';
 import '../api/api_client.dart';
 import '../api/pipeline_service.dart';
 import '../api/source_directory_service.dart';
@@ -18,6 +19,7 @@ class PreviewPage extends ConsumerStatefulWidget {
 class _PreviewPageState extends ConsumerState<PreviewPage> {
   final PipelineService _pipelineService = PipelineService(ApiClient());
   final SourceDirectoryService _sourceDirectoryService = SourceDirectoryService(ApiClient());
+  final ApiClient _apiClient = ApiClient();
   List<ChangeRecord> _changeRecords = [];
   List<SourceDirectory> _sourceDirectories = [];
   List<StrategyInfo> _pipeline = [];
@@ -34,6 +36,16 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
   int _previewThreads = 10;
   int _executionThreads = 4;
   String _threadPoolMode = 'GLOBAL';
+
+  // 分页相关
+  int _currentPage = 1;
+  int _pageSize = 20;
+  int _totalRecords = 0;
+  int _totalPages = 0;
+
+  // 刷新时间间隔配置
+  int _listRefreshInterval = 2; // 列表刷新间隔（秒）
+  int _progressRefreshInterval = 1; // 进度刷新间隔（秒）
 
   // 进度信息
   double _progress = 0.0;
@@ -83,8 +95,15 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
     });
 
     // 定期获取进度
-    final progressTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+    final progressTimer = Timer.periodic(Duration(seconds: _progressRefreshInterval), (timer) {
       _fetchProgress();
+    });
+
+    // 定期获取变更记录
+    final changesTimer = Timer.periodic(Duration(seconds: _listRefreshInterval), (timer) {
+      if (_autoRefresh) {
+        _fetchChanges();
+      }
     });
 
     try {
@@ -103,15 +122,25 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
       }
 
       final sourcePaths = _sourceDirectories.map((d) => d.path).toList();
-      final changes = await _pipelineService.analyzePipeline(sourcePaths, _pipeline);
-      setState(() {
-        _changeRecords = changes;
-        _progress = 1.0;
-        _remainingTime = '00:00:00';
-        _progressStatus = '分析完成';
-        _completedTasks = changes.length;
-        _totalTasks = changes.length;
-      });
+      final result = await _pipelineService.analyzePipeline(sourcePaths, _pipeline);
+
+      if (result['success'] == true) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(result['message'] ?? '分析任务已开始执行')),
+          );
+        }
+
+        // 立即获取一次变更记录
+        await _fetchChanges();
+      } else {
+        setState(() {
+          _errorMessage = result['message'] ?? '分析任务提交失败';
+          _progress = 0.0;
+          _remainingTime = '00:00:00';
+          _progressStatus = '分析失败';
+        });
+      }
     } catch (e) {
       setState(() {
         _errorMessage = '分析流水线失败: $e';
@@ -120,10 +149,8 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
         _progressStatus = '分析失败';
       });
     } finally {
-      progressTimer.cancel();
-      setState(() {
-        _isAnalyzing = false;
-      });
+      // 等待任务完成后再取消定时器
+      // 这里不立即取消，因为任务在后台执行，我们需要继续获取进度
     }
   }
 
@@ -139,8 +166,15 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
     });
 
     // 定期获取进度
-    final progressTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+    final progressTimer = Timer.periodic(Duration(seconds: _progressRefreshInterval), (timer) {
       _fetchProgress();
+    });
+
+    // 定期获取变更记录
+    final changesTimer = Timer.periodic(Duration(seconds: _listRefreshInterval), (timer) {
+      if (_autoRefresh) {
+        _fetchChanges();
+      }
     });
 
     try {
@@ -161,18 +195,23 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
       final sourcePaths = _sourceDirectories.map((d) => d.path).toList();
       final result = await _pipelineService.executePipeline(sourcePaths, _pipeline);
       
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('执行任务已创建，任务ID: ${result['taskId']}')),
-        );
-      }
+      if (result['success'] == true) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(result['message'] ?? '执行任务已开始执行')),
+          );
+        }
 
-      setState(() {
-        _progress = 1.0;
-        _remainingTime = '00:00:00';
-        _progressStatus = '执行完成';
-        _completedTasks = _totalTasks;
-      });
+        // 立即获取一次变更记录
+        await _fetchChanges();
+      } else {
+        setState(() {
+          _errorMessage = result['message'] ?? '执行任务提交失败';
+          _progress = 0.0;
+          _remainingTime = '00:00:00';
+          _progressStatus = '执行失败';
+        });
+      }
     } catch (e) {
       setState(() {
         _errorMessage = '执行流水线失败: $e';
@@ -181,35 +220,36 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
         _progressStatus = '执行失败';
       });
     } finally {
-      progressTimer.cancel();
-      setState(() {
-        _isAnalyzing = false;
-      });
+      // 等待任务完成后再取消定时器
+      // 这里不立即取消，因为任务在后台执行，我们需要继续获取进度
+    }
+  }
+
+  Future<void> _stopPipeline() async {
+    setState(() {
+      _isAnalyzing = false;
+      _progress = 0.0;
+      _remainingTime = '00:00:00';
+      _progressStatus = '已中止';
+    });
+
+    try {
+      // 调用后端API停止任务
+      final result = await _pipelineService.stopPipeline();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result['message'] ?? '任务已成功中止')),
+        );
+      }
+    } catch (e) {
+      print('停止任务失败: $e');
     }
   }
 
   List<ChangeRecord> get _filteredRecords {
-    var records = _changeRecords;
-
-    if (_searchFilter.isNotEmpty) {
-      records = records.where((r) =>
-          r.originalName.toLowerCase().contains(_searchFilter.toLowerCase()) ||
-          (r.filePath != null && r.filePath!.toLowerCase().contains(_searchFilter.toLowerCase()))).toList();
-    }
-
-    if (_statusFilter != '全部') {
-      records = records.where((r) => r.status == _statusFilter).toList();
-    }
-
-    if (_operationTypeFilter != '全部') {
-      records = records.where((r) => r.operationType == _operationTypeFilter).toList();
-    }
-
-    if (_hideUnchanged) {
-      records = records.where((r) => r.changed).toList();
-    }
-
-    return records.take(_previewLimit).toList();
+    // 现在过滤和分页在后端完成，直接返回当前记录
+    return _changeRecords;
   }
 
   @override
@@ -289,15 +329,7 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
                   ),
                   const SizedBox(width: 10),
                   ElevatedButton.icon(
-                    onPressed: () {
-                      // 中止任务功能
-                      setState(() {
-                        _isAnalyzing = false;
-                        _progress = 0.0;
-                        _remainingTime = '00:00:00';
-                        _progressStatus = '已中止';
-                      });
-                    },
+                    onPressed: _stopPipeline,
                     icon: const Icon(Icons.stop),
                     label: const Text('中止'),
                     style: ElevatedButton.styleFrom(
@@ -334,7 +366,9 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
                     onChanged: (value) {
                       setState(() {
                         _searchFilter = value;
+                        _currentPage = 1;
                       });
+                      _fetchChanges();
                     },
                   ),
                 ),
@@ -351,7 +385,9 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
                   onChanged: (value) {
                     setState(() {
                       _statusFilter = value ?? '全部';
+                      _currentPage = 1;
                     });
+                    _fetchChanges();
                   },
                 ),
                 const SizedBox(width: 16),
@@ -368,7 +404,9 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
                   onChanged: (value) {
                     setState(() {
                       _operationTypeFilter = value ?? '全部';
+                      _currentPage = 1;
                     });
+                    _fetchChanges();
                   },
                 ),
               ],
@@ -382,7 +420,9 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
                   onChanged: (value) {
                     setState(() {
                       _hideUnchanged = value ?? true;
+                      _currentPage = 1;
                     });
+                    _fetchChanges();
                   },
                   controlAffinity: ListTileControlAffinity.leading,
                   contentPadding: EdgeInsets.zero,
@@ -402,20 +442,54 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
                   visualDensity: VisualDensity.compact,
                 ),
                 const SizedBox(width: 20),
-                const Text('显示数量限制:'),
+                const Text('分页大小:'),
                 const SizedBox(width: 10),
                 DropdownButton<int>(
-                  value: _previewLimit,
+                  value: _pageSize,
                   items: const [
+                    DropdownMenuItem(value: 10, child: Text('10')),
+                    DropdownMenuItem(value: 20, child: Text('20')),
                     DropdownMenuItem(value: 50, child: Text('50')),
                     DropdownMenuItem(value: 100, child: Text('100')),
-                    DropdownMenuItem(value: 200, child: Text('200')),
-                    DropdownMenuItem(value: 500, child: Text('500')),
-                    DropdownMenuItem(value: 1000, child: Text('1000')),
                   ],
                   onChanged: (value) {
                     setState(() {
-                      _previewLimit = value ?? 200;
+                      _pageSize = value ?? 20;
+                      _currentPage = 1;
+                      _fetchChanges();
+                    });
+                  },
+                ),
+                const SizedBox(width: 20),
+                const Text('列表刷新间隔:'),
+                const SizedBox(width: 10),
+                DropdownButton<int>(
+                  value: _listRefreshInterval,
+                  items: const [
+                    DropdownMenuItem(value: 1, child: Text('1秒')),
+                    DropdownMenuItem(value: 2, child: Text('2秒')),
+                    DropdownMenuItem(value: 5, child: Text('5秒')),
+                    DropdownMenuItem(value: 10, child: Text('10秒')),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      _listRefreshInterval = value ?? 2;
+                    });
+                  },
+                ),
+                const SizedBox(width: 20),
+                const Text('进度刷新间隔:'),
+                const SizedBox(width: 10),
+                DropdownButton<int>(
+                  value: _progressRefreshInterval,
+                  items: const [
+                    DropdownMenuItem(value: 1, child: Text('1秒')),
+                    DropdownMenuItem(value: 2, child: Text('2秒')),
+                    DropdownMenuItem(value: 5, child: Text('5秒')),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      _progressRefreshInterval = value ?? 1;
                     });
                   },
                 ),
@@ -599,48 +673,54 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
           Expanded(
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              child: DataTable(
-                columns: const [
-                  DataColumn(label: Text('操作类型')),
-                  DataColumn(label: Text('原始文件名')),
-                  DataColumn(label: Text('新文件名')),
-                  DataColumn(label: Text('文件路径')),
-                  DataColumn(label: Text('状态')),
-                  DataColumn(label: Text('变更原因')),
-                ],
-                rows: _filteredRecords.map((record) {
-                  return DataRow(
-                    cells: [
-                      DataCell(Text(record.operationType ?? 'N/A')),
-                      DataCell(Text(record.originalName)),
-                      DataCell(Text(record.newName ?? '-')),
-                      DataCell(
-                        Tooltip(
-                          message: record.filePath ?? '',
-                          child: Text(
-                            record.filePath ?? '',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ),
-                      DataCell(
-                        Row(
-                          children: [
-                            Icon(
-                              _getStatusIcon(record.status),
-                              size: 16,
-                              color: _getStatusColor(record.status),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(record.status),
-                          ],
-                        ),
-                      ),
-                      DataCell(Text(record.reason ?? '')),
+              child: Column(
+                children: [
+                  DataTable(
+                    columns: const [
+                      DataColumn(label: Text('操作类型')),
+                      DataColumn(label: Text('原始文件名')),
+                      DataColumn(label: Text('新文件名')),
+                      DataColumn(label: Text('文件路径')),
+                      DataColumn(label: Text('状态')),
+                      DataColumn(label: Text('变更原因')),
                     ],
-                  );
-                }).toList(),
+                    rows: _filteredRecords.map((record) {
+                      return DataRow(
+                        cells: [
+                          DataCell(Text(record.operationType ?? 'N/A')),
+                          DataCell(Text(record.originalName)),
+                          DataCell(Text(record.newName ?? '-')),
+                          DataCell(
+                            Tooltip(
+                              message: record.filePath ?? '',
+                              child: Text(
+                                record.filePath ?? '',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                          DataCell(
+                            Row(
+                              children: [
+                                Icon(
+                                  _getStatusIcon(record.status),
+                                  size: 16,
+                                  color: _getStatusColor(record.status),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(record.status),
+                              ],
+                            ),
+                          ),
+                          DataCell(Text(record.reason ?? '')),
+                        ],
+                      );
+                    }).toList(),
+                  ),
+                  // 分页控件
+                  _buildPagination(),
+                ],
               ),
             ),
           ),
@@ -735,7 +815,7 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
               labelStyle: TextStyle(color: Colors.purple.shade700),
             ),
             Chip(
-              label: Text('显示限制: $_previewLimit'),
+              label: Text('分页: $_currentPage/$(_totalPages > 0 ? _totalPages : 1), $(_pageSize)条/页'),
               backgroundColor: Colors.teal.shade100,
               labelStyle: TextStyle(color: Colors.teal.shade700),
             ),
@@ -798,19 +878,96 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
     );
   }
 
-  // 模拟从后端获取进度信息
+  // 从后端获取进度信息
   Future<void> _fetchProgress() async {
-    // 这里应该是从后端API获取进度信息
-    // 现在使用模拟数据
     if (_isAnalyzing) {
-      // 模拟进度更新
-      setState(() {
-        _progress = (_changeRecords.length > 0) ? 0.7 : 0.3;
-        _remainingTime = '00:01:30';
-        _progressStatus = '分析中';
-        _completedTasks = (_changeRecords.length * 0.7).round();
-        _totalTasks = _changeRecords.length;
-      });
+      try {
+        // 调用后端API获取任务状态
+        final status = await _pipelineService.getPipelineStatus();
+        setState(() {
+          _progress = status['progress'] ?? 0.0;
+          _remainingTime = status['remainingTime'] ?? '00:00:00';
+          _progressStatus = status['status'] ?? '分析中';
+          _completedTasks = status['completedTasks'] ?? 0;
+          _totalTasks = status['totalTasks'] ?? 0;
+        });
+
+        // 如果任务完成，更新状态
+        if (_progressStatus == '分析完成' || _progressStatus == '执行完成' || _progressStatus == '已中止' || _progressStatus == '分析失败' || _progressStatus == '执行失败') {
+          setState(() {
+            _isAnalyzing = false;
+          });
+        }
+      } catch (e) {
+        print('获取进度信息失败: $e');
+      }
     }
+  }
+
+  // 从后端获取变更记录
+  Future<void> _fetchChanges() async {
+    try {
+      final result = await _pipelineService.getChanges(
+        searchFilter: _searchFilter,
+        statusFilter: _statusFilter != '全部' ? _statusFilter : null,
+        operationTypeFilter: _operationTypeFilter != '全部' ? _operationTypeFilter : null,
+        hideUnchanged: _hideUnchanged,
+        page: _currentPage,
+        size: _pageSize,
+        sortBy: 'id',
+        sortDirection: 'ASC',
+      );
+
+      setState(() {
+        _changeRecords = (result['records'] as List<dynamic>)
+            .map((json) => ChangeRecord.fromJson(json as Map<String, dynamic>))
+            .toList();
+        _totalRecords = result['total'] ?? 0;
+        _totalPages = result['pages'] ?? 0;
+      });
+    } catch (e) {
+      print('获取变更记录失败: $e');
+    }
+  }
+
+  // 分页控件
+  Widget _buildPagination() {
+    if (_totalPages <= 1) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconButton(
+            onPressed: _currentPage > 1
+                ? () {
+                    setState(() {
+                      _currentPage--;
+                    });
+                    _fetchChanges();
+                  }
+                : null,
+            icon: const Icon(Icons.chevron_left),
+            tooltip: '上一页',
+          ),
+          Text('第 $_currentPage 页，共 $_totalPages 页，总计 $_totalRecords 条记录'),
+          IconButton(
+            onPressed: _currentPage < _totalPages
+                ? () {
+                    setState(() {
+                      _currentPage++;
+                    });
+                    _fetchChanges();
+                  }
+                : null,
+            icon: const Icon(Icons.chevron_right),
+            tooltip: '下一页',
+          ),
+        ],
+      ),
+    );
   }
 } 

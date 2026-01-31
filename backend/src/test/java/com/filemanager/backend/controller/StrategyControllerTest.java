@@ -129,7 +129,7 @@ public class StrategyControllerTest {
         change.setId("1");
         change.setOriginalName("file1.txt");
         change.setNewName("processed1.txt");
-        change.setStatus(ChangeRecord.ExecStatus.PENDING);
+        change.setStatus("PENDING");
         mockChanges.add(change);
 
         when(strategyService.analyzeFiles(eq("test-strategy"), eq(files), any(StrategyConfigDTO.class)))
@@ -159,7 +159,7 @@ public class StrategyControllerTest {
         change.setId("1");
         change.setOriginalName("file1.txt");
         change.setNewName("processed1.txt");
-        change.setStatus(ChangeRecord.ExecStatus.SUCCESS);
+        change.setStatus("SUCCESS");
         mockChanges.add(change);
 
         when(strategyService.executeStrategy(eq("test-strategy"), eq(files), any(StrategyConfigDTO.class)))
@@ -170,6 +170,6 @@ public class StrategyControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals(1, response.getBody().size());
-        assertEquals("SUCCESS", response.getBody().get(0).getStatus().name());
+        assertEquals("SUCCESS", response.getBody().get(0).getStatus());
     }
 }

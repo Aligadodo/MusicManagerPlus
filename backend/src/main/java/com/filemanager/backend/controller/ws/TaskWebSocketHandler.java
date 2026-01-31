@@ -45,7 +45,8 @@ public class TaskWebSocketHandler extends TextWebSocketHandler {
                     session.sendMessage(new TextMessage(message));
 
                     // 如果任务完成，停止监控
-                    if (status.getStatus().isFinalState()) {
+                    String taskStatus = status.getStatus();
+                    if (taskStatus.equals("COMPLETED") || taskStatus.equals("FAILED") || taskStatus.equals("CANCELLED")) {
                         executor.shutdown();
                         taskMonitors.remove(taskId);
                     }

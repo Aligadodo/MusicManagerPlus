@@ -573,7 +573,7 @@ public class StrategyServiceImpl implements StrategyService {
             record.setNewName(getTargetPath(filePath, strategyId, config));
             record.setFilePath(filePath);
             record.setChanged(true);
-            record.setStatus(ChangeRecord.ExecStatus.PENDING);
+            record.setStatus("PENDING");
             changes.add(record);
         }
         return changes;
@@ -589,7 +589,7 @@ public class StrategyServiceImpl implements StrategyService {
             List<ChangeRecord> changes = plugin.execute(filePaths, pluginConfig, new com.filemanager.plugin.ExecutionContext());
             // 更新执行状态
             for (ChangeRecord record : changes) {
-                record.setStatus(ChangeRecord.ExecStatus.SUCCESS);
+                record.setStatus("SUCCESS");
             }
             return changes;
         }
@@ -597,7 +597,7 @@ public class StrategyServiceImpl implements StrategyService {
         // 如果没有对应的插件，使用默认实现
         List<ChangeRecord> changes = analyzeFiles(strategyId, filePaths, config);
         for (ChangeRecord record : changes) {
-            record.setStatus(ChangeRecord.ExecStatus.SUCCESS);
+            record.setStatus("SUCCESS");
         }
         return changes;
     }

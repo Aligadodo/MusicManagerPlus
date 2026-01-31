@@ -308,9 +308,9 @@ class _ConfigPageState extends ConsumerState<ConfigPage> {
                             const SizedBox(height: 8),
                             TextField(
                               controller: controller,
-                              decoration: InputDecoration(
+                              decoration: const InputDecoration(
                                 labelText: '值',
-                                border: const OutlineInputBorder(),
+                                border: OutlineInputBorder(),
                                 hintText: '输入配置值',
                               ),
                             ),

@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/api_client.dart';
@@ -44,7 +43,7 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
   };
 
   List<Map<String, dynamic>> _themePresets = [];
-  int _selectedPresetIndex = 0;
+  final int _selectedPresetIndex = 0;
   bool _isLoading = false;
   String _errorMessage = '';
   String _successMessage = '';
@@ -618,7 +617,7 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
           ),
           const SizedBox(height: 10),
           DropdownButtonFormField<String>(
-            value: _appearanceConfig[key] as String,
+            initialValue: _appearanceConfig[key] as String,
             items: options.map((option) {
               return DropdownMenuItem<String>(
                 value: option,

@@ -99,7 +99,7 @@ public class PluginControllerTest {
     @Test
     public void testGetPluginConfig_Success() {
         PluginConfigDTO mockConfig = new PluginConfigDTO();
-        mockConfig.setConfigValues(new HashMap<>());
+        mockConfig.setConfigMap(new HashMap<>());
 
         when(pluginService.getPluginConfig("test-plugin")).thenReturn(mockConfig);
 
@@ -112,7 +112,7 @@ public class PluginControllerTest {
     @Test
     public void testUpdatePluginConfig_Success() {
         PluginConfigDTO config = new PluginConfigDTO();
-        config.setConfigValues(new HashMap<>());
+        config.setConfigMap(new HashMap<>());
 
         when(pluginService.updatePluginConfig(eq("test-plugin"), any(PluginConfigDTO.class)))
             .thenReturn(true);
@@ -134,7 +134,7 @@ public class PluginControllerTest {
         request.put("filePaths", filePaths);
 
         PluginConfigDTO config = new PluginConfigDTO();
-        config.setConfigValues(new HashMap<>());
+        config.setConfigMap(new HashMap<>());
         request.put("config", config);
 
         List<ChangeRecord> mockChanges = new ArrayList<>();
@@ -142,7 +142,7 @@ public class PluginControllerTest {
         change.setId("1");
         change.setOriginalName("file1.txt");
         change.setNewName("renamed1.txt");
-        change.setStatus(ChangeRecord.ExecStatus.PENDING);
+        change.setStatus("PENDING");
         mockChanges.add(change);
 
         when(pluginService.previewPlugin(eq("test-plugin"), eq(filePaths), any(PluginConfigDTO.class)))
@@ -164,7 +164,7 @@ public class PluginControllerTest {
         request.put("filePaths", filePaths);
 
         PluginConfigDTO config = new PluginConfigDTO();
-        config.setConfigValues(new HashMap<>());
+        config.setConfigMap(new HashMap<>());
         request.put("config", config);
 
         List<ChangeRecord> mockChanges = new ArrayList<>();
@@ -172,7 +172,7 @@ public class PluginControllerTest {
         change.setId("1");
         change.setOriginalName("file1.txt");
         change.setNewName("processed1.txt");
-        change.setStatus(ChangeRecord.ExecStatus.SUCCESS);
+        change.setStatus("SUCCESS");
         mockChanges.add(change);
 
         when(pluginService.executePlugin(eq("test-plugin"), eq(filePaths), any(PluginConfigDTO.class)))
@@ -183,7 +183,7 @@ public class PluginControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals(1, response.getBody().size());
-        assertEquals("SUCCESS", response.getBody().get(0).getStatus().name());
+        assertEquals("SUCCESS", response.getBody().get(0).getStatus());
     }
 
     @Test

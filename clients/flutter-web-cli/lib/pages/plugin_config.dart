@@ -187,12 +187,10 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
           hintText: param.description,
           border: const OutlineInputBorder(),
           errorText: param.required && (value == null || value.toString().isEmpty) ? '必填项' : null,
-          suffixIcon: param.description != null
-              ? IconButton(
+          suffixIcon: IconButton(
                   icon: const Icon(Icons.info_outline),
                   onPressed: () => _showTooltip(param.label, param.description),
-                )
-              : null,
+                ),
         ),
         onChanged: (v) => _handleParameterChange(param.name, v, param),
       ),
@@ -209,12 +207,10 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
           hintText: param.description,
           border: const OutlineInputBorder(),
           errorText: param.required && (value == null || value.toString().isEmpty) ? '必填项' : null,
-          suffixIcon: param.description != null
-              ? IconButton(
+          suffixIcon: IconButton(
                   icon: const Icon(Icons.info_outline),
                   onPressed: () => _showTooltip(param.label, param.description),
-                )
-              : null,
+                ),
         ),
         keyboardType: TextInputType.number,
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -229,15 +225,13 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
       margin: const EdgeInsets.symmetric(vertical: 8.0),
       child: SwitchListTile(
         title: Text(param.label),
-        subtitle: param.description != null ? Text(param.description) : null,
+        subtitle: Text(param.description),
         value: value ?? false,
         onChanged: (v) => _handleParameterChange(param.name, v, param),
-        secondary: param.description != null
-            ? IconButton(
+        secondary: IconButton(
                 icon: const Icon(Icons.info_outline),
                 onPressed: () => _showTooltip(param.label, param.description),
-              )
-            : null,
+              ),
       ),
     );
   }
@@ -250,14 +244,12 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
           labelText: param.label,
           hintText: param.description,
           border: const OutlineInputBorder(),
-          suffixIcon: param.description != null
-              ? IconButton(
+          suffixIcon: IconButton(
                   icon: const Icon(Icons.info_outline),
                   onPressed: () => _showTooltip(param.label, param.description),
-                )
-              : null,
+                ),
         ),
-        value: value?.toString(),
+        initialValue: value?.toString(),
         items: param.options?.map((option) {
           return DropdownMenuItem<String>(
             value: option,
@@ -282,12 +274,10 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
                 hintText: param.description,
                 border: const OutlineInputBorder(),
                 errorText: param.required && (value == null || value.toString().isEmpty) ? '必填项' : null,
-                suffixIcon: param.description != null
-                    ? IconButton(
+                suffixIcon: IconButton(
                         icon: const Icon(Icons.info_outline),
                         onPressed: () => _showTooltip(param.label, param.description),
-                      )
-                    : null,
+                      ),
               ),
               onChanged: (v) => _handleParameterChange(param.name, v, param),
             ),
@@ -315,12 +305,10 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
                 hintText: param.description,
                 border: const OutlineInputBorder(),
                 errorText: param.required && (value == null || value.toString().isEmpty) ? '必填项' : null,
-                suffixIcon: param.description != null
-                    ? IconButton(
+                suffixIcon: IconButton(
                         icon: const Icon(Icons.info_outline),
                         onPressed: () => _showTooltip(param.label, param.description),
-                      )
-                    : null,
+                      ),
               ),
               onChanged: (v) => _handleParameterChange(param.name, v, param),
             ),
@@ -355,18 +343,16 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
                     style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
-                if (param.description != null)
-                  IconButton(
-                    icon: const Icon(Icons.info_outline),
-                    onPressed: () => _showTooltip(param.label, param.description),
-                  ),
+                IconButton(
+                  icon: const Icon(Icons.info_outline),
+                  onPressed: () => _showTooltip(param.label, param.description),
+                ),
               ],
             ),
-            if (param.description != null)
-              Text(
-                param.description,
-                style: const TextStyle(fontSize: 14, color: Colors.grey),
-              ),
+            Text(
+              param.description,
+              style: const TextStyle(fontSize: 14, color: Colors.grey),
+            ),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -415,7 +401,7 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
                     },
                   ),
                 );
-              }).toList(),
+              }),
           ],
         ),
       ),
@@ -469,14 +455,13 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            if (group.description != null)
-              Text(
-                group.description!,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
-                ),
+            Text(
+              group.description,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
               ),
+            ),
             Text(
               '逻辑类型: ${group.logicType}',
               style: const TextStyle(
@@ -496,12 +481,10 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
     return ListTile(
       title: Text(precondition.field),
       subtitle: Text('${precondition.operator} ${precondition.value}'),
-      trailing: precondition.description != null
-          ? IconButton(
+      trailing: IconButton(
               icon: const Icon(Icons.info_outline),
-              onPressed: () => _showTooltip(precondition.field, precondition.description!),
-            )
-          : null,
+              onPressed: () => _showTooltip(precondition.field, precondition.description),
+            ),
     );
   }
 

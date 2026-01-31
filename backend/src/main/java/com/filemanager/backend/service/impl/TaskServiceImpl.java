@@ -47,7 +47,7 @@ public class TaskServiceImpl implements TaskService {
         List<TaskStatusDTO> result = new ArrayList<>();
         for (TaskExecution execution : tasks.values()) {
             TaskStatusDTO taskStatus = execution.getStatus();
-            if (status == null || taskStatus.getStatus().name().equals(status)) {
+            if (status == null || taskStatus.getStatus().equals(status)) {
                 result.add(taskStatus);
             }
         }
@@ -67,7 +67,7 @@ public class TaskServiceImpl implements TaskService {
             throw new IllegalArgumentException("Task not found: " + taskId);
         }
 
-        if (execution.getStatus().getStatus() == TaskStatusDTO.TaskStatus.RUNNING) {
+        if (execution.getStatus().getStatus().equals("RUNNING")) {
             throw new IllegalStateException("Task is already running");
         }
 
@@ -95,7 +95,7 @@ public class TaskServiceImpl implements TaskService {
             future.cancel(true);
         }
 
-        execution.getStatus().setStatus(TaskStatusDTO.TaskStatus.CANCELLED);
+        execution.getStatus().setStatus("CANCELLED");
         execution.getStatus().setMessage("Task cancelled");
         return true;
     }
@@ -114,6 +114,16 @@ public class TaskServiceImpl implements TaskService {
         return tasks.remove(taskId) != null;
     }
 
+    @Override
+    public boolean isTaskRunning() {
+        for (TaskExecution execution : tasks.values()) {
+            if (execution.getStatus().getStatus().equals("RUNNING")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static class TaskExecution {
         private final String taskId;
         private final TaskRequestDTO request;
@@ -126,15 +136,15 @@ public class TaskServiceImpl implements TaskService {
             this.request = request;
             this.status = new TaskStatusDTO();
             this.status.setTaskId(taskId);
-            this.status.setStatus(TaskStatusDTO.TaskStatus.PENDING);
-            this.status.setProgress(0.0);
+            this.status.setStatus("PENDING");
+            this.status.setProgress(0);
             this.status.setStartTime(System.currentTimeMillis());
             this.results = new ArrayList<>();
         }
 
         public void execute(StrategyService strategyService) {
-            status.setStatus(TaskStatusDTO.TaskStatus.RUNNING);
-            status.setProgress(0.0);
+            status.setStatus("RUNNING");
+            status.setProgress(0);
             status.setMessage("Task started");
 
             try {
@@ -142,23 +152,22 @@ public class TaskServiceImpl implements TaskService {
                 results.addAll(strategyService.executeStrategy(
                         request.getStrategyId(),
                         request.getFilePaths(),
-                        request.getStrategyConfig()
+                        strategyService.getStrategyConfig(request.getStrategyId())
                 ));
 
-                status.setChanges(results);
-                status.setStatus(TaskStatusDTO.TaskStatus.SUCCESS);
-                status.setProgress(1.0);
+                status.setStatus("COMPLETED");
+                status.setProgress(100);
                 status.setMessage("Task completed successfully");
                 status.setEndTime(System.currentTimeMillis());
             } catch (Exception e) {
-                status.setStatus(TaskStatusDTO.TaskStatus.FAILED);
+                status.setStatus("FAILED");
                 status.setMessage("Task failed: " + e.getMessage());
                 status.setEndTime(System.currentTimeMillis());
             }
         }
 
         public void setError(String errorMessage) {
-            status.setStatus(TaskStatusDTO.TaskStatus.FAILED);
+            status.setStatus("FAILED");
             status.setMessage(errorMessage);
             status.setEndTime(System.currentTimeMillis());
         }
