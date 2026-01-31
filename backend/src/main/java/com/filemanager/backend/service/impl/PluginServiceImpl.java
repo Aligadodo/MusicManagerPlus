@@ -102,4 +102,51 @@ public class PluginServiceImpl implements PluginService {
         pluginRegistry.reloadPlugins();
         return true;
     }
+
+    @Override
+    public List<PluginInfoDTO> getInternalPlugins() {
+        List<PluginInfoDTO> plugins = new ArrayList<>();
+        for (IPlugin plugin : pluginRegistry.getInternalPlugins()) {
+            PluginInfoDTO info = new PluginInfoDTO();
+            info.setId(plugin.getId());
+            info.setName(plugin.getName());
+            info.setDescription(plugin.getDescription());
+            info.setVersion(plugin.getVersion());
+            info.setEnabled(true);
+            info.setInternal(true);
+            plugins.add(info);
+        }
+        return plugins;
+    }
+
+    @Override
+    public List<PluginInfoDTO> getExternalPlugins() {
+        List<PluginInfoDTO> plugins = new ArrayList<>();
+        for (IPlugin plugin : pluginRegistry.getExternalPlugins()) {
+            PluginInfoDTO info = new PluginInfoDTO();
+            info.setId(plugin.getId());
+            info.setName(plugin.getName());
+            info.setDescription(plugin.getDescription());
+            info.setVersion(plugin.getVersion());
+            info.setEnabled(true);
+            info.setInternal(false);
+            plugins.add(info);
+        }
+        return plugins;
+    }
+
+    @Override
+    public List<String> scanExternalPlugins(String pluginDir) {
+        return pluginRegistry.scanExternalPluginDirectory(pluginDir);
+    }
+
+    @Override
+    public void loadExternalPlugins(String pluginDir) {
+        pluginRegistry.loadExternalPlugins(pluginDir);
+    }
+
+    @Override
+    public void reloadExternalPlugins() {
+        pluginRegistry.reloadExternalPlugins();
+    }
 }

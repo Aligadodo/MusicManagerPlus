@@ -9,6 +9,10 @@ class PluginParameter {
   final String? validationPattern;
   final int? minValue;
   final int? maxValue;
+  
+  final List<Map<String, dynamic>>? visibilityConditions;
+  final List<Map<String, dynamic>>? exclusiveParams;
+  final Map<String, dynamic>? autoDetectParams;
 
   PluginParameter({
     required this.name,
@@ -21,6 +25,9 @@ class PluginParameter {
     this.validationPattern,
     this.minValue,
     this.maxValue,
+    this.visibilityConditions,
+    this.exclusiveParams,
+    this.autoDetectParams,
   });
 
   factory PluginParameter.fromJson(Map<String, dynamic> json) {
@@ -35,6 +42,15 @@ class PluginParameter {
       validationPattern: json['validationPattern'],
       minValue: json['minValue'],
       maxValue: json['maxValue'],
+      visibilityConditions: json['visibilityConditions'] != null 
+          ? List<Map<String, dynamic>>.from(json['visibilityConditions']) 
+          : null,
+      exclusiveParams: json['exclusiveParams'] != null 
+          ? List<Map<String, dynamic>>.from(json['exclusiveParams']) 
+          : null,
+      autoDetectParams: json['autoDetectParams'] != null 
+          ? Map<String, dynamic>.from(json['autoDetectParams']) 
+          : null,
     );
   }
 
@@ -50,6 +66,9 @@ class PluginParameter {
       'validationPattern': validationPattern,
       'minValue': minValue,
       'maxValue': maxValue,
+      'visibilityConditions': visibilityConditions,
+      'exclusiveParams': exclusiveParams,
+      'autoDetectParams': autoDetectParams,
     };
   }
 }

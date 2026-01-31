@@ -1,0 +1,15 @@
+com.filemanager.plugin.operations.FileCleanupPlugin
+com.filemanager.plugin.operations.FileCollectionPlugin
+com.filemanager.plugin.operations.FileRenamePlugin
+com.filemanager.plugin.operations.AudioConverterPlugin
+com.filemanager.plugin.operations.MetadataScraperPlugin
+com.filemanager.plugin.operations.CueSplitterPlugin
+com.filemanager.plugin.operations.AlbumDirNormalizePlugin
+com.filemanager.plugin.operations.FileTypeFixPlugin
+com.filemanager.plugin.operations.FileUnzipPlugin
+com.filemanager.plugin.operations.FileMigratePlugin
+com.filemanager.plugin.operations.CueFileRenamePlugin
+com.filemanager.plugin.operations.NcmIntegratedPlugin
+com.filemanager.plugin.operations.AdvancedRenamePlugin
+com.filemanager.plugin.operations.CollectionNamingPlugin
+com.filemanager.plugin.operations.DuplicatePlugin

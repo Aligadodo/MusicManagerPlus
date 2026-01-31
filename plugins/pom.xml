@@ -14,11 +14,7 @@
 
     <modules>
         <module>base</module>
-        <module>file-collection</module>
-        <module>metadata-scraper</module>
-        <module>file-cleanup</module>
-        <module>audio-converter</module>
-        <module>file-rename</module>
+        <module>file-operations</module>
     </modules>
 
     <properties>

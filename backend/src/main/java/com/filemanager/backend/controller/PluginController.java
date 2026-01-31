@@ -98,4 +98,66 @@ public class PluginController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
+
+    @GetMapping("/internal")
+    public ResponseEntity<List<PluginInfoDTO>> getInternalPlugins() {
+        try {
+            List<PluginInfoDTO> plugins = pluginService.getInternalPlugins();
+            return ResponseEntity.ok(plugins);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    @GetMapping("/external")
+    public ResponseEntity<List<PluginInfoDTO>> getExternalPlugins() {
+        try {
+            List<PluginInfoDTO> plugins = pluginService.getExternalPlugins();
+            return ResponseEntity.ok(plugins);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    @PostMapping("/scan")
+    public ResponseEntity<Map<String, Object>> scanExternalPlugins(@RequestBody Map<String, Object> request) {
+        try {
+            String pluginDir = (String) request.get("pluginDir");
+            List<String> pluginJars = pluginService.scanExternalPlugins(pluginDir);
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("pluginJars", pluginJars);
+            result.put("count", pluginJars.size());
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    @PostMapping("/load-external")
+    public ResponseEntity<Map<String, Object>> loadExternalPlugins(@RequestBody Map<String, Object> request) {
+        try {
+            String pluginDir = (String) request.get("pluginDir");
+            pluginService.loadExternalPlugins(pluginDir);
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("message", "外部插件加载成功");
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    @PostMapping("/reload-external")
+    public ResponseEntity<Map<String, Object>> reloadExternalPlugins() {
+        try {
+            pluginService.reloadExternalPlugins();
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("message", "外部插件重载成功");
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
 }

@@ -14,4 +14,9 @@ public interface PluginService {
     List<ChangeRecord> previewPlugin(String pluginId, List<String> filePaths, PluginConfigDTO config);
     List<ChangeRecord> executePlugin(String pluginId, List<String> filePaths, PluginConfigDTO config);
     boolean reloadPlugins();
+    List<PluginInfoDTO> getInternalPlugins();
+    List<PluginInfoDTO> getExternalPlugins();
+    List<String> scanExternalPlugins(String pluginDir);
+    void loadExternalPlugins(String pluginDir);
+    void reloadExternalPlugins();
 }

@@ -6,6 +6,7 @@ public class PluginInfoDTO {
     private String description;
     private String version;
     private boolean enabled;
+    private boolean internal;
 
     public PluginInfoDTO() {
     }
@@ -56,5 +57,13 @@ public class PluginInfoDTO {
 
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
+    }
+
+    public boolean isInternal() {
+        return internal;
+    }
+
+    public void setInternal(boolean internal) {
+        this.internal = internal;
     }
 }

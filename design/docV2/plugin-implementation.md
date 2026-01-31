@@ -19,7 +19,10 @@ public interface IPlugin {
     String getDescription();
     String getVersion();
     PluginConfigDTO getDefaultConfig();
+    List<PluginParameterDTO> getParameters();
+    List<PreconditionGroupDTO> getDefaultPreconditionGroups();
     List<ChangeRecord> execute(List<String> filePaths, PluginConfigDTO config, ExecutionContext context);
+    List<ChangeRecord> preview(List<String> filePaths, PluginConfigDTO config, ExecutionContext context);
 }
 ```
 
@@ -31,12 +34,36 @@ public interface IPlugin {
 public class PluginRegistry {
     private static PluginRegistry instance;
     private final Map<String, IPlugin> plugins = new HashMap<>();
-    
+    private final PluginLoader pluginLoader = new PluginLoader();
+    private String externalPluginDir;
+
     public static synchronized PluginRegistry getInstance();
-    public void registerPlugin(IPlugin plugin);
+    public void loadExternalPlugins(String pluginDirPath);
+    public void reloadPlugins();
+    public void reloadExternalPlugins();
+    public List<String> scanExternalPluginDirectory(String pluginDirPath);
     public IPlugin getPlugin(String pluginId);
     public List<IPlugin> getAllPlugins();
-    public void loadPlugins();
+    public List<IPlugin> getInternalPlugins();
+    public List<IPlugin> getExternalPlugins();
+    public void registerPlugin(IPlugin plugin);
+    public void unregisterPlugin(String pluginId);
+}
+```
+
+#### PluginLoader
+
+插件加载器支持从外部JAR文件加载插件：
+
+```java
+public class PluginLoader {
+    public List<IPlugin> loadPluginsFromDirectory(String pluginDirPath);
+    public List<IPlugin> loadPluginFromJar(File jarFile);
+    public boolean isPluginJar(File jarFile);
+    public List<String> scanPluginDirectory(String pluginDirPath);
+    public void unloadExternalPlugins();
+    public List<IPlugin> getExternalPlugins();
+    public void reloadExternalPlugins(String pluginDirPath);
 }
 ```
 
@@ -49,7 +76,7 @@ public class ExecutionContext {
     private String taskId;
     private String userId;
     private Map<String, Object> contextData;
-    
+
     public void setContextData(String key, Object value);
     public Object getContextData(String key);
 }
@@ -62,7 +89,9 @@ public class ExecutionContext {
 ```java
 public class PluginConfigDTO {
     private Map<String, Object> configValues;
-    
+    private List<PluginParameterDTO> parameters;
+    private List<PreconditionGroupDTO> preconditionGroups;
+
     public void setValue(String key, Object value);
     public Object getValue(String key);
     public Object getValue(String key, Object defaultValue);
@@ -70,9 +99,68 @@ public class PluginConfigDTO {
 }
 ```
 
-## 已实现的插件
+## 插件分类
 
-### 1. 文件收集插件 (file-collection)
+### 内置插件
+
+内置插件位于`plugins/file-operations`模块中，随主程序一起发布。
+
+#### 1. 文件清理插件 (file-cleanup)
+
+**插件ID**: `file-cleanup`
+
+**描述**: 支持文件去重、文件夹去重、空目录清理、文件夹合并等多种清理模式
+
+**默认配置**:
+```json
+{
+  "cleanupMode": "dedup_files",
+  "deleteMethod": "pseudo_delete",
+  "trashPath": ".EchoTrash",
+  "keepLargest": true,
+  "keepEarliest": true,
+  "keepExt": "wav",
+  "preprocessLower": true,
+  "preprocessUpper": false,
+  "preprocessSimplified": false,
+  "audioSpecial": true,
+  "minFileSizeKB": 0,
+  "maxFileSizeKB": 10240
+}
+```
+
+**配置参数**:
+- `cleanupMode`: 清理模式（dedup_files, dedup_folders, remove_empty_dirs, direct_cleanup, merge_same_name, merge_nested）
+- `deleteMethod`: 删除方法（direct_delete, pseudo_delete）
+- `trashPath`: 伪删除时的回收站路径
+- `keepLargest`: 去重时保留最大的文件
+- `keepEarliest`: 去重时保留最早的文件
+- `keepExt`: 去重时保留的扩展名
+- `preprocessLower`: 去重前将文件名转为小写
+- `preprocessUpper`: 去重前将文件名转为大写
+- `preprocessSimplified`: 去重前将文件名转为简体中文
+- `audioSpecial`: 对音频文件进行特殊处理
+- `minFileSizeKB`: 小于此大小的文件将被清理
+- `maxFileSizeKB`: 大于此大小的文件将被清理
+
+**使用示例**:
+```http
+POST /api/plugins/file-cleanup/execute
+Content-Type: application/json
+
+{
+  "files": ["/path/to/file1.mp3", "/path/to/file2.mp3"],
+  "config": {
+    "values": {
+      "cleanupMode": "dedup_files",
+      "deleteMethod": "pseudo_delete",
+      "keepLargest": true
+    }
+  }
+}
+```
+
+#### 2. 文件收集插件 (file-collection)
 
 **插件ID**: `file-collection`
 
@@ -110,131 +198,7 @@ Content-Type: application/json
 }
 ```
 
-### 2. 文件清理插件 (file-cleanup)
-
-**插件ID**: `file-cleanup`
-
-**描述**: 根据配置规则清理不需要的文件
-
-**默认配置**:
-```json
-{
-  "maxFileAgeDays": 30,
-  "minFileSizeKB": 0,
-  "maxFileSizeKB": 10240,
-  "deleteEmptyDirectories": true,
-  "includePatterns": ["*.tmp", "*.log", "*.bak"]
-}
-```
-
-**配置参数**:
-- `maxFileAgeDays`: 最大文件年龄（天）
-- `minFileSizeKB`: 最小文件大小（KB）
-- `maxFileSizeKB`: 最大文件大小（KB）
-- `deleteEmptyDirectories`: 是否删除空目录
-- `includePatterns`: 包含的文件模式列表
-
-**使用示例**:
-```http
-POST /api/plugins/file-cleanup/execute
-Content-Type: application/json
-
-{
-  "files": ["/path/to/file1.tmp", "/path/to/file2.log"],
-  "config": {
-    "values": {
-      "maxFileAgeDays": 30,
-      "deleteEmptyDirectories": true
-    }
-  }
-}
-```
-
-### 3. 元数据抓取插件 (metadata-scraper)
-
-**插件ID**: `metadata-scraper`
-
-**描述**: 从网络或本地抓取并更新文件的元数据信息
-
-**默认配置**:
-```json
-{
-  "sources": ["discogs", "musicbrainz", "local"],
-  "updateTags": true,
-  "updateCoverArt": true,
-  "forceUpdate": false
-}
-```
-
-**配置参数**:
-- `sources`: 数据源列表（discogs, musicbrainz, local）
-- `updateTags`: 是否更新标签
-- `updateCoverArt`: 是否更新封面艺术
-- `forceUpdate`: 是否强制更新
-
-**使用示例**:
-```http
-POST /api/plugins/metadata-scraper/execute
-Content-Type: application/json
-
-{
-  "files": ["/path/to/file1.mp3", "/path/to/file2.mp3"],
-  "config": {
-    "values": {
-      "sources": ["discogs", "musicbrainz"],
-      "updateTags": true,
-      "updateCoverArt": true
-    }
-  }
-}
-```
-
-### 4. 音频转换插件 (audio-converter)
-
-**插件ID**: `audio-converter`
-
-**描述**: 将音频文件转换为不同格式
-
-**默认配置**:
-```json
-{
-  "targetFormat": "mp3",
-  "bitrate": "320k",
-  "sampleRate": 44100,
-  "channels": 2,
-  "outputDirectory": "",
-  "overwriteExisting": false
-}
-```
-
-**配置参数**:
-- `targetFormat`: 目标格式（mp3, wav, flac, aac等）
-- `bitrate`: 比特率（如320k, 256k, 128k）
-- `sampleRate`: 采样率（如44100, 48000）
-- `channels`: 声道数（1=单声道, 2=立体声）
-- `outputDirectory`: 输出目录（空表示原文件所在目录）
-- `overwriteExisting`: 是否覆盖已存在的文件
-
-**使用示例**:
-```http
-POST /api/plugins/audio-converter/execute
-Content-Type: application/json
-
-{
-  "files": ["/path/to/file1.wav", "/path/to/file2.flac"],
-  "config": {
-    "values": {
-      "targetFormat": "mp3",
-      "bitrate": "320k",
-      "sampleRate": 44100,
-      "channels": 2,
-      "outputDirectory": "/path/to/output"
-    }
-  }
-}
-```
-
-### 5. 文件重命名插件 (file-rename)
+#### 3. 文件重命名插件 (file-rename)
 
 **插件ID**: `file-rename`
 
@@ -279,29 +243,411 @@ Content-Type: application/json
 }
 ```
 
+#### 4. 音频转换插件 (audio-converter)
+
+**插件ID**: `audio-converter`
+
+**描述**: 将音频文件转换为不同格式
+
+**默认配置**:
+```json
+{
+  "targetFormat": "mp3",
+  "bitrate": "320k",
+  "sampleRate": 44100,
+  "channels": 2,
+  "outputDirectory": "",
+  "overwriteExisting": false
+}
+```
+
+**配置参数**:
+- `targetFormat`: 目标格式（mp3, wav, flac, aac等）
+- `bitrate`: 比特率（如320k, 256k, 128k）
+- `sampleRate`: 采样率（如44100, 48000）
+- `channels`: 声道数（1=单声道, 2=立体声）
+- `outputDirectory`: 输出目录（空表示原文件所在目录）
+- `overwriteExisting`: 是否覆盖已存在的文件
+
+**使用示例**:
+```http
+POST /api/plugins/audio-converter/execute
+Content-Type: application/json
+
+{
+  "files": ["/path/to/file1.wav", "/path/to/file2.flac"],
+  "config": {
+    "values": {
+      "targetFormat": "mp3",
+      "bitrate": "320k",
+      "sampleRate": 44100,
+      "channels": 2,
+      "outputDirectory": "/path/to/output"
+    }
+  }
+}
+```
+
+#### 5. 元数据抓取插件 (metadata-scraper)
+
+**插件ID**: `metadata-scraper`
+
+**描述**: 从网络或本地抓取并更新文件的元数据信息
+
+**默认配置**:
+```json
+{
+  "sources": ["discogs", "musicbrainz", "local"],
+  "updateTags": true,
+  "updateCoverArt": true,
+  "forceUpdate": false
+}
+```
+
+**配置参数**:
+- `sources`: 数据源列表（discogs, musicbrainz, local）
+- `updateTags`: 是否更新标签
+- `updateCoverArt`: 是否更新封面艺术
+- `forceUpdate`: 是否强制更新
+
+**使用示例**:
+```http
+POST /api/plugins/metadata-scraper/execute
+Content-Type: application/json
+
+{
+  "files": ["/path/to/file1.mp3", "/path/to/file2.mp3"],
+  "config": {
+    "values": {
+      "sources": ["discogs", "musicbrainz"],
+      "updateTags": true,
+      "updateCoverArt": true
+    }
+  }
+}
+```
+
+#### 6. CUE分轨插件 (cue-splitter)
+
+**插件ID**: `cue-splitter`
+
+**描述**: 解析.cue索引文件，将整轨音频无损切割为单曲。支持预览详细的歌曲清单与时长信息。只需要扫描cue文件。
+
+**默认配置**:
+```json
+{
+  "afterSplitAction": "do_nothing",
+  "enableArchive": false,
+  "archiveDir": "",
+  "outputDirPrefix": "Split",
+  "overwrite": false,
+  "format": "%artist% - %album% - %track% - %title%",
+  "autoFormatFilename": true,
+  "useCacheDir": false,
+  "cacheDir": "",
+  "mirrorDir": ""
+}
+```
+
+**配置参数**:
+- `afterSplitAction`: 切分后操作（do_nothing, delete_original, archive_original）
+- `enableArchive`: 是否启用归档目录
+- `archiveDir`: 归档目录路径
+- `outputDirPrefix`: 输出目录前缀
+- `overwrite`: 是否覆盖已存在文件
+- `format`: 文件名格式
+- `autoFormatFilename`: 是否自动格式化文件名
+- `useCacheDir`: 是否使用缓存目录
+- `cacheDir`: 缓存目录路径
+- `mirrorDir`: 镜像目录路径
+
+#### 7. 专辑目录标准化插件 (album-dir-normalize)
+
+**插件ID**: `album-dir-normalize`
+
+**描述**: 智能规范化专辑目录名称，支持多种命名模板、元数据提取、特殊字符清理等功能。
+
+**默认配置**:
+```json
+{
+  "template": "%artist% - %year% - %album%",
+  "customTemplate": "",
+  "cleanSpecialChars": true,
+  "removeYearPrefix": true,
+  "useConsensusMetadata": true,
+  "preserveOriginalName": false,
+  "validateAlbumInfo": true
+}
+```
+
+**配置参数**:
+- `template`: 命名模板
+- `customTemplate`: 自定义模板
+- `cleanSpecialChars`: 是否清理特殊字符
+- `removeYearPrefix`: 是否移除年份前缀
+- `useConsensusMetadata`: 是否使用共识元数据
+- `preserveOriginalName`: 是否保留原始目录名
+- `validateAlbumInfo`: 是否验证专辑信息
+
+#### 8. 文件类型修复插件 (file-type-fix)
+
+**插件ID**: `file-type-fix`
+
+**描述**: 一些网上下载的音频文件类型和实际类型不符，可以通过该工具智能进行修复。
+
+**默认配置**:
+```json
+{
+  "force": false
+}
+```
+
+**配置参数**:
+- `force`: 是否强制文件类型识别
+
+#### 9. 文件解压插件 (file-unzip)
+
+**插件ID**: `file-unzip`
+
+**描述**: 批量智能解压文件，支持多种压缩格式、密码管理、智能目录等功能。
+
+**默认配置**:
+```json
+{
+  "engine": "java",
+  "exePath": "",
+  "outputMode": "same_dir",
+  "customPath": "",
+  "smartFolder": true,
+  "mergeSameName": false,
+  "deleteSource": false,
+  "overwrite": false,
+  "deleteOnFail": false,
+  "nestedFolderMerge": false,
+  "passwords": []
+}
+```
+
+**配置参数**:
+- `engine`: 解压引擎（java, 7zip, bandizip）
+- `exePath`: 可执行文件路径
+- `outputMode`: 输出模式（same_dir, custom_dir, parent_dir）
+- `customPath`: 自定义路径
+- `smartFolder`: 是否智能文件夹
+- `mergeSameName`: 是否合并同名文件夹
+- `deleteSource`: 是否解压后删除源文件
+- `overwrite`: 是否覆盖已存在文件
+- `deleteOnFail`: 是否解压失败后删除
+- `nestedFolderMerge`: 是否嵌套文件夹合并
+- `passwords`: 密码列表
+
+#### 10. 文件迁移插件 (file-migrate)
+
+**插件ID**: `file-migrate`
+
+**描述**: 文件批量归档和移动工具，支持复制/移动操作，多种路径模式选择。
+
+**默认配置**:
+```json
+{
+  "operationMode": "MOVE",
+  "targetPath": "",
+  "pathMode": "absolute",
+  "scope": "all",
+  "duplicateStrategy": "skip",
+  "overwrite": false,
+  "preserveStructure": true
+}
+```
+
+**配置参数**:
+- `operationMode`: 操作模式（MOVE, COPY）
+- `targetPath`: 目标路径
+- `pathMode`: 路径模式（absolute, relative, flat）
+- `scope`: 生效范围（all, selected, matched）
+- `duplicateStrategy`: 去重策略（skip, overwrite, rename, keep_both）
+- `overwrite`: 是否覆盖已存在文件
+- `preserveStructure`: 是否保留目录结构
+
+#### 11. CUE文件重命名插件 (cue-file-rename)
+
+**插件ID**: `cue-file-rename`
+
+**描述**: 为了解决cue文件在部分软件下，由于中文命名导致的无法加载的问题，支持统一调整cue及对应的音频文件命名。
+
+**默认配置**:
+```json
+{
+  "mode": "auto",
+  "fileName": "album",
+  "overwrite": false
+}
+```
+
+**配置参数**:
+- `mode`: 修改模式（auto）
+- `fileName`: 文件名前缀
+- `overwrite`: 是否覆盖已存在文件
+
+#### 12. 网易云音乐工具集插件 (ncm-integrated)
+
+**插件ID**: `ncm-integrated`
+
+**描述**: 网易云音乐工具集，包含NCM转换、缓存扫描、歌词下载等功能。
+
+**默认配置**:
+```json
+{
+  "function": "convert",
+  "outputFormat": "mp3",
+  "bitrate": "320k",
+  "cacheDir": "",
+  "outputDir": "",
+  "downloadLyric": true,
+  "lyricFormat": "lrc",
+  "overwrite": false
+}
+```
+
+**配置参数**:
+- `function`: 功能选择（convert, cache_scan, lyric_download）
+- `outputFormat`: 输出格式
+- `bitrate`: 比特率
+- `cacheDir`: 缓存目录
+- `outputDir`: 输出目录
+- `downloadLyric`: 是否下载歌词
+- `lyricFormat`: 歌词格式
+- `overwrite`: 是否覆盖已存在文件
+
+#### 13. 高级重命名插件 (advanced-rename)
+
+**插件ID**: `advanced-rename`
+
+**描述**: 支持规则列表、正则表达式、元数据提取等多种重命名方式的高级重命名工具。
+
+**默认配置**:
+```json
+{
+  "crossDriveMode": "move",
+  "processScope": "all",
+  "rules": [],
+  "caseSensitive": false,
+  "useRegex": false,
+  "preserveExtension": true,
+  "overwrite": false
+}
+```
+
+**配置参数**:
+- `crossDriveMode`: 跨盘动作（move, copy）
+- `processScope`: 处理范围（files_only, folders_only, all）
+- `rules`: 重命名规则列表
+- `caseSensitive`: 是否区分大小写
+- `useRegex`: 是否使用正则表达式
+- `preserveExtension`: 是否保留文件扩展名
+- `overwrite`: 是否覆盖已存在文件
+
+#### 14. 合集命名插件 (collection-naming)
+
+**插件ID**: `collection-naming`
+
+**描述**: 支持多种合集命名策略，包括简洁风格、精确风格、选取模板等。
+
+**默认配置**:
+```json
+{
+  "strategy": "concise",
+  "removeYear": true,
+  "removeFormat": true,
+  "removeCDNumber": true,
+  "removeDiscNumber": true,
+  "removeVolNumber": true,
+  "removeParentheses": false,
+  "removeBrackets": false,
+  "keepTemplate": false,
+  "overwrite": false
+}
+```
+
+**配置参数**:
+- `strategy`: 命名策略（concise, precise, template）
+- `removeYear`: 是否移除年份
+- `removeFormat`: 是否移除格式
+- `removeCDNumber`: 是否移除CD序号
+- `removeDiscNumber`: 是否移除Disc序号
+- `removeVolNumber`: 是否移除Vol序号
+- `removeParentheses`: 是否移除括号内容
+- `removeBrackets`: 是否移除方括号内容
+- `keepTemplate`: 是否保留模板
+- `overwrite`: 是否覆盖已存在文件
+
+#### 15. 文件去重插件 (duplicate)
+
+**插件ID**: `duplicate`
+
+**描述**: 支持多种去重策略，包括保留最佳版本、添加序号、保留最早/最新文件等。
+
+**默认配置**:
+```json
+{
+  "strategy": "keep_best",
+  "comparisonMethod": "md5",
+  "caseInsensitive": true,
+  "ignoreWhitespace": true,
+  "ignoreSpecialChars": true,
+  "keepLargest": true,
+  "keepEarliest": true,
+  "keepLatest": false,
+  "addSequence": false,
+  "sequenceFormat": "({index})",
+  "moveToTrash": false,
+  "trashPath": ".EchoTrash"
+}
+```
+
+**配置参数**:
+- `strategy`: 去重策略（keep_best, keep_largest, keep_earliest, keep_latest, add_sequence）
+- `comparisonMethod`: 比较方法（md5, sha1, sha256, size, name）
+- `caseInsensitive`: 是否忽略大小写
+- `ignoreWhitespace`: 是否忽略空白字符
+- `ignoreSpecialChars`: 是否忽略特殊字符
+- `keepLargest`: 是否保留最大文件
+- `keepEarliest`: 是否保留最早文件
+- `keepLatest`: 是否保留最新文件
+- `addSequence`: 是否添加序号
+- `sequenceFormat`: 序号格式
+- `moveToTrash`: 是否移动到回收站
+- `trashPath`: 回收站路径
+
+### 外部插件
+
+外部插件是用户或第三方开发者开发的插件，可以动态加载到系统中。
+
+#### 创建外部插件
+
+1. 创建新的Maven项目
+2. 添加对`plugin-base`和`domain`模块的依赖
+3. 实现`IPlugin`接口
+4. 创建`META-INF/services/com.filemanager.plugin.IPlugin`文件
+5. 打包为JAR文件
+
+#### 加载外部插件
+
+1. 将插件JAR文件放入插件目录
+2. 调用`/api/plugins/load-external` API
+3. 插件自动加载并可用
+
 ## 插件开发指南
 
 ### 创建新插件
 
-1. 创建新的插件模块目录结构：
-```
-plugins/your-plugin/
-├── pom.xml
-└── src/
-    └── main/
-        └── java/
-            └── com/
-                └── filemanager/
-                    └── plugin/
-                        └── yourplugin/
-                            └── YourPlugin.java
-```
-
-2. 实现IPlugin接口：
+1. 创建新的插件类并实现IPlugin接口：
 ```java
-package com.filemanager.plugin.yourplugin;
+package com.filemanager.plugin.operations;
 
 import com.filemanager.domain.dto.PluginConfigDTO;
+import com.filemanager.domain.dto.PluginParameterDTO;
+import com.filemanager.domain.dto.PreconditionGroupDTO;
 import com.filemanager.domain.entity.ChangeRecord;
 import com.filemanager.plugin.ExecutionContext;
 import com.filemanager.plugin.IPlugin;
@@ -335,7 +681,31 @@ public class YourPlugin implements IPlugin {
         PluginConfigDTO config = new PluginConfigDTO();
         config.setValue("key1", "default-value1");
         config.setValue("key2", "default-value2");
+        config.setParameters(getParameters());
+        config.setPreconditionGroups(getDefaultPreconditionGroups());
         return config;
+    }
+
+    @Override
+    public List<PluginParameterDTO> getParameters() {
+        List<PluginParameterDTO> parameters = new ArrayList<>();
+        
+        PluginParameterDTO param = new PluginParameterDTO(
+            "key1",
+            "参数1",
+            "参数描述",
+            "text",
+            "default-value1",
+            true
+        );
+        parameters.add(param);
+        
+        return parameters;
+    }
+
+    @Override
+    public List<PreconditionGroupDTO> getDefaultPreconditionGroups() {
+        return new ArrayList<>();
     }
 
     @Override
@@ -357,102 +727,20 @@ public class YourPlugin implements IPlugin {
         return changes;
     }
 
+    @Override
+    public List<ChangeRecord> preview(List<String> filePaths, PluginConfigDTO config, ExecutionContext context) {
+        return execute(filePaths, config, context);
+    }
+
     private String getNewName(String filePath, PluginConfigDTO config) {
         return filePath;
     }
 }
 ```
 
-3. 创建pom.xml：
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
-
-    <parent>
-        <groupId>com.filemanager</groupId>
-        <artifactId>plugins</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
-        <relativePath>../pom.xml</relativePath>
-    </parent>
-
-    <artifactId>plugin-your-plugin</artifactId>
-    <name>Your Plugin</name>
-    <description>Your plugin description</description>
-
-    <dependencies>
-        <dependency>
-            <groupId>com.filemanager</groupId>
-            <artifactId>plugin-base</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.filemanager</groupId>
-            <artifactId>domain</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-    </dependencies>
-
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <configuration>
-                    <archive>
-                        <manifest>
-                            <addClasspath>true</addClasspath>
-                        </manifest>
-                    </archive>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
-</project>
+2. 在`META-INF/services/com.filemanager.plugin.IPlugin`文件中注册插件：
 ```
-
-4. 在plugins/pom.xml中添加模块：
-```xml
-<modules>
-    <module>base</module>
-    <module>file-collection</module>
-    <module>metadata-scraper</module>
-    <module>file-cleanup</module>
-    <module>audio-converter</module>
-    <module>file-rename</module>
-    <module>your-plugin</module>
-</modules>
-```
-
-5. 构建插件：
-```bash
-cd plugins
-mvn clean install
-```
-
-## 插件测试
-
-### 测试插件配置
-
-```bash
-curl -X GET http://localhost:8080/api/plugins/file-collection/config
-```
-
-### 测试插件执行
-
-```bash
-curl -X POST http://localhost:8080/api/plugins/file-collection/execute \
-  -H "Content-Type: application/json" \
-  -d '{
-    "files": ["/path/to/file1.mp3"],
-    "config": {
-      "values": {
-        "targetDirectory": "/path/to/target"
-      }
-    }
-  }'
+com.filemanager.plugin.operations.YourPlugin
 ```
 
 ## 插件管理API
@@ -461,6 +749,18 @@ curl -X POST http://localhost:8080/api/plugins/file-collection/execute \
 
 ```http
 GET /api/plugins
+```
+
+### 获取内置插件
+
+```http
+GET /api/plugins/internal
+```
+
+### 获取外部插件
+
+```http
+GET /api/plugins/external
 ```
 
 ### 获取插件信息
@@ -505,7 +805,35 @@ Content-Type: application/json
 }
 ```
 
-### 重新加载插件
+### 扫描外部插件目录
+
+```http
+POST /api/plugins/scan
+Content-Type: application/json
+
+{
+  "pluginDir": "/path/to/plugins"
+}
+```
+
+### 加载外部插件
+
+```http
+POST /api/plugins/load-external
+Content-Type: application/json
+
+{
+  "pluginDir": "/path/to/plugins"
+}
+```
+
+### 重载外部插件
+
+```http
+POST /api/plugins/reload-external
+```
+
+### 重载所有插件
 
 ```http
 POST /api/plugins/reload
@@ -513,13 +841,15 @@ POST /api/plugins/reload
 
 ## 插件最佳实践
 
-1. **配置验证**: 在execute方法中验证配置参数的有效性
-2. **错误处理**: 使用try-catch块处理可能的异常
-3. **日志记录**: 使用适当的日志级别记录插件执行过程
-4. **性能优化**: 对于大量文件，考虑使用批处理或并行处理
-5. **资源清理**: 确保在插件执行完成后清理所有打开的资源
-6. **文档完善**: 为插件提供清晰的配置说明和使用示例
+1. **配置验证**：在execute方法中验证配置参数的有效性
+2. **错误处理**：使用try-catch块处理可能的异常
+3. **日志记录**：使用适当的日志级别记录插件执行过程
+4. **性能优化**：对于大量文件，考虑使用批处理或并行处理
+5. **资源清理**：确保在插件执行完成后清理所有打开的资源
+6. **文档完善**：为插件提供清晰的配置说明和使用示例
 
 ## 总结
 
 FileManager Plus的插件系统提供了灵活的扩展机制，允许开发者轻松添加新的文件处理功能。通过实现IPlugin接口并遵循插件开发指南，可以创建功能强大的插件来满足各种文件管理需求。
+
+系统支持内置插件和外部插件两种方式，内置插件随主程序发布，外部插件可以动态加载，提供了极大的灵活性和可扩展性。
