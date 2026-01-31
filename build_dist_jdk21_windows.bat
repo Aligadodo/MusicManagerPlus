@@ -165,7 +165,7 @@ REM 生成停止脚本
     echo echo [1/2] 检查服务运行状态...
     echo.
     echo REM 检查后端服务 (8080 端口)
-    echo netstat -ano ^^| findstr :8080 ^^>nul
+    echo netstat -ano ^| findstr :8080 ^>nul
     echo if %%errorlevel%% equ 0 (
     echo     echo [发现] 后端服务正在运行 (端口 8080)
     echo     set "BACKEND_RUNNING=true"
@@ -175,7 +175,7 @@ REM 生成停止脚本
     echo )
     echo.
     echo REM 检查前端服务 (8081 端口)
-    echo netstat -ano ^^| findstr :8081 ^^>nul
+    echo netstat -ano ^| findstr :8081 ^>nul
     echo if %%errorlevel%% equ 0 (
     echo     echo [发现] 前端服务正在运行 (端口 8081)
     echo     set "FRONTEND_RUNNING=true"
@@ -197,7 +197,7 @@ REM 生成停止脚本
     echo if "!BACKEND_RUNNING!" equ "true" (
     echo     echo 正在停止后端服务...
     echo     REM 获取占用 8080 端口的进程 ID
-    echo     for /f "tokens=5" %%a in ('netstat -ano ^^| findstr :8080') do (
+    echo     for /f "tokens=5" %%a in ('netstat -ano ^| findstr :8080') do (
     echo         set "PID=%%a"
     echo         echo 发现进程 ID: !PID!
     echo         taskkill /PID !PID! /F ^>nul 2^>nul
@@ -213,7 +213,7 @@ REM 生成停止脚本
     echo if "!FRONTEND_RUNNING!" equ "true" (
     echo     echo 正在停止前端服务...
     echo     REM 获取占用 8081 端口的进程 ID
-    echo     for /f "tokens=5" %%a in ('netstat -ano ^^| findstr :8081') do (
+    echo     for /f "tokens=5" %%a in ('netstat -ano ^| findstr :8081') do (
     echo         set "PID=%%a"
     echo         echo 发现进程 ID: !PID!
     echo         taskkill /PID !PID! /F ^>nul 2^>nul
@@ -229,7 +229,7 @@ REM 生成停止脚本
     echo echo [验证] 验证服务停止状态...
     echo.
     echo REM 检查后端服务是否停止
-    echo netstat -ano ^^| findstr :8080 ^^>nul
+    echo netstat -ano ^| findstr :8080 ^>nul
     echo if %%errorlevel%% equ 0 (
     echo     echo [警告] 后端服务可能未完全停止，请手动检查
     echo ) else (
@@ -237,7 +237,7 @@ REM 生成停止脚本
     echo )
     echo.
     echo REM 检查前端服务是否停止
-    echo netstat -ano ^^| findstr :8081 ^^>nul
+    echo netstat -ano ^| findstr :8081 ^>nul
     echo if %%errorlevel%% equ 0 (
     echo     echo [警告] 前端服务可能未完全停止，请手动检查
     echo ) else (
@@ -274,7 +274,7 @@ REM 生成重启脚本
     echo timeout /t 2 /nobreak ^>nul
     echo.
     echo REM 检查后端服务是否停止
-    echo netstat -ano ^^| findstr :8080 ^^>nul
+    echo netstat -ano ^| findstr :8080 ^>nul
     echo if %%errorlevel%% equ 0 (
     echo     echo [警告] 后端服务可能未完全停止，继续重启操作
     echo ) else (
@@ -282,7 +282,7 @@ REM 生成重启脚本
     echo )
     echo.
     echo REM 检查前端服务是否停止
-    echo netstat -ano ^^| findstr :8081 ^^>nul
+    echo netstat -ano ^| findstr :8081 ^>nul
     echo if %%errorlevel%% equ 0 (
     echo     echo [警告] 前端服务可能未完全停止，继续重启操作
     echo ) else (

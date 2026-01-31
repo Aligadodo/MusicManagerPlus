@@ -21,8 +21,8 @@ class ConfigField {
       label: json['label'] as String,
       type: json['type'] as String,
       defaultValue: json['defaultValue'],
-      description: json['description'] as String,
-      required: json['required'] as bool,
+      description: json['description'] as String? ?? '',
+      required: json['required'] as bool? ?? false,
     );
   }
 

@@ -42,10 +42,10 @@ build/
 /logs/
 
 ### Local File ###
-/setting/fmplus_config.properties
-*/package_config.json
-*/package_graph.json
-*/pubspec.lock
-*/version
-*/.flutter-plugins-dependencies
-*/pubspec.lock
+fmplus_config.properties
+package_config.json
+package_graph.json
+pubspec.lock
+version
+.flutter-plugins-dependencies
+pubspec.lock
