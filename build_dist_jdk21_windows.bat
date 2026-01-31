@@ -11,10 +11,10 @@ echo ==========================================
 REM =================配置区域=================
 REM 请根据你的实际情况修改这些路径！！
 REM JDK 21 路径 (指向包含 bin 和 lib 文件夹的 jdk 目录)
-set "SOURCE_JDK=D:\Java\jdk-21"
+set "SOURCE_JDK=C:\Program Files\Java\jdk-21.0.10"
 
 REM Flutter SDK 路径
-set "FLUTTER_SDK=D:\flutter"
+set "FLUTTER_SDK=C:\Program Files\flutter_windows_3.38.4-stable\flutter"
 
 REM 设置构建输出目录
 set "BUILD_OUTPUT=dist"
