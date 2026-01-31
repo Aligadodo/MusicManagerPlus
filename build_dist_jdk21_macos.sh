@@ -17,6 +17,9 @@ SOURCE_JDK="/Library/Java/JavaVirtualMachines/jdk-21.jdk/Contents/Home"
 # Flutter SDK 路径
 FLUTTER_SDK="/Users/$(whoami)/flutter"
 
+# 工具文件路径
+SOURCE_TOOLS="/Users/$(whoami)/projects/pack/tools"
+
 # 设置构建输出目录
 BUILD_OUTPUT="dist"
 # ==========================================
@@ -103,7 +106,7 @@ echo "[6/8] 复制前端文件..."
 cp -r "clients/flutter-web-cli/build/web"/* "$BUILD_OUTPUT/frontend/"
 
 # --- 7. 复制 JDK ---
-echo "[7/8] 复制 JDK 运行时..."
+echo "[7/9] 复制 JDK 运行时..."
 if [ -d "$SOURCE_JDK/jre" ]; then
     cp -r "$SOURCE_JDK/jre"/* "$BUILD_OUTPUT/jdk/"
 elif [ -d "$SOURCE_JDK" ]; then
@@ -123,8 +126,19 @@ if [ ! -f "$BUILD_OUTPUT/jdk/bin/java" ]; then
     exit 1
 fi
 
-# --- 8. 生成启动和管理脚本 ---
-echo "[8/8] 生成启动和管理脚本..."
+# --- 8. 复制工具文件 ---
+echo "[8/9] 复制工具文件..."
+mkdir -p "$BUILD_OUTPUT/tools"
+if [ -d "$SOURCE_TOOLS" ]; then
+    cp -r "$SOURCE_TOOLS"/* "$BUILD_OUTPUT/tools/"
+    echo "[成功] 工具文件复制完成"
+else
+    echo "[警告] 工具文件目录不存在: $SOURCE_TOOLS"
+    echo "请检查工具文件路径是否正确"
+fi
+
+# --- 9. 生成启动和管理脚本 ---
+echo "[9/9] 生成启动和管理脚本..."
 
 # 生成后端启动脚本
 cat > "$BUILD_OUTPUT/start-backend.sh" << 'EOF'
