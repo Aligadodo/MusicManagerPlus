@@ -4,6 +4,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -37,6 +40,61 @@ public class SourceDirectoryController {
     }
 
     private final List<SourceDirectory> sourceDirectories = new ArrayList<>();
+    private final String configFilePath = "source_directories_config.json";
+
+    @javax.annotation.PostConstruct
+    public void init() {
+        System.out.println("[SourceDirectory] 初始化配置加载");
+        loadSourceDirectoriesConfig();
+    }
+
+    private void loadSourceDirectoriesConfig() {
+        try {
+            File configFile = new File(configFilePath);
+            if (configFile.exists()) {
+                System.out.println("[SourceDirectory] 找到配置文件，开始加载: " + configFilePath);
+                FileReader reader = new FileReader(configFile);
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                List<Map<String, Object>> configList = mapper.readValue(reader, new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, Object>>>() {});
+                sourceDirectories.clear();
+                for (Map<String, Object> config : configList) {
+                    String path = (String) config.get("path");
+                    int threadCount = (Integer) config.getOrDefault("threadCount", 4);
+                    sourceDirectories.add(new SourceDirectory(path, threadCount));
+                }
+                reader.close();
+                System.out.println("[SourceDirectory] 配置加载成功，源目录数量: " + sourceDirectories.size());
+            } else {
+                System.out.println("[SourceDirectory] 配置文件不存在，使用默认空配置: " + configFilePath);
+                sourceDirectories.clear();
+            }
+        } catch (Exception e) {
+            System.err.println("[SourceDirectory] 配置加载失败: " + e.getMessage());
+            e.printStackTrace();
+            sourceDirectories.clear();
+        }
+    }
+
+    private void saveSourceDirectoriesConfig() {
+        try {
+            List<Map<String, Object>> configList = new ArrayList<>();
+            for (SourceDirectory dir : sourceDirectories) {
+                Map<String, Object> config = new HashMap<>();
+                config.put("path", dir.getPath());
+                config.put("threadCount", dir.getThreadCount());
+                configList.add(config);
+            }
+            File configFile = new File(configFilePath);
+            FileWriter writer = new FileWriter(configFile);
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            mapper.writeValue(writer, configList);
+            writer.close();
+            System.out.println("[SourceDirectory] 配置保存成功，源目录数量: " + sourceDirectories.size());
+        } catch (Exception e) {
+            System.err.println("[SourceDirectory] 配置保存失败: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
 
     @GetMapping
     public ResponseEntity<List<Map<String, Object>>> getSourceDirectories() {
@@ -71,6 +129,7 @@ public class SourceDirectoryController {
             }
 
             sourceDirectories.add(new SourceDirectory(path, threadCount));
+            saveSourceDirectoriesConfig();
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
             result.put("message", "源目录添加成功");
@@ -90,6 +149,7 @@ public class SourceDirectoryController {
                 errorResult.put("message", "源目录不存在");
                 return ResponseEntity.badRequest().body(errorResult);
             }
+            saveSourceDirectoriesConfig();
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
             result.put("message", "源目录移除成功");
@@ -103,6 +163,7 @@ public class SourceDirectoryController {
     public ResponseEntity<Map<String, Object>> clearSourceDirectories() {
         try {
             sourceDirectories.clear();
+            saveSourceDirectoriesConfig();
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
             result.put("message", "源目录清空成功");
@@ -126,6 +187,7 @@ public class SourceDirectoryController {
             for (SourceDirectory dir : sourceDirectories) {
                 if (dir.getPath().equals(id)) {
                     dir.setThreadCount(threadCount);
+                    saveSourceDirectoriesConfig();
                     Map<String, Object> result = new HashMap<>();
                     result.put("success", true);
                     result.put("message", "线程数更新成功");

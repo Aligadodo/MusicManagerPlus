@@ -1,8 +1,11 @@
 package com.filemanager.backend.controller;
 
 import com.filemanager.domain.dto.PluginConfigDTO;
+import com.filemanager.domain.dto.PipelineTaskStatusDTO;
 import com.filemanager.domain.entity.ChangeRecord;
+import com.filemanager.domain.enums.TaskStatus;
 import com.filemanager.domain.service.PluginService;
+import com.filemanager.domain.service.PipelineTaskManager;
 import com.filemanager.domain.service.TaskService;
 import com.filemanager.domain.dto.TaskRequestDTO;
 import com.filemanager.domain.dto.ChangeRecordQueryDTO;
@@ -12,24 +15,21 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.io.*;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 @RestController
 @RequestMapping("/api/pipeline")
 public class PipelineController {
 
     private final Map<String, List<Map<String, Object>>> pipelines = new ConcurrentHashMap<>();
-    private final AtomicBoolean isTaskRunning = new AtomicBoolean(false);
     private final List<ChangeRecord> currentChanges = new ArrayList<>();
-    private final Map<String, Object> taskStatus = new ConcurrentHashMap<>();
     private final ExecutorService executorService = Executors.newFixedThreadPool(5);
     private final String configFilePath = "pipeline_config.json";
+    private final PipelineTaskManager taskManager = PipelineTaskManager.getInstance();
 
     @Autowired
     private PluginService pluginService;
@@ -37,14 +37,12 @@ public class PipelineController {
     @Autowired
     private TaskService taskService;
 
-    // 初始化时加载配置
     @javax.annotation.PostConstruct
     public void init() {
         System.out.println("[Pipeline] 初始化配置加载");
         loadPipelineConfig();
     }
 
-    // 加载流水线配置
     private void loadPipelineConfig() {
         try {
             File configFile = new File(configFilePath);
@@ -67,7 +65,6 @@ public class PipelineController {
         }
     }
 
-    // 保存流水线配置
     private void savePipelineConfig() {
         try {
             List<Map<String, Object>> pipeline = pipelines.getOrDefault("default", new ArrayList<>());
@@ -98,7 +95,6 @@ public class PipelineController {
         try {
             System.out.println("[Pipeline] 收到更新流水线请求，长度: " + (pipeline != null ? pipeline.size() : 0));
             pipelines.put("default", pipeline);
-            // 保存配置到文件
             savePipelineConfig();
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
@@ -115,28 +111,20 @@ public class PipelineController {
     @PostMapping("/analyze")
     public ResponseEntity<Map<String, Object>> analyzePipeline(@RequestBody Map<String, Object> request) {
         try {
-            if (taskService.isTaskRunning()) {
+            if (taskManager.isTaskRunning()) {
                 Map<String, Object> result = new HashMap<>();
                 result.put("success", false);
                 result.put("message", "已有任务在运行，请先中止");
                 return ResponseEntity.badRequest().body(result);
             }
 
-            isTaskRunning.set(true);
             currentChanges.clear();
-            taskStatus.clear();
-            taskStatus.put("status", "分析中");
-            taskStatus.put("progress", 0.0);
-            taskStatus.put("remainingTime", "计算中...");
-            taskStatus.put("completedTasks", 0);
-            taskStatus.put("totalTasks", 0);
+            taskManager.clearAllTasks();
 
             List<String> sourceDirectories = (List<String>) request.get("sourceDirectories");
             List<Map<String, Object>> pipeline = (List<Map<String, Object>>) request.get("pipeline");
 
             if (sourceDirectories == null || sourceDirectories.isEmpty()) {
-                taskStatus.put("status", "分析失败");
-                isTaskRunning.set(false);
                 Map<String, Object> result = new HashMap<>();
                 result.put("success", false);
                 result.put("message", "源目录不能为空");
@@ -144,28 +132,85 @@ public class PipelineController {
             }
 
             if (pipeline == null || pipeline.isEmpty()) {
-                taskStatus.put("status", "分析失败");
-                isTaskRunning.set(false);
                 Map<String, Object> result = new HashMap<>();
                 result.put("success", false);
                 result.put("message", "流水线不能为空");
                 return ResponseEntity.badRequest().body(result);
             }
 
-            // 异步执行分析任务
+            String taskId = taskManager.createTask("preview");
+            taskManager.updateTaskStatus(taskId, TaskStatus.PREVIEWING);
+            taskManager.setCurrentTaskRunning(true);
+            taskManager.updateTaskStep(taskId, "初始化预览任务");
+            taskManager.updateTaskMessage(taskId, "开始分析流水线...");
+
             CompletableFuture.runAsync(() -> {
                 try {
-                    taskStatus.put("totalTasks", pipeline.size());
+                    System.out.println("[Pipeline] 开始预览分析，任务ID: " + taskId);
+                    System.out.println("[Pipeline] 源目录: " + sourceDirectories);
+                    System.out.println("[Pipeline] 流水线节点数量: " + pipeline.size());
+
+                    taskManager.updateTaskStep(taskId, "输出流水线配置信息");
+                    StringBuilder configSummary = new StringBuilder();
+                    configSummary.append("=== 流水线配置信息 ===\n");
+                    configSummary.append("源目录数量: ").append(sourceDirectories.size()).append("\n");
+                    for (int i = 0; i < sourceDirectories.size(); i++) {
+                        configSummary.append("  目录").append(i + 1).append(": ").append(sourceDirectories.get(i)).append("\n");
+                    }
+                    configSummary.append("流水线节点数量: ").append(pipeline.size()).append("\n");
+                    
+                    for (int i = 0; i < pipeline.size(); i++) {
+                        Map<String, Object> pluginConfig = pipeline.get(i);
+                        String pluginId = (String) pluginConfig.get("pluginId");
+                        Map<String, Object> configMap = (Map<String, Object>) pluginConfig.get("config");
+                        configSummary.append("  节点").append(i + 1).append(": ").append(pluginId);
+                        if (configMap != null && !configMap.isEmpty()) {
+                            configSummary.append(" (参数: ").append(configMap.size()).append("个)");
+                        }
+                        configSummary.append("\n");
+                        
+                        if (configMap != null) {
+                            for (Map.Entry<String, Object> entry : configMap.entrySet()) {
+                                configSummary.append("    ").append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");
+                            }
+                        }
+                    }
+                    
+                    System.out.println(configSummary.toString());
+                    taskManager.updateTaskLogMessage(taskId, configSummary.toString());
+
+                    taskManager.updateTaskStep(taskId, "扫描文件");
+                    taskManager.updateTaskMessage(taskId, "正在扫描文件...");
+                    
                     List<ChangeRecord> allChanges = new ArrayList<>();
+                    int totalFiles = 0;
+                    int scannedFiles = 0;
+                    
+                    for (String directory : sourceDirectories) {
+                        File dir = new File(directory);
+                        if (dir.exists() && dir.isDirectory()) {
+                            int fileCount = countFiles(dir);
+                            totalFiles += fileCount;
+                            System.out.println("[Pipeline] 目录 " + directory + " 包含 " + fileCount + " 个文件");
+                        }
+                    }
+                    
+                    taskManager.updateTaskScanningInfo(taskId, sourceDirectories.get(0), 0, totalFiles);
 
                     int completed = 0;
                     for (Map<String, Object> pluginConfig : pipeline) {
-                        if (!isTaskRunning.get()) {
+                        if (!taskManager.isTaskRunning()) {
+                            taskManager.updateTaskStatus(taskId, TaskStatus.CANCELLED);
+                            taskManager.updateTaskMessage(taskId, "任务已中止");
                             break;
                         }
 
                         String pluginId = (String) pluginConfig.get("pluginId");
                         Map<String, Object> configMap = (Map<String, Object>) pluginConfig.get("config");
+
+                        taskManager.updateTaskStep(taskId, "执行节点: " + pluginId);
+                        taskManager.updateTaskMessage(taskId, "正在执行节点: " + pluginId);
+                        System.out.println("[Pipeline] 执行节点: " + pluginId);
 
                         PluginConfigDTO config = new PluginConfigDTO();
                         if (configMap != null) {
@@ -178,32 +223,44 @@ public class PipelineController {
                         allChanges.addAll(changes);
                         completed++;
 
-                        taskStatus.put("completedTasks", completed);
-                        taskStatus.put("progress", (double) completed / pipeline.size());
+                        scannedFiles = (int) ((double) completed / pipeline.size() * totalFiles);
+                        taskManager.updateTaskProgress(taskId, completed, pipeline.size());
+                        taskManager.updateTaskScanningInfo(taskId, sourceDirectories.get(0), scannedFiles, totalFiles);
+                        
+                        String progressMessage = String.format("节点 %d/%d 完成，发现 %d 个变更", completed, pipeline.size(), changes.size());
+                        taskManager.updateTaskMessage(taskId, progressMessage);
+                        System.out.println("[Pipeline] " + progressMessage);
                     }
 
                     currentChanges.addAll(allChanges);
-                    taskStatus.put("status", isTaskRunning.get() ? "分析完成" : "已中止");
-                    taskStatus.put("progress", 1.0);
-                    taskStatus.put("remainingTime", "00:00:00");
-                    taskStatus.put("totalTasks", allChanges.size());
-                    taskStatus.put("completedTasks", allChanges.size());
+                    
+                    if (taskManager.isTaskRunning()) {
+                        taskManager.updateTaskStatus(taskId, TaskStatus.PREVIEW_COMPLETED);
+                        taskManager.updateTaskMessage(taskId, "预览完成，共发现 " + allChanges.size() + " 个变更");
+                        taskManager.updateTaskChanges(taskId, !allChanges.isEmpty(), allChanges.size());
+                        taskManager.updateTaskScanningInfo(taskId, sourceDirectories.get(0), totalFiles, totalFiles);
+                        System.out.println("[Pipeline] 预览完成，共发现 " + allChanges.size() + " 个变更");
+                    } else {
+                        taskManager.updateTaskStatus(taskId, TaskStatus.CANCELLED);
+                        taskManager.updateTaskMessage(taskId, "任务已中止");
+                    }
                 } catch (Exception e) {
                     e.printStackTrace();
-                    taskStatus.put("status", "分析失败: " + e.getMessage());
+                    taskManager.updateTaskStatus(taskId, TaskStatus.PREVIEW_FAILED);
+                    taskManager.updateTaskMessage(taskId, "预览失败: " + e.getMessage());
+                    System.err.println("[Pipeline] 预览失败: " + e.getMessage());
                 } finally {
-                    isTaskRunning.set(false);
+                    taskManager.setCurrentTaskRunning(false);
                 }
             }, executorService);
 
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
-            result.put("message", "分析任务已开始执行");
+            result.put("taskId", taskId);
+            result.put("message", "预览任务已开始执行");
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             e.printStackTrace();
-            taskStatus.put("status", "分析失败");
-            isTaskRunning.set(false);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
@@ -211,28 +268,20 @@ public class PipelineController {
     @PostMapping("/execute")
     public ResponseEntity<Map<String, Object>> executePipeline(@RequestBody Map<String, Object> request) {
         try {
-            if (taskService.isTaskRunning()) {
+            if (taskManager.isTaskRunning()) {
                 Map<String, Object> result = new HashMap<>();
                 result.put("success", false);
                 result.put("message", "已有任务在运行，请先中止");
                 return ResponseEntity.badRequest().body(result);
             }
 
-            isTaskRunning.set(true);
             currentChanges.clear();
-            taskStatus.clear();
-            taskStatus.put("status", "执行中");
-            taskStatus.put("progress", 0.0);
-            taskStatus.put("remainingTime", "计算中...");
-            taskStatus.put("completedTasks", 0);
-            taskStatus.put("totalTasks", 0);
+            taskManager.clearAllTasks();
 
             List<String> sourceDirectories = (List<String>) request.get("sourceDirectories");
             List<Map<String, Object>> pipeline = (List<Map<String, Object>>) request.get("pipeline");
 
             if (sourceDirectories == null || sourceDirectories.isEmpty()) {
-                taskStatus.put("status", "执行失败");
-                isTaskRunning.set(false);
                 Map<String, Object> result = new HashMap<>();
                 result.put("success", false);
                 result.put("message", "源目录不能为空");
@@ -240,37 +289,93 @@ public class PipelineController {
             }
 
             if (pipeline == null || pipeline.isEmpty()) {
-                taskStatus.put("status", "执行失败");
-                isTaskRunning.set(false);
                 Map<String, Object> result = new HashMap<>();
                 result.put("success", false);
                 result.put("message", "流水线不能为空");
                 return ResponseEntity.badRequest().body(result);
             }
 
-            // 创建任务记录
+            String taskId = taskManager.createTask("execute");
+            taskManager.updateTaskStatus(taskId, TaskStatus.EXECUTING);
+            taskManager.setCurrentTaskRunning(true);
+            taskManager.updateTaskStep(taskId, "初始化执行任务");
+            taskManager.updateTaskMessage(taskId, "开始执行流水线...");
+
             TaskRequestDTO taskRequest = new TaskRequestDTO();
             taskRequest.setStrategyId("pipeline");
             taskRequest.setFilePaths(sourceDirectories);
             taskRequest.setTaskName("Pipeline Execution");
             taskRequest.setDescription("Execute pipeline with " + pipeline.size() + " plugins");
 
-            String taskId = taskService.createTask(taskRequest);
+            String taskServiceId = taskService.createTask(taskRequest);
 
-            // 异步执行任务
             CompletableFuture.runAsync(() -> {
                 try {
-                    taskStatus.put("totalTasks", pipeline.size());
+                    System.out.println("[Pipeline] 开始执行，任务ID: " + taskId);
+                    System.out.println("[Pipeline] 源目录: " + sourceDirectories);
+                    System.out.println("[Pipeline] 流水线节点数量: " + pipeline.size());
+
+                    taskManager.updateTaskStep(taskId, "输出流水线配置信息");
+                    StringBuilder configSummary = new StringBuilder();
+                    configSummary.append("=== 流水线配置信息 ===\n");
+                    configSummary.append("源目录数量: ").append(sourceDirectories.size()).append("\n");
+                    for (int i = 0; i < sourceDirectories.size(); i++) {
+                        configSummary.append("  目录").append(i + 1).append(": ").append(sourceDirectories.get(i)).append("\n");
+                    }
+                    configSummary.append("流水线节点数量: ").append(pipeline.size()).append("\n");
+                    
+                    for (int i = 0; i < pipeline.size(); i++) {
+                        Map<String, Object> pluginConfig = pipeline.get(i);
+                        String pluginId = (String) pluginConfig.get("pluginId");
+                        Map<String, Object> configMap = (Map<String, Object>) pluginConfig.get("config");
+                        configSummary.append("  节点").append(i + 1).append(": ").append(pluginId);
+                        if (configMap != null && !configMap.isEmpty()) {
+                            configSummary.append(" (参数: ").append(configMap.size()).append("个)");
+                        }
+                        configSummary.append("\n");
+                        
+                        if (configMap != null) {
+                            for (Map.Entry<String, Object> entry : configMap.entrySet()) {
+                                configSummary.append("    ").append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");
+                            }
+                        }
+                    }
+                    
+                    System.out.println(configSummary.toString());
+                    taskManager.updateTaskLogMessage(taskId, configSummary.toString());
+
+                    taskManager.updateTaskStep(taskId, "扫描文件");
+                    taskManager.updateTaskMessage(taskId, "正在扫描文件...");
+                    
                     List<ChangeRecord> allChanges = new ArrayList<>();
+                    int totalFiles = 0;
+                    int scannedFiles = 0;
+                    
+                    for (String directory : sourceDirectories) {
+                        File dir = new File(directory);
+                        if (dir.exists() && dir.isDirectory()) {
+                            int fileCount = countFiles(dir);
+                            totalFiles += fileCount;
+                            System.out.println("[Pipeline] 目录 " + directory + " 包含 " + fileCount + " 个文件");
+                        }
+                    }
+                    
+                    taskManager.updateTaskScanningInfo(taskId, sourceDirectories.get(0), 0, totalFiles);
 
                     int completed = 0;
                     for (Map<String, Object> pluginConfig : pipeline) {
-                        if (!isTaskRunning.get()) {
+                        if (!taskManager.isTaskRunning()) {
+                            taskManager.updateTaskStatus(taskId, TaskStatus.CANCELLED);
+                            taskManager.updateTaskMessage(taskId, "任务已中止");
                             break;
                         }
 
                         String pluginId = (String) pluginConfig.get("pluginId");
                         Map<String, Object> configMap = (Map<String, Object>) pluginConfig.get("config");
+
+                        taskManager.updateTaskStep(taskId, "执行节点: " + pluginId);
+                        taskManager.updateTaskMessage(taskId, "正在执行节点: " + pluginId);
+                        System.out.println("[Pipeline] 执行节点: " + pluginId);
 
                         PluginConfigDTO config = new PluginConfigDTO();
                         if (configMap != null) {
@@ -283,24 +388,36 @@ public class PipelineController {
                         allChanges.addAll(changes);
                         completed++;
 
-                        taskStatus.put("completedTasks", completed);
-                        taskStatus.put("progress", (double) completed / pipeline.size());
+                        scannedFiles = (int) ((double) completed / pipeline.size() * totalFiles);
+                        taskManager.updateTaskProgress(taskId, completed, pipeline.size());
+                        taskManager.updateTaskScanningInfo(taskId, sourceDirectories.get(0), scannedFiles, totalFiles);
+                        
+                        String progressMessage = String.format("节点 %d/%d 完成，处理 %d 个文件", completed, pipeline.size(), changes.size());
+                        taskManager.updateTaskMessage(taskId, progressMessage);
+                        System.out.println("[Pipeline] " + progressMessage);
                     }
 
                     currentChanges.addAll(allChanges);
-                    taskStatus.put("status", isTaskRunning.get() ? "执行完成" : "已中止");
-                    taskStatus.put("progress", 1.0);
-                    taskStatus.put("remainingTime", "00:00:00");
-                    taskStatus.put("totalTasks", allChanges.size());
-                    taskStatus.put("completedTasks", allChanges.size());
-
-                    // 执行任务记录
-                    taskService.executeTask(taskId);
+                    
+                    if (taskManager.isTaskRunning()) {
+                        taskManager.updateTaskStatus(taskId, TaskStatus.EXECUTION_COMPLETED);
+                        taskManager.updateTaskMessage(taskId, "执行完成，共处理 " + allChanges.size() + " 个文件");
+                        taskManager.updateTaskChanges(taskId, !allChanges.isEmpty(), allChanges.size());
+                        taskManager.updateTaskScanningInfo(taskId, sourceDirectories.get(0), totalFiles, totalFiles);
+                        System.out.println("[Pipeline] 执行完成，共处理 " + allChanges.size() + " 个文件");
+                        
+                        taskService.executeTask(taskServiceId);
+                    } else {
+                        taskManager.updateTaskStatus(taskId, TaskStatus.CANCELLED);
+                        taskManager.updateTaskMessage(taskId, "任务已中止");
+                    }
                 } catch (Exception e) {
                     e.printStackTrace();
-                    taskStatus.put("status", "执行失败: " + e.getMessage());
+                    taskManager.updateTaskStatus(taskId, TaskStatus.EXECUTION_FAILED);
+                    taskManager.updateTaskMessage(taskId, "执行失败: " + e.getMessage());
+                    System.err.println("[Pipeline] 执行失败: " + e.getMessage());
                 } finally {
-                    isTaskRunning.set(false);
+                    taskManager.setCurrentTaskRunning(false);
                 }
             }, executorService);
 
@@ -311,8 +428,6 @@ public class PipelineController {
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             e.printStackTrace();
-            taskStatus.put("status", "执行失败");
-            isTaskRunning.set(false);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
@@ -320,11 +435,8 @@ public class PipelineController {
     @PostMapping("/stop")
     public ResponseEntity<Map<String, Object>> stopPipeline() {
         try {
-            isTaskRunning.set(false);
-            taskStatus.put("status", "已中止");
-            taskStatus.put("progress", 0.0);
-            taskStatus.put("remainingTime", "00:00:00");
-
+            taskManager.cancelCurrentTask();
+            
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
             result.put("message", "任务已成功中止");
@@ -336,11 +448,14 @@ public class PipelineController {
     }
 
     @GetMapping("/status")
-    public ResponseEntity<Map<String, Object>> getPipelineStatus() {
+    public ResponseEntity<PipelineTaskStatusDTO> getPipelineStatus() {
         try {
-            Map<String, Object> status = new HashMap<>(taskStatus);
-            status.put("running", isTaskRunning.get());
-            return ResponseEntity.ok(status);
+            PipelineTaskStatusDTO status = taskManager.getCurrentTaskStatus();
+            if (status != null) {
+                return ResponseEntity.ok(status);
+            } else {
+                return ResponseEntity.ok(new PipelineTaskStatusDTO());
+            }
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
@@ -358,7 +473,6 @@ public class PipelineController {
             @RequestParam(required = false, defaultValue = "id") String sortBy,
             @RequestParam(required = false, defaultValue = "ASC") String sortDirection) {
         try {
-            // 创建查询DTO
             ChangeRecordQueryDTO queryDTO = new ChangeRecordQueryDTO();
             queryDTO.setSearchFilter(searchFilter);
             queryDTO.setStatusFilter(statusFilter);
@@ -369,10 +483,8 @@ public class PipelineController {
             queryDTO.setSortBy(sortBy);
             queryDTO.setSortDirection(sortDirection);
 
-            // 应用过滤条件
             List<ChangeRecord> filteredChanges = new ArrayList<>();
             for (ChangeRecord record : currentChanges) {
-                // 搜索过滤
                 if (searchFilter != null && !searchFilter.isEmpty()) {
                     boolean matchesSearch = false;
                     if (record.getOriginalName() != null && record.getOriginalName().toLowerCase().contains(searchFilter.toLowerCase())) {
@@ -386,21 +498,18 @@ public class PipelineController {
                     }
                 }
 
-                // 状态过滤
                 if (statusFilter != null && !statusFilter.isEmpty() && !statusFilter.equals("全部")) {
                     if (!statusFilter.equals(record.getStatus())) {
                         continue;
                     }
                 }
 
-                // 操作类型过滤
                 if (operationTypeFilter != null && !operationTypeFilter.isEmpty() && !operationTypeFilter.equals("全部")) {
                     if (!operationTypeFilter.equals(record.getOperationType())) {
                         continue;
                     }
                 }
 
-                // 隐藏未变更的记录
                 if (hideUnchanged && !record.isChanged()) {
                     continue;
                 }
@@ -408,7 +517,6 @@ public class PipelineController {
                 filteredChanges.add(record);
             }
 
-            // 排序
             if (sortBy != null && !sortBy.isEmpty()) {
                 filteredChanges.sort((a, b) -> {
                     int result = 0;
@@ -436,7 +544,6 @@ public class PipelineController {
                 });
             }
 
-            // 分页
             long total = filteredChanges.size();
             int startIndex = (page - 1) * size;
             int endIndex = Math.min(startIndex + size, filteredChanges.size());
@@ -445,7 +552,6 @@ public class PipelineController {
                 paginatedChanges = filteredChanges.subList(startIndex, endIndex);
             }
 
-            // 创建响应DTO
             ChangeRecordResponseDTO responseDTO = new ChangeRecordResponseDTO(
                     paginatedChanges,
                     total,
@@ -460,17 +566,27 @@ public class PipelineController {
         }
     }
 
-    // 辅助方法：比较两个字符串
-    private int compareStrings(String s1, String s2) {
-        if (s1 == null && s2 == null) {
-            return 0;
+    private int compareStrings(String a, String b) {
+        if (a == null && b == null) return 0;
+        if (a == null) return -1;
+        if (b == null) return 1;
+        return a.compareTo(b);
+    }
+
+    private int countFiles(File directory) {
+        int count = 0;
+        if (directory.exists() && directory.isDirectory()) {
+            File[] files = directory.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    if (file.isFile()) {
+                        count++;
+                    } else if (file.isDirectory()) {
+                        count += countFiles(file);
+                    }
+                }
+            }
         }
-        if (s1 == null) {
-            return -1;
-        }
-        if (s2 == null) {
-            return 1;
-        }
-        return s1.compareTo(s2);
+        return count;
     }
 }

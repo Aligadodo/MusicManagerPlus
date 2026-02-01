@@ -12,6 +12,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import javax.annotation.PostConstruct;
 
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -22,6 +25,7 @@ public class StrategyServiceImpl implements StrategyService {
 
     private final Map<String, StrategyConfigDTO> strategyConfigs = new ConcurrentHashMap<>();
     private final Map<String, StrategyInfoDTO> strategies = new ConcurrentHashMap<>();
+    private final String configFilePath = "strategy_configs.json";
 
     @Autowired
     private PluginRegistry pluginRegistry;
@@ -33,6 +37,9 @@ public class StrategyServiceImpl implements StrategyService {
     
     @PostConstruct
     private void initPluginStrategies() {
+        // 加载保存的策略配置
+        loadStrategyConfigs();
+        
         // 从插件注册表加载策略
         List<com.filemanager.plugin.IPlugin> plugins = pluginRegistry.getAvailablePlugins();
         for (com.filemanager.plugin.IPlugin plugin : plugins) {
@@ -59,6 +66,57 @@ public class StrategyServiceImpl implements StrategyService {
             }
             strategy.setConfigFields(configFields);
             strategies.put(strategy.getId(), strategy);
+        }
+    }
+
+    private void loadStrategyConfigs() {
+        try {
+            File configFile = new File(configFilePath);
+            if (configFile.exists()) {
+                logger.info("[Strategy] 找到配置文件，开始加载: {}", configFilePath);
+                FileReader reader = new FileReader(configFile);
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                Map<String, Map<String, Object>> configMap = mapper.readValue(reader, new com.fasterxml.jackson.core.type.TypeReference<Map<String, Map<String, Object>>>() {});
+                reader.close();
+                
+                for (Map.Entry<String, Map<String, Object>> entry : configMap.entrySet()) {
+                    String strategyId = entry.getKey();
+                    Map<String, Object> configValues = entry.getValue();
+                    StrategyConfigDTO config = new StrategyConfigDTO();
+                    config.setConfigValues(configValues);
+                    strategyConfigs.put(strategyId, config);
+                    logger.info("[Strategy] 加载策略配置: {}，配置项数量: {}", strategyId, configValues.size());
+                }
+                logger.info("[Strategy] 配置加载成功，共加载 {} 个策略配置", configMap.size());
+            } else {
+                logger.info("[Strategy] 配置文件不存在，使用默认配置: {}", configFilePath);
+            }
+        } catch (Exception e) {
+            logger.error("[Strategy] 配置加载失败: {}", e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private void saveStrategyConfigs() {
+        try {
+            Map<String, Map<String, Object>> configMap = new HashMap<>();
+            for (Map.Entry<String, StrategyConfigDTO> entry : strategyConfigs.entrySet()) {
+                String strategyId = entry.getKey();
+                StrategyConfigDTO config = entry.getValue();
+                if (config.getConfigValues() != null && !config.getConfigValues().isEmpty()) {
+                    configMap.put(strategyId, config.getConfigValues());
+                }
+            }
+            
+            File configFile = new File(configFilePath);
+            FileWriter writer = new FileWriter(configFile);
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            mapper.writeValue(writer, configMap);
+            writer.close();
+            logger.info("[Strategy] 配置保存成功，共保存 {} 个策略配置", configMap.size());
+        } catch (Exception e) {
+            logger.error("[Strategy] 配置保存失败: {}", e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -558,6 +616,7 @@ public class StrategyServiceImpl implements StrategyService {
     @Override
     public boolean updateStrategyConfig(String strategyId, StrategyConfigDTO config) {
         strategyConfigs.put(strategyId, config);
+        saveStrategyConfigs();
         return true;
     }
 

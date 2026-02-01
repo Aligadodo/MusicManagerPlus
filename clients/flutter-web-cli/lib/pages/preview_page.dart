@@ -10,6 +10,17 @@ import '../models/source_directory.dart';
 import '../models/strategy_info.dart';
 import '../utils/tooltip_utils.dart';
 
+enum TaskState {
+  ready,
+  previewing,
+  previewCompleted,
+  previewFailed,
+  executing,
+  executionCompleted,
+  executionFailed,
+  cancelled,
+}
+
 class PreviewPage extends ConsumerStatefulWidget {
   const PreviewPage({super.key});
 
@@ -25,7 +36,6 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
   List<SourceDirectory> _sourceDirectories = [];
   List<StrategyInfo> _pipeline = [];
   bool _isLoading = false;
-  bool _isAnalyzing = false;
   String _errorMessage = '';
 
   String _searchFilter = '';
@@ -33,28 +43,36 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
   String _operationTypeFilter = '全部';
   bool _hideUnchanged = true;
 
-  // 分页相关
   int _currentPage = 1;
   int _pageSize = 20;
   int _totalRecords = 0;
   int _totalPages = 0;
 
-  // 进度信息
-  double _progress = 0.0;
+  TaskState _taskState = TaskState.ready;
+  int _progress = 0;
   String _remainingTime = '00:00:00';
-  String _progressStatus = '准备就绪';
-  int _completedTasks = 0;
-  int _totalTasks = 0;
-  
-  // 日志信息
-  List<String> _logs = [];
-  Timer? _statusTimer;
+  String _currentStep = '';
+  String _message = '';
   bool _hasChanges = false;
+  int _changeCount = 0;
+  String _currentDirectory = '';
+  int _scannedFiles = 0;
+  int _totalFiles = 0;
+  String _logMessage = '';
+  
+  Timer? _statusTimer;
+  String? _taskId;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    _statusTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -80,324 +98,258 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
     }
   }
 
+  bool _validateConfiguration() {
+    if (_sourceDirectories.isEmpty) {
+      _showError('请先添加源目录');
+      return false;
+    }
+
+    if (_pipeline.isEmpty) {
+      _showError('请先配置插件流水线');
+      return false;
+    }
+
+    return true;
+  }
+
+  bool _validatePipelineParameters() {
+    for (int i = 0; i < _pipeline.length; i++) {
+      final strategy = _pipeline[i];
+      
+      if (strategy.configFields != null) {
+        for (final field in strategy.configFields!) {
+          if (field.required && (field.defaultValue == null || field.defaultValue!.isEmpty)) {
+            _showError('策略 "${strategy.name}" 的参数 "${field.label}" 是必填项，请配置');
+            return false;
+          }
+        }
+      }
+    }
+
+    return true;
+  }
+
+  void _showError(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _showSuccess(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
   Future<void> _analyzePipeline() async {
+    if (!_validateConfiguration()) {
+      return;
+    }
+
+    if (!_validatePipelineParameters()) {
+      return;
+    }
+
     setState(() {
-      _isAnalyzing = true;
+      _taskState = TaskState.previewing;
       _errorMessage = '';
-      _progress = 0.0;
+      _progress = 0;
       _remainingTime = '计算中...';
-      _progressStatus = '分析中';
-      _completedTasks = 0;
-      _totalTasks = 0;
-      _logs.clear();
+      _currentStep = '初始化预览任务';
+      _message = '开始分析流水线...';
       _hasChanges = false;
-      _logs.add('开始分析流水线...');
+      _changeCount = 0;
+      _scannedFiles = 0;
+      _totalFiles = 0;
+      _logMessage = '';
     });
 
     try {
-      if (_sourceDirectories.isEmpty) {
-        setState(() {
-          _errorMessage = '请先添加源目录';
-          _logs.add('错误: 请先添加源目录');
-        });
-        return;
-      }
-
-      if (_pipeline.isEmpty) {
-        setState(() {
-          _errorMessage = '请先配置插件流水线';
-          _logs.add('错误: 请先配置插件流水线');
-        });
-        return;
-      }
-
-      // 校验策略参数，确保所有参数都有配置或默认值
-      bool allParamsValid = true;
-      String validationMessage = '';
-      
-      _logs.add('开始校验策略参数...');
-      for (int i = 0; i < _pipeline.length; i++) {
-        final strategy = _pipeline[i];
-        _logs.add('校验策略: ${strategy.name} (${strategy.id})');
-        
-        if (strategy.configFields != null) {
-          for (final field in strategy.configFields!) {
-            // 检查字段是否有值或默认值
-            bool hasValue = false;
-            if (field.defaultValue != null) {
-              hasValue = true;
-              _logs.add('  字段 ${field.name}: 使用默认值 ${field.defaultValue}');
-            } else {
-              _logs.add('  字段 ${field.name}: 无默认值，需要配置');
-              if (field.required) {
-                validationMessage = '策略 "${strategy.name}" 的参数 "${field.label}" 是必填项，请配置';
-                allParamsValid = false;
-                _logs.add('  错误: ${validationMessage}');
-                break;
-              }
-            }
-          }
-        }
-        
-        if (!allParamsValid) {
-          break;
-        }
-      }
-
-      if (!allParamsValid) {
-        setState(() {
-          _errorMessage = validationMessage;
-          _logs.add('参数校验失败');
-        });
-        return;
-      }
-
-      // 输出每个策略的参数信息
-      _logs.add('\n=== 流水线策略参数信息 ===');
-      for (int i = 0; i < _pipeline.length; i++) {
-        final strategy = _pipeline[i];
-        _logs.add('策略 ${i + 1}: ${strategy.name} (${strategy.id})');
-        _logs.add('配置字段数量: ${strategy.configFields?.length ?? 0}');
-        
-        if (strategy.configFields != null) {
-          for (final field in strategy.configFields!) {
-            _logs.add('  - ${field.label} (${field.name}): ${field.defaultValue ?? '无默认值'}');
-          }
-        }
-      }
-
       final sourcePaths = _sourceDirectories.map((d) => d.path).toList();
-      _logs.add('\n开始分析流水线，源目录: ${sourcePaths.join(', ')}');
       final result = await _pipelineService.analyzePipeline(sourcePaths, _pipeline);
 
       if (result['success'] == true) {
-        setState(() {
-          _logs.add('分析任务已开始执行');
-          _logs.add('任务ID: ${result['taskId'] ?? '未知'}');
-        });
+        _taskId = result['taskId'];
+        _showSuccess(result['message'] ?? '分析任务已开始执行');
         
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(result['message'] ?? '分析任务已开始执行')),
-          );
-        }
-
-        // 立即获取一次变更记录
         await _fetchChanges();
-        
-        // 启动定时器，定期获取状态和变更
         _startStatusTimer();
       } else {
         setState(() {
+          _taskState = TaskState.previewFailed;
           _errorMessage = result['message'] ?? '分析任务提交失败';
-          _progress = 0.0;
-          _remainingTime = '00:00:00';
-          _progressStatus = '分析失败';
-          _logs.add('错误: ${_errorMessage}');
         });
+        _showError(_errorMessage);
       }
     } catch (e) {
       setState(() {
+        _taskState = TaskState.previewFailed;
         _errorMessage = '分析流水线失败: $e';
-        _progress = 0.0;
-        _remainingTime = '00:00:00';
-        _progressStatus = '分析失败';
-        _logs.add('异常: ${_errorMessage}');
       });
+      _showError(_errorMessage);
     }
   }
 
   Future<void> _executePipeline() async {
+    if (_taskState != TaskState.previewCompleted) {
+      _showError('请先完成预览分析');
+      return;
+    }
+
+    if (!_hasChanges) {
+      _showError('没有需要执行的变更');
+      return;
+    }
+
+    if (!_validateConfiguration()) {
+      return;
+    }
+
+    if (!_validatePipelineParameters()) {
+      return;
+    }
+
     setState(() {
-      _isAnalyzing = true;
+      _taskState = TaskState.executing;
       _errorMessage = '';
-      _progress = 0.0;
+      _progress = 0;
       _remainingTime = '计算中...';
-      _progressStatus = '执行中';
-      _completedTasks = 0;
-      _totalTasks = _changeRecords.length;
-      _logs.add('开始执行流水线...');
+      _currentStep = '初始化执行任务';
+      _message = '开始执行流水线...';
+      _scannedFiles = 0;
+      _totalFiles = 0;
+      _logMessage = '';
     });
 
     try {
-      if (_sourceDirectories.isEmpty) {
-        setState(() {
-          _errorMessage = '请先添加源目录';
-          _logs.add('错误: 请先添加源目录');
-        });
-        return;
-      }
-
-      if (_pipeline.isEmpty) {
-        setState(() {
-          _errorMessage = '请先配置插件流水线';
-          _logs.add('错误: 请先配置插件流水线');
-        });
-        return;
-      }
-
-      if (!_hasChanges) {
-        setState(() {
-          _errorMessage = '没有需要执行的变更';
-          _logs.add('错误: 没有需要执行的变更');
-        });
-        return;
-      }
-
-      // 校验策略参数，确保所有参数都有配置或默认值
-      bool allParamsValid = true;
-      String validationMessage = '';
-      
-      _logs.add('开始校验策略参数...');
-      for (int i = 0; i < _pipeline.length; i++) {
-        final strategy = _pipeline[i];
-        _logs.add('校验策略: ${strategy.name} (${strategy.id})');
-        
-        if (strategy.configFields != null) {
-          for (final field in strategy.configFields!) {
-            // 检查字段是否有值或默认值
-            bool hasValue = false;
-            if (field.defaultValue != null) {
-              hasValue = true;
-              _logs.add('  字段 ${field.name}: 使用默认值 ${field.defaultValue}');
-            } else {
-              _logs.add('  字段 ${field.name}: 无默认值，需要配置');
-              if (field.required) {
-                validationMessage = '策略 "${strategy.name}" 的参数 "${field.label}" 是必填项，请配置';
-                allParamsValid = false;
-                _logs.add('  错误: ${validationMessage}');
-                break;
-              }
-            }
-          }
-        }
-        
-        if (!allParamsValid) {
-          break;
-        }
-      }
-
-      if (!allParamsValid) {
-        setState(() {
-          _errorMessage = validationMessage;
-          _logs.add('参数校验失败');
-        });
-        return;
-      }
-
-      // 输出每个策略的参数信息
-      _logs.add('\n=== 流水线策略参数信息 ===');
-      for (int i = 0; i < _pipeline.length; i++) {
-        final strategy = _pipeline[i];
-        _logs.add('策略 ${i + 1}: ${strategy.name} (${strategy.id})');
-        _logs.add('配置字段数量: ${strategy.configFields?.length ?? 0}');
-        
-        if (strategy.configFields != null) {
-          for (final field in strategy.configFields!) {
-            _logs.add('  - ${field.label} (${field.name}): ${field.defaultValue ?? '无默认值'}');
-          }
-        }
-      }
-
       final sourcePaths = _sourceDirectories.map((d) => d.path).toList();
-      _logs.add('\n开始执行流水线，源目录: ${sourcePaths.join(', ')}');
-      _logs.add('预计处理文件数: ${_totalTasks}');
       final result = await _pipelineService.executePipeline(sourcePaths, _pipeline);
-      
-      if (result['success'] == true) {
-        setState(() {
-          _logs.add('执行任务已开始执行');
-          _logs.add('任务ID: ${result['taskId'] ?? '未知'}');
-        });
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(result['message'] ?? '执行任务已开始执行')),
-          );
-        }
 
-        // 立即获取一次变更记录
-        await _fetchChanges();
+      if (result['success'] == true) {
+        _taskId = result['taskId'];
+        _showSuccess(result['message'] ?? '执行任务已开始执行');
         
-        // 启动定时器，定期获取状态和变更
+        await _fetchChanges();
         _startStatusTimer();
       } else {
         setState(() {
+          _taskState = TaskState.executionFailed;
           _errorMessage = result['message'] ?? '执行任务提交失败';
-          _progress = 0.0;
-          _remainingTime = '00:00:00';
-          _progressStatus = '执行失败';
-          _logs.add('错误: ${_errorMessage}');
         });
+        _showError(_errorMessage);
       }
     } catch (e) {
       setState(() {
+        _taskState = TaskState.executionFailed;
         _errorMessage = '执行流水线失败: $e';
-        _progress = 0.0;
-        _remainingTime = '00:00:00';
-        _progressStatus = '执行失败';
-        _logs.add('异常: ${_errorMessage}');
       });
-    } finally {
-      // 等待任务完成后再取消定时器
-      // 这里不立即取消，因为任务在后台执行，我们需要继续获取进度
+      _showError(_errorMessage);
     }
   }
 
   Future<void> _stopPipeline() async {
-    setState(() {
-      _isAnalyzing = false;
-      _progress = 0.0;
-      _remainingTime = '00:00:00';
-      _progressStatus = '已中止';
-      _logs.add('任务已中止');
-    });
-
     try {
-      // 调用后端API停止任务
-      final result = await _pipelineService.stopPipeline();
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result['message'] ?? '任务已成功中止')),
-        );
-      }
-      
-      // 停止定时器
+      await _pipelineService.stopPipeline();
+      setState(() {
+        _taskState = TaskState.cancelled;
+        _message = '任务已中止';
+      });
       _stopStatusTimer();
+      _showSuccess('任务已成功中止');
     } catch (e) {
-      print('停止任务失败: $e');
-      _logs.add('停止任务失败: $e');
+      _showError('停止任务失败: $e');
     }
   }
 
   void _startStatusTimer() {
-    // 停止现有定时器
     _stopStatusTimer();
-    
-    // 启动新定时器，每2秒获取一次状态
     _statusTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
-      await _fetchProgress();
+      await _fetchStatus();
       await _fetchChanges();
-      
-      // 如果任务完成，停止定时器
-      if (_progressStatus == '分析完成' || _progressStatus == '执行完成' || 
-          _progressStatus == '已中止' || _progressStatus == '分析失败' || 
-          _progressStatus == '执行失败') {
-        _stopStatusTimer();
-      }
     });
   }
 
   void _stopStatusTimer() {
-    if (_statusTimer != null) {
-      _statusTimer!.cancel();
-      _statusTimer = null;
+    _statusTimer?.cancel();
+    _statusTimer = null;
+  }
+
+  Future<void> _fetchStatus() async {
+    try {
+      final status = await _pipelineService.getPipelineStatus();
+      if (status != null) {
+        setState(() {
+          _progress = (status['progress'] as num?)?.toInt() ?? 0;
+          _remainingTime = status['remainingTime']?.toString() ?? '00:00:00';
+          _currentStep = status['currentStep']?.toString() ?? '';
+          _message = status['message']?.toString() ?? '';
+          _hasChanges = status['hasChanges'] as bool? ?? false;
+          _changeCount = (status['changeCount'] as num?)?.toInt() ?? 0;
+          _currentDirectory = status['currentDirectory']?.toString() ?? '';
+          _scannedFiles = (status['scannedFiles'] as num?)?.toInt() ?? 0;
+          _totalFiles = (status['totalFiles'] as num?)?.toInt() ?? 0;
+          _logMessage = status['logMessage']?.toString() ?? '';
+
+          final statusStr = status['status']?.toString();
+          if (statusStr == '预览完成') {
+            _taskState = TaskState.previewCompleted;
+          } else if (statusStr == '预览失败') {
+            _taskState = TaskState.previewFailed;
+          } else if (statusStr == '执行完成') {
+            _taskState = TaskState.executionCompleted;
+          } else if (statusStr == '执行失败') {
+            _taskState = TaskState.executionFailed;
+          } else if (statusStr == '已中止') {
+            _taskState = TaskState.cancelled;
+          }
+        });
+
+        if (_taskState.isCompleted || _taskState.isFailed || _taskState == TaskState.cancelled) {
+          _stopStatusTimer();
+        }
+      }
+    } catch (e) {
+      print('获取状态信息失败: $e');
+    }
+  }
+
+  Future<void> _fetchChanges() async {
+    try {
+      final response = await _apiClient.get('/api/pipeline/changes', queryParams: {
+        'searchFilter': _searchFilter,
+        'statusFilter': _statusFilter,
+        'operationTypeFilter': _operationTypeFilter,
+        'hideUnchanged': _hideUnchanged.toString(),
+        'page': _currentPage.toString(),
+        'size': _pageSize.toString(),
+      });
+
+      if (response.statusCode == 200) {
+        final jsonResponse = json.decode(response.body);
+        setState(() {
+          _changeRecords = (jsonResponse['data'] as List)
+              .map((e) => ChangeRecord.fromJson(e))
+              .toList();
+          _totalRecords = (jsonResponse['total'] as num?)?.toInt() ?? 0;
+          _totalPages = (_totalRecords / _pageSize).ceil();
+        });
+      }
+    } catch (e) {
+      print('获取变更记录失败: $e');
     }
   }
 
   List<ChangeRecord> get _filteredRecords {
-    // 现在过滤和分页在后端完成，直接返回当前记录
     return _changeRecords;
   }
 
@@ -410,58 +362,16 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
           children: [
             _buildFilterBar(),
             const SizedBox(height: 12),
-            _buildProgressSection(),
-            const SizedBox(height: 12),
-            _buildStatsBar(),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: _buildPreviewTable(),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 1,
-                  child: _buildLogSection(),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Header部分 - 显示任务预览标题
-  Widget _buildHeader() {
-    return Card(
-      key: const ValueKey('preview_header_card'),
-      elevation: 4,
-      child: Padding(
-        key: const ValueKey('preview_header_padding'),
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          key: const ValueKey('preview_header_row'),
-          children: [
-            const Text(
-              '任务预览',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+            Expanded(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _buildPreviewTable(),
+                  ),
+                ],
               ),
             ),
-            const Spacer(),
-            if (_isAnalyzing) ...[
-              SizedBox(
-                key: const ValueKey('analyzing_indicator'),
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-              const SizedBox(width: 10),
-              Text('处理中...'),
-            ],
+            _buildStatusBar(),
           ],
         ),
       ),
@@ -472,7 +382,6 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
     return Container(
       padding: const EdgeInsets.all(12.0),
       child: Row(
-        key: const ValueKey('filter_bar_row'),
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Tooltip(
@@ -605,15 +514,14 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
             ],
           ),
           const Spacer(),
-          // 预览和执行按钮
           Tooltip(
-            message: _isAnalyzing ? '正在分析...' : '分析变更并生成预览',
+            message: _taskState.isRunning ? '正在分析...' : '分析变更并生成预览',
             child: ElevatedButton.icon(
-              onPressed: _isAnalyzing ? null : _analyzePipeline,
-              icon: _isAnalyzing ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Icon(Icons.analytics),
+              onPressed: _taskState.isRunning ? null : _analyzePipeline,
+              icon: _taskState.isRunning ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Icon(Icons.analytics),
               label: const Text('分析变更'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: _isAnalyzing ? Colors.blue.shade300 : Colors.blue,
+                backgroundColor: _taskState.isRunning ? Colors.blue.shade300 : Colors.blue,
                 foregroundColor: Colors.white,
               ),
             ),
@@ -622,7 +530,7 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
           Tooltip(
             message: _hasChanges ? '执行变更' : '预览成功且有变更时才能执行',
             child: ElevatedButton.icon(
-              onPressed: _hasChanges && !_isAnalyzing ? _executePipeline : null,
+              onPressed: _hasChanges && !_taskState.isRunning ? _executePipeline : null,
               icon: const Icon(Icons.play_arrow),
               label: const Text('执行'),
               style: ElevatedButton.styleFrom(
@@ -634,42 +542,22 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
           const SizedBox(width: 10),
           IconButton(
             icon: const Icon(Icons.stop),
-            onPressed: _isAnalyzing ? _stopPipeline : null,
+            onPressed: _taskState.isRunning ? _stopPipeline : null,
             tooltip: '停止分析或执行',
             iconSize: 20,
-            color: _isAnalyzing ? Colors.red : Colors.grey,
+            color: _taskState.isRunning ? Colors.red : Colors.grey,
           ),
           const SizedBox(width: 10),
           Tooltip(
             message: ParameterDescriptions.previewPage['refresh']!,
             child: IconButton(
               icon: const Icon(Icons.refresh),
-              onPressed: _isAnalyzing ? null : () {
+              onPressed: _taskState.isRunning ? null : () {
                 _fetchChanges();
               },
               tooltip: '刷新变更记录',
               iconSize: 20,
-              color: _isAnalyzing ? Colors.grey : null,
-            ),
-          ),
-          const SizedBox(width: 10),
-          // 状态显示
-          Tooltip(
-            message: '当前状态',
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                color: _isAnalyzing ? Colors.orange.shade100 : _hasChanges ? Colors.green.shade100 : Colors.grey.shade100,
-              ),
-              child: Text(
-                _isAnalyzing ? '分析中...' : _hasChanges ? '有变更' : '无变更',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: _isAnalyzing ? Colors.orange : _hasChanges ? Colors.green : Colors.grey,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              color: _taskState.isRunning ? Colors.grey : null,
             ),
           ),
         ],
@@ -677,43 +565,176 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
     );
   }
 
-  Widget _buildStatsBar() {
+  Widget _buildStatusBar() {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      padding: const EdgeInsets.all(12.0),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: Colors.grey.shade300),
         borderRadius: BorderRadius.circular(8),
         color: Colors.grey.shade50,
       ),
-      child: Row(
-        key: const ValueKey('stats_bar_row'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildCompactStatItem('总记录', '${_changeRecords.length}', Icons.list),
-          const SizedBox(width: 24),
-          _buildCompactStatItem('变更记录', '${_filteredRecords.length}', Icons.edit),
-          const SizedBox(width: 24),
-          _buildCompactStatItem('成功', '${_changeRecords.where((r) => r.status == 'SUCCESS').length}', Icons.check_circle, Colors.green),
-          const SizedBox(width: 24),
-          _buildCompactStatItem('失败', '${_changeRecords.where((r) => r.status == 'FAILED').length}', Icons.error, Colors.red),
+          Row(
+            children: [
+              Icon(
+                _getTaskStateIcon(),
+                size: 20,
+                color: _getTaskStateColor(),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                _getTaskStateText(),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: _getTaskStateColor(),
+                ),
+              ),
+              const Spacer(),
+              if (_taskState.isRunning)
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (_message.isNotEmpty)
+            Text(
+              _message,
+              style: const TextStyle(fontSize: 12),
+            ),
+          if (_message.isNotEmpty)
+            const SizedBox(height: 8),
+          if (_taskState.isRunning || _taskState.isCompleted)
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('进度: $_progress%', style: const TextStyle(fontSize: 12)),
+                      LinearProgressIndicator(
+                        value: _progress / 100,
+                        backgroundColor: Colors.grey.shade200,
+                        valueColor: AlwaysStoppedAnimation<Color>(_getTaskStateColor()),
+                        minHeight: 6,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                if (_totalFiles > 0)
+                  Text('文件: $_scannedFiles/$_totalFiles', style: const TextStyle(fontSize: 12)),
+                if (_totalFiles > 0)
+                  const SizedBox(width: 16),
+                if (_changeCount > 0)
+                  Text('变更: $_changeCount', style: const TextStyle(fontSize: 12)),
+              ],
+            ),
+          if (_currentStep.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Text(
+                '当前步骤: $_currentStep',
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ),
+          if (_logMessage.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Container(
+                padding: const EdgeInsets.all(8.0),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(4),
+                  color: Colors.white,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '日志信息:',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _logMessage,
+                      style: const TextStyle(fontSize: 11, fontFamily: 'monospace'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildCompactStatItem(String label, String value, IconData icon, [Color? color]) {
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: color ?? Colors.blue),
-        const SizedBox(width: 4),
-        Text(
-          '$label: $value',
-          style: TextStyle(
-            fontSize: 12,
-            color: color ?? Colors.black,
-          ),
-        ),
-      ],
-    );
+  IconData _getTaskStateIcon() {
+    switch (_taskState) {
+      case TaskState.ready:
+        return Icons.check_circle_outline;
+      case TaskState.previewing:
+        return Icons.analytics;
+      case TaskState.previewCompleted:
+        return Icons.check_circle;
+      case TaskState.previewFailed:
+        return Icons.error;
+      case TaskState.executing:
+        return Icons.play_circle;
+      case TaskState.executionCompleted:
+        return Icons.check_circle;
+      case TaskState.executionFailed:
+        return Icons.error;
+      case TaskState.cancelled:
+        return Icons.cancel;
+    }
+  }
+
+  Color _getTaskStateColor() {
+    switch (_taskState) {
+      case TaskState.ready:
+        return Colors.grey;
+      case TaskState.previewing:
+        return Colors.blue;
+      case TaskState.previewCompleted:
+        return Colors.green;
+      case TaskState.previewFailed:
+        return Colors.red;
+      case TaskState.executing:
+        return Colors.orange;
+      case TaskState.executionCompleted:
+        return Colors.green;
+      case TaskState.executionFailed:
+        return Colors.red;
+      case TaskState.cancelled:
+        return Colors.orange;
+    }
+  }
+
+  String _getTaskStateText() {
+    switch (_taskState) {
+      case TaskState.ready:
+        return '准备就绪';
+      case TaskState.previewing:
+        return '预览中';
+      case TaskState.previewCompleted:
+        return '预览完成';
+      case TaskState.previewFailed:
+        return '预览失败';
+      case TaskState.executing:
+        return '执行中';
+      case TaskState.executionCompleted:
+        return '执行完成';
+      case TaskState.executionFailed:
+        return '执行失败';
+      case TaskState.cancelled:
+        return '已中止';
+    }
   }
 
   Widget _buildPreviewTable() {
@@ -775,7 +796,7 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
                   ),
                 ),
                 const Spacer(),
-                if (_isAnalyzing)
+                if (_taskState.isRunning)
                   const Row(
                     children: [
                       SizedBox(
@@ -784,7 +805,7 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       ),
                       SizedBox(width: 10),
-                      Text('正在分析...'),
+                      Text('正在处理...'),
                     ],
                   ),
               ],
@@ -798,254 +819,55 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
                 children: [
                   DataTable(
                     columns: const [
-                      DataColumn(label: Text('操作类型')),
-                      DataColumn(label: Text('原始文件名')),
+                      DataColumn(label: Text('文件名')),
                       DataColumn(label: Text('新文件名')),
                       DataColumn(label: Text('文件路径')),
+                      DataColumn(label: Text('操作类型')),
                       DataColumn(label: Text('状态')),
-                      DataColumn(label: Text('变更原因')),
                     ],
                     rows: _filteredRecords.map((record) {
                       return DataRow(
                         cells: [
-                          DataCell(Text(record.operationType ?? 'N/A')),
-                          DataCell(Text(record.originalName)),
-                          DataCell(Text(record.newName ?? '-')),
-                          DataCell(
-                            Tooltip(
-                              message: record.filePath ?? '',
-                              child: Text(
-                                record.filePath ?? '',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ),
+                          DataCell(Text(record.originalName ?? '')),
+                          DataCell(Text(record.newName ?? '')),
+                          DataCell(Text(record.filePath ?? '')),
+                          DataCell(Text(record.operationType ?? '')),
                           DataCell(
                             Row(
-                              key: ValueKey('status_cell_${record.id}'),
                               children: [
                                 Icon(
-                                  _getStatusIcon(record.status),
+                                  _getStatusIcon(record.status ?? ''),
                                   size: 16,
-                                  color: _getStatusColor(record.status),
+                                  color: _getStatusColor(record.status ?? ''),
                                 ),
                                 const SizedBox(width: 4),
-                                Text(record.status),
+                                Text(record.status ?? ''),
                               ],
                             ),
                           ),
-                          DataCell(Text(record.reason ?? '')),
                         ],
                       );
                     }).toList(),
                   ),
-                  // 分页控件
-                  _buildPagination(),
                 ],
               ),
             ),
           ),
+          _buildPagination(),
         ],
       ),
     );
   }
 
-  IconData _getStatusIcon(String status) {
-    switch (status.toUpperCase()) {
-      case 'SUCCESS':
-        return Icons.check_circle;
-      case 'FAILED':
-        return Icons.error;
-      case 'PENDING':
-        return Icons.pending;
-      default:
-        return Icons.help_outline;
-    }
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status.toUpperCase()) {
-      case 'SUCCESS':
-        return Colors.green;
-      case 'FAILED':
-        return Colors.red;
-      case 'PENDING':
-        return Colors.orange;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  // 进度和过滤条件配置区域
-  Widget _buildProgressSection() {
-    return Container(
-      padding: const EdgeInsets.all(16.0),
-      child: _buildProgressBar(),
-    );
-  }
-
-  // 过滤条件显示
-  Widget _buildFilterConditions() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          '当前过滤条件',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-            color: Colors.grey,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 12.0,
-          runSpacing: 8.0,
-          children: [
-            if (_searchFilter.isNotEmpty)
-              Chip(
-                label: Text('搜索: $_searchFilter'),
-                backgroundColor: Colors.blue.shade100,
-                labelStyle: TextStyle(color: Colors.blue.shade700),
-              ),
-            Chip(
-              label: Text('状态: $_statusFilter'),
-              backgroundColor: Colors.green.shade100,
-              labelStyle: TextStyle(color: Colors.green.shade700),
-            ),
-            Chip(
-              label: Text('操作类型: $_operationTypeFilter'),
-              backgroundColor: Colors.orange.shade100,
-              labelStyle: TextStyle(color: Colors.orange.shade700),
-            ),
-            Chip(
-              label: Text(_hideUnchanged ? '仅显示变更' : '显示所有'),
-              backgroundColor: Colors.purple.shade100,
-              labelStyle: TextStyle(color: Colors.purple.shade700),
-            ),
-            Chip(
-              label: Text('分页: ${_currentPage}/${_totalPages > 0 ? _totalPages : 1}, ${_pageSize}条/页'),
-              backgroundColor: Colors.teal.shade100,
-              labelStyle: TextStyle(color: Colors.teal.shade700),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  // 进度条和剩余时间显示
-  Widget _buildProgressBar() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        LinearProgressIndicator(
-          value: _isAnalyzing ? null : _progress,
-          backgroundColor: Colors.grey.shade200,
-          valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
-          minHeight: 8,
-          borderRadius: BorderRadius.circular(4),
-        ),
-        if (_isAnalyzing)
-          const SizedBox(height: 4),
-        if (_isAnalyzing)
-          Row(
-            key: const ValueKey('progress_info_row'),
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                _isAnalyzing ? '分析中...' : '',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-              if (_totalTasks > 0)
-                Text(
-                  '已完成: $_completedTasks / $_totalTasks',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-            ],
-          ),
-      ],
-    );
-  }
-
-  // 从后端获取进度信息
-  Future<void> _fetchProgress() async {
-    if (_isAnalyzing) {
-      try {
-        // 调用后端API获取任务状态
-        final status = await _pipelineService.getPipelineStatus();
-        setState(() {
-          _progress = status['progress'] ?? 0.0;
-          _remainingTime = status['remainingTime'] ?? '00:00:00';
-          _progressStatus = status['status'] ?? '分析中';
-          _completedTasks = status['completedTasks'] ?? 0;
-          _totalTasks = status['totalTasks'] ?? 0;
-        });
-
-        // 如果任务完成，更新状态
-        if (_progressStatus == '分析完成' || _progressStatus == '执行完成' || _progressStatus == '已中止' || _progressStatus == '分析失败' || _progressStatus == '执行失败') {
-          setState(() {
-            _isAnalyzing = false;
-          });
-        }
-      } catch (e) {
-        print('获取进度信息失败: $e');
-      }
-    }
-  }
-
-  // 从后端获取变更记录
-  Future<void> _fetchChanges() async {
-    try {
-      _logs.add('获取变更记录...');
-      final result = await _pipelineService.getChanges(
-        searchFilter: _searchFilter,
-        statusFilter: _statusFilter != '全部' ? _statusFilter : null,
-        operationTypeFilter: _operationTypeFilter != '全部' ? _operationTypeFilter : null,
-        hideUnchanged: _hideUnchanged,
-        page: _currentPage,
-        size: _pageSize,
-        sortBy: 'id',
-        sortDirection: 'ASC',
-      );
-
-      setState(() {
-        _changeRecords = (result['records'] as List<dynamic>)
-            .map((json) => ChangeRecord.fromJson(json as Map<String, dynamic>))
-            .toList();
-        _totalRecords = result['total'] ?? 0;
-        _totalPages = result['pages'] ?? 0;
-        
-        // 更新是否有变更的标志
-        _hasChanges = _totalRecords > 0;
-        
-        _logs.add('获取到 ${_totalRecords} 条变更记录');
-      });
-    } catch (e) {
-      print('获取变更记录失败: $e');
-      _logs.add('获取变更记录失败: $e');
-    }
-  }
-
-  // 分页控件
   Widget _buildPagination() {
-    if (_totalPages <= 1) {
-      return const SizedBox.shrink();
-    }
-
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
+    return Container(
+      padding: const EdgeInsets.all(12.0),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          Text('共 $_totalRecords 条记录', style: const TextStyle(fontSize: 12)),
+          const Spacer(),
           IconButton(
+            icon: const Icon(Icons.chevron_left),
             onPressed: _currentPage > 1
                 ? () {
                     setState(() {
@@ -1054,11 +876,10 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
                     _fetchChanges();
                   }
                 : null,
-            icon: const Icon(Icons.chevron_left),
-            tooltip: '上一页',
           ),
-          Text('第 $_currentPage 页，共 $_totalPages 页，总计 $_totalRecords 条记录'),
+          Text('$_currentPage/$_totalPages', style: const TextStyle(fontSize: 12)),
           IconButton(
+            icon: const Icon(Icons.chevron_right),
             onPressed: _currentPage < _totalPages
                 ? () {
                     setState(() {
@@ -1067,84 +888,45 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
                     _fetchChanges();
                   }
                 : null,
-            icon: const Icon(Icons.chevron_right),
-            tooltip: '下一页',
           ),
         ],
       ),
     );
   }
 
-  @override
-  void dispose() {
-    _stopStatusTimer();
-    super.dispose();
+  IconData _getStatusIcon(String status) {
+    switch (status) {
+      case 'SUCCESS':
+        return Icons.check_circle;
+      case 'FAILED':
+        return Icons.error;
+      case 'PENDING':
+        return Icons.pending;
+      case 'SKIPPED':
+        return Icons.skip_next;
+      default:
+        return Icons.help;
+    }
   }
 
-  Widget _buildLogSection() {
-    return Card(
-      elevation: 4,
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  '执行日志',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () {
-                    setState(() {
-                      _logs.clear();
-                    });
-                  },
-                  tooltip: '清空日志',
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.all(12.0),
-              child: _logs.isEmpty
-                  ? const Center(
-                      child: Text(
-                        '暂无日志信息',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    )
-                  : ListView.builder(
-                      itemCount: _logs.length,
-                      itemBuilder: (context, index) {
-                        final log = _logs[index];
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 2.0),
-                          child: Text(
-                            log,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: log.contains('错误') || log.contains('异常')
-                                  ? Colors.red
-                                  : log.contains('开始') || log.contains('完成')
-                                      ? Colors.blue
-                                      : Colors.black,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-            ),
-          ),
-        ],
-      ),
-    );
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'SUCCESS':
+        return Colors.green;
+      case 'FAILED':
+        return Colors.red;
+      case 'PENDING':
+        return Colors.orange;
+      case 'SKIPPED':
+        return Colors.grey;
+      default:
+        return Colors.grey;
+    }
   }
-} 
+}
+
+extension on TaskState {
+  bool get isRunning => this == TaskState.previewing || this == TaskState.executing;
+  bool get isCompleted => this == TaskState.previewCompleted || this == TaskState.executionCompleted;
+  bool get isFailed => this == TaskState.previewFailed || this == TaskState.executionFailed;
+}
