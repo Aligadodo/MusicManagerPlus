@@ -40,7 +40,12 @@ class _LogPageState extends ConsumerState<LogPage> {
       final result = await _logService.getLogFiles();
 
       setState(() {
-        _logFiles = (result['files'] as List<dynamic>)
+        List<dynamic> filesList = [];
+        if (result.containsKey('files')) {
+          filesList = result['files'] as List<dynamic>;
+        }
+        
+        _logFiles = filesList
             .map((json) => LogFileInfo.fromJson(json as Map<String, dynamic>))
             .toList();
         _isLoading = false;

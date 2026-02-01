@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/api_client.dart';
 import '../api/config_service.dart';
+import '../providers/config_provider.dart';
 
 class AppearancePage extends ConsumerStatefulWidget {
   const AppearancePage({super.key});
@@ -13,37 +14,9 @@ class AppearancePage extends ConsumerStatefulWidget {
 class _AppearancePageState extends ConsumerState<AppearancePage> {
   final ConfigService _configService = ConfigService(ApiClient());
 
-  Map<String, dynamic> _appearanceConfig = {
-    'theme': 'light',
-    'bgColor': '#FFFFFF',
-    'accentColor': '#2196F3',
-    'textPrimaryColor': '#000000',
-    'textSecondaryColor': '#666666',
-    'textTertiaryColor': '#999999',
-    'textDisabledColor': '#CCCCCC',
-    'glassOpacity': 0.9,
-    'darkBackground': false,
-    'panelBgColor': '#FFFFFF',
-    'fontFamily': 'Roboto',
-    'fontSize': 14,
-    'cornerRadius': 8.0,
-    'borderWidth': 1.0,
-    'borderColor': '#E0E0E0',
-    'listBgColor': '#FFFFFF',
-    'listRowEvenBgColor': '#FFFFFF',
-    'listRowOddBgColor': '#F5F5F5',
-    'listRowSelectedBgColor': '#2196F3',
-    'listRowSelectedTextColor': '#FFFFFF',
-    'listRowHoverBgColor': '#E3F2FD',
-    'listBorderColor': '#E0E0E0',
-    'listHeaderBgColor': '#F5F5F5',
-    'listHeaderTextColor': '#000000',
-    'buttonLargeSize': 48.0,
-    'buttonSmallSize': 32.0,
-  };
-
+  Map<String, dynamic> _appearanceConfig = {};
   List<Map<String, dynamic>> _themePresets = [];
-  final int _selectedPresetIndex = 0;
+  int _selectedPresetIndex = -1;
   bool _isLoading = false;
   String _errorMessage = '';
   String _successMessage = '';
@@ -51,8 +24,10 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
   @override
   void initState() {
     super.initState();
-    _loadAppearanceConfig();
-    _loadThemePresets();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadAppearanceConfig();
+      _loadThemePresets();
+    });
   }
 
   Future<void> _loadAppearanceConfig() async {
@@ -62,29 +37,9 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
     });
 
     try {
-      final config = await _configService.getConfig();
+      final config = ref.read(configProvider);
       setState(() {
-        if (config.containsKey('theme')) {
-          _appearanceConfig['theme'] = config['theme'];
-        }
-        if (config.containsKey('bgColor')) {
-          _appearanceConfig['bgColor'] = config['bgColor'];
-        }
-        if (config.containsKey('accentColor')) {
-          _appearanceConfig['accentColor'] = config['accentColor'];
-        }
-        if (config.containsKey('textPrimaryColor')) {
-          _appearanceConfig['textPrimaryColor'] = config['textPrimaryColor'];
-        }
-        if (config.containsKey('glassOpacity')) {
-          _appearanceConfig['glassOpacity'] = config['glassOpacity'];
-        }
-        if (config.containsKey('fontFamily')) {
-          _appearanceConfig['fontFamily'] = config['fontFamily'];
-        }
-        if (config.containsKey('fontSize')) {
-          _appearanceConfig['fontSize'] = config['fontSize'];
-        }
+        _appearanceConfig = Map.from(config.appearanceConfig);
         _isLoading = false;
       });
     } catch (e) {
@@ -101,39 +56,43 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
       setState(() {
         _themePresets = presets;
       });
+      print('成功加载 ${presets.length} 个主题预设');
     } catch (e) {
       print('加载主题预设失败: $e');
-    }
-  }
-
-  Future<void> _saveAppearanceConfig() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = '';
-      _successMessage = '';
-    });
-
-    try {
-      await _configService.saveConfig(_appearanceConfig);
-      setState(() {
-        _successMessage = '外观设置保存成功';
-      });
-    } catch (e) {
-      setState(() {
-        _errorMessage = '保存外观设置失败: $e';
-      });
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('加载主题预设失败: $e')),
+        );
+      }
     }
   }
 
   Future<void> _applyPreset(Map<String, dynamic> preset) async {
     setState(() {
       _appearanceConfig = Map.from(preset);
+      _isLoading = true;
     });
-    await _saveAppearanceConfig();
+
+    try {
+      final configNotifier = ref.read(configProvider.notifier);
+      configNotifier.updateAppearanceConfig(_appearanceConfig);
+      await configNotifier.saveConfig();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('主题预设应用成功')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('应用主题预设失败: $e')),
+        );
+      }
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _saveAsPreset() async {
@@ -204,35 +163,9 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
   }
 
   void _resetToDefault() {
+    final config = ref.read(configProvider);
     setState(() {
-      _appearanceConfig = {
-        'theme': 'light',
-        'bgColor': '#FFFFFF',
-        'accentColor': '#2196F3',
-        'textPrimaryColor': '#000000',
-        'textSecondaryColor': '#666666',
-        'textTertiaryColor': '#999999',
-        'textDisabledColor': '#CCCCCC',
-        'glassOpacity': 0.9,
-        'darkBackground': false,
-        'panelBgColor': '#FFFFFF',
-        'fontFamily': 'Roboto',
-        'fontSize': 14,
-        'cornerRadius': 8.0,
-        'borderWidth': 1.0,
-        'borderColor': '#E0E0E0',
-        'listBgColor': '#FFFFFF',
-        'listRowEvenBgColor': '#FFFFFF',
-        'listRowOddBgColor': '#F5F5F5',
-        'listRowSelectedBgColor': '#2196F3',
-        'listRowSelectedTextColor': '#FFFFFF',
-        'listRowHoverBgColor': '#E3F2FD',
-        'listBorderColor': '#E0E0E0',
-        'listHeaderBgColor': '#F5F5F5',
-        'listHeaderTextColor': '#000000',
-        'buttonLargeSize': 48.0,
-        'buttonSmallSize': 32.0,
-      };
+      _appearanceConfig = Map.from(config.appearanceConfig);
     });
   }
 
@@ -256,7 +189,17 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildActionButtons(),
+          if (_isLoading)
+            const Center(
+              child: CircularProgressIndicator(),
+            )
+          else if (_errorMessage.isNotEmpty)
+            Center(
+              child: Text(
+                _errorMessage,
+                style: const TextStyle(color: Colors.red),
+              ),
+            ),
           const SizedBox(height: 20),
           Expanded(
             child: DefaultTabController(
@@ -282,29 +225,6 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildActionButtons() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        ElevatedButton.icon(
-          onPressed: _isLoading ? null : _saveAppearanceConfig,
-          icon: const Icon(Icons.save),
-          label: const Text('保存设置'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blue,
-            foregroundColor: Colors.white,
-          ),
-        ),
-        const SizedBox(width: 10),
-        OutlinedButton.icon(
-          onPressed: _resetToDefault,
-          icon: const Icon(Icons.refresh),
-          label: const Text('恢复默认'),
-        ),
-      ],
     );
   }
 
@@ -378,10 +298,26 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
     );
   }
 
+  bool _isPresetApplied(Map<String, dynamic> preset) {
+    final config = preset['config'] as Map<String, dynamic>;
+    return config['bgColor'] == _appearanceConfig['bgColor'] &&
+           config['accentColor'] == _appearanceConfig['accentColor'] &&
+           config['theme'] == _appearanceConfig['theme'];
+  }
+
   Widget _buildPresetCard(Map<String, dynamic> preset, int index) {
     final config = preset['config'] as Map<String, dynamic>;
+    final isApplied = _isPresetApplied(preset);
     return Card(
-      elevation: 2,
+      elevation: isApplied ? 4 : 2,
+      borderOnForeground: true,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(
+          color: isApplied ? Colors.blue : Colors.grey.shade300,
+          width: isApplied ? 2 : 1,
+        ),
+        borderRadius: BorderRadius.circular(8),
+      ),
       child: InkWell(
         onTap: () => _applyPreset(config),
         child: Container(
@@ -390,28 +326,42 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
             color: _parseColor(config['bgColor']),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+          child: Stack(
             children: [
-              Text(
-                preset['name'] ?? '未命名主题',
-                style: TextStyle(
-                  color: _parseColor(config['textPrimaryColor']),
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    preset['name'] ?? '未命名主题',
+                    style: TextStyle(
+                      color: _parseColor(config['textPrimaryColor']),
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    preset['description'] ?? '',
+                    style: TextStyle(
+                      color: _parseColor(config['textSecondaryColor']),
+                      fontSize: 12,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
-              const SizedBox(height: 5),
-              Text(
-                preset['description'] ?? '',
-                style: TextStyle(
-                  color: _parseColor(config['textSecondaryColor']),
-                  fontSize: 12,
+              if (isApplied)
+                Positioned(
+                  top: 5,
+                  right: 5,
+                  child: Icon(
+                    Icons.check_circle,
+                    color: Colors.green,
+                    size: 20,
+                  ),
                 ),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
             ],
           ),
         ),

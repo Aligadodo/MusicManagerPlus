@@ -4,8 +4,9 @@ import '../api/api_client.dart';
 import '../api/plugin_service.dart';
 import '../models/plugin_config.dart';
 import '../models/plugin_parameter.dart';
-import '../models/precondition_group.dart';
-import '../models/precondition.dart';
+import '../models/rule_condition_group.dart';
+import '../models/rule_condition.dart';
+import '../models/condition_type.dart';
 
 class PluginConfigPage extends StatefulWidget {
   final String pluginId;
@@ -50,11 +51,11 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
         _config = config;
         _formValues.clear();
         _listValues.clear();
-        
+
         for (final param in config.parameters) {
           final value = config.configValues[param.name] ?? param.defaultValue;
           _formValues[param.name] = value;
-          
+
           if (param.type == 'list' && value is List) {
             _listValues[param.name] = List<String>.from(value);
           }
@@ -64,41 +65,6 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
     } catch (e) {
       setState(() {
         _error = '加载配置失败: $e';
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _saveConfig() async {
-    if (_config == null) return;
-
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-
-    try {
-      final Map<String, dynamic> finalValues = Map.from(_formValues);
-      
-      _listValues.forEach((key, value) {
-        finalValues[key] = value;
-      });
-
-      final updatedConfig = PluginConfig(
-        configValues: finalValues,
-        parameters: _config!.parameters,
-        preconditionGroups: _config!.preconditionGroups,
-      );
-      await _pluginService.savePluginConfig(widget.pluginId, updatedConfig);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('配置保存成功')),
-      );
-      setState(() {
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _error = '保存配置失败: $e';
         _isLoading = false;
       });
     }
@@ -140,7 +106,7 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
   }
 
   void _handleAutoDetect(Map<String, dynamic> autoDetectParams, String selectedValue) {
-    if (autoDetectParams['triggerValues'] != null && 
+    if (autoDetectParams['triggerValues'] != null &&
         (autoDetectParams['triggerValues'] as List).contains(selectedValue)) {
       final paths = autoDetectParams['paths'] as List<String>;
       for (final path in paths) {
@@ -150,30 +116,67 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
     }
   }
 
-  Widget _buildParameterField(PluginParameter param) {
-    if (!_isParameterVisible(param)) {
-      return const SizedBox.shrink();
+  TextEditingController _getController(String paramName, String initialValue) {
+    if (!_controllers.containsKey(paramName)) {
+      _controllers[paramName] = TextEditingController(text: initialValue);
     }
+    return _controllers[paramName]!;
+  }
 
-    final value = _formValues[param.name];
+  Widget _buildParameterField(PluginParameter param) {
+    try {
+      if (!_isParameterVisible(param)) {
+        return const SizedBox.shrink();
+      }
 
-    switch (param.type) {
-      case 'text':
-        return _buildTextField(param, value);
-      case 'number':
-        return _buildNumberField(param, value);
-      case 'boolean':
-        return _buildBooleanField(param, value);
-      case 'select':
-        return _buildSelectField(param, value);
-      case 'directory':
-        return _buildDirectoryField(param, value);
-      case 'file':
-        return _buildFileField(param, value);
-      case 'list':
-        return _buildListField(param);
-      default:
-        return _buildTextField(param, value);
+      final value = _formValues[param.name];
+
+      switch (param.type) {
+        case 'text':
+          return _buildTextField(param, value);
+        case 'number':
+          return _buildNumberField(param, value);
+        case 'boolean':
+          return _buildBooleanField(param, value);
+        case 'select':
+          return _buildSelectField(param, value);
+        case 'directory':
+          return _buildDirectoryField(param, value);
+        case 'file':
+          return _buildFileField(param, value);
+        case 'list':
+          return _buildListField(param);
+        default:
+          return _buildTextField(param, value);
+      }
+    } catch (e) {
+      return Card(
+        color: Colors.red.shade50,
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            children: [
+              const Icon(Icons.error_outline, color: Colors.red),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '参数 ${param.name} 加载失败',
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+                    ),
+                    Text(
+                      '错误: $e',
+                      style: const TextStyle(fontSize: 12, color: Colors.red),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
     }
   }
 
@@ -248,18 +251,10 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
                   ),
                 ],
               ),
-            const SizedBox(width: 12),
-            Switch(
+            ),
+            Checkbox(
               value: value ?? false,
               onChanged: (v) => _handleParameterChange(param.name, v, param),
-            ),
-            const SizedBox(width: 12),
-            SizedBox(
-              width: 50,
-              child: IconButton(
-                icon: const Icon(Icons.info_outline),
-                onPressed: () => _showTooltip(param.label, param.description),
-              ),
             ),
           ],
         ),
@@ -275,6 +270,7 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
           labelText: param.label,
           hintText: param.description,
           border: const OutlineInputBorder(),
+          errorText: param.required && (value == null || value.toString().isEmpty) ? '必填项' : null,
           suffixIcon: SizedBox(
             width: 40,
             child: IconButton(
@@ -283,13 +279,13 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
             ),
           ),
         ),
-        initialValue: value?.toString(),
+        value: value?.toString(),
         items: param.options?.map((option) {
           return DropdownMenuItem<String>(
             value: option,
             child: Text(option),
           );
-        }).toList(),
+        }).toList() ?? [],
         onChanged: (v) => _handleParameterChange(param.name, v, param),
       ),
     );
@@ -298,33 +294,25 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
   Widget _buildDirectoryField(PluginParameter param, dynamic value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextFormField(
-              controller: _getController(param.name, value?.toString() ?? ''),
-              decoration: InputDecoration(
-                labelText: param.label,
-                hintText: param.description,
-                border: const OutlineInputBorder(),
-                errorText: param.required && (value == null || value.toString().isEmpty) ? '必填项' : null,
-                suffixIcon: SizedBox(
-                  width: 40,
-                  child: IconButton(
-                    icon: const Icon(Icons.info_outline),
-                    onPressed: () => _showTooltip(param.label, param.description),
-                  ),
-                ),
-              ),
-              onChanged: (v) => _handleParameterChange(param.name, v, param),
+      child: TextFormField(
+        controller: _getController(param.name, value?.toString() ?? ''),
+        decoration: InputDecoration(
+          labelText: param.label,
+          hintText: param.description,
+          border: const OutlineInputBorder(),
+          errorText: param.required && (value == null || value.toString().isEmpty) ? '必填项' : null,
+          suffixIcon: SizedBox(
+            width: 40,
+            child: IconButton(
+              icon: const Icon(Icons.info_outline),
+              onPressed: () => _showTooltip(param.label, param.description),
             ),
           ),
-          const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(Icons.folder_open),
-            onPressed: () => _selectDirectory(param.name),
-          ),
-        ],
+        ),
+        readOnly: true,
+        onTap: () async {
+          // TODO: 实现目录选择器
+        },
       ),
     );
   }
@@ -332,157 +320,143 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
   Widget _buildFileField(PluginParameter param, dynamic value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextFormField(
-              controller: _getController(param.name, value?.toString() ?? ''),
-              decoration: InputDecoration(
-                labelText: param.label,
-                hintText: param.description,
-                border: const OutlineInputBorder(),
-                errorText: param.required && (value == null || value.toString().isEmpty) ? '必填项' : null,
-                suffixIcon: SizedBox(
-                  width: 40,
-                  child: IconButton(
-                    icon: const Icon(Icons.info_outline),
-                    onPressed: () => _showTooltip(param.label, param.description),
-                  ),
-                ),
-              ),
-              onChanged: (v) => _handleParameterChange(param.name, v, param),
+      child: TextFormField(
+        controller: _getController(param.name, value?.toString() ?? ''),
+        decoration: InputDecoration(
+          labelText: param.label,
+          hintText: param.description,
+          border: const OutlineInputBorder(),
+          errorText: param.required && (value == null || value.toString().isEmpty) ? '必填项' : null,
+          suffixIcon: SizedBox(
+            width: 40,
+            child: IconButton(
+              icon: const Icon(Icons.info_outline),
+              onPressed: () => _showTooltip(param.label, param.description),
             ),
           ),
-          const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(Icons.file_open),
-            onPressed: () => _selectFile(param.name),
-          ),
-        ],
+        ),
+        readOnly: true,
+        onTap: () async {
+          // TODO: 实现文件选择器
+        },
       ),
     );
   }
 
   Widget _buildListField(PluginParameter param) {
-    final items = _listValues[param.name] ?? [];
-    final controller = TextEditingController();
-
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
+    try {
+      final listValue = _listValues[param.name] ?? [];
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
         child: Column(
-          key: ValueKey('list_param_column_${param.name}'),
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              key: ValueKey('list_param_header_row_${param.name}'),
               children: [
-                Expanded(
-                  child: Text(
-                    param.label,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
+                Text(
+                  param.label,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
+                const SizedBox(width: 10),
                 IconButton(
-                  key: ValueKey('list_param_info_button_${param.name}'),
                   icon: const Icon(Icons.info_outline),
                   onPressed: () => _showTooltip(param.label, param.description),
                 ),
               ],
             ),
-            Text(
-              param.description,
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
+            const SizedBox(height: 5),
+            Container(
+              height: 100,
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: ListView.builder(
+                itemCount: listValue.length,
+                itemBuilder: (context, index) {
+                  return ListTile(
+                    title: Text(listValue[index]),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: () {
+                        setState(() {
+                          _listValues[param.name] = List.from(listValue)..removeAt(index);
+                        });
+                      },
+                    ),
+                  );
+                },
+              ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 5),
             Row(
-              key: ValueKey('list_param_input_row_${param.name}'),
               children: [
                 Expanded(
                   child: TextField(
-                    controller: controller,
-                    decoration: InputDecoration(
-                      hintText: '输入${param.label}...',
-                      border: const OutlineInputBorder(),
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      hintText: '输入新项...',
                     ),
+                    onSubmitted: (v) {
+                      if (v.isNotEmpty) {
+                        setState(() {
+                          _listValues[param.name] = List.from(listValue)..add(v);
+                        });
+                      }
+                    },
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
                 ElevatedButton(
                   onPressed: () {
-                    final value = controller.text.trim();
-                    if (value.isNotEmpty && !items.contains(value)) {
-                      setState(() {
-                        _listValues[param.name] = [...items, value];
-                      });
-                      controller.clear();
-                    }
+                    setState(() {
+                      _listValues[param.name] = List.from(listValue)..add('新项');
+                    });
                   },
                   child: const Text('添加'),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            if (items.isEmpty)
-              const Text(
-                '暂无项目',
-                style: TextStyle(color: Colors.grey),
-              )
-            else
-              ...items.asMap().entries.map((entry) {
-                final index = entry.key;
-                final item = entry.value;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(item),
-                      ),
-                      SizedBox(
-                        width: 50,
-                        child: IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () {
-                            setState(() {
-                              _listValues[param.name] = List.from(items)..removeAt(index);
-                            });
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }),
           ],
         ),
-      ),
-    );
-  }
-
-  TextEditingController _getController(String paramName, String initialValue) {
-    if (!_controllers.containsKey(paramName)) {
-      _controllers[paramName] = TextEditingController(text: initialValue);
+      );
+    } catch (e) {
+      return Card(
+        color: Colors.red.shade50,
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            children: [
+              const Icon(Icons.error_outline, color: Colors.red),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '列表参数 ${param.name} 加载失败',
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+                    ),
+                    Text(
+                      '错误: $e',
+                      style: const TextStyle(fontSize: 12, color: Colors.red),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
     }
-    return _controllers[paramName]!;
   }
 
-  Future<void> _selectDirectory(String paramName) async {
-    // TODO: 实现目录选择功能
-  }
-
-  Future<void> _selectFile(String paramName) async {
-    // TODO: 实现文件选择功能
-  }
-
-  void _showTooltip(String title, String content) {
+  void _showTooltip(String title, String description) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(title),
-        content: Text(content),
+        content: Text(description),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -493,134 +467,308 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
     );
   }
 
-  Widget _buildPreconditionGroup(PreconditionGroup group) {
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+  Widget _buildPreconditionGroup(RuleConditionGroup group, int index) {
+    try {
+      return Container(
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          border: Border.all(color: const Color(0xFFBDBDBD)),
+          borderRadius: BorderRadius.circular(4),
+          color: Colors.white.withOpacity(0.4),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              group.name,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            Text(
-              group.description,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
-              ),
-            ),
-            Text(
-              '逻辑类型: ${group.logicType}',
-              style: const TextStyle(
-                fontSize: 12,
-                color: Colors.blue,
-              ),
+            Row(
+              children: [
+                Text(
+                  '条件组 $index (一组条件内为且)',
+                  style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF616161)),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.red),
+                  onPressed: () {
+                    setState(() {
+                      _config!.preconditionGroups.remove(group);
+                    });
+                  },
+                ),
+              ],
             ),
             const SizedBox(height: 8),
-            ...group.preconditions.map((precondition) => _buildPrecondition(precondition)),
+            ...group.conditions.map((condition) => _buildConditionItem(group, condition)),
+            const SizedBox(height: 8),
+            _buildAddConditionForm(group),
           ],
         ),
+      );
+    } catch (e) {
+      return Card(
+        color: Colors.red.shade50,
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            children: [
+              const Icon(Icons.error_outline, color: Colors.red),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '条件组 $index 加载失败',
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+                    ),
+                    Text(
+                      '错误: $e',
+                      style: const TextStyle(fontSize: 12, color: Colors.red),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+  }
+
+  Widget _buildConditionItem(RuleConditionGroup group, RuleCondition condition) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          const Text('• ', style: TextStyle(fontSize: 16)),
+          Expanded(
+            child: Text(
+              condition.toString(),
+              style: const TextStyle(color: Color(0xFF424242)),
+            ),
+          ),
+          const SizedBox(width: 5),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: (value) {
+              switch (value) {
+                case 'move_up':
+                  setState(() {
+                    final index = group.conditions.indexOf(condition);
+                    if (index > 0) {
+                      group.conditions.removeAt(index);
+                      group.conditions.insert(index - 1, condition);
+                    }
+                  });
+                  break;
+                case 'move_down':
+                  setState(() {
+                    final index = group.conditions.indexOf(condition);
+                    if (index < group.conditions.length - 1) {
+                      group.conditions.removeAt(index);
+                      group.conditions.insert(index + 1, condition);
+                    }
+                  });
+                  break;
+                case 'delete':
+                  setState(() {
+                    group.conditions.remove(condition);
+                  });
+                  break;
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'move_up',
+                child: Text('上移'),
+              ),
+              const PopupMenuItem(
+                value: 'move_down',
+                child: Text('下移'),
+              ),
+              const PopupMenuItem(
+                value: 'delete',
+                child: Text('删除'),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildPrecondition(Precondition precondition) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  precondition.field,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  '${precondition.operator} ${precondition.value}',
-                  style: const TextStyle(fontSize: 12),
-                ),
-              ],
+  Widget _buildAddConditionForm(RuleConditionGroup group) {
+    ConditionType selectedType = ConditionType.contains;
+    String valueText = '';
+
+    return StatefulBuilder(
+      builder: (context, setState) {
+        return Row(
+          children: [
+            DropdownButton<ConditionType>(
+              value: selectedType,
+              items: ConditionType.values.map((type) {
+                return DropdownMenuItem<ConditionType>(
+                  value: type,
+                  child: Text(type.description),
+                );
+              }).toList(),
+              onChanged: (type) {
+                setState(() {
+                  selectedType = type ?? ConditionType.contains;
+                });
+              },
             ),
-          const SizedBox(width: 12),
-          SizedBox(
-            width: 50,
-            child: IconButton(
-              icon: const Icon(Icons.info_outline),
-              onPressed: () => _showTooltip(precondition.field, precondition.description),
+            const SizedBox(width: 5),
+            Expanded(
+              child: TextField(
+                enabled: selectedType.needsValue(),
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  hintText: '值',
+                  contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                ),
+                onChanged: (v) {
+                  valueText = v;
+                },
+              ),
             ),
-          ),
-        ],
-      ),
+            const SizedBox(width: 5),
+            ElevatedButton(
+              onPressed: () {
+                if (!selectedType.needsValue() || valueText.isNotEmpty) {
+                  setState(() {
+                    group.conditions.add(RuleCondition(
+                      type: selectedType,
+                      value: selectedType.needsValue() ? valueText : null,
+                    ));
+                  });
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2980B9),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              ),
+              child: const Text('添加条件'),
+            ),
+          ],
+        );
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('${widget.pluginName} 配置'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadConfig,
-          ),
-          IconButton(
-            icon: const Icon(Icons.save),
-            onPressed: _saveConfig,
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(_error!, style: const TextStyle(color: Colors.red)),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _loadConfig,
-                        child: const Text('重试'),
-                      ),
-                    ],
-                  ),
-                )
-              : _config == null
-                  ? const Center(child: Text('未找到配置'))
-                  : SingleChildScrollView(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            '参数配置',
-                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 16),
-                          ..._config!.parameters.map((param) => _buildParameterField(param)),
-                          if (_config!.preconditionGroups.isNotEmpty) ...[
-                            const SizedBox(height: 24),
-                            const Text(
-                              '前置条件',
-                              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 16),
-                            ..._config!.preconditionGroups.map((group) => _buildPreconditionGroup(group)),
-                          ],
-                        ],
-                      ),
+    try {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text('${widget.pluginName} 配置'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _loadConfig,
+            ),
+          ],
+        ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                        const SizedBox(height: 16),
+                        Text(
+                          _error!,
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: _loadConfig,
+                          child: const Text('重试'),
+                        ),
+                      ],
                     ),
-    );
+                  )
+                : _config == null
+                    ? const Center(child: Text('无配置'))
+                    : _buildConfigContent(),
+      );
+    } catch (e) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text('${widget.pluginName} 配置'),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+              const SizedBox(height: 16),
+              Text(
+                '页面加载失败: $e',
+                style: const TextStyle(color: Colors.red),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _loadConfig,
+                child: const Text('重新加载'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+  }
+
+  Widget _buildConfigContent() {
+    try {
+      return SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '参数配置',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            ..._config!.parameters.map((param) => _buildParameterField(param)),
+            const SizedBox(height: 32),
+            const Text(
+              '前置条件',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            if (_config!.preconditionGroups.isEmpty)
+              const Text('暂无前置条件')
+            else
+              ..._config!.preconditionGroups.asMap().entries.map((entry) =>
+                  _buildPreconditionGroup(entry.value, entry.key + 1)),
+          ],
+        ),
+      );
+    } catch (e) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            const SizedBox(height: 16),
+            Text(
+              '配置内容加载失败: $e',
+              style: const TextStyle(color: Colors.red),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _loadConfig,
+              child: const Text('重新加载'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 }

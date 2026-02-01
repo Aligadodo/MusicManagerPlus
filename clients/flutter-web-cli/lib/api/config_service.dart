@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:filemanager_flutter/api/api_client.dart';
 
 class ConfigService {
@@ -6,15 +7,29 @@ class ConfigService {
   ConfigService(this._apiClient);
 
   Future<dynamic> getConfig() async {
-    // 这里可以实现获取配置的逻辑
-    // 暂时返回空的配置
-    return {};
+    try {
+      final response = await _apiClient.get('/api/config');
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return {};
+    } catch (e) {
+      print('获取配置失败: $e');
+      return {};
+    }
   }
 
   Future<dynamic> saveConfig(Map<String, dynamic> config) async {
-    // 这里可以实现保存配置的逻辑
-    // 暂时返回成功
-    return {"success": true};
+    try {
+      final response = await _apiClient.post('/api/config', body: config);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      throw Exception('保存配置失败');
+    } catch (e) {
+      print('保存配置失败: $e');
+      rethrow;
+    }
   }
 
   Future<List<Map<String, dynamic>>> getThemePresets() async {

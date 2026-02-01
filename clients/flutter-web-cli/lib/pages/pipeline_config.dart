@@ -18,7 +18,7 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
   final PluginService _pluginService = PluginService(ApiClient());
   final StrategyService _strategyService = StrategyService(ApiClient());
   final PipelineService _pipelineService = PipelineService(ApiClient());
-  List<Map<String, dynamic>> _pipeline = [];
+  List<StrategyInfo> _pipeline = [];
   List<PluginInfo> _availablePlugins = [];
   List<StrategyInfo> _availableStrategies = [];
   bool _isLoading = false;
@@ -34,7 +34,7 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
 
   Future<void> _loadAvailableStrategies() async {
     try {
-      final strategies = await _strategyService.getStrategies();
+      final strategies = await _strategyService.getAvailableStrategies();
       setState(() {
         _availableStrategies = strategies;
       });
@@ -104,21 +104,19 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
 
   void _addPlugin(PluginInfo plugin) {
     setState(() {
-      _pipeline.add({
-        'pluginId': plugin.id,
-        'name': plugin.name,
-        'config': {},
-      });
+      _pipeline.add(StrategyInfo(
+        id: plugin.id,
+        name: plugin.name,
+        description: plugin.description,
+        configFields: [],
+        enabled: true,
+      ));
     });
   }
 
   void _addStrategy(StrategyInfo strategy) {
     setState(() {
-      _pipeline.add({
-        'strategyId': strategy.id,
-        'name': strategy.name,
-        'config': {},
-      });
+      _pipeline.add(strategy);
     });
   }
 
@@ -281,7 +279,7 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  plugin['name'] as String,
+                                  plugin.name,
                                   style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
@@ -294,14 +292,10 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
                               ],
                             ),
                             const SizedBox(height: 8),
-                            if (plugin.containsKey('pluginId'))
-                              Text('插件ID: ${plugin['pluginId']}')
-                            else if (plugin.containsKey('strategyId'))
-                              Text('策略ID: ${plugin['strategyId']}'),
+                            Text('ID: ${plugin.id}'),
                             const SizedBox(height: 16),
                             const Text('配置:', style: TextStyle(fontWeight: FontWeight.bold)),
                             const SizedBox(height: 8),
-                            // 这里可以添加配置表单，根据插件类型动态生成
                             const TextField(
                               decoration: InputDecoration(
                                 labelText: '配置项',

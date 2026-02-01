@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:filemanager_flutter/api/api_client.dart';
@@ -15,9 +16,119 @@ import 'package:filemanager_flutter/pages/preview_page.dart';
 import 'package:filemanager_flutter/pages/log_page.dart';
 import 'package:filemanager_flutter/pages/appearance_page.dart';
 import 'package:filemanager_flutter/pages/global_settings_page.dart';
+import 'package:filemanager_flutter/providers/config_provider.dart';
 
 
 final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());
+
+enum TaskStatus {
+  idle,
+  analyzing,
+  running,
+  stopping,
+  completed,
+  error,
+}
+
+class TaskState {
+  final TaskStatus status;
+  final String? taskId;
+  final String? message;
+  final int progress;
+  final String? errorMessage;
+
+  TaskState({
+    required this.status,
+    this.taskId,
+    this.message,
+    this.progress = 0,
+    this.errorMessage,
+  });
+
+  TaskState copyWith({
+    TaskStatus? status,
+    String? taskId,
+    String? message,
+    int? progress,
+    String? errorMessage,
+  }) {
+    return TaskState(
+      status: status ?? this.status,
+      taskId: taskId ?? this.taskId,
+      message: message ?? this.message,
+      progress: progress ?? this.progress,
+      errorMessage: errorMessage ?? this.errorMessage,
+    );
+  }
+}
+
+class TaskNotifier extends StateNotifier<TaskState> {
+  TaskNotifier() : super(TaskState(status: TaskStatus.idle, message: '就绪'));
+
+  void startAnalyzing() {
+    state = state.copyWith(
+      status: TaskStatus.analyzing,
+      message: '正在分析...',
+      progress: 0,
+    );
+  }
+
+  void startRunning(String taskId) {
+    state = state.copyWith(
+      status: TaskStatus.running,
+      taskId: taskId,
+      message: '正在执行...',
+      progress: 0,
+    );
+  }
+
+  void updateProgress(int progress, String message) {
+    state = state.copyWith(
+      progress: progress,
+      message: message,
+    );
+  }
+
+  void complete() {
+    state = state.copyWith(
+      status: TaskStatus.completed,
+      message: '执行完成',
+      progress: 100,
+    );
+  }
+
+  void stop() {
+    state = state.copyWith(
+      status: TaskStatus.stopping,
+      message: '正在停止...',
+    );
+  }
+
+  void stopComplete() {
+    state = state.copyWith(
+      status: TaskStatus.idle,
+      taskId: null,
+      message: '已停止',
+      progress: 0,
+    );
+  }
+
+  void error(String errorMessage) {
+    state = state.copyWith(
+      status: TaskStatus.error,
+      message: '执行出错',
+      errorMessage: errorMessage,
+    );
+  }
+
+  void reset() {
+    state = TaskState(status: TaskStatus.idle, message: '就绪');
+  }
+}
+
+final taskStateProvider = StateNotifierProvider<TaskNotifier, TaskState>((ref) {
+  return TaskNotifier();
+});
 
 void main() {
   runZonedGuarded(
@@ -65,8 +176,6 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
   late TabController _tabController;
   bool _showTooltips = true;
   bool _autoRun = false;
-  bool _taskRunning = false;
-  String _statusMessage = '就绪';
 
   @override
   void initState() {
@@ -80,33 +189,141 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
     super.dispose();
   }
 
-  void _runPipelineAnalysis() {
-    setState(() {
-      _statusMessage = '正在分析...';
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('开始预览分析')),
-    );
+  Future<void> _runPipelineAnalysis() async {
+    final taskNotifier = ref.read(taskStateProvider.notifier);
+    
+    try {
+      taskNotifier.startAnalyzing();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('开始预览分析')),
+      );
+      
+      await Future.delayed(const Duration(seconds: 2));
+      
+      taskNotifier.complete();
+    } catch (e) {
+      taskNotifier.error(e.toString());
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('预览分析失败: $e')),
+      );
+    }
   }
 
-  void _runPipelineExecution() {
-    setState(() {
-      _taskRunning = true;
-      _statusMessage = '正在执行...';
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('开始执行流水线')),
-    );
+  Future<void> _runPipelineExecution() async {
+    final taskNotifier = ref.read(taskStateProvider.notifier);
+    final currentState = ref.read(taskStateProvider);
+    
+    if (currentState.status == TaskStatus.running || currentState.status == TaskStatus.analyzing) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('任务正在执行中，请先停止当前任务')),
+      );
+      return;
+    }
+    
+    try {
+      final taskId = await _createTask();
+      if (taskId == null) {
+        taskNotifier.error('创建任务失败');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('创建任务失败，请检查配置')),
+        );
+        return;
+      }
+      
+      taskNotifier.startRunning(taskId);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('开始执行流水线')),
+      );
+      
+      await _executeTask(taskId);
+      
+      taskNotifier.complete();
+    } catch (e) {
+      taskNotifier.error(e.toString());
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('执行失败: $e')),
+      );
+    }
   }
 
-  void _forceStop() {
-    setState(() {
-      _taskRunning = false;
-      _statusMessage = '就绪';
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('任务已停止')),
-    );
+  Future<String?> _createTask() async {
+    try {
+      final apiClient = ref.read(apiClientProvider);
+      final response = await apiClient.post(
+        '/api/tasks',
+        body: {
+          'strategyId': 'default',
+          'filePaths': [],
+          'taskName': '文件管理任务',
+          'description': '通过前端创建的任务',
+        },
+      );
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map;
+        return data['taskId'] as String?;
+      }
+      return null;
+    } catch (e) {
+      print('创建任务失败: $e');
+      return null;
+    }
+  }
+
+  Future<void> _executeTask(String taskId) async {
+    try {
+      final apiClient = ref.read(apiClientProvider);
+      final response = await apiClient.post(
+        '/api/tasks/$taskId/execute',
+        body: {},
+      );
+      
+      if (response.statusCode != 200) {
+        throw Exception('执行任务失败');
+      }
+    } catch (e) {
+      print('执行任务失败: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> _forceStop() async {
+    final taskNotifier = ref.read(taskStateProvider.notifier);
+    final currentState = ref.read(taskStateProvider);
+    
+    if (currentState.status == TaskStatus.idle || currentState.status == TaskStatus.completed) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('当前没有正在执行的任务')),
+      );
+      return;
+    }
+    
+    try {
+      taskNotifier.stop();
+      
+      if (currentState.taskId != null) {
+        final apiClient = ref.read(apiClientProvider);
+        await apiClient.post(
+          '/api/tasks/${currentState.taskId}/cancel',
+          body: {},
+        );
+      }
+      
+      await Future.delayed(const Duration(seconds: 1));
+      
+      taskNotifier.stopComplete();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('任务已停止')),
+      );
+    } catch (e) {
+      taskNotifier.error(e.toString());
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('停止任务失败: $e')),
+      );
+    }
   }
 
   @override
@@ -177,22 +394,80 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
   Widget _buildMenu() {
     return PopupMenuButton<String>(
       icon: const Icon(Icons.menu, color: Colors.grey),
-      onSelected: (value) {
+      onSelected: (value) async {
+        final configNotifier = ref.read(configProvider.notifier);
         switch (value) {
           case 'load':
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('加载配置...')),
-            );
+            try {
+              await configNotifier.loadConfig();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('配置加载成功')),
+                );
+              }
+            } catch (e) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('配置加载失败: $e')),
+                );
+              }
+            }
             break;
           case 'save':
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('保存配置...')),
-            );
+            try {
+              await configNotifier.saveConfig();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('配置保存成功')),
+                );
+              }
+            } catch (e) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('配置保存失败: $e')),
+                );
+              }
+            }
             break;
           case 'reset':
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('重置配置...')),
+            final confirmed = await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('确认重置'),
+                content: const Text('确定要重置所有配置到默认值吗？此操作不可撤销。'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('取消'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('确认重置'),
+                  ),
+                ],
+              ),
             );
+
+            if (confirmed == true) {
+              try {
+                await configNotifier.resetConfig();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('配置已重置为默认值')),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('配置重置失败: $e')),
+                  );
+                }
+              }
+            }
             break;
         }
       },
@@ -251,38 +526,45 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
   }
 
   Widget _buildActionButtons() {
-    return Row(
-      children: [
-        ElevatedButton.icon(
-          onPressed: _runPipelineAnalysis,
-          icon: const Icon(Icons.visibility),
-          label: const Text('预览'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blue,
-            foregroundColor: Colors.white,
-          ),
-        ),
-        const SizedBox(width: 10),
-        ElevatedButton.icon(
-          onPressed: _taskRunning ? null : _runPipelineExecution,
-          icon: const Icon(Icons.play_arrow),
-          label: const Text('执行'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.green,
-            foregroundColor: Colors.white,
-          ),
-        ),
-        const SizedBox(width: 10),
-        ElevatedButton.icon(
-          onPressed: _taskRunning ? _forceStop : null,
-          icon: const Icon(Icons.stop),
-          label: const Text('停止'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red,
-            foregroundColor: Colors.white,
-          ),
-        ),
-      ],
+    return Consumer(
+      builder: (context, ref, child) {
+        final taskState = ref.watch(taskStateProvider);
+        final isRunning = taskState.status == TaskStatus.running || taskState.status == TaskStatus.analyzing;
+        
+        return Row(
+          children: [
+            ElevatedButton.icon(
+              onPressed: isRunning ? null : _runPipelineAnalysis,
+              icon: const Icon(Icons.visibility),
+              label: const Text('预览'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+              ),
+            ),
+            const SizedBox(width: 10),
+            ElevatedButton.icon(
+              onPressed: isRunning ? null : _runPipelineExecution,
+              icon: const Icon(Icons.play_arrow),
+              label: const Text('执行'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+              ),
+            ),
+            const SizedBox(width: 10),
+            ElevatedButton.icon(
+              onPressed: isRunning ? _forceStop : null,
+              icon: const Icon(Icons.stop),
+              label: const Text('停止'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -332,34 +614,41 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
   }
 
   Widget _buildStatusBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade200.withOpacity(0.8),
-        border: Border(
-          top: BorderSide(
-            color: Colors.grey.shade300,
-            width: 1,
-          ),
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.circle,
-            size: 10,
-            color: _taskRunning ? Colors.orange : Colors.green,
-          ),
-          const SizedBox(width: 10),
-          Text(
-            _statusMessage,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
+    return Consumer(
+      builder: (context, ref, child) {
+        final taskState = ref.watch(taskStateProvider);
+        final isRunning = taskState.status == TaskStatus.running || taskState.status == TaskStatus.analyzing;
+        
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade200.withOpacity(0.8),
+            border: Border(
+              top: BorderSide(
+                color: Colors.grey.shade300,
+                width: 1,
+              ),
             ),
           ),
-        ],
-      ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.circle,
+                size: 10,
+                color: isRunning ? Colors.orange : Colors.green,
+              ),
+              const SizedBox(width: 10),
+              Text(
+                taskState.message ?? '就绪',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

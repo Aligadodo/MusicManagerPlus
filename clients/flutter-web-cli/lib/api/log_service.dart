@@ -14,9 +14,9 @@ class LogService {
         if (data is Map) {
           return data as Map<String, dynamic>;
         } else if (data is List) {
-          return {'files': data};
+          return {'files': data, 'success': true};
         }
-        return {'files': data};
+        return {'files': [], 'success': false};
       } else {
         throw Exception('获取日志文件列表失败: ${response.statusCode}');
       }

@@ -33,9 +33,6 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
   bool _hideUnchanged = true;
   bool _autoRefresh = true;
   int _previewLimit = 200;
-  int _previewThreads = 10;
-  int _executionThreads = 4;
-  String _threadPoolMode = 'GLOBAL';
 
   // 分页相关
   int _currentPage = 1;
@@ -43,27 +40,12 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
   int _totalRecords = 0;
   int _totalPages = 0;
 
-  // 刷新时间间隔配置
-  int _listRefreshInterval = 2; // 列表刷新间隔（秒）
-  int _progressRefreshInterval = 1; // 进度刷新间隔（秒）
-
   // 进度信息
   double _progress = 0.0;
   String _remainingTime = '00:00:00';
   String _progressStatus = '准备就绪';
   int _completedTasks = 0;
   int _totalTasks = 0;
-
-  // 运行参数配置
-  bool _showAdvancedParams = false;
-  int _globalPreviewLimit = 100;
-  int _globalExecutionLimit = 100;
-  bool _unlimitedPreview = false;
-  bool _unlimitedExecution = false;
-  int _previewTimeout = 300;
-  int _executionTimeout = 600;
-  bool _unlimitedPreviewTimeout = false;
-  bool _unlimitedExecutionTimeout = false;
 
   @override
   void initState() {
@@ -103,18 +85,6 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
       _progressStatus = '分析中';
       _completedTasks = 0;
       _totalTasks = 0;
-    });
-
-    // 定期获取进度
-    final progressTimer = Timer.periodic(Duration(seconds: _progressRefreshInterval), (timer) {
-      _fetchProgress();
-    });
-
-    // 定期获取变更记录
-    final changesTimer = Timer.periodic(Duration(seconds: _listRefreshInterval), (timer) {
-      if (_autoRefresh) {
-        _fetchChanges();
-      }
     });
 
     try {
@@ -159,9 +129,6 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
         _remainingTime = '00:00:00';
         _progressStatus = '分析失败';
       });
-    } finally {
-      // 等待任务完成后再取消定时器
-      // 这里不立即取消，因为任务在后台执行，我们需要继续获取进度
     }
   }
 
@@ -174,18 +141,6 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
       _progressStatus = '执行中';
       _completedTasks = 0;
       _totalTasks = _changeRecords.length;
-    });
-
-    // 定期获取进度
-    final progressTimer = Timer.periodic(Duration(seconds: _progressRefreshInterval), (timer) {
-      _fetchProgress();
-    });
-
-    // 定期获取变更记录
-    final changesTimer = Timer.periodic(Duration(seconds: _listRefreshInterval), (timer) {
-      if (_autoRefresh) {
-        _fetchChanges();
-      }
     });
 
     try {
@@ -288,7 +243,7 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
     );
   }
 
-  // Header部分 - 包含预览、运行、中止按钮
+  // Header部分 - 显示任务预览标题
   Widget _buildHeader() {
     return Card(
       key: const ValueKey('preview_header_card'),
@@ -316,39 +271,6 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
               ),
               const SizedBox(width: 10),
               Text('处理中...'),
-            ] else ...[
-              ElevatedButton.icon(
-                key: const ValueKey('analyze_button'),
-                onPressed: _analyzePipeline,
-                icon: const Icon(Icons.visibility),
-                label: const Text('分析变更'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-              const SizedBox(width: 10),
-              ElevatedButton.icon(
-                key: const ValueKey('execute_button'),
-                onPressed: _executePipeline,
-                icon: const Icon(Icons.play_arrow),
-                label: const Text('执行变更'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-              const SizedBox(width: 10),
-              ElevatedButton.icon(
-                key: const ValueKey('stop_button'),
-                onPressed: _stopPipeline,
-                icon: const Icon(Icons.stop),
-                label: const Text('中止'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  foregroundColor: Colors.white,
-                ),
-              ),
             ],
           ],
         ),
@@ -368,13 +290,15 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
             Row(
               key: const ValueKey('filter_bar_search_row'),
               children: [
-                Expanded(
+                SizedBox(
+                  width: 300,
                   child: TextField(
                     decoration: const InputDecoration(
                       labelText: '搜索',
                       hintText: '请输入关键词进行搜索...',
                       prefixIcon: Icon(Icons.search),
                       border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     ),
                     onChanged: (value) {
                       setState(() {
@@ -421,6 +345,14 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
                     });
                     _fetchChanges();
                   },
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.refresh),
+                  onPressed: () {
+                    _fetchChanges();
+                  },
+                  tooltip: '刷新',
                 ),
               ],
             ),
@@ -480,285 +412,10 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
                     _fetchChanges();
                   },
                 ),
-                const SizedBox(width: 20),
-                const Text('列表刷新间隔(秒):'),
-                const SizedBox(width: 10),
-                DropdownButton<int>(
-                  value: _listRefreshInterval,
-                  items: const [
-                    DropdownMenuItem(value: 1, child: Text('1')),
-                    DropdownMenuItem(value: 2, child: Text('2')),
-                    DropdownMenuItem(value: 5, child: Text('5')),
-                    DropdownMenuItem(value: 10, child: Text('10')),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      _listRefreshInterval = value ?? 2;
-                    });
-                  },
-                ),
-                const SizedBox(width: 20),
-                const Text('进度刷新间隔(秒):'),
-                const SizedBox(width: 10),
-                DropdownButton<int>(
-                  value: _progressRefreshInterval,
-                  items: const [
-                    DropdownMenuItem(value: 1, child: Text('1')),
-                    DropdownMenuItem(value: 2, child: Text('2')),
-                    DropdownMenuItem(value: 5, child: Text('5')),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      _progressRefreshInterval = value ?? 1;
-                    });
-                  },
-                ),
-                const SizedBox(width: 20),
-                TextButton.icon(
-                  onPressed: () {
-                    setState(() {
-                      _showAdvancedParams = !_showAdvancedParams;
-                    });
-                  },
-                  icon: Icon(_showAdvancedParams ? Icons.expand_less : Icons.expand_more),
-                  label: Text(_showAdvancedParams ? '收起高级参数' : '展开高级参数'),
-                ),
               ],
             ),
-            if (_showAdvancedParams)
-              Padding(
-                padding: const EdgeInsets.only(top: 16),
-                child: _buildAdvancedParams(),
-              ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildAdvancedParams() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            '线程池配置',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            key: const ValueKey('thread_pool_mode_row'),
-            children: [
-              const Text('线程池模式:'),
-              const SizedBox(width: 10),
-              DropdownButton<String>(
-                value: _threadPoolMode,
-                items: const [
-                  DropdownMenuItem(value: 'GLOBAL', child: Text('全局统一配置')),
-                  DropdownMenuItem(value: 'ROOT_PATH', child: Text('根路径独立配置')),
-                ],
-                onChanged: (value) {
-                  setState(() {
-                    _threadPoolMode = value ?? 'GLOBAL';
-                  });
-                },
-              ),
-              const SizedBox(width: 20),
-              const Text('预览线程数:'),
-              const SizedBox(width: 10),
-              SizedBox(
-                width: 80,
-                child: TextField(
-                  keyboardType: TextInputType.number,
-                  controller: TextEditingController(text: '$_previewThreads'),
-                  onChanged: (value) {
-                    setState(() {
-                      _previewThreads = int.tryParse(value) ?? 10;
-                    });
-                  },
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 20),
-              const Text('执行线程数:'),
-              const SizedBox(width: 10),
-              SizedBox(
-                width: 80,
-                child: TextField(
-                  keyboardType: TextInputType.number,
-                  controller: TextEditingController(text: '$_executionThreads'),
-                  onChanged: (value) {
-                    setState(() {
-                      _executionThreads = int.tryParse(value) ?? 4;
-                    });
-                  },
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            '数量上限配置',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            key: const ValueKey('preview_limit_row'),
-            children: [
-              const Text('预览数量上限:'),
-              const SizedBox(width: 10),
-              SizedBox(
-                width: 80,
-                child: TextField(
-                  keyboardType: TextInputType.number,
-                  controller: TextEditingController(text: '$_globalPreviewLimit'),
-                  onChanged: (value) {
-                    setState(() {
-                      _globalPreviewLimit = int.tryParse(value) ?? 100;
-                    });
-                  },
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Checkbox(
-                value: _unlimitedPreview,
-                onChanged: (value) {
-                  setState(() {
-                    _unlimitedPreview = value ?? false;
-                  });
-                },
-              ),
-              const Text('无限制'),
-              const SizedBox(width: 20),
-              const Text('执行数量上限:'),
-              const SizedBox(width: 10),
-              SizedBox(
-                width: 80,
-                child: TextField(
-                  keyboardType: TextInputType.number,
-                  controller: TextEditingController(text: '$_globalExecutionLimit'),
-                  onChanged: (value) {
-                    setState(() {
-                      _globalExecutionLimit = int.tryParse(value) ?? 100;
-                    });
-                  },
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Checkbox(
-                value: _unlimitedExecution,
-                onChanged: (value) {
-                  setState(() {
-                    _unlimitedExecution = value ?? false;
-                  });
-                },
-              ),
-              const Text('无限制'),
-            ],
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            '超时配置',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            key: const ValueKey('preview_timeout_row'),
-            children: [
-              const Text('预览超时(秒):'),
-              const SizedBox(width: 10),
-              SizedBox(
-                width: 80,
-                child: TextField(
-                  keyboardType: TextInputType.number,
-                  controller: TextEditingController(text: '$_previewTimeout'),
-                  onChanged: (value) {
-                    setState(() {
-                      _previewTimeout = int.tryParse(value) ?? 300;
-                    });
-                  },
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Checkbox(
-                value: _unlimitedPreviewTimeout,
-                onChanged: (value) {
-                  setState(() {
-                    _unlimitedPreviewTimeout = value ?? false;
-                  });
-                },
-              ),
-              const Text('无限制'),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            key: const ValueKey('execution_timeout_row'),
-            children: [
-              const Text('执行超时(秒):'),
-              const SizedBox(width: 10),
-              SizedBox(
-                width: 80,
-                child: TextField(
-                  keyboardType: TextInputType.number,
-                  controller: TextEditingController(text: '$_executionTimeout'),
-                  onChanged: (value) {
-                    setState(() {
-                      _executionTimeout = int.tryParse(value) ?? 600;
-                    });
-                  },
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Checkbox(
-                value: _unlimitedExecutionTimeout,
-                onChanged: (value) {
-                  setState(() {
-                    _unlimitedExecutionTimeout = value ?? false;
-                  });
-                },
-              ),
-              const Text('无限制'),
-            ],
-          ),
-        ],
       ),
     );
   }

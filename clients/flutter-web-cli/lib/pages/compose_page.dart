@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -201,18 +202,17 @@ class _ComposePageState extends ConsumerState<ComposePage> {
 
     return Column(
       children: [
-        _buildActionButtons(),
         _buildSectionHeaders(),
         Expanded(
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                flex: 4,
+                flex: 3,
                 child: _buildLeftPanel(),
               ),
               Expanded(
-                flex: 2,
+                flex: 3,
                 child: _buildMidPanel(),
               ),
               Expanded(
@@ -222,96 +222,9 @@ class _ComposePageState extends ConsumerState<ComposePage> {
             ],
           ),
         ),
+        _buildActionButtons(),
       ],
     );
-  }
-
-  Widget _buildActionButtons() {
-    return Container(
-      key: const ValueKey('action_buttons_container'),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Row(
-        key: const ValueKey('action_buttons_row'),
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          ElevatedButton.icon(
-            key: const ValueKey('preview_button'),
-            onPressed: _previewAction,
-            icon: const Icon(Icons.visibility),
-            label: const Text('预览'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-            ),
-          ),
-          const SizedBox(width: 10),
-          ElevatedButton.icon(
-            key: const ValueKey('run_button'),
-            onPressed: _runAction,
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('运行'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-            ),
-          ),
-          const SizedBox(width: 10),
-          ElevatedButton.icon(
-            key: const ValueKey('abort_button'),
-            onPressed: _abortAction,
-            icon: const Icon(Icons.stop),
-            label: const Text('中止'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _previewAction() async {
-    try {
-      // 跳转到预览页面
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const PreviewPage()),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('预览失败: $e')),
-      );
-    }
-  }
-
-  Future<void> _runAction() async {
-    try {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('运行功能已触发')),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('运行失败: $e')),
-      );
-    }
-  }
-
-  Future<void> _abortAction() async {
-    try {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('中止功能已触发')),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('中止失败: $e')),
-      );
-    }
   }
 
   Widget _buildSectionHeaders() {
@@ -322,7 +235,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
         key: const ValueKey('section_headers_row'),
         children: [
           Expanded(
-            flex: 1,
+            flex: 3,
             child: _buildSectionHeader(
               'Step1-选择目录',
               '通过弹窗或者拖拽至空白处来添加需要处理的文件或文件夹。',
@@ -330,7 +243,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
             ),
           ),
           Expanded(
-            flex: 2,
+            flex: 3,
             child: _buildSectionHeader(
               'Step2-流水线配置',
               '添加必要的处理流程，可同时应用不同的操作。点击任意项目，可打开详细的配置界面。（同一文件只会被修改一次）。',
@@ -338,7 +251,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
             ),
           ),
           Expanded(
-            flex: 2,
+            flex: 4,
             child: _buildSectionHeader(
               'Step3-参数配置',
               '支持选中步骤并编辑步骤下的参数。支持配置步骤的前置条件，以在满足特定条件下才执行特定操作，用于更精细化的操作控制。',
@@ -348,6 +261,111 @@ class _ComposePageState extends ConsumerState<ComposePage> {
         ],
       ),
     );
+  }
+
+  Widget _buildActionButtons() {
+    return Container(
+      key: const ValueKey('action_buttons_container'),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Row(
+        key: const ValueKey('action_buttons_row'),
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          ElevatedButton.icon(
+            key: const ValueKey('load_config_button'),
+            onPressed: _loadConfigFromFile,
+            icon: const Icon(Icons.file_upload),
+            label: const Text('加载配置'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+          ),
+          const SizedBox(width: 10),
+          ElevatedButton.icon(
+            key: const ValueKey('save_config_button'),
+            onPressed: _saveConfigToFile,
+            icon: const Icon(Icons.file_download),
+            label: const Text('保存配置'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _loadConfigFromFile() async {
+    try {
+      final input = html.InputElement(type: 'file')
+        ..accept = '.json';
+      input.onChange.listen((event) {
+        if (input.files?.isNotEmpty == true) {
+          final file = input.files![0];
+          final reader = html.FileReader();
+          reader.onLoad.listen((event) {
+            try {
+              final json = jsonDecode(reader.result as String) as Map<String, dynamic>;
+              setState(() {
+                if (json['sourceDirectories'] != null) {
+                  _sourceDirectories = (json['sourceDirectories'] as List)
+                      .map((e) => SourceDirectory.fromJson(e))
+                      .toList();
+                }
+                if (json['pipelineStrategies'] != null) {
+                  _pipelineStrategies = (json['pipelineStrategies'] as List)
+                      .map((e) => StrategyInfo.fromJson(e))
+                      .toList();
+                }
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('配置加载成功')),
+              );
+            } catch (e) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('配置文件解析失败: $e')),
+              );
+            }
+          });
+          reader.readAsText(file);
+        }
+      });
+      input.click();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('加载配置失败: $e')),
+      );
+    }
+  }
+
+  Future<void> _saveConfigToFile() async {
+    try {
+      final config = {
+        'sourceDirectories': _sourceDirectories.map((e) => e.toJson()).toList(),
+        'pipelineStrategies': _pipelineStrategies.map((e) => e.toJson()).toList(),
+      };
+      final jsonStr = jsonEncode(config);
+      final blob = html.Blob([jsonStr], 'application/json');
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      final anchor = html.AnchorElement(href: url)
+        ..download = 'pipeline_config_${DateTime.now().millisecondsSinceEpoch}.json'
+        ..click();
+      html.Url.revokeObjectUrl(url);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('配置保存成功')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('保存配置失败: $e')),
+      );
+    }
   }
 
   Widget _buildSectionHeader(String title, String description, String key) {
@@ -1320,6 +1338,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
           },
         );
       case 'list':
+        final List<String> items = (field.defaultValue as List<String>?) ?? [];
         return Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
@@ -1329,23 +1348,66 @@ class _ComposePageState extends ConsumerState<ComposePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                '列表项 (${field.defaultValue != null ? (field.defaultValue as List).length : 0})',
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-              const SizedBox(height: 10),
-              ElevatedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.add, size: 16),
-                label: const Text('添加项目'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  minimumSize: const Size(0, 0),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '列表项 (${items.length})',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
                   ),
-                ),
+                  ElevatedButton.icon(
+                    onPressed: () => _showAddListItemDialog(field.name, items),
+                    icon: const Icon(Icons.add, size: 16),
+                    label: const Text('添加项目'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      minimumSize: const Size(0, 0),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                  ),
+                ],
               ),
+              if (items.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                ...items.asMap().entries.map((entry) {
+                  int index = entry.key;
+                  String item = entry.value;
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 5),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            item,
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.edit, size: 16, color: Colors.blue),
+                          onPressed: () => _showEditListItemDialog(field.name, items, index),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.delete, size: 16, color: Colors.red),
+                          onPressed: () => _removeListItem(field.name, items, index),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ],
             ],
           ),
         );
@@ -1373,6 +1435,88 @@ class _ComposePageState extends ConsumerState<ComposePage> {
           },
         );
     }
+  }
+
+  void _showAddListItemDialog(String fieldName, List<String> items) {
+    final TextEditingController controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('添加项目'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: '请输入内容',
+            border: OutlineInputBorder(),
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (controller.text.isNotEmpty) {
+                setState(() {
+                  final newItems = List<String>.from(items);
+                  newItems.add(controller.text);
+                  _updateConfigValue(fieldName, newItems);
+                });
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('添加'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditListItemDialog(String fieldName, List<String> items, int index) {
+    final TextEditingController controller = TextEditingController(text: items[index]);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('编辑项目'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: '请输入内容',
+            border: OutlineInputBorder(),
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (controller.text.isNotEmpty) {
+                setState(() {
+                  final newItems = List<String>.from(items);
+                  newItems[index] = controller.text;
+                  _updateConfigValue(fieldName, newItems);
+                });
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _removeListItem(String fieldName, List<String> items, int index) {
+    setState(() {
+      final newItems = List<String>.from(items);
+      newItems.removeAt(index);
+      _updateConfigValue(fieldName, newItems);
+    });
   }
 
   void _updateConfigValue(String fieldName, dynamic value) {

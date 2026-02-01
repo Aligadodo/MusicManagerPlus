@@ -138,26 +138,85 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
       appBar: AppBar(
         title: const Text('全局设置'),
       ),
-      body: Container(
-        padding: const EdgeInsets.all(20.0),
-        child: ListView(
-          children: [
-            _buildThreadPoolSection(),
-            const SizedBox(height: 30),
-            _buildScanSettingsSection(),
-            const SizedBox(height: 30),
-            _buildFilterRulesSection(),
-            const SizedBox(height: 30),
-            _buildFileTypeTreeSection(),
-            const SizedBox(height: 30),
-            _buildPreviewSettingsSection(),
-            const SizedBox(height: 30),
-            _buildActionButtons(),
-          ],
+      body: Row(
+        children: [
+          Container(
+            width: 200,
+            color: Colors.grey.shade100,
+            child: ListView(
+              children: [
+                _buildNavItem('线程池配置', 0),
+                _buildNavItem('扫描配置', 1),
+                _buildNavItem('过滤规则', 2),
+                _buildNavItem('文件类型筛选', 3),
+                _buildNavItem('预览配置', 4),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.all(20.0),
+              child: ListView(
+                children: [
+                  if (_selectedSection == 0) ...[
+                    _buildThreadPoolSection(),
+                    const SizedBox(height: 30),
+                  ],
+                  if (_selectedSection == 1) ...[
+                    _buildScanSettingsSection(),
+                    const SizedBox(height: 30),
+                  ],
+                  if (_selectedSection == 2) ...[
+                    _buildFilterRulesSection(),
+                    const SizedBox(height: 30),
+                  ],
+                  if (_selectedSection == 3) ...[
+                    _buildFileTypeTreeSection(),
+                    const SizedBox(height: 30),
+                  ],
+                  if (_selectedSection == 4) ...[
+                    _buildPreviewSettingsSection(),
+                    const SizedBox(height: 30),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavItem(String title, int index) {
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _selectedSection = index;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: _selectedSection == index ? Colors.blue.shade100 : Colors.transparent,
+          border: Border(
+            left: BorderSide(
+              color: _selectedSection == index ? Colors.blue : Colors.transparent,
+              width: 4,
+            ),
+          ),
+        ),
+        child: Text(
+          title,
+          style: TextStyle(
+            color: _selectedSection == index ? Colors.blue.shade700 : Colors.black87,
+            fontWeight: _selectedSection == index ? FontWeight.bold : FontWeight.normal,
+          ),
         ),
       ),
     );
   }
+
+  int _selectedSection = 0;
 
   Widget _buildThreadPoolSection() {
     return Card(
@@ -549,12 +608,60 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
           ),
         ),
         if (node.children.isNotEmpty)
-          Column(
-            children: node.children
-                .map((child) => _buildFileTypeTreeNode(child, level + 1))
-                .toList(),
+          Padding(
+            padding: const EdgeInsets.only(left: 32.0, top: 8.0),
+            child: Wrap(
+              spacing: 16.0,
+              runSpacing: 12.0,
+              children: node.children.map((child) {
+                return _buildFileTypeNodeInline(child);
+              }).toList(),
+            ),
           ),
       ],
+    );
+  }
+
+  // 内联构建文件类型节点（用于横向展示）
+  Widget _buildFileTypeNodeInline(FileTypeNode node) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(6.0),
+        color: node.isSelected ? Colors.blue.shade50 : Colors.white,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Checkbox(
+            value: node.isSelected,
+            onChanged: (value) {
+              setState(() {
+                node.isSelected = value ?? false;
+              });
+            },
+          ),
+          const SizedBox(width: 4.0),
+          Text(
+            node.name,
+            style: TextStyle(
+              fontSize: 13.0,
+              color: node.isSelected ? Colors.blue.shade700 : Colors.black87,
+            ),
+          ),
+          if (node.extension != null) ...[
+            const SizedBox(width: 4.0),
+            Text(
+              '(.${node.extension})',
+              style: TextStyle(
+                fontSize: 11.0,
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -630,70 +737,6 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildActionButtons() {
-    return Row(
-      key: const ValueKey('action_buttons_row'),
-      children: [
-        Expanded(
-          child: ElevatedButton(
-            onPressed: () {
-              // 保存配置
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('配置保存成功')),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-            ),
-            child: const Text('保存配置'),
-          ),
-        ),
-        const SizedBox(width: 20),
-        Expanded(
-          child: ElevatedButton(
-            onPressed: () {
-              // 重置配置
-              setState(() {
-                _previewThreads = 10;
-                _executionThreads = 4;
-                _threadPoolMode = 'GLOBAL';
-                _recursionMode = 'ALL';
-                _recursionDepth = 3;
-                _minRecursionDepth = 1;
-                _maxRecursionDepth = 3;
-                _scanFilterList = [
-                  '*Convert*',
-                  '*Split*',
-                  '*System*',
-                  '*trash*',
-                  '*Temp*',
-                  '*tmp*',
-                  '*cache*',
-                  '*backup*',
-                ];
-                _autoRefresh = true;
-                _previewLimit = 200;
-                // 重置文件类型树
-                _fileTypeTree = _initFileTypeTree();
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('配置已重置')),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.grey,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-            ),
-            child: const Text('重置配置'),
-          ),
-        ),
-      ],
     );
   }
 }
