@@ -11,7 +11,7 @@ class PluginService {
 
   Future<List<PluginInfo>> getPlugins() async {
     try {
-      final response = await _apiClient.get('/api/plugins');
+      final response = await _apiClient.get('/plugins');
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
         return data.map((item) => PluginInfo.fromJson(item)).toList();
@@ -25,7 +25,7 @@ class PluginService {
 
   Future<PluginConfig> getPluginConfig(String pluginId) async {
     try {
-      final response = await _apiClient.get('/api/plugins/$pluginId/config');
+      final response = await _apiClient.get('/plugins/$pluginId/config');
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
         return PluginConfig.fromJson(data);
@@ -40,7 +40,7 @@ class PluginService {
   Future<PluginConfig> savePluginConfig(String pluginId, PluginConfig config) async {
     try {
       final response = await _apiClient.post(
-        '/api/plugins/$pluginId/config',
+        '/plugins/$pluginId/config',
         body: json.encode(config.toJson()),
       );
       if (response.statusCode == 200) {
@@ -57,7 +57,7 @@ class PluginService {
   Future<List<ChangeRecord>> previewPlugin(String pluginId, List<String> filePaths, PluginConfig config) async {
     try {
       final response = await _apiClient.post(
-        '/api/plugins/$pluginId/preview',
+        '/plugins/$pluginId/preview',
         body: json.encode({
           'filePaths': filePaths,
           'config': config.toJson(),
@@ -77,7 +77,7 @@ class PluginService {
   Future<List<ChangeRecord>> executePlugin(String pluginId, List<String> filePaths, PluginConfig config) async {
     try {
       final response = await _apiClient.post(
-        '/api/plugins/$pluginId/execute',
+        '/plugins/$pluginId/execute',
         body: json.encode({
           'filePaths': filePaths,
           'config': config.toJson(),

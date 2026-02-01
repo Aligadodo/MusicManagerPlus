@@ -66,13 +66,21 @@ class _ComposePageState extends ConsumerState<ComposePage> {
     });
 
     try {
+      print('开始加载数据...');
+      
+      print('正在加载源目录...');
       final sources = await _sourceDirectoryService.getSourceDirectories();
+      print('源目录加载完成，数量: ${sources.length}');
       if (_isDisposed) return;
       
+      print('正在加载策略列表...');
       final strategies = await _strategyService.getAvailableStrategies();
+      print('策略列表加载完成，数量: ${strategies.length}');
       if (_isDisposed) return;
       
+      print('正在加载流水线配置...');
       final pipeline = await _pipelineService.getPipeline();
+      print('流水线配置加载完成，数量: ${pipeline.length}');
       if (_isDisposed) return;
 
       setState(() {
@@ -81,9 +89,12 @@ class _ComposePageState extends ConsumerState<ComposePage> {
         _pipelineStrategies = pipeline;
         _isLoading = false;
       });
+      
+      print('数据加载完成');
     } catch (e) {
       if (_isDisposed) return;
       
+      print('加载数据失败: $e');
       setState(() {
         _errorMessage = '加载数据失败: $e';
         _isLoading = false;

@@ -33,16 +33,16 @@ class ConfigField {
 
   factory ConfigField.fromJson(Map<String, dynamic> json) {
     return ConfigField(
-      name: json['name'] as String,
-      label: json['label'] as String,
-      type: json['type'] as String,
+      name: json['name'] as String? ?? 'unknown',
+      label: json['label'] as String? ?? 'Unknown Field',
+      type: json['type'] as String? ?? 'string',
       defaultValue: json['defaultValue'],
       description: json['description'] as String? ?? '',
       required: json['required'] as bool? ?? false,
       dependsOn: json['dependsOn'] as String?,
       dependsValue: json['dependsValue'] as String?,
       options: json['options'] != null 
-          ? List<String>.from(json['options'] as List) 
+          ? List<String>.from((json['options'] as List).where((option) => option != null).cast<String>()) 
           : null,
       subFields: json['subFields'] as Map<String, dynamic>?,
       isModule: json['isModule'] as bool? ?? json['module'] as bool? ?? false,

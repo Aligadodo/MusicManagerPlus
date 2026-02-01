@@ -60,6 +60,10 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
   int _totalFiles = 0;
   String _logMessage = '';
   
+  // 折叠状态
+  bool _isStatusBarExpanded = true;
+  bool _isLogMessageExpanded = false;
+  
   Timer? _statusTimer;
   String? _taskId;
 
@@ -325,7 +329,7 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
 
   Future<void> _fetchChanges() async {
     try {
-      final response = await _apiClient.get('/api/pipeline/changes', queryParams: {
+      final response = await _apiClient.get('/pipeline/changes', queryParams: {
         'searchFilter': _searchFilter,
         'statusFilter': _statusFilter,
         'operationTypeFilter': _operationTypeFilter,
@@ -599,75 +603,118 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
                   height: 20,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
+              if (_taskState.isCompleted)
+                Icon(
+                  Icons.check_circle,
+                  size: 20,
+                  color: Colors.green,
+                ),
+              IconButton(
+                icon: Icon(
+                  _isStatusBarExpanded ? Icons.expand_less : Icons.expand_more,
+                  size: 18,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _isStatusBarExpanded = !_isStatusBarExpanded;
+                  });
+                },
+                tooltip: _isStatusBarExpanded ? '折叠详情' : '展开详情',
+              ),
             ],
           ),
-          const SizedBox(height: 8),
-          if (_message.isNotEmpty)
-            Text(
-              _message,
-              style: const TextStyle(fontSize: 12),
-            ),
-          if (_message.isNotEmpty)
-            const SizedBox(height: 8),
-          if (_taskState.isRunning || _taskState.isCompleted)
-            Row(
+          if (_isStatusBarExpanded)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                const SizedBox(height: 8),
+                if (_message.isNotEmpty)
+                  Text(
+                    _message,
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                if (_message.isNotEmpty)
+                  const SizedBox(height: 8),
+                if (_taskState.isRunning || _taskState.isCompleted)
+                  Row(
                     children: [
-                      Text('进度: $_progress%', style: const TextStyle(fontSize: 12)),
-                      LinearProgressIndicator(
-                        value: _progress / 100,
-                        backgroundColor: Colors.grey.shade200,
-                        valueColor: AlwaysStoppedAnimation<Color>(_getTaskStateColor()),
-                        minHeight: 6,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('进度: $_progress%', style: const TextStyle(fontSize: 12)),
+                            LinearProgressIndicator(
+                              value: _progress / 100,
+                              backgroundColor: Colors.grey.shade200,
+                              valueColor: AlwaysStoppedAnimation<Color>(_getTaskStateColor()),
+                              minHeight: 6,
+                            ),
+                          ],
+                        ),
                       ),
+                      const SizedBox(width: 16),
+                      if (_totalFiles > 0)
+                        Text('文件: $_scannedFiles/$_totalFiles', style: const TextStyle(fontSize: 12)),
+                      if (_totalFiles > 0)
+                        const SizedBox(width: 16),
+                      if (_changeCount > 0)
+                        Text('变更: $_changeCount', style: const TextStyle(fontSize: 12)),
                     ],
                   ),
-                ),
-                const SizedBox(width: 16),
-                if (_totalFiles > 0)
-                  Text('文件: $_scannedFiles/$_totalFiles', style: const TextStyle(fontSize: 12)),
-                if (_totalFiles > 0)
-                  const SizedBox(width: 16),
-                if (_changeCount > 0)
-                  Text('变更: $_changeCount', style: const TextStyle(fontSize: 12)),
+                if (_currentStep.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Text(
+                      '当前步骤: $_currentStep',
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ),
+                if (_logMessage.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Text(
+                              '日志信息:',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                            ),
+                            IconButton(
+                              icon: Icon(
+                                _isLogMessageExpanded ? Icons.expand_less : Icons.expand_more,
+                                size: 16,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _isLogMessageExpanded = !_isLogMessageExpanded;
+                                });
+                              },
+                              tooltip: _isLogMessageExpanded ? '折叠日志' : '展开日志',
+                            ),
+                          ],
+                        ),
+                        if (_isLogMessageExpanded)
+                          Container(
+                            margin: const EdgeInsets.only(top: 4.0),
+                            padding: const EdgeInsets.all(8.0),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey.shade300),
+                              borderRadius: BorderRadius.circular(4),
+                              color: Colors.white,
+                            ),
+                            child: Text(
+                              _logMessage,
+                              style: const TextStyle(fontSize: 11, fontFamily: 'monospace'),
+                              maxLines: 10,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
               ],
-            ),
-          if (_currentStep.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 8.0),
-              child: Text(
-                '当前步骤: $_currentStep',
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-            ),
-          if (_logMessage.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 8.0),
-              child: Container(
-                padding: const EdgeInsets.all(8.0),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(4),
-                  color: Colors.white,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      '日志信息:',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _logMessage,
-                      style: const TextStyle(fontSize: 11, fontFamily: 'monospace'),
-                    ),
-                  ],
-                ),
-              ),
             ),
         ],
       ),

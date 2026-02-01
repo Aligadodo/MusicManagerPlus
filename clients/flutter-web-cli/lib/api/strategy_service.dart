@@ -10,13 +10,25 @@ class StrategyService {
   StrategyService(this._apiClient);
 
   Future<List<StrategyInfo>> getAvailableStrategies() async {
-    final response = await _apiClient.get('/strategies');
-
-    if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
-      return data.map((item) => StrategyInfo.fromJson(item)).toList();
-    } else {
-      throw Exception('Failed to get strategies: ${response.statusCode}');
+    try {
+      print('正在请求策略列表...');
+      print('请求URL: http://localhost:8080/api/strategies');
+      final response = await _apiClient.get('/strategies');
+      print('响应状态码: ${response.statusCode}');
+      
+      if (response.statusCode == 200) {
+        print('响应体长度: ${response.body.length}');
+        final List<dynamic> data = jsonDecode(response.body);
+        print('策略数量: ${data.length}');
+        return data.map((item) => StrategyInfo.fromJson(item)).toList();
+      } else {
+        print('获取策略失败: ${response.statusCode}');
+        print('响应体: ${response.body}');
+        throw Exception('Failed to get strategies: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('获取策略列表异常: $e');
+      rethrow;
     }
   }
 

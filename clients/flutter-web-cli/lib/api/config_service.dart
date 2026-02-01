@@ -8,7 +8,7 @@ class ConfigService {
 
   Future<dynamic> getConfig() async {
     try {
-      final response = await _apiClient.get('/api/config');
+      final response = await _apiClient.get('/config');
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       }
@@ -21,7 +21,7 @@ class ConfigService {
 
   Future<dynamic> saveConfig(Map<String, dynamic> config) async {
     try {
-      final response = await _apiClient.post('/api/config', body: config);
+      final response = await _apiClient.post('/config', body: config);
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       }

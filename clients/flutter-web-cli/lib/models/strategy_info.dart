@@ -18,16 +18,20 @@ class StrategyInfo {
   factory StrategyInfo.fromJson(Map<String, dynamic> json) {
     final configFields = (json['configFields'] as List<dynamic>?)?.map((field) {
       try {
+        if (field == null) {
+          print('Skipping null config field');
+          return null;
+        }
         return ConfigField.fromJson(field as Map<String, dynamic>);
       } catch (e) {
         print('Failed to parse config field: $field, error: $e');
-        rethrow;
+        return null;
       }
-    }).toList() ?? [];
+    }).where((field) => field != null).cast<ConfigField>().toList() ?? [];
     return StrategyInfo(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      description: json['description'] as String,
+      id: json['id'] as String? ?? 'unknown',
+      name: json['name'] as String? ?? 'Unknown Strategy',
+      description: json['description'] as String? ?? '',
       configFields: configFields,
       enabled: json['enabled'] as bool? ?? true,
     );
