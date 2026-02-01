@@ -179,46 +179,52 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('界面设置'),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      body: Row(
         children: [
-          if (_isLoading)
-            const Center(
-              child: CircularProgressIndicator(),
-            )
-          else if (_errorMessage.isNotEmpty)
-            Center(
-              child: Text(
-                _errorMessage,
-                style: const TextStyle(color: Colors.red),
-              ),
+          Container(
+            width: 200,
+            color: Colors.grey.shade100,
+            child: ListView(
+              children: [
+                _buildNavItem('主题预设', 0),
+                _buildNavItem('颜色设置', 1),
+                _buildNavItem('背景设置', 2),
+                _buildNavItem('字体设置', 3),
+                _buildNavItem('样式管理', 4),
+              ],
             ),
-          const SizedBox(height: 20),
+          ),
           Expanded(
-            child: DefaultTabController(
-              length: 5,
-              child: Column(
+            child: Container(
+              padding: const EdgeInsets.all(20.0),
+              child: ListView(
                 children: [
-                  _buildTabBar(),
-                  const SizedBox(height: 10),
-                  Expanded(
-                    child: TabBarView(
-                      children: [
-                        _buildPresetTabContent(),
-                        _buildColorTabContent(),
-                        _buildBackgroundTabContent(),
-                        _buildFontTabContent(),
-                        _buildStyleTabContent(),
-                      ],
+                  if (_isLoading)
+                    const Center(
+                      child: CircularProgressIndicator(),
+                    )
+                  else if (_errorMessage.isNotEmpty)
+                    Center(
+                      child: Text(
+                        _errorMessage,
+                        style: const TextStyle(color: Colors.red),
+                      ),
                     ),
-                  ),
+                  const SizedBox(height: 20),
+                  if (_selectedSection == 0)
+                    _buildPresetTabContent(),
+                  if (_selectedSection == 1)
+                    _buildColorTabContent(),
+                  if (_selectedSection == 2)
+                    _buildBackgroundTabContent(),
+                  if (_selectedSection == 3)
+                    _buildFontTabContent(),
+                  if (_selectedSection == 4)
+                    _buildStyleTabContent(),
                 ],
               ),
             ),
@@ -228,26 +234,36 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
     );
   }
 
-  Widget _buildTabBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: const TabBar(
-        tabs: [
-          Tab(text: '主题预设'),
-          Tab(text: '颜色设置'),
-          Tab(text: '背景设置'),
-          Tab(text: '字体设置'),
-          Tab(text: '样式管理'),
-        ],
-        labelColor: Colors.blue,
-        unselectedLabelColor: Colors.grey,
-        indicatorColor: Colors.blue,
+  Widget _buildNavItem(String title, int index) {
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _selectedSection = index;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: _selectedSection == index ? Colors.blue.shade100 : Colors.transparent,
+          border: Border(
+            left: BorderSide(
+              color: _selectedSection == index ? Colors.blue : Colors.transparent,
+              width: 4,
+            ),
+          ),
+        ),
+        child: Text(
+          title,
+          style: TextStyle(
+            color: _selectedSection == index ? Colors.blue.shade700 : Colors.black87,
+            fontWeight: _selectedSection == index ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
       ),
     );
   }
+
+  int _selectedSection = 0;
 
   Widget _buildPresetTabContent() {
     return SingleChildScrollView(

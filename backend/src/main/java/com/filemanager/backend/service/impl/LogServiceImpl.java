@@ -82,17 +82,85 @@ public class LogServiceImpl implements LogService {
                         .collect(Collectors.toList());
             }
 
-            int total = filteredLines.size();
+            // 处理多行堆栈信息
+            List<Map<String, Object>> processedEntries = new ArrayList<>();
+            Map<String, Object> currentEntry = null;
+            StringBuilder currentStackTrace = new StringBuilder();
+
+            for (String line : filteredLines) {
+                if (line.trim().isEmpty()) {
+                    continue;
+                }
+
+                // 检查是否是新的日志条目
+                boolean isNewEntry = false;
+                
+                // 1. 标准Spring Boot日志格式（带时间戳）
+                if (line.matches("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}\\.\\d{3}.*")) {
+                    isNewEntry = true;
+                }
+
+                if (isNewEntry) {
+                    // 保存当前条目
+                    if (currentEntry != null) {
+                        if (currentStackTrace.length() > 0) {
+                            currentEntry.put("stackTrace", currentStackTrace.toString().trim().replaceAll("\\n", " "));
+                        }
+                        processedEntries.add(currentEntry);
+                    }
+
+                    // 开始新条目
+                    currentEntry = parseLogEntry(line);
+                    currentStackTrace.setLength(0);
+
+                    // 检查是否是错误条目或包含堆栈信息的开始
+                } else if (currentEntry != null) {
+                    // 检查是否是堆栈信息的延续
+                    if (line.trim().startsWith("at ") || 
+                        line.trim().startsWith("Caused by:") || 
+                        line.trim().startsWith("StackTrace:") || 
+                        line.trim().startsWith("    at ") ||
+                        line.trim().startsWith("        at ")) {
+                        currentStackTrace.append(line.trim()).append(" ");
+                    } else if (currentStackTrace.length() > 0) {
+                        // 堆栈信息结束
+                        currentEntry.put("stackTrace", currentStackTrace.toString().trim().replaceAll("\\n", " "));
+                        processedEntries.add(currentEntry);
+                        currentEntry = null;
+                        currentStackTrace.setLength(0);
+                    }
+                }
+            }
+
+            // 保存最后一个条目
+            if (currentEntry != null) {
+                if (currentStackTrace.length() > 0) {
+                    currentEntry.put("stackTrace", currentStackTrace.toString().trim().replaceAll("\\n", " "));
+                }
+                processedEntries.add(currentEntry);
+            }
+
+            // 过滤和分页
+            List<Map<String, Object>> finalEntries = processedEntries;
+            if (keyword != null && !keyword.isEmpty()) {
+                final String lowerKeyword = keyword.toLowerCase();
+                finalEntries = processedEntries.stream()
+                        .filter(entry -> {
+                            String message = entry.get("message") != null ? entry.get("message").toString() : "";
+                            String stackTrace = entry.get("stackTrace") != null ? entry.get("stackTrace").toString() : "";
+                            return message.toLowerCase().contains(lowerKeyword) || stackTrace.toLowerCase().contains(lowerKeyword);
+                        })
+                        .collect(Collectors.toList());
+            }
+
+            int total = finalEntries.size();
             int totalPages = (int) Math.ceil((double) total / size);
 
             int startIndex = (page - 1) * size;
             int endIndex = Math.min(startIndex + size, total);
 
             if (startIndex < total) {
-                for (int i = startIndex; i < endIndex; i++) {
-                    Map<String, Object> entry = parseLogEntry(filteredLines.get(i));
-                    entries.add(entry);
-                }
+                entries = finalEntries.subList(startIndex, endIndex);
             }
 
             result.put("success", true);
@@ -183,6 +251,11 @@ public class LogServiceImpl implements LogService {
         }
 
         return result;
+    }
+
+    @Override
+    public String getLogDirectory() {
+        return logDirectory;
     }
 
     private Map<String, Object> parseLogEntry(String line) {

@@ -11,4 +11,6 @@ public interface LogService {
     Map<String, Object> downloadLogFile(String fileName);
 
     Map<String, Object> clearOldLogs(int days);
+
+    String getLogDirectory();
 }

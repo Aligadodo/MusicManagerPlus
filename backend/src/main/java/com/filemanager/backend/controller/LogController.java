@@ -3,10 +3,19 @@ package com.filemanager.backend.controller;
 import com.filemanager.backend.logging.UnifiedLogger;
 import com.filemanager.domain.service.LogService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -84,19 +93,25 @@ public class LogController {
     }
 
     @GetMapping("/download/{fileName}")
-    public ResponseEntity<Map<String, Object>> downloadLogFile(@PathVariable String fileName) {
+    public ResponseEntity<Resource> downloadLogFile(@PathVariable String fileName) {
         try {
-            Map<String, Object> result = logService.downloadLogFile(fileName);
-            if ((Boolean) result.getOrDefault("success", false)) {
-                return ResponseEntity.ok(result);
-            } else {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(result);
+            String logDirectory = logService.getLogDirectory();
+            Path logFile = Paths.get(logDirectory, fileName);
+
+            if (!Files.exists(logFile)) {
+                return ResponseEntity.notFound().build();
             }
+
+            Resource resource = new FileSystemResource(logFile.toFile());
+            
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .contentLength(logFile.toFile().length())
+                    .body(resource);
         } catch (Exception e) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("success", false);
-            error.put("message", "Failed to download log file: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+            UnifiedLogger.error("LOG_CONTROLLER", "Failed to download log file: " + fileName, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 

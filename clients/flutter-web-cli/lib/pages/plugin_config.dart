@@ -48,19 +48,29 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
     try {
       final config = await _pluginService.getPluginConfig(widget.pluginId);
       setState(() {
-        _config = config;
-        _formValues.clear();
-        _listValues.clear();
+        try {
+          _config = config;
+          _formValues.clear();
+          _listValues.clear();
 
-        for (final param in config.parameters) {
-          final value = config.configValues[param.name] ?? param.defaultValue;
-          _formValues[param.name] = value;
+          final parameters = config.parameters ?? [];
+          for (final param in parameters) {
+            try {
+              final value = config.configValues?[param.name] ?? param.defaultValue;
+              _formValues[param.name] = value;
 
-          if (param.type == 'list' && value is List) {
-            _listValues[param.name] = List<String>.from(value);
+              if (param.type == 'list' && value is List) {
+                _listValues[param.name] = List<String>.from(value);
+              }
+            } catch (e) {
+              print('初始化参数 ${param.name} 失败: $e');
+            }
           }
+          _isLoading = false;
+        } catch (e) {
+          _error = '解析配置失败: $e';
+          _isLoading = false;
         }
-        _isLoading = false;
       });
     } catch (e) {
       setState(() {

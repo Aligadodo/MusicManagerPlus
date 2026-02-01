@@ -62,12 +62,20 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
       final strategy = await _strategyService.getStrategyInfo(strategyId);
       final config = await _strategyService.getStrategyConfig(strategyId);
       setState(() {
-        _selectedStrategy = strategy;
-        _strategyConfig = config;
+        try {
+          if (strategy != null) {
+            _selectedStrategy = strategy;
+          }
+          if (config != null) {
+            _strategyConfig = config;
+          }
+        } catch (e) {
+          _errorMessage = '解析策略配置失败: $e';
+        }
       });
     } catch (e) {
       setState(() {
-        _errorMessage = 'Failed to load strategy config: $e';
+        _errorMessage = '加载策略配置失败: $e';
       });
     } finally {
       setState(() {
@@ -259,7 +267,7 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
                           itemCount: _selectedStrategy!.configFields.length,
                           itemBuilder: (context, index) {
                             try {
-                              final field = _selectedStrategy!.configFields[index];
+                              final ConfigField field = _selectedStrategy!.configFields[index];
                               return _buildConfigField(field);
                             } catch (e) {
                               return Card(
@@ -518,7 +526,17 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
 
   Widget _buildListField(ConfigField field, dynamic value) {
     try {
-      final listValue = value is List ? List<String>.from(value) : <String>[];
+      List<String> listValue = <String>[];
+      if (value is List) {
+        try {
+          listValue = List<String>.from(value);
+        } catch (e) {
+          listValue = value.map((item) => item?.toString() ?? '').toList();
+        }
+      } else if (value != null) {
+        listValue = [value.toString()];
+      }
+      
       return Container(
         margin: const EdgeInsets.symmetric(vertical: 10),
         child: Column(

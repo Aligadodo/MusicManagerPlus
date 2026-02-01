@@ -8,7 +8,7 @@ class LogService {
 
   Future<Map<String, dynamic>> getLogFiles() async {
     try {
-      final response = await _apiClient.get('/api/logs/files');
+      final response = await _apiClient.get('/logs/files');
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data is Map) {
@@ -42,7 +42,7 @@ class LogService {
         queryParams['keyword'] = keyword;
       }
 
-      final response = await _apiClient.get('/api/logs/entries', queryParams: queryParams);
+      final response = await _apiClient.get('/logs/entries', queryParams: queryParams);
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         return data as Map<String, dynamic>;
@@ -56,7 +56,7 @@ class LogService {
 
   Future<Map<String, dynamic>> downloadLogFile(String fileName) async {
     try {
-      final response = await _apiClient.get('/api/logs/download/$fileName');
+      final response = await _apiClient.get('/logs/download/$fileName');
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         return data as Map<String, dynamic>;
@@ -70,7 +70,7 @@ class LogService {
 
   Future<Map<String, dynamic>> clearOldLogs({int days = 7}) async {
     try {
-      final response = await _apiClient.post('/api/logs/clear', body: {'days': days});
+      final response = await _apiClient.post('/logs/clear', body: {'days': days});
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         return data as Map<String, dynamic>;

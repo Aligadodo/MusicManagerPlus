@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
+import 'dart:html' as html;
 import '../api/api_client.dart';
 import '../api/log_service.dart';
 
@@ -24,6 +26,21 @@ class _LogPageState extends ConsumerState<LogPage> {
   int _totalRecords = 0;
   int _totalPages = 0;
 
+  void _copyToClipboard(String text) {
+    Clipboard.setData(ClipboardData(text: text));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: GestureDetector(
+            onDoubleTap: () => _copyToClipboard('已复制到剪贴板'),
+            child: const SelectableText('已复制到剪贴板'),
+          ),
+          duration: const Duration(seconds: 1),
+        ),
+      );
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -40,20 +57,33 @@ class _LogPageState extends ConsumerState<LogPage> {
       final result = await _logService.getLogFiles();
 
       setState(() {
-        List<dynamic> filesList = [];
-        if (result.containsKey('files')) {
-          filesList = result['files'] as List<dynamic>;
-        }
-        
-        _logFiles = filesList
-            .map((json) => LogFileInfo.fromJson(json as Map<String, dynamic>))
-            .toList();
-        _isLoading = false;
+        try {
+          List<dynamic> filesList = [];
+          if (result.containsKey('files')) {
+            filesList = result['files'] as List<dynamic>;
+          }
+          
+          _logFiles = filesList
+              .map((json) {
+                try {
+                  return LogFileInfo.fromJson(json as Map<String, dynamic>);
+                } catch (e) {
+                  print('解析日志文件信息失败: $e, json: $json');
+                  return null;
+                }
+              })
+              .whereType<LogFileInfo>()
+              .toList();
+          _isLoading = false;
 
-        // 默认选择最新的日志文件
-        if (_logFiles.isNotEmpty) {
-          _selectedLogFile = _logFiles.first.fileName;
-          _loadLogEntries();
+          // 默认选择最新的日志文件
+          if (_logFiles.isNotEmpty) {
+            _selectedLogFile = _logFiles.first.fileName;
+            _loadLogEntries();
+          }
+        } catch (e) {
+          _errorMessage = '解析日志文件列表失败: $e';
+          _isLoading = false;
         }
       });
     } catch (e) {
@@ -83,12 +113,25 @@ class _LogPageState extends ConsumerState<LogPage> {
       );
 
       setState(() {
-        _logEntries = (result['entries'] as List<dynamic>)
-            .map((json) => LogEntry.fromJson(json as Map<String, dynamic>))
-            .toList();
-        _totalRecords = result['total'] ?? 0;
-        _totalPages = result['pages'] ?? 0;
-        _isLoading = false;
+        try {
+          _logEntries = (result['entries'] as List<dynamic>? ?? [])
+              .map((json) {
+                try {
+                  return LogEntry.fromJson(json as Map<String, dynamic>);
+                } catch (e) {
+                  print('解析日志条目失败: $e, json: $json');
+                  return null;
+                }
+              })
+              .whereType<LogEntry>()
+              .toList();
+          _totalRecords = (result['total'] as int?) ?? 0;
+          _totalPages = (result['pages'] as int?) ?? 0;
+          _isLoading = false;
+        } catch (e) {
+          _errorMessage = '解析日志内容失败: $e';
+          _isLoading = false;
+        }
       });
     } catch (e) {
       setState(() {
@@ -111,56 +154,69 @@ class _LogPageState extends ConsumerState<LogPage> {
     _loadLogFiles();
   }
 
+  Future<void> _downloadLogFile(String fileName) async {
+    try {
+      final result = await _logService.downloadLogFile(fileName);
+      
+      if (result['success'] == true) {
+        final downloadUrl = 'http://localhost:8080/api/logs/download/$fileName';
+        final anchor = html.AnchorElement(href: downloadUrl)
+          ..setAttribute('download', fileName)
+          ..click();
+        anchor.remove();
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: GestureDetector(
+                onDoubleTap: () => _copyToClipboard('开始下载: $fileName'),
+                child: SelectableText('开始下载: $fileName'),
+              ),
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: GestureDetector(
+                onDoubleTap: () => _copyToClipboard('下载失败: ${result['message'] ?? '未知错误'}'),
+                child: SelectableText('下载失败: ${result['message'] ?? '未知错误'}'),
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: GestureDetector(
+              onDoubleTap: () => _copyToClipboard('下载失败: $e'),
+              child: SelectableText('下载失败: $e'),
+            ),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          children: [
-            _buildHeader(),
-            const SizedBox(height: 20),
-            Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    flex: 1,
-                    child: _buildLogFileList(),
-                  ),
-                  const SizedBox(width: 20),
-                  Expanded(
-                    flex: 3,
-                    child: _buildLogContent(),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Card(
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(12.0),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '运行日志',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+            Expanded(
+              flex: 1,
+              child: _buildLogFileList(),
             ),
-            const Spacer(),
-            IconButton(
-              onPressed: _refreshLogs,
-              icon: const Icon(Icons.refresh),
-              tooltip: '刷新',
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 3,
+              child: _buildLogContent(),
             ),
           ],
         ),
@@ -170,18 +226,28 @@ class _LogPageState extends ConsumerState<LogPage> {
 
   Widget _buildLogFileList() {
     return Card(
-      elevation: 4,
+      elevation: 2,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Text(
-              '日志文件列表',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+          Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Row(
+              children: [
+                const Text(
+                  '日志文件',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  onPressed: _refreshLogs,
+                  icon: const Icon(Icons.refresh, size: 16),
+                  tooltip: '刷新',
+                ),
+              ],
             ),
           ),
           const Divider(height: 1),
@@ -191,10 +257,13 @@ class _LogPageState extends ConsumerState<LogPage> {
                 : _errorMessage.isNotEmpty && _logFiles.isEmpty
                     ? Center(
                         child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: SelectableText(
-                            _errorMessage,
-                            style: const TextStyle(color: Colors.red),
+                          padding: const EdgeInsets.all(12.0),
+                          child: GestureDetector(
+                            onDoubleTap: () => _copyToClipboard(_errorMessage),
+                            child: SelectableText(
+                              _errorMessage,
+                              style: const TextStyle(color: Colors.red),
+                            ),
                           ),
                         ),
                       )
@@ -214,41 +283,53 @@ class _LogPageState extends ConsumerState<LogPage> {
   Widget _buildLogFileItem(LogFileInfo file) {
     final isSelected = file.fileName == _selectedLogFile;
 
-    return InkWell(
+    return GestureDetector(
       onTap: () => _selectLogFile(file.fileName),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    file.fileName,
-                    style: TextStyle(
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      child: Container(
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.blue.shade50 : Colors.transparent,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    GestureDetector(
+                      onDoubleTap: () => _copyToClipboard(file.fileName),
+                      child: SelectableText(
+                        file.fileName,
+                        style: TextStyle(
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          fontSize: 13,
+                        ),
+                      ),
                     ),
-                  ),
-                  Text(
-                    '${file.fileSize} | ${file.createTime}',
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ],
+                    GestureDetector(
+                      onDoubleTap: () => _copyToClipboard('${file.fileSize} | ${file.createTime}'),
+                      child: SelectableText(
+                        '${file.fileSize} | ${file.createTime}',
+                        style: const TextStyle(fontSize: 11),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            SizedBox(
-              width: 50,
-              child: IconButton(
-                icon: const Icon(Icons.download, size: 20),
-                onPressed: () {
-                  _downloadLogFile(file.fileName);
-                },
-                tooltip: '下载',
+              SizedBox(
+                width: 40,
+                child: IconButton(
+                  icon: const Icon(Icons.download, size: 16),
+                  onPressed: () {
+                    _downloadLogFile(file.fileName);
+                  },
+                  tooltip: '下载',
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -256,23 +337,26 @@ class _LogPageState extends ConsumerState<LogPage> {
 
   Widget _buildLogContent() {
     return Card(
-      elevation: 4,
+      elevation: 2,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(12.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  '日志内容: $_selectedLogFile',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                GestureDetector(
+                  onDoubleTap: () => _copyToClipboard('日志内容: $_selectedLogFile'),
+                  child: SelectableText(
+                    '日志内容: $_selectedLogFile',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 Row(
                   key: const ValueKey('log_search_row'),
                   children: [
@@ -281,8 +365,9 @@ class _LogPageState extends ConsumerState<LogPage> {
                         decoration: const InputDecoration(
                           labelText: '关键词筛选',
                           hintText: '输入关键词进行筛选...',
-                          prefixIcon: Icon(Icons.search),
+                          prefixIcon: Icon(Icons.search, size: 16),
                           border: OutlineInputBorder(),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         ),
                         onChanged: (value) {
                           setState(() {
@@ -295,7 +380,7 @@ class _LogPageState extends ConsumerState<LogPage> {
                         },
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 12),
                     ElevatedButton.icon(
                       onPressed: _keywordFilter.isNotEmpty
                           ? () {
@@ -306,23 +391,26 @@ class _LogPageState extends ConsumerState<LogPage> {
                               _loadLogEntries();
                             }
                           : null,
-                      icon: const Icon(Icons.clear),
-                      label: const Text('清除筛选'),
+                      icon: const Icon(Icons.clear, size: 14),
+                      label: const Text('清除', style: TextStyle(fontSize: 12)),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 Row(
                   key: const ValueKey('log_page_size_row'),
                   children: [
-                    const Text('每页显示:'),
-                    const SizedBox(width: 10),
+                    const Text('每页显示:', style: TextStyle(fontSize: 12)),
+                    const SizedBox(width: 8),
                     DropdownButton<int>(
                       value: _pageSize,
                       items: const [
-                        DropdownMenuItem(value: 50, child: Text('50')),
                         DropdownMenuItem(value: 100, child: Text('100')),
                         DropdownMenuItem(value: 200, child: Text('200')),
+                        DropdownMenuItem(value: 300, child: Text('300')),
                         DropdownMenuItem(value: 500, child: Text('500')),
                       ],
                       onChanged: (value) {
@@ -332,11 +420,15 @@ class _LogPageState extends ConsumerState<LogPage> {
                         });
                         _loadLogEntries();
                       },
-                    ),
-                    const SizedBox(width: 20),
-                    Text(
-                      '总计: $_totalRecords 条记录',
                       style: const TextStyle(fontSize: 12),
+                    ),
+                    const SizedBox(width: 16),
+                    GestureDetector(
+                      onDoubleTap: () => _copyToClipboard('总计: $_totalRecords 条记录'),
+                      child: SelectableText(
+                        '总计: $_totalRecords 条记录',
+                        style: const TextStyle(fontSize: 11),
+                      ),
                     ),
                   ],
                 ),
@@ -350,10 +442,13 @@ class _LogPageState extends ConsumerState<LogPage> {
                 : _errorMessage.isNotEmpty
                     ? Center(
                         child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: SelectableText(
-                            _errorMessage,
-                            style: const TextStyle(color: Colors.red),
+                          padding: const EdgeInsets.all(12.0),
+                          child: GestureDetector(
+                            onDoubleTap: () => _copyToClipboard(_errorMessage),
+                            child: SelectableText(
+                              _errorMessage,
+                              style: const TextStyle(color: Colors.red),
+                            ),
                           ),
                         ),
                       )
@@ -383,59 +478,84 @@ class _LogPageState extends ConsumerState<LogPage> {
 
   Widget _buildLogEntry(LogEntry entry) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: Colors.grey.shade300),
+          bottom: BorderSide(color: Colors.grey.shade200),
         ),
       ),
       child: Column(
         key: ValueKey('log_entry_column_${entry.hashCode}'),
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            key: ValueKey('log_entry_header_${entry.hashCode}'),
-            children: [
-              Text(
-                entry.timestamp,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-              const SizedBox(width: 10),
-              _buildLogLevelChip(entry.level),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            entry.message,
-            style: const TextStyle(fontSize: 13),
-          ),
-          if (entry.stackTrace != null && entry.stackTrace!.isNotEmpty)
-            ExpansionTile(
-              title: const Text(
-                '查看堆栈信息',
-                style: TextStyle(fontSize: 12),
-              ),
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: SelectableText(
-                    entry.stackTrace!,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontFamily: 'monospace',
-                      color: Colors.grey.shade800,
+          GestureDetector(
+            onDoubleTap: () => _copyToClipboard('${entry.timestamp} ${entry.level} ${entry.message}'),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+              child: Row(
+                key: ValueKey('log_entry_header_${entry.hashCode}'),
+                children: [
+                  SizedBox(
+                    width: 140,
+                    child: SelectableText(
+                      entry.timestamp,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade600,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                  SizedBox(
+                    width: 70,
+                    child: _buildLogLevelChip(entry.level),
+                  ),
+                  Expanded(
+                    child: Text(
+                      entry.message.replaceAll('\n', ' ').replaceAll('\r', ' '),
+                      style: const TextStyle(fontSize: 12),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      softWrap: false,
+                    ),
+                  ),
+                  if (entry.stackTrace != null && entry.stackTrace!.isNotEmpty)
+                    IconButton(
+                      icon: const Icon(Icons.expand_more, size: 14),
+                      onPressed: () {
+                        // 点击展开堆栈信息
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('堆栈信息'),
+                            content: Container(
+                              width: 800,
+                              height: 400,
+                              child: SingleChildScrollView(
+                                child: GestureDetector(
+                                  onDoubleTap: () => _copyToClipboard(entry.stackTrace!),
+                                  child: SelectableText(
+                                    entry.stackTrace!,
+                                    style: TextStyle(
+                                      fontFamily: 'monospace',
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text('关闭'),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                ],
+              ),
             ),
+          ),
         ],
       ),
     );
@@ -468,16 +588,17 @@ class _LogPageState extends ConsumerState<LogPage> {
     }
 
     return Chip(
-      label: Text(
+      label: SelectableText(
         level,
         style: TextStyle(
-          fontSize: 11,
+          fontSize: 10,
           color: textColor,
         ),
       ),
       backgroundColor: backgroundColor,
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
       visualDensity: VisualDensity.compact,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 
@@ -487,10 +608,10 @@ class _LogPageState extends ConsumerState<LogPage> {
     }
 
     return Container(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(12.0),
       decoration: BoxDecoration(
         border: Border(
-          top: BorderSide(color: Colors.grey.shade300),
+          top: BorderSide(color: Colors.grey.shade200),
         ),
       ),
       child: Row(
@@ -505,10 +626,16 @@ class _LogPageState extends ConsumerState<LogPage> {
                     _loadLogEntries();
                   }
                 : null,
-            icon: const Icon(Icons.chevron_left),
+            icon: const Icon(Icons.chevron_left, size: 16),
             tooltip: '上一页',
           ),
-          Text('第 $_currentPage 页，共 $_totalPages 页'),
+          GestureDetector(
+            onDoubleTap: () => _copyToClipboard('第 $_currentPage 页，共 $_totalPages 页'),
+            child: SelectableText(
+              '第 $_currentPage / $_totalPages 页',
+              style: const TextStyle(fontSize: 12),
+            ),
+          ),
           IconButton(
             onPressed: _currentPage < _totalPages
                 ? () {
@@ -518,30 +645,12 @@ class _LogPageState extends ConsumerState<LogPage> {
                     _loadLogEntries();
                   }
                 : null,
-            icon: const Icon(Icons.chevron_right),
+            icon: const Icon(Icons.chevron_right, size: 16),
             tooltip: '下一页',
           ),
         ],
       ),
     );
-  }
-
-  Future<void> _downloadLogFile(String fileName) async {
-    try {
-      final result = await _logService.downloadLogFile(fileName);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result['message'] ?? '下载已开始')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('下载失败: $e')),
-        );
-      }
-    }
   }
 }
 
