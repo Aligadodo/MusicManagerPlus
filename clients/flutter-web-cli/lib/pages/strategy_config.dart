@@ -61,8 +61,13 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
     });
 
     try {
+      print('Loading strategy info for: $strategyId');
       final strategy = await _strategyService.getStrategyInfo(strategyId);
+      print('Strategy info loaded: ${strategy?.name}');
+      
+      print('Loading strategy config for: $strategyId');
       final config = await _strategyService.getStrategyConfig(strategyId);
+      print('Strategy config loaded: ${config?.configValues}');
       
       setState(() {
         if (strategy != null) {
@@ -72,7 +77,9 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
           _strategyConfig = config;
         }
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('Error loading strategy config: $e');
+      print('Stack trace: $stackTrace');
       setState(() {
         _errorMessage = '加载策略配置失败: $e';
         _strategyConfig = null;
@@ -325,6 +332,7 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
 
   Widget _buildConfigField(ConfigField field) {
     try {
+      // 安全获取字段值，即使_strategyConfig为null
       final value = _strategyConfig?.getValue(field.name);
 
       switch (field.type) {
@@ -344,25 +352,28 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
           return _buildTextField(field, value);
       }
     } catch (e) {
+      // 友好处理错误，显示警告而不是崩溃
+      print('字段 ${field.name} 加载失败: $e');
       return Card(
-        color: Colors.red.shade50,
+        color: Colors.yellow.shade50,
         child: Padding(
-          padding: const EdgeInsets.all(8.0),
+          padding: const EdgeInsets.all(12.0),
           child: Row(
             children: [
-              const Icon(Icons.error_outline, color: Colors.red),
-              const SizedBox(width: 8),
+              const Icon(Icons.warning, color: Colors.orange),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '字段 ${field.name} 加载失败',
-                      style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+                      '字段 ${field.label} 加载异常',
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange),
                     ),
+                    const SizedBox(height: 4),
                     Text(
-                      '错误: $e',
-                      style: const TextStyle(fontSize: 12, color: Colors.red),
+                      '该字段将使用默认值或保持为空',
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
                     ),
                   ],
                 ),
@@ -375,196 +386,231 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
   }
 
   Widget _buildTextField(ConfigField field, dynamic value) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Tooltip(
-            message: field.description ?? '',
-            child: Text(
-              field.label,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          const SizedBox(height: 5),
-          Tooltip(
-            message: field.description ?? '',
-            child: TextField(
-              decoration: InputDecoration(
-                border: const OutlineInputBorder(),
-                hintText: field.description,
+    try {
+      return Container(
+        margin: const EdgeInsets.symmetric(vertical: 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Tooltip(
+              message: field.description ?? '',
+              child: Text(
+                field.label,
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
-              controller: TextEditingController(
-                text: value?.toString() ?? field.defaultValue?.toString() ?? '',
-              ),
-              onChanged: (v) {
-                _strategyConfig?.setValue(field.name, v);
-              },
             ),
-          ),
-        ],
-      ),
-    );
+            const SizedBox(height: 5),
+            Tooltip(
+              message: field.description ?? '',
+              child: TextField(
+                decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  hintText: field.description,
+                ),
+                controller: TextEditingController(
+                  text: value?.toString() ?? field.defaultValue?.toString() ?? '',
+                ),
+                onChanged: (v) {
+                  if (_strategyConfig != null) {
+                    _strategyConfig?.setValue(field.name, v);
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      print('构建文本字段 ${field.name} 失败: $e');
+      return _buildErrorField(field, e);
+    }
   }
 
   Widget _buildNumberField(ConfigField field, dynamic value) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Tooltip(
-            message: field.description ?? '',
-            child: Text(
-              field.label,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          const SizedBox(height: 5),
-          Tooltip(
-            message: field.description ?? '',
-            child: TextField(
-              decoration: InputDecoration(
-                border: const OutlineInputBorder(),
-                hintText: field.description,
+    try {
+      return Container(
+        margin: const EdgeInsets.symmetric(vertical: 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Tooltip(
+              message: field.description ?? '',
+              child: Text(
+                field.label,
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
-              controller: TextEditingController(
-                text: value?.toString() ?? field.defaultValue?.toString() ?? '',
-              ),
-              keyboardType: TextInputType.number,
-              onChanged: (v) {
-                _strategyConfig?.setValue(field.name, int.tryParse(v));
-              },
             ),
-          ),
-        ],
-      ),
-    );
+            const SizedBox(height: 5),
+            Tooltip(
+              message: field.description ?? '',
+              child: TextField(
+                decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  hintText: field.description,
+                ),
+                controller: TextEditingController(
+                  text: value?.toString() ?? field.defaultValue?.toString() ?? '',
+                ),
+                keyboardType: TextInputType.number,
+                onChanged: (v) {
+                  if (_strategyConfig != null) {
+                    _strategyConfig?.setValue(field.name, int.tryParse(v));
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      print('构建数字字段 ${field.name} 失败: $e');
+      return _buildErrorField(field, e);
+    }
   }
 
   Widget _buildBooleanField(ConfigField field, dynamic value) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Tooltip(
-                  message: field.description ?? '',
-                  child: Text(
-                    field.label,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+    try {
+      return Container(
+        margin: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Tooltip(
+                    message: field.description ?? '',
+                    child: Text(
+                      field.label,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
-                ),
-                Text(
-                  field.description ?? '',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-              ],
+                  Text(
+                    field.description ?? '',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              ),
             ),
-          ),
-          Tooltip(
-            message: field.description ?? '',
-            child: Checkbox(
-              value: value ?? field.defaultValue ?? false,
-              onChanged: (v) {
-                _strategyConfig?.setValue(field.name, v);
-              },
+            Tooltip(
+              message: field.description ?? '',
+              child: Checkbox(
+                value: value ?? field.defaultValue ?? false,
+                onChanged: (v) {
+                  if (_strategyConfig != null) {
+                    _strategyConfig?.setValue(field.name, v);
+                  }
+                },
+              ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
+    } catch (e) {
+      print('构建布尔字段 ${field.name} 失败: $e');
+      return _buildErrorField(field, e);
+    }
   }
 
   Widget _buildSelectField(ConfigField field, dynamic value) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Tooltip(
-            message: field.description ?? '',
-            child: Text(
-              field.label,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          const SizedBox(height: 5),
-          Tooltip(
-            message: field.description ?? '',
-            child: DropdownButtonFormField<String>(
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
+    try {
+      return Container(
+        margin: const EdgeInsets.symmetric(vertical: 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Tooltip(
+              message: field.description ?? '',
+              child: Text(
+                field.label,
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
-              value: value?.toString() ?? field.defaultValue?.toString(),
-              items: field.options?.map((option) {
-                return DropdownMenuItem<String>(
-                  value: option,
-                  child: Text(option),
-                );
-              }).toList() ?? [],
-              onChanged: (v) {
-                _strategyConfig?.setValue(field.name, v);
-              },
             ),
-          ),
-        ],
-      ),
-    );
+            const SizedBox(height: 5),
+            Tooltip(
+              message: field.description ?? '',
+              child: DropdownButtonFormField<String>(
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                ),
+                value: value?.toString() ?? field.defaultValue?.toString(),
+                items: field.options?.map((option) {
+                  return DropdownMenuItem<String>(
+                    value: option,
+                    child: Text(option),
+                  );
+                }).toList() ?? [],
+                onChanged: (v) {
+                  if (_strategyConfig != null) {
+                    _strategyConfig?.setValue(field.name, v);
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      print('构建选择字段 ${field.name} 失败: $e');
+      return _buildErrorField(field, e);
+    }
   }
 
   Widget _buildDirectoryField(ConfigField field, dynamic value) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Tooltip(
-            message: field.description ?? '',
-            child: Text(
-              field.label,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          const SizedBox(height: 5),
-          Tooltip(
-            message: field.description ?? '',
-            child: TextField(
-              decoration: InputDecoration(
-                border: const OutlineInputBorder(),
-                hintText: field.description,
-                suffixIcon: const Icon(Icons.folder),
+    try {
+      return Container(
+        margin: const EdgeInsets.symmetric(vertical: 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Tooltip(
+              message: field.description ?? '',
+              child: Text(
+                field.label,
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
-              controller: TextEditingController(
-                text: value?.toString() ?? field.defaultValue?.toString() ?? '',
-              ),
-              readOnly: true,
-              onTap: () async {
-                // TODO: 实现目录选择器
-              },
             ),
-          ),
-        ],
-      ),
-    );
+            const SizedBox(height: 5),
+            Tooltip(
+              message: field.description ?? '',
+              child: TextField(
+                decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  hintText: field.description,
+                  suffixIcon: const Icon(Icons.folder),
+                ),
+                controller: TextEditingController(
+                  text: value?.toString() ?? field.defaultValue?.toString() ?? '',
+                ),
+                readOnly: true,
+                onTap: () async {
+                  // TODO: 实现目录选择器
+                },
+              ),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      print('构建目录字段 ${field.name} 失败: $e');
+      return _buildErrorField(field, e);
+    }
   }
 
   Widget _buildListField(ConfigField field, dynamic value) {
     try {
       List<String> listValue = <String>[];
-      if (value is List) {
-        try {
-          listValue = List<String>.from(value);
-        } catch (e) {
-          listValue = value.map((item) => item?.toString() ?? '').toList();
+      if (value != null) {
+        if (value is List) {
+          try {
+            listValue = List<String>.from(value);
+          } catch (e) {
+            listValue = value.map((item) => item?.toString() ?? '').toList();
+          }
+        } else {
+          listValue = [value.toString()];
         }
-      } else if (value != null) {
-        listValue = [value.toString()];
       }
       
       return Container(
@@ -596,9 +642,11 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
                       trailing: IconButton(
                         icon: const Icon(Icons.delete, color: Colors.red),
                         onPressed: () {
-                          final newValue = List<String>.from(listValue);
-                          newValue.removeAt(index);
-                          _strategyConfig?.setValue(field.name, newValue);
+                          if (_strategyConfig != null) {
+                            final newValue = List<String>.from(listValue);
+                            newValue.removeAt(index);
+                            _strategyConfig?.setValue(field.name, newValue);
+                          }
                         },
                       ),
                     );
@@ -618,7 +666,7 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
                         hintText: '输入新项...',
                       ),
                       onSubmitted: (v) {
-                        if (v.isNotEmpty) {
+                        if (v.isNotEmpty && _strategyConfig != null) {
                           final newValue = List<String>.from(listValue);
                           newValue.add(v);
                           _strategyConfig?.setValue(field.name, newValue);
@@ -630,9 +678,11 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
                 const SizedBox(width: 10),
                 ElevatedButton(
                   onPressed: () {
-                    final newValue = List<String>.from(listValue);
-                    newValue.add('新项');
-                    _strategyConfig?.setValue(field.name, newValue);
+                    if (_strategyConfig != null) {
+                      final newValue = List<String>.from(listValue);
+                      newValue.add('新项');
+                      _strategyConfig?.setValue(field.name, newValue);
+                    }
                   },
                   child: const Text('添加'),
                 ),
@@ -642,33 +692,40 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
         ),
       );
     } catch (e) {
-      return Card(
-        color: Colors.red.shade50,
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Row(
-            children: [
-              const Icon(Icons.error_outline, color: Colors.red),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '列表字段 ${field.name} 加载失败',
-                      style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
-                    ),
-                    Text(
-                      '错误: $e',
-                      style: const TextStyle(fontSize: 12, color: Colors.red),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
+      print('构建列表字段 ${field.name} 失败: $e');
+      return _buildErrorField(field, e);
     }
+  }
+
+  // 辅助方法：构建错误提示卡片
+  Widget _buildErrorField(ConfigField field, dynamic error) {
+    return Card(
+      color: Colors.yellow.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Row(
+          children: [
+            const Icon(Icons.warning, color: Colors.orange),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '字段 ${field.label} 加载异常',
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '该字段将使用默认值或保持为空',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

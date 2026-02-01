@@ -38,6 +38,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
 
   bool _isLoading = false;
   String _errorMessage = '';
+  bool _isDisposed = false;
 
   @override
   void initState() {
@@ -46,10 +47,19 @@ class _ComposePageState extends ConsumerState<ComposePage> {
     _sourceDirectoryService = SourceDirectoryService(_apiClient);
     _strategyService = StrategyService(_apiClient);
     _pipelineService = PipelineService(_apiClient);
+    _isDisposed = false;
     _loadData();
   }
 
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
+  }
+
   Future<void> _loadData() async {
+    if (_isDisposed) return;
+    
     setState(() {
       _isLoading = true;
       _errorMessage = '';
@@ -57,8 +67,13 @@ class _ComposePageState extends ConsumerState<ComposePage> {
 
     try {
       final sources = await _sourceDirectoryService.getSourceDirectories();
+      if (_isDisposed) return;
+      
       final strategies = await _strategyService.getAvailableStrategies();
+      if (_isDisposed) return;
+      
       final pipeline = await _pipelineService.getPipeline();
+      if (_isDisposed) return;
 
       setState(() {
         _sourceDirectories = sources;
@@ -67,6 +82,8 @@ class _ComposePageState extends ConsumerState<ComposePage> {
         _isLoading = false;
       });
     } catch (e) {
+      if (_isDisposed) return;
+      
       setState(() {
         _errorMessage = '加载数据失败: $e';
         _isLoading = false;

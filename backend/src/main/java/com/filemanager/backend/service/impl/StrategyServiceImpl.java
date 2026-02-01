@@ -6,6 +6,8 @@ import com.filemanager.domain.dto.ConfigFieldDTO;
 import com.filemanager.domain.entity.ChangeRecord;
 import com.filemanager.domain.service.StrategyService;
 import com.filemanager.plugin.PluginRegistry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import javax.annotation.PostConstruct;
@@ -15,6 +17,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class StrategyServiceImpl implements StrategyService {
+
+    private static final Logger logger = LoggerFactory.getLogger(StrategyServiceImpl.class);
 
     private final Map<String, StrategyConfigDTO> strategyConfigs = new ConcurrentHashMap<>();
     private final Map<String, StrategyInfoDTO> strategies = new ConcurrentHashMap<>();
@@ -421,8 +425,10 @@ public class StrategyServiceImpl implements StrategyService {
 
     @Override
     public StrategyConfigDTO getStrategyConfig(String strategyId) {
+        logger.info("[Service] 获取策略配置 - strategyId: {}", strategyId);
         StrategyConfigDTO config = strategyConfigs.get(strategyId);
         if (config == null) {
+            logger.info("[Service] 策略配置不存在，创建默认配置 - strategyId: {}", strategyId);
             config = new StrategyConfigDTO();
             // 设置默认配置
             switch (strategyId) {
@@ -545,6 +551,7 @@ public class StrategyServiceImpl implements StrategyService {
             }
             strategyConfigs.put(strategyId, config);
         }
+        logger.info("[Service] 返回策略配置 - strategyId: {}, 配置项数量: {}", strategyId, config.getConfigValues() != null ? config.getConfigValues().size() : 0);
         return config;
     }
 

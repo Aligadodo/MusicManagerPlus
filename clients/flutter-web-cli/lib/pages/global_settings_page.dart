@@ -1,19 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../api/config_service.dart';
+import '../api/api_client.dart';
 
 // 文件类型树形结构
 class FileTypeNode {
-  final String name;
-  final String? extension;
-  final List<FileTypeNode> children;
-  bool isSelected;
+  String id;
+  String name;
+  List<String> extensions;
+  List<FileTypeNode> children;
+  bool selected;
+  bool indeterminate;
 
   FileTypeNode({
+    required this.id,
     required this.name,
-    this.extension,
-    required this.children,
-    this.isSelected = false,
+    this.extensions = const [],
+    this.children = const [],
+    this.selected = false,
+    this.indeterminate = false,
   });
+
+  bool get isLeaf => children.isEmpty;
 }
 
 class GlobalSettingsPage extends ConsumerStatefulWidget {
@@ -24,6 +32,8 @@ class GlobalSettingsPage extends ConsumerStatefulWidget {
 }
 
 class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
+  final ConfigService _configService = ConfigService(ApiClient());
+
   // 线程池配置
   int _previewThreads = 10;
   int _executionThreads = 4;
@@ -48,72 +58,151 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
   ];
   String _newFilterRule = '';
 
+  // 手动输入的文件类型后缀
+  List<String> _customFileTypes = [];
+  String _newFileType = '';
+
   // 初始化文件类型树
   FileTypeNode _initFileTypeTree() {
     return FileTypeNode(
+      id: 'root',
       name: '所有文件类型',
+      selected: true,
       children: [
         FileTypeNode(
-          name: '音频文件',
+          id: 'folder',
+          name: '文件夹',
+          selected: true,
+        ),
+        FileTypeNode(
+          id: 'file',
+          name: '除文件夹',
+          selected: true,
+        ),
+        FileTypeNode(
+          id: 'audio',
+          name: '音频',
+          selected: true,
           children: [
-            FileTypeNode(name: 'MP3', extension: 'mp3', children: []),
-            FileTypeNode(name: 'WAV', extension: 'wav', children: []),
-            FileTypeNode(name: 'FLAC', extension: 'flac', children: []),
-            FileTypeNode(name: 'AAC', extension: 'aac', children: []),
-            FileTypeNode(name: 'WMA', extension: 'wma', children: []),
-            FileTypeNode(name: 'OGG', extension: 'ogg', children: []),
+            FileTypeNode(id: 'dsf', name: 'dsf'),
+            FileTypeNode(id: 'dff', name: 'dff'),
+            FileTypeNode(id: 'dts', name: 'dts'),
+            FileTypeNode(id: 'ape', name: 'ape'),
+            FileTypeNode(id: 'wav', name: 'wav'),
+            FileTypeNode(id: 'flac', name: 'flac'),
+            FileTypeNode(id: 'm4a', name: 'm4a'),
+            FileTypeNode(id: 'dfd', name: 'dfd'),
+            FileTypeNode(id: 'tak', name: 'tak'),
+            FileTypeNode(id: 'tta', name: 'tta'),
+            FileTypeNode(id: 'wv', name: 'wv'),
+            FileTypeNode(id: 'mp3', name: 'mp3'),
+            FileTypeNode(id: 'aac', name: 'aac'),
+            FileTypeNode(id: 'ogg', name: 'ogg'),
+            FileTypeNode(id: 'wma', name: 'wma'),
           ],
         ),
         FileTypeNode(
-          name: '视频文件',
+          id: 'audio_other',
+          name: '音频其他',
+          selected: true,
           children: [
-            FileTypeNode(name: 'MP4', extension: 'mp4', children: []),
-            FileTypeNode(name: 'MKV', extension: 'mkv', children: []),
-            FileTypeNode(name: 'AVI', extension: 'avi', children: []),
-            FileTypeNode(name: 'MOV', extension: 'mov', children: []),
-            FileTypeNode(name: 'WMV', extension: 'wmv', children: []),
-            FileTypeNode(name: 'FLV', extension: 'flv', children: []),
+            FileTypeNode(id: 'cue', name: 'cue'),
+            FileTypeNode(id: 'lrc', name: 'lrc'),
           ],
         ),
         FileTypeNode(
-          name: '图片文件',
+          id: 'image',
+          name: '图片',
+          selected: true,
           children: [
-            FileTypeNode(name: 'JPG/JPEG', extension: 'jpg', children: []),
-            FileTypeNode(name: 'PNG', extension: 'png', children: []),
-            FileTypeNode(name: 'GIF', extension: 'gif', children: []),
-            FileTypeNode(name: 'WebP', extension: 'webp', children: []),
-            FileTypeNode(name: 'BMP', extension: 'bmp', children: []),
-            FileTypeNode(name: 'TIFF', extension: 'tiff', children: []),
+            FileTypeNode(id: 'jpg', name: 'jpg'),
+            FileTypeNode(id: 'jpeg', name: 'jpeg'),
+            FileTypeNode(id: 'png', name: 'png'),
+            FileTypeNode(id: 'gif', name: 'gif'),
+            FileTypeNode(id: 'bmp', name: 'bmp'),
+            FileTypeNode(id: 'webp', name: 'webp'),
+            FileTypeNode(id: 'svg', name: 'svg'),
+            FileTypeNode(id: 'ico', name: 'ico'),
+            FileTypeNode(id: 'tif', name: 'tif'),
+            FileTypeNode(id: 'tiff', name: 'tiff'),
           ],
         ),
         FileTypeNode(
-          name: '文档文件',
+          id: 'video',
+          name: '视频',
+          selected: true,
           children: [
-            FileTypeNode(name: 'PDF', extension: 'pdf', children: []),
-            FileTypeNode(name: 'DOC/DOCX', extension: 'doc', children: []),
-            FileTypeNode(name: 'XLS/XLSX', extension: 'xls', children: []),
-            FileTypeNode(name: 'PPT/PPTX', extension: 'ppt', children: []),
-            FileTypeNode(name: 'TXT', extension: 'txt', children: []),
-            FileTypeNode(name: 'MD', extension: 'md', children: []),
+            FileTypeNode(id: 'mp4', name: 'mp4'),
+            FileTypeNode(id: 'mkv', name: 'mkv'),
+            FileTypeNode(id: 'avi', name: 'avi'),
+            FileTypeNode(id: 'mov', name: 'mov'),
+            FileTypeNode(id: 'wmv', name: 'wmv'),
+            FileTypeNode(id: 'flv', name: 'flv'),
+            FileTypeNode(id: 'webm', name: 'webm'),
+            FileTypeNode(id: 'ts', name: 'ts'),
           ],
         ),
         FileTypeNode(
-          name: '压缩文件',
+          id: 'document',
+          name: '文档',
+          selected: true,
           children: [
-            FileTypeNode(name: 'ZIP', extension: 'zip', children: []),
-            FileTypeNode(name: 'RAR', extension: 'rar', children: []),
-            FileTypeNode(name: '7Z', extension: '7z', children: []),
-            FileTypeNode(name: 'GZ', extension: 'gz', children: []),
-            FileTypeNode(name: 'TAR', extension: 'tar', children: []),
+            FileTypeNode(id: 'txt', name: 'txt'),
+            FileTypeNode(id: 'pdf', name: 'pdf'),
+            FileTypeNode(id: 'doc', name: 'doc'),
+            FileTypeNode(id: 'docx', name: 'docx'),
+            FileTypeNode(id: 'xls', name: 'xls'),
+            FileTypeNode(id: 'xlsx', name: 'xlsx'),
+            FileTypeNode(id: 'ppt', name: 'ppt'),
+            FileTypeNode(id: 'pptx', name: 'pptx'),
+            FileTypeNode(id: 'md', name: 'md'),
+            FileTypeNode(id: 'csv', name: 'csv'),
           ],
         ),
         FileTypeNode(
-          name: '其他文件',
+          id: 'archive',
+          name: '压缩包',
+          selected: true,
           children: [
-            FileTypeNode(name: 'EXE', extension: 'exe', children: []),
-            FileTypeNode(name: 'DLL', extension: 'dll', children: []),
-            FileTypeNode(name: 'ISO', extension: 'iso', children: []),
-            FileTypeNode(name: 'IMG', extension: 'img', children: []),
+            FileTypeNode(id: 'zip', name: 'zip'),
+            FileTypeNode(id: 'rar', name: 'rar'),
+            FileTypeNode(id: '7z', name: '7z'),
+            FileTypeNode(id: 'tar', name: 'tar'),
+            FileTypeNode(id: 'gz', name: 'gz'),
+            FileTypeNode(id: 'iso', name: 'iso'),
+            FileTypeNode(id: 'jar', name: 'jar'),
+          ],
+        ),
+        FileTypeNode(
+          id: 'code',
+          name: '代码',
+          selected: true,
+          children: [
+            FileTypeNode(id: 'java', name: 'java'),
+            FileTypeNode(id: 'c', name: 'c'),
+            FileTypeNode(id: 'cpp', name: 'cpp'),
+            FileTypeNode(id: 'py', name: 'py'),
+            FileTypeNode(id: 'js', name: 'js'),
+            FileTypeNode(id: 'html', name: 'html'),
+            FileTypeNode(id: 'css', name: 'css'),
+            FileTypeNode(id: 'json', name: 'json'),
+            FileTypeNode(id: 'xml', name: 'xml'),
+            FileTypeNode(id: 'sql', name: 'sql'),
+            FileTypeNode(id: 'sh', name: 'sh'),
+            FileTypeNode(id: 'bat', name: 'bat'),
+          ],
+        ),
+        FileTypeNode(
+          id: 'program',
+          name: '程序',
+          selected: true,
+          children: [
+            FileTypeNode(id: 'exe', name: 'exe'),
+            FileTypeNode(id: 'msi', name: 'msi'),
+            FileTypeNode(id: 'bat', name: 'bat'),
+            FileTypeNode(id: 'cmd', name: 'cmd'),
+            FileTypeNode(id: 'sh', name: 'sh'),
+            FileTypeNode(id: 'app', name: 'app'),
           ],
         ),
       ],
@@ -128,9 +217,10 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
     _fileTypeTree = _initFileTypeTree();
   }
 
-  // 预览配置
+  // 运行配置
   bool _autoRefresh = true;
   int _previewLimit = 200;
+  int _executionLimit = 1000;
 
   @override
   Widget build(BuildContext context) {
@@ -146,10 +236,10 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
             child: ListView(
               children: [
                 _buildNavItem('线程池配置', 0),
-                _buildNavItem('扫描配置', 1),
-                _buildNavItem('过滤规则', 2),
-                _buildNavItem('文件类型筛选', 3),
-                _buildNavItem('预览配置', 4),
+                _buildNavItem('运行配置', 1),
+                _buildNavItem('扫描配置', 2),
+                _buildNavItem('过滤规则', 3),
+                _buildNavItem('文件类型筛选', 4),
               ],
             ),
           ),
@@ -162,20 +252,20 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
                     _buildThreadPoolSection(),
                     const SizedBox(height: 30),
                   ],
-                  if (_selectedSection == 1) ...[
-                    _buildScanSettingsSection(),
+                  if (_selectedSection ==1) ...[
+                    _buildRunSettingsSection(),
                     const SizedBox(height: 30),
                   ],
                   if (_selectedSection == 2) ...[
-                    _buildFilterRulesSection(),
+                    _buildScanSettingsSection(),
                     const SizedBox(height: 30),
                   ],
                   if (_selectedSection == 3) ...[
-                    _buildFileTypeTreeSection(),
+                    _buildFilterRulesSection(),
                     const SizedBox(height: 30),
                   ],
                   if (_selectedSection == 4) ...[
-                    _buildPreviewSettingsSection(),
+                    _buildFileTypeTreeSection(),
                     const SizedBox(height: 30),
                   ],
                 ],
@@ -248,6 +338,7 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
                       setState(() {
                         _previewThreads = value.toInt();
                       });
+                      _autoSaveConfig();
                     },
                     divisions: 15,
                     label: '$_previewThreads',
@@ -271,6 +362,7 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
                       setState(() {
                         _executionThreads = value.toInt();
                       });
+                      _autoSaveConfig();
                     },
                     divisions: 11,
                     label: '$_executionThreads',
@@ -295,6 +387,7 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
                     setState(() {
                       _threadPoolMode = value ?? 'GLOBAL';
                     });
+                    _autoSaveConfig();
                   },
                 ),
               ],
@@ -338,6 +431,7 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
                     setState(() {
                       _recursionMode = value ?? 'ALL';
                     });
+                    _autoSaveConfig();
                   },
                 ),
               ],
@@ -358,6 +452,7 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
                           setState(() {
                             _recursionDepth = value.toInt();
                           });
+                          _autoSaveConfig();
                         },
                         divisions: 9,
                         label: '$_recursionDepth',
@@ -386,6 +481,7 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
                               setState(() {
                                 _minRecursionDepth = value.toInt();
                               });
+                              _autoSaveConfig();
                             },
                             divisions: 9,
                             label: '$_minRecursionDepth',
@@ -411,6 +507,7 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
                               setState(() {
                                 _maxRecursionDepth = value.toInt();
                               });
+                              _autoSaveConfig();
                             },
                             divisions: 10 - _minRecursionDepth,
                             label: '$_maxRecursionDepth',
@@ -468,6 +565,7 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
                         _scanFilterList.add(_newFilterRule);
                         _newFilterRule = '';
                       });
+                      _autoSaveConfig();
                     }
                   },
                   child: const Text('添加'),
@@ -506,6 +604,7 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
                                 setState(() {
                                   _scanFilterList.removeAt(index);
                                 });
+                                _autoSaveConfig();
                               },
                             ),
                           ],
@@ -530,12 +629,37 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '文件类型筛选',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  '文件类型筛选',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Row(
+                  children: [
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _selectAll(_fileTypeTree, true);
+                        });
+                      },
+                      child: const Text('全选'),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _selectAll(_fileTypeTree, false);
+                        });
+                      },
+                      child: const Text('取消全选'),
+                    ),
+                  ],
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             Container(
@@ -544,144 +668,293 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
                 border: Border.all(color: Colors.grey),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: SingleChildScrollView(
-                child: _buildFileTypeTreeNode(_fileTypeTree, 0),
+              child: ListView(
+                children: _fileTypeTree.children.map((category) {
+                  return _buildCategoryNode(category);
+                }).toList(),
               ),
             ),
             const SizedBox(height: 16),
+            const Text(
+              '手动添加文件类型后缀',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                ElevatedButton(
-                  onPressed: () {
-                    // 全选
-                    _selectAll(_fileTypeTree, true);
-                    setState(() {});
-                  },
-                  child: const Text('全选'),
+                Expanded(
+                  child: TextField(
+                    decoration: const InputDecoration(
+                      labelText: '输入文件类型后缀',
+                      hintText: '例如：mp3,flac,wav',
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    ),
+                    onChanged: (value) {
+                      _newFileType = value;
+                    },
+                  ),
                 ),
+                const SizedBox(width: 10),
                 ElevatedButton(
                   onPressed: () {
-                    // 取消全选
-                    _selectAll(_fileTypeTree, false);
-                    setState(() {});
+                    if (_newFileType.isNotEmpty) {
+                      final types = _newFileType.split(',')
+                          .map((t) => t.trim())
+                          .where((t) => t.isNotEmpty)
+                          .toList();
+                      setState(() {
+                        _customFileTypes.addAll(types);
+                        _newFileType = '';
+                      });
+                      _autoSaveConfig();
+                    }
                   },
-                  child: const Text('取消全选'),
+                  child: const Text('添加'),
                 ),
               ],
             ),
+            const SizedBox(height: 16),
+            if (_customFileTypes.isNotEmpty)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '自定义文件类型:',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _customFileTypes.map((type) {
+                      return Chip(
+                        label: Text(type),
+                        onDeleted: () {
+                          setState(() {
+                            _customFileTypes.remove(type);
+                          });
+                          _autoSaveConfig();
+                        },
+                        deleteIcon: const Icon(Icons.close, size: 16),
+                        deleteIconColor: Colors.red,
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
           ],
         ),
       ),
     );
   }
 
-  // 递归构建树形节点
-  Widget _buildFileTypeTreeNode(FileTypeNode node, int level) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          margin: EdgeInsets.only(left: level * 20.0),
-          child: Row(
-            children: [
-              Checkbox(
-                value: node.isSelected,
-                onChanged: (value) {
-                  setState(() {
-                    node.isSelected = value ?? false;
-                    // 递归更新子节点
-                    _updateChildrenSelection(node, value ?? false);
-                  });
-                },
-              ),
-              Text(node.name),
-              if (node.extension != null)
-                Padding(
-                  padding: const EdgeInsets.only(left: 10),
-                  child: Text(
-                    '(.${node.extension})',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                ),
-            ],
-          ),
-        ),
-        if (node.children.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(left: 32.0, top: 8.0),
-            child: Wrap(
-              spacing: 16.0,
-              runSpacing: 12.0,
-              children: node.children.map((child) {
-                return _buildFileTypeNodeInline(child);
-              }).toList(),
-            ),
-          ),
-      ],
-    );
-  }
+  // 构建类别节点
+  Widget _buildCategoryNode(FileTypeNode category) {
+    if (category.isLeaf) {
+      return CheckboxListTile(
+        key: ValueKey(category.id),
+        title: Text(category.name),
+        value: category.selected,
+        onChanged: (value) {
+          setState(() {
+            _updateNodeSelection(category, value);
+          });
+          _autoSaveConfig();
+        },
+        controlAffinity: ListTileControlAffinity.leading,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+      );
+    }
 
-  // 内联构建文件类型节点（用于横向展示）
-  Widget _buildFileTypeNodeInline(FileTypeNode node) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(6.0),
-        color: node.isSelected ? Colors.blue.shade50 : Colors.white,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+    return ExpansionTile(
+      key: ValueKey(category.id),
+      title: Row(
         children: [
           Checkbox(
-            value: node.isSelected,
+            value: category.selected,
+            tristate: category.indeterminate,
             onChanged: (value) {
               setState(() {
-                node.isSelected = value ?? false;
+                _updateNodeSelection(category, value);
               });
+              _autoSaveConfig();
             },
           ),
-          const SizedBox(width: 4.0),
-          Text(
-            node.name,
-            style: TextStyle(
-              fontSize: 13.0,
-              color: node.isSelected ? Colors.blue.shade700 : Colors.black87,
+          Expanded(
+            child: Text(
+              category.name,
+              style: const TextStyle(fontWeight: FontWeight.w500),
             ),
           ),
-          if (node.extension != null) ...[
-            const SizedBox(width: 4.0),
-            Text(
-              '(.${node.extension})',
-              style: TextStyle(
-                fontSize: 11.0,
-                color: Colors.grey.shade600,
-              ),
-            ),
-          ],
         ],
       ),
+      children: category.children.map((child) {
+        if (child.isLeaf) {
+          return CheckboxListTile(
+            key: ValueKey(child.id),
+            title: Text(child.name),
+            value: child.selected,
+            onChanged: (value) {
+              setState(() {
+                _updateNodeSelection(child, value);
+              });
+              _autoSaveConfig();
+            },
+            controlAffinity: ListTileControlAffinity.leading,
+            contentPadding: const EdgeInsets.only(left: 48),
+          );
+        } else {
+          return ExpansionTile(
+            key: ValueKey(child.id),
+            title: Row(
+              children: [
+                Checkbox(
+                  value: child.selected,
+                  tristate: child.indeterminate,
+                  onChanged: (value) {
+                    setState(() {
+                      _updateNodeSelection(child, value);
+                    });
+                    _autoSaveConfig();
+                  },
+                ),
+                Expanded(
+                  child: Text(
+                    child.name,
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ],
+            ),
+            children: child.children.map((leaf) {
+              return CheckboxListTile(
+                key: ValueKey(leaf.id),
+                title: Text(leaf.name),
+                value: leaf.selected,
+                onChanged: (value) {
+                  setState(() {
+                    _updateNodeSelection(leaf, value);
+                  });
+                  _autoSaveConfig();
+                },
+                controlAffinity: ListTileControlAffinity.leading,
+                contentPadding: const EdgeInsets.only(left: 72),
+              );
+            }).toList(),
+          );
+        }
+      }).toList(),
     );
+  }
+
+  // 更新节点选择状态
+  void _updateNodeSelection(FileTypeNode node, bool? value) {
+    bool newValue = value ?? !node.selected;
+    _updateChildren(node, newValue);
+    _updateParentSelection(node);
   }
 
   // 更新子节点选择状态
-  void _updateChildrenSelection(FileTypeNode node, bool isSelected) {
+  void _updateChildren(FileTypeNode node, bool selected) {
+    node.selected = selected;
+    node.indeterminate = false;
+
     for (var child in node.children) {
-      child.isSelected = isSelected;
-      _updateChildrenSelection(child, isSelected);
+      _updateChildren(child, selected);
     }
+  }
+
+  // 向上更新父节点的选择状态
+  void _updateParentSelection(FileTypeNode node) {
+    final parent = _findParent(node);
+    if (parent != null) {
+      final allSelected = parent.children.every((child) => child.selected);
+      final anySelected = parent.children.any((child) => child.selected || child.indeterminate);
+
+      parent.selected = allSelected;
+      parent.indeterminate = anySelected && !allSelected;
+
+      _updateParentSelection(parent);
+    }
+  }
+
+  // 查找父节点
+  FileTypeNode? _findParent(FileTypeNode node) {
+    for (var category in _fileTypeTree.children) {
+      if (category.children.contains(node)) {
+        return category;
+      }
+      for (var child in category.children) {
+        if (child.children.contains(node)) {
+          return child;
+        }
+      }
+    }
+    return null;
   }
 
   // 全选/取消全选
   void _selectAll(FileTypeNode node, bool isSelected) {
-    node.isSelected = isSelected;
+    node.selected = isSelected;
+    node.indeterminate = false;
     for (var child in node.children) {
       _selectAll(child, isSelected);
     }
   }
 
-  Widget _buildPreviewSettingsSection() {
+  // 自动保存配置
+  void _autoSaveConfig() {
+    try {
+      final config = {
+        'previewThreads': _previewThreads,
+        'executionThreads': _executionThreads,
+        'threadPoolMode': _threadPoolMode,
+        'autoRefresh': _autoRefresh,
+        'previewLimit': _previewLimit,
+        'executionLimit': _executionLimit,
+        'recursionMode': _recursionMode,
+        'recursionDepth': _recursionDepth,
+        'minRecursionDepth': _minRecursionDepth,
+        'maxRecursionDepth': _maxRecursionDepth,
+        'scanFilterList': _scanFilterList,
+        'customFileTypes': _customFileTypes,
+        'selectedFileTypes': _getSelectedFileTypes(),
+      };
+
+      _configService.saveConfig(config).catchError((e) {
+        print('自动保存配置失败: $e');
+      });
+    } catch (e) {
+      print('构建配置对象失败: $e');
+    }
+  }
+
+  // 获取选中的文件类型
+  Map<String, dynamic> _getSelectedFileTypes() {
+    Map<String, dynamic> selectedTypes = {};
+    
+    for (var category in _fileTypeTree.children) {
+      if (category.id == 'folder' || category.id == 'file') {
+        selectedTypes[category.id] = category.selected;
+      } else if (category.selected || category.indeterminate) {
+        List<String> selectedExtensions = [];
+        for (var child in category.children) {
+          if (child.selected) {
+            selectedExtensions.add(child.id);
+          }
+        }
+        selectedTypes[category.id] = selectedExtensions;
+      }
+    }
+    
+    return selectedTypes;
+  }
+
+  Widget _buildRunSettingsSection() {
     return Card(
       elevation: 4,
       child: Padding(
@@ -690,7 +963,7 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              '预览配置',
+              '运行配置',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -706,6 +979,7 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
                     setState(() {
                       _autoRefresh = value ?? true;
                     });
+                    _autoSaveConfig();
                   },
                 ),
                 const Text('自动刷新'),
@@ -726,12 +1000,37 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
                       setState(() {
                         _previewLimit = value.toInt();
                       });
+                      _autoSaveConfig();
                     },
                     divisions: 19,
                     label: '$_previewLimit',
                   ),
                 ),
                 Text('$_previewLimit'),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              key: const ValueKey('execution_limit_row'),
+              children: [
+                const Text('执行数量限制:'),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Slider(
+                    min: 100,
+                    max: 5000,
+                    value: _executionLimit.toDouble(),
+                    onChanged: (value) {
+                      setState(() {
+                        _executionLimit = value.toInt();
+                      });
+                      _autoSaveConfig();
+                    },
+                    divisions: 49,
+                    label: '$_executionLimit',
+                  ),
+                ),
+                Text('$_executionLimit'),
               ],
             ),
           ],

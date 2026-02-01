@@ -32,8 +32,6 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
   String _statusFilter = '全部';
   String _operationTypeFilter = '全部';
   bool _hideUnchanged = true;
-  bool _autoRefresh = true;
-  int _previewLimit = 200;
 
   // 分页相关
   int _currentPage = 1;
@@ -103,6 +101,58 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
         return;
       }
 
+      // 校验策略参数，确保所有参数都有配置或默认值
+      bool allParamsValid = true;
+      String validationMessage = '';
+      
+      for (int i = 0; i < _pipeline.length; i++) {
+        final strategy = _pipeline[i];
+        print('\n=== 校验策略参数: ${strategy.name} (${strategy.id}) ===');
+        
+        if (strategy.configFields != null) {
+          for (final field in strategy.configFields!) {
+            // 检查字段是否有值或默认值
+            bool hasValue = false;
+            if (field.defaultValue != null) {
+              hasValue = true;
+              print('字段 ${field.name}: 使用默认值 ${field.defaultValue}');
+            } else {
+              print('字段 ${field.name}: 无默认值，需要配置');
+              if (field.required) {
+                validationMessage = '策略 "${strategy.name}" 的参数 "${field.label}" 是必填项，请配置';
+                allParamsValid = false;
+                break;
+              }
+            }
+          }
+        }
+        
+        if (!allParamsValid) {
+          break;
+        }
+      }
+
+      if (!allParamsValid) {
+        setState(() {
+          _errorMessage = validationMessage;
+        });
+        return;
+      }
+
+      // 输出每个策略的参数信息
+      print('\n=== 流水线策略参数信息 ===');
+      for (int i = 0; i < _pipeline.length; i++) {
+        final strategy = _pipeline[i];
+        print('策略 ${i + 1}: ${strategy.name} (${strategy.id})');
+        print('配置字段数量: ${strategy.configFields?.length ?? 0}');
+        
+        if (strategy.configFields != null) {
+          for (final field in strategy.configFields!) {
+            print('  - ${field.label} (${field.name}): ${field.defaultValue ?? '无默认值'}');
+          }
+        }
+      }
+
       final sourcePaths = _sourceDirectories.map((d) => d.path).toList();
       final result = await _pipelineService.analyzePipeline(sourcePaths, _pipeline);
 
@@ -157,6 +207,58 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
           _errorMessage = '请先配置插件流水线';
         });
         return;
+      }
+
+      // 校验策略参数，确保所有参数都有配置或默认值
+      bool allParamsValid = true;
+      String validationMessage = '';
+      
+      for (int i = 0; i < _pipeline.length; i++) {
+        final strategy = _pipeline[i];
+        print('\n=== 校验策略参数: ${strategy.name} (${strategy.id}) ===');
+        
+        if (strategy.configFields != null) {
+          for (final field in strategy.configFields!) {
+            // 检查字段是否有值或默认值
+            bool hasValue = false;
+            if (field.defaultValue != null) {
+              hasValue = true;
+              print('字段 ${field.name}: 使用默认值 ${field.defaultValue}');
+            } else {
+              print('字段 ${field.name}: 无默认值，需要配置');
+              if (field.required) {
+                validationMessage = '策略 "${strategy.name}" 的参数 "${field.label}" 是必填项，请配置';
+                allParamsValid = false;
+                break;
+              }
+            }
+          }
+        }
+        
+        if (!allParamsValid) {
+          break;
+        }
+      }
+
+      if (!allParamsValid) {
+        setState(() {
+          _errorMessage = validationMessage;
+        });
+        return;
+      }
+
+      // 输出每个策略的参数信息
+      print('\n=== 流水线策略参数信息 ===');
+      for (int i = 0; i < _pipeline.length; i++) {
+        final strategy = _pipeline[i];
+        print('策略 ${i + 1}: ${strategy.name} (${strategy.id})');
+        print('配置字段数量: ${strategy.configFields?.length ?? 0}');
+        
+        if (strategy.configFields != null) {
+          for (final field in strategy.configFields!) {
+            print('  - ${field.label} (${field.name}): ${field.defaultValue ?? '无默认值'}');
+          }
+        }
       }
 
       final sourcePaths = _sourceDirectories.map((d) => d.path).toList();
@@ -279,39 +381,40 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
   Widget _buildFilterBar() {
     return Container(
       padding: const EdgeInsets.all(12.0),
-      child: Column(
-        key: const ValueKey('filter_bar_column'),
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        key: const ValueKey('filter_bar_row'),
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
-            key: const ValueKey('filter_bar_search_row'),
-            children: [
-              Tooltip(
-                message: ParameterDescriptions.previewPage['search']!,
-                child: SizedBox(
-                  width: 250,
-                  child: TextField(
-                    decoration: const InputDecoration(
-                      labelText: '搜索',
-                      hintText: '搜索文件...',
-                      prefixIcon: Icon(Icons.search),
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    ),
-                    onChanged: (value) {
-                      setState(() {
-                        _searchFilter = value;
-                        _currentPage = 1;
-                      });
-                      _fetchChanges();
-                    },
-                  ),
+          Tooltip(
+            message: ParameterDescriptions.previewPage['search']!,
+            child: SizedBox(
+              width: 200,
+              child: TextField(
+                decoration: const InputDecoration(
+                  labelText: '搜索',
+                  hintText: '搜索文件...',
+                  prefixIcon: Icon(Icons.search),
+                  border: OutlineInputBorder(),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 ),
+                onChanged: (value) {
+                  setState(() {
+                    _searchFilter = value;
+                    _currentPage = 1;
+                  });
+                  _fetchChanges();
+                },
               ),
-              const SizedBox(width: 12),
-              Tooltip(
-                message: ParameterDescriptions.previewPage['statusFilter']!,
-                child: DropdownButton<String>(
+            ),
+          ),
+          const SizedBox(width: 12),
+          Tooltip(
+            message: ParameterDescriptions.previewPage['statusFilter']!,
+            child: Row(
+              children: [
+                const Text('状态:', style: TextStyle(fontSize: 12)),
+                const SizedBox(width: 4),
+                DropdownButton<String>(
                   value: _statusFilter,
                   items: const [
                     DropdownMenuItem(value: '全部', child: Text('全部')),
@@ -327,12 +430,20 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
                     });
                     _fetchChanges();
                   },
+                  style: const TextStyle(fontSize: 12),
+                  iconSize: 20,
                 ),
-              ),
-              const SizedBox(width: 12),
-              Tooltip(
-                message: ParameterDescriptions.previewPage['operationTypeFilter']!,
-                child: DropdownButton<String>(
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Tooltip(
+            message: ParameterDescriptions.previewPage['operationTypeFilter']!,
+            child: Row(
+              children: [
+                const Text('操作类型:', style: TextStyle(fontSize: 12)),
+                const SizedBox(width: 4),
+                DropdownButton<String>(
                   value: _operationTypeFilter,
                   items: const [
                     DropdownMenuItem(value: '全部', child: Text('全部')),
@@ -349,66 +460,37 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
                     });
                     _fetchChanges();
                   },
+                  style: const TextStyle(fontSize: 12),
+                  iconSize: 20,
                 ),
-              ),
-              const Spacer(),
-              Tooltip(
-                message: ParameterDescriptions.previewPage['refresh']!,
-                child: IconButton(
-                  icon: const Icon(Icons.refresh),
-                  onPressed: () {
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Tooltip(
+            message: ParameterDescriptions.previewPage['hideUnchanged']!,
+            child: Row(
+              children: [
+                Checkbox(
+                  value: _hideUnchanged,
+                  onChanged: (value) {
+                    setState(() {
+                      _hideUnchanged = value ?? true;
+                      _currentPage = 1;
+                    });
                     _fetchChanges();
                   },
-                  tooltip: '刷新',
+                  visualDensity: VisualDensity.compact,
                 ),
-              ),
-            ],
+                const Text('仅显示变更', style: TextStyle(fontSize: 12)),
+              ],
+            ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(width: 12),
           Row(
-            key: const ValueKey('filter_bar_checkbox_row'),
-            mainAxisSize: MainAxisSize.min,
             children: [
-              Tooltip(
-                message: ParameterDescriptions.previewPage['hideUnchanged']!,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Checkbox(
-                      value: _hideUnchanged,
-                      onChanged: (value) {
-                        setState(() {
-                          _hideUnchanged = value ?? true;
-                          _currentPage = 1;
-                        });
-                        _fetchChanges();
-                      },
-                    ),
-                    const Text('仅显示变更'),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
-              Tooltip(
-                message: ParameterDescriptions.previewPage['autoRefresh']!,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Checkbox(
-                      value: _autoRefresh,
-                      onChanged: (value) {
-                        setState(() {
-                          _autoRefresh = value ?? true;
-                        });
-                      },
-                    ),
-                    const Text('自动刷新'),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
-              const Text('分页:'),
-              const SizedBox(width: 8),
+              const Text('分页:', style: TextStyle(fontSize: 12)),
+              const SizedBox(width: 4),
               Tooltip(
                 message: ParameterDescriptions.previewPage['pageSize']!,
                 child: DropdownButton<int>(
@@ -426,9 +508,23 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
                     });
                     _fetchChanges();
                   },
+                  style: const TextStyle(fontSize: 12),
+                  iconSize: 20,
                 ),
               ),
             ],
+          ),
+          const Spacer(),
+          Tooltip(
+            message: ParameterDescriptions.previewPage['refresh']!,
+            child: IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: () {
+                _fetchChanges();
+              },
+              tooltip: '刷新',
+              iconSize: 20,
+            ),
           ),
         ],
       ),
@@ -436,47 +532,38 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
   }
 
   Widget _buildStatsBar() {
-    return Card(
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          key: const ValueKey('stats_bar_row'),
-          children: [
-            Expanded(
-              child: _buildStatItem('总记录', '${_changeRecords.length}', Icons.list),
-            ),
-            Expanded(
-              child: _buildStatItem('变更记录', '${_filteredRecords.length}', Icons.edit),
-            ),
-            Expanded(
-              child: _buildStatItem('成功', '${_changeRecords.where((r) => r.status == 'SUCCESS').length}', Icons.check_circle, Colors.green),
-            ),
-            Expanded(
-              child: _buildStatItem('失败', '${_changeRecords.where((r) => r.status == 'FAILED').length}', Icons.error, Colors.red),
-            ),
-          ],
-        ),
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(8),
+        color: Colors.grey.shade50,
+      ),
+      child: Row(
+        key: const ValueKey('stats_bar_row'),
+        children: [
+          _buildCompactStatItem('总记录', '${_changeRecords.length}', Icons.list),
+          const SizedBox(width: 24),
+          _buildCompactStatItem('变更记录', '${_filteredRecords.length}', Icons.edit),
+          const SizedBox(width: 24),
+          _buildCompactStatItem('成功', '${_changeRecords.where((r) => r.status == 'SUCCESS').length}', Icons.check_circle, Colors.green),
+          const SizedBox(width: 24),
+          _buildCompactStatItem('失败', '${_changeRecords.where((r) => r.status == 'FAILED').length}', Icons.error, Colors.red),
+        ],
       ),
     );
   }
 
-  Widget _buildStatItem(String label, String value, IconData icon, [Color? color]) {
-    return Column(
+  Widget _buildCompactStatItem(String label, String value, IconData icon, [Color? color]) {
+    return Row(
       children: [
-        Icon(icon, size: 32, color: color ?? Colors.blue),
-        const SizedBox(height: 8),
+        Icon(icon, size: 16, color: color ?? Colors.blue),
+        const SizedBox(width: 4),
         Text(
-          label,
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
+          '$label: $value',
           style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: color ?? Colors.blue,
+            fontSize: 12,
+            color: color ?? Colors.black,
           ),
         ),
       ],
@@ -707,50 +794,36 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          '执行进度',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-            color: Colors.grey,
-          ),
-        ),
-        const SizedBox(height: 8),
         LinearProgressIndicator(
           value: _isAnalyzing ? null : _progress,
           backgroundColor: Colors.grey.shade200,
           valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
-          minHeight: 10,
-          borderRadius: BorderRadius.circular(5),
+          minHeight: 8,
+          borderRadius: BorderRadius.circular(4),
         ),
-        const SizedBox(height: 8),
-        Row(
-          key: const ValueKey('progress_info_row'),
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              _isAnalyzing ? '分析中...' : _progressStatus,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey.shade600,
+        if (_isAnalyzing)
+          const SizedBox(height: 4),
+        if (_isAnalyzing)
+          Row(
+            key: const ValueKey('progress_info_row'),
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                _isAnalyzing ? '分析中...' : '',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                ),
               ),
-            ),
-            Text(
-              '剩余时间: ${_isAnalyzing ? '计算中...' : _remainingTime}',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey.shade600,
-              ),
-            ),
-          ],
-        ),
-        if (_totalTasks > 0)
-          Text(
-            '已完成: $_completedTasks / $_totalTasks',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade600,
-            ),
+              if (_totalTasks > 0)
+                Text(
+                  '已完成: $_completedTasks / $_totalTasks',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+            ],
           ),
       ],
     );

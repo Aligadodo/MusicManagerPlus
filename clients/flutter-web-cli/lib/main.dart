@@ -131,37 +131,63 @@ final taskStateProvider = StateNotifierProvider<TaskNotifier, TaskState>((ref) {
 });
 
 void main() {
-  runZonedGuarded(
-    () => runApp(
-      const ProviderScope(
-        child: FileManagerApp(),
-      ),
+  runApp(
+    const ProviderScope(
+      child: FileManagerApp(),
     ),
-    (error, stack) {
-      print('Uncaught error: $error');
-      print('Stack trace: $stack');
-    },
   );
 }
 
-class FileManagerApp extends StatelessWidget {
+class FileManagerApp extends ConsumerWidget {
   const FileManagerApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final config = ref.watch(configProvider);
+    final appearanceConfig = config.appearanceConfig;
+
+    final isDark = appearanceConfig['darkBackground'] as bool? ?? false;
+    final primaryColor = _parseColor(appearanceConfig['accentColor'] as String? ?? '#2196F3');
+    final backgroundColor = _parseColor(appearanceConfig['bgColor'] as String? ?? '#FFFFFF');
+
     return MaterialApp(
       title: 'MUSIC MANAGER PLUS - By chrse1997@163.com',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
         useMaterial3: true,
+        brightness: isDark ? Brightness.dark : Brightness.light,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blue,
-          brightness: Brightness.light,
+          seedColor: primaryColor,
+          brightness: isDark ? Brightness.dark : Brightness.light,
         ),
+        scaffoldBackgroundColor: backgroundColor,
+        cardColor: _parseColor(appearanceConfig['panelBgColor'] as String? ?? '#FFFFFF'),
+        textTheme: TextTheme(
+          bodyLarge: TextStyle(
+            color: _parseColor(appearanceConfig['textPrimaryColor'] as String? ?? '#000000'),
+            fontSize: (appearanceConfig['fontSize'] as int? ?? 14).toDouble(),
+          ),
+          bodyMedium: TextStyle(
+            color: _parseColor(appearanceConfig['textPrimaryColor'] as String? ?? '#000000'),
+            fontSize: (appearanceConfig['fontSize'] as int? ?? 14).toDouble(),
+          ),
+          bodySmall: TextStyle(
+            color: _parseColor(appearanceConfig['textSecondaryColor'] as String? ?? '#666666'),
+            fontSize: ((appearanceConfig['fontSize'] as int? ?? 14) - 2).toDouble(),
+          ),
+        ),
+        fontFamily: appearanceConfig['fontFamily'] as String? ?? 'Roboto',
       ),
       home: const MainLayout(),
       debugShowCheckedModeBanner: false,
     );
+  }
+
+  Color _parseColor(String colorString) {
+    try {
+      return Color(int.parse(colorString.replaceAll('#', '0xFF')));
+    } catch (e) {
+      return Colors.blue;
+    }
   }
 }
 
@@ -181,6 +207,18 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
   void initState() {
     super.initState();
     _tabController = TabController(length: 5, vsync: this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadConfig();
+    });
+  }
+
+  Future<void> _loadConfig() async {
+    try {
+      final configNotifier = ref.read(configProvider.notifier);
+      await configNotifier.loadConfig();
+    } catch (e) {
+      print('加载配置失败: $e');
+    }
   }
 
   @override

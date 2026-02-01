@@ -18,8 +18,6 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
   List<Map<String, dynamic>> _themePresets = [];
   int _selectedPresetIndex = -1;
   bool _isLoading = false;
-  String _errorMessage = '';
-  String _successMessage = '';
 
   @override
   void initState() {
@@ -33,7 +31,6 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
   Future<void> _loadAppearanceConfig() async {
     setState(() {
       _isLoading = true;
-      _errorMessage = '';
     });
 
     try {
@@ -43,8 +40,9 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
         _isLoading = false;
       });
     } catch (e) {
+      print('加载外观配置失败: $e');
       setState(() {
-        _errorMessage = '加载外观配置失败: $e';
+        _appearanceConfig = {};
         _isLoading = false;
       });
     }
@@ -170,6 +168,16 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
     });
   }
 
+
+
+  void _autoSaveConfig() {
+    final configNotifier = ref.read(configProvider.notifier);
+    configNotifier.updateAppearanceConfig(_appearanceConfig);
+    configNotifier.saveConfig().catchError((e) {
+      print('自动保存配置失败: $e');
+    });
+  }
+
   Color _parseColor(String colorString) {
     try {
       return Color(int.parse(colorString.replaceAll('#', '0xFF')));
@@ -207,13 +215,6 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
                   if (_isLoading)
                     const Center(
                       child: CircularProgressIndicator(),
-                    )
-                  else if (_errorMessage.isNotEmpty)
-                    Center(
-                      child: Text(
-                        _errorMessage,
-                        style: const TextStyle(color: Colors.red),
-                      ),
                     ),
                   const SizedBox(height: 20),
                   if (_selectedSection == 0)
@@ -454,6 +455,7 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
                 setState(() {
                   _appearanceConfig[key] = value;
                 });
+                _autoSaveConfig();
               },
             ),
           ),
@@ -550,6 +552,7 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
               setState(() {
                 _appearanceConfig[key] = value;
               });
+              _autoSaveConfig();
             },
           ),
         ],
@@ -558,18 +561,48 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
   }
 
   Widget _buildSwitchField(String label, String key) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
-      child: SwitchListTile(
-        title: Text(label),
-        value: _appearanceConfig[key] as bool,
-        onChanged: (value) {
-          setState(() {
-            _appearanceConfig[key] = value;
-          });
-        },
-      ),
-    );
+    try {
+      // 安全获取布尔值，处理各种类型情况
+      bool getValue() {
+        final value = _appearanceConfig[key];
+        if (value == null) {
+          return false;
+        }
+        if (value is bool) {
+          return value;
+        }
+        if (value is String) {
+          return value.toLowerCase() == 'true';
+        }
+        if (value is int) {
+          return value == 1;
+        }
+        return false;
+      }
+
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 20),
+        child: SwitchListTile(
+          title: Text(label),
+          value: getValue(),
+          onChanged: (value) {
+            setState(() {
+              _appearanceConfig[key] = value;
+            });
+            _autoSaveConfig();
+          },
+        ),
+      );
+    } catch (e) {
+      print('构建开关字段失败: $e');
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 20),
+        child: ListTile(
+          title: Text(label),
+          subtitle: Text('加载失败: $e'),
+        ),
+      );
+    }
   }
 
   Widget _buildDropdownField(String label, String key, List<String> options) {
@@ -595,6 +628,7 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
               setState(() {
                 _appearanceConfig[key] = value;
               });
+              _autoSaveConfig();
             },
             decoration: const InputDecoration(
               border: OutlineInputBorder(),
@@ -630,6 +664,7 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
                 setState(() {
                   _appearanceConfig[key] = numValue;
                 });
+                _autoSaveConfig();
               }
             },
           ),
