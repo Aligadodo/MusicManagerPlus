@@ -588,24 +588,66 @@ public class StrategyServiceImpl implements StrategyService {
 
     @Override
     public List<ChangeRecord> executeStrategy(String strategyId, List<String> filePaths, StrategyConfigDTO config) {
+        System.out.println("[Strategy] 开始执行策略: " + strategyId);
+        System.out.println("[Strategy] 文件数量: " + (filePaths != null ? filePaths.size() : 0));
+        System.out.println("[Strategy] 配置项数量: " + (config != null && config.getConfigValues() != null ? config.getConfigValues().size() : 0));
+        
+        long startTime = System.currentTimeMillis();
+        
         // 尝试从插件系统获取对应的插件
+        System.out.println("[Strategy] 开始查找插件: " + strategyId);
         com.filemanager.plugin.IPlugin plugin = pluginRegistry.getPlugin(strategyId);
+        
+        List<ChangeRecord> changes = new ArrayList<>();
+        
         if (plugin != null) {
+            System.out.println("[Strategy] 找到插件: " + strategyId);
             // 转换配置为插件配置
+            System.out.println("[Strategy] 转换配置为插件配置");
             com.filemanager.domain.dto.PluginConfigDTO pluginConfig = convertToPluginConfig(config);
-            List<ChangeRecord> changes = plugin.execute(filePaths, pluginConfig, new com.filemanager.plugin.ExecutionContext());
-            // 更新执行状态
-            for (ChangeRecord record : changes) {
-                record.setStatus("SUCCESS");
+            System.out.println("[Strategy] 配置转换完成，开始执行插件");
+            
+            try {
+                changes = plugin.execute(filePaths, pluginConfig, new com.filemanager.plugin.ExecutionContext());
+                System.out.println("[Strategy] 插件执行完成，结果数量: " + (changes != null ? changes.size() : 0));
+                
+                // 更新执行状态
+                if (changes != null) {
+                    for (ChangeRecord record : changes) {
+                        record.setStatus("SUCCESS");
+                    }
+                    System.out.println("[Strategy] 执行状态更新完成");
+                }
+            } catch (Exception e) {
+                System.err.println("[Strategy] 插件执行异常: " + e.getMessage());
+                e.printStackTrace();
+                throw e;
             }
-            return changes;
+        } else {
+            System.out.println("[Strategy] 未找到插件，使用默认实现: " + strategyId);
+            // 如果没有对应的插件，使用默认实现
+            try {
+                changes = analyzeFiles(strategyId, filePaths, config);
+                System.out.println("[Strategy] 默认实现执行完成，结果数量: " + (changes != null ? changes.size() : 0));
+                
+                if (changes != null) {
+                    for (ChangeRecord record : changes) {
+                        record.setStatus("SUCCESS");
+                    }
+                    System.out.println("[Strategy] 执行状态更新完成");
+                }
+            } catch (Exception e) {
+                System.err.println("[Strategy] 默认实现执行异常: " + e.getMessage());
+                e.printStackTrace();
+                throw e;
+            }
         }
         
-        // 如果没有对应的插件，使用默认实现
-        List<ChangeRecord> changes = analyzeFiles(strategyId, filePaths, config);
-        for (ChangeRecord record : changes) {
-            record.setStatus("SUCCESS");
-        }
+        long endTime = System.currentTimeMillis();
+        System.out.println("[Strategy] 策略执行完成: " + strategyId);
+        System.out.println("[Strategy] 执行时间: " + (endTime - startTime) + "ms");
+        System.out.println("[Strategy] 最终结果数量: " + (changes != null ? changes.size() : 0));
+        
         return changes;
     }
 

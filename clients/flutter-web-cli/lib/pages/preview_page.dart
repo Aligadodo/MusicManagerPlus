@@ -45,6 +45,11 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
   String _progressStatus = '准备就绪';
   int _completedTasks = 0;
   int _totalTasks = 0;
+  
+  // 日志信息
+  List<String> _logs = [];
+  Timer? _statusTimer;
+  bool _hasChanges = false;
 
   @override
   void initState() {
@@ -84,12 +89,16 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
       _progressStatus = '分析中';
       _completedTasks = 0;
       _totalTasks = 0;
+      _logs.clear();
+      _hasChanges = false;
+      _logs.add('开始分析流水线...');
     });
 
     try {
       if (_sourceDirectories.isEmpty) {
         setState(() {
           _errorMessage = '请先添加源目录';
+          _logs.add('错误: 请先添加源目录');
         });
         return;
       }
@@ -97,6 +106,7 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
       if (_pipeline.isEmpty) {
         setState(() {
           _errorMessage = '请先配置插件流水线';
+          _logs.add('错误: 请先配置插件流水线');
         });
         return;
       }
@@ -105,9 +115,10 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
       bool allParamsValid = true;
       String validationMessage = '';
       
+      _logs.add('开始校验策略参数...');
       for (int i = 0; i < _pipeline.length; i++) {
         final strategy = _pipeline[i];
-        print('\n=== 校验策略参数: ${strategy.name} (${strategy.id}) ===');
+        _logs.add('校验策略: ${strategy.name} (${strategy.id})');
         
         if (strategy.configFields != null) {
           for (final field in strategy.configFields!) {
@@ -115,12 +126,13 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
             bool hasValue = false;
             if (field.defaultValue != null) {
               hasValue = true;
-              print('字段 ${field.name}: 使用默认值 ${field.defaultValue}');
+              _logs.add('  字段 ${field.name}: 使用默认值 ${field.defaultValue}');
             } else {
-              print('字段 ${field.name}: 无默认值，需要配置');
+              _logs.add('  字段 ${field.name}: 无默认值，需要配置');
               if (field.required) {
                 validationMessage = '策略 "${strategy.name}" 的参数 "${field.label}" 是必填项，请配置';
                 allParamsValid = false;
+                _logs.add('  错误: ${validationMessage}');
                 break;
               }
             }
@@ -135,28 +147,35 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
       if (!allParamsValid) {
         setState(() {
           _errorMessage = validationMessage;
+          _logs.add('参数校验失败');
         });
         return;
       }
 
       // 输出每个策略的参数信息
-      print('\n=== 流水线策略参数信息 ===');
+      _logs.add('\n=== 流水线策略参数信息 ===');
       for (int i = 0; i < _pipeline.length; i++) {
         final strategy = _pipeline[i];
-        print('策略 ${i + 1}: ${strategy.name} (${strategy.id})');
-        print('配置字段数量: ${strategy.configFields?.length ?? 0}');
+        _logs.add('策略 ${i + 1}: ${strategy.name} (${strategy.id})');
+        _logs.add('配置字段数量: ${strategy.configFields?.length ?? 0}');
         
         if (strategy.configFields != null) {
           for (final field in strategy.configFields!) {
-            print('  - ${field.label} (${field.name}): ${field.defaultValue ?? '无默认值'}');
+            _logs.add('  - ${field.label} (${field.name}): ${field.defaultValue ?? '无默认值'}');
           }
         }
       }
 
       final sourcePaths = _sourceDirectories.map((d) => d.path).toList();
+      _logs.add('\n开始分析流水线，源目录: ${sourcePaths.join(', ')}');
       final result = await _pipelineService.analyzePipeline(sourcePaths, _pipeline);
 
       if (result['success'] == true) {
+        setState(() {
+          _logs.add('分析任务已开始执行');
+          _logs.add('任务ID: ${result['taskId'] ?? '未知'}');
+        });
+        
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(result['message'] ?? '分析任务已开始执行')),
@@ -165,12 +184,16 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
 
         // 立即获取一次变更记录
         await _fetchChanges();
+        
+        // 启动定时器，定期获取状态和变更
+        _startStatusTimer();
       } else {
         setState(() {
           _errorMessage = result['message'] ?? '分析任务提交失败';
           _progress = 0.0;
           _remainingTime = '00:00:00';
           _progressStatus = '分析失败';
+          _logs.add('错误: ${_errorMessage}');
         });
       }
     } catch (e) {
@@ -179,6 +202,7 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
         _progress = 0.0;
         _remainingTime = '00:00:00';
         _progressStatus = '分析失败';
+        _logs.add('异常: ${_errorMessage}');
       });
     }
   }
@@ -192,12 +216,14 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
       _progressStatus = '执行中';
       _completedTasks = 0;
       _totalTasks = _changeRecords.length;
+      _logs.add('开始执行流水线...');
     });
 
     try {
       if (_sourceDirectories.isEmpty) {
         setState(() {
           _errorMessage = '请先添加源目录';
+          _logs.add('错误: 请先添加源目录');
         });
         return;
       }
@@ -205,6 +231,15 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
       if (_pipeline.isEmpty) {
         setState(() {
           _errorMessage = '请先配置插件流水线';
+          _logs.add('错误: 请先配置插件流水线');
+        });
+        return;
+      }
+
+      if (!_hasChanges) {
+        setState(() {
+          _errorMessage = '没有需要执行的变更';
+          _logs.add('错误: 没有需要执行的变更');
         });
         return;
       }
@@ -213,9 +248,10 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
       bool allParamsValid = true;
       String validationMessage = '';
       
+      _logs.add('开始校验策略参数...');
       for (int i = 0; i < _pipeline.length; i++) {
         final strategy = _pipeline[i];
-        print('\n=== 校验策略参数: ${strategy.name} (${strategy.id}) ===');
+        _logs.add('校验策略: ${strategy.name} (${strategy.id})');
         
         if (strategy.configFields != null) {
           for (final field in strategy.configFields!) {
@@ -223,12 +259,13 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
             bool hasValue = false;
             if (field.defaultValue != null) {
               hasValue = true;
-              print('字段 ${field.name}: 使用默认值 ${field.defaultValue}');
+              _logs.add('  字段 ${field.name}: 使用默认值 ${field.defaultValue}');
             } else {
-              print('字段 ${field.name}: 无默认值，需要配置');
+              _logs.add('  字段 ${field.name}: 无默认值，需要配置');
               if (field.required) {
                 validationMessage = '策略 "${strategy.name}" 的参数 "${field.label}" 是必填项，请配置';
                 allParamsValid = false;
+                _logs.add('  错误: ${validationMessage}');
                 break;
               }
             }
@@ -243,28 +280,36 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
       if (!allParamsValid) {
         setState(() {
           _errorMessage = validationMessage;
+          _logs.add('参数校验失败');
         });
         return;
       }
 
       // 输出每个策略的参数信息
-      print('\n=== 流水线策略参数信息 ===');
+      _logs.add('\n=== 流水线策略参数信息 ===');
       for (int i = 0; i < _pipeline.length; i++) {
         final strategy = _pipeline[i];
-        print('策略 ${i + 1}: ${strategy.name} (${strategy.id})');
-        print('配置字段数量: ${strategy.configFields?.length ?? 0}');
+        _logs.add('策略 ${i + 1}: ${strategy.name} (${strategy.id})');
+        _logs.add('配置字段数量: ${strategy.configFields?.length ?? 0}');
         
         if (strategy.configFields != null) {
           for (final field in strategy.configFields!) {
-            print('  - ${field.label} (${field.name}): ${field.defaultValue ?? '无默认值'}');
+            _logs.add('  - ${field.label} (${field.name}): ${field.defaultValue ?? '无默认值'}');
           }
         }
       }
 
       final sourcePaths = _sourceDirectories.map((d) => d.path).toList();
+      _logs.add('\n开始执行流水线，源目录: ${sourcePaths.join(', ')}');
+      _logs.add('预计处理文件数: ${_totalTasks}');
       final result = await _pipelineService.executePipeline(sourcePaths, _pipeline);
       
       if (result['success'] == true) {
+        setState(() {
+          _logs.add('执行任务已开始执行');
+          _logs.add('任务ID: ${result['taskId'] ?? '未知'}');
+        });
+        
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(result['message'] ?? '执行任务已开始执行')),
@@ -273,12 +318,16 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
 
         // 立即获取一次变更记录
         await _fetchChanges();
+        
+        // 启动定时器，定期获取状态和变更
+        _startStatusTimer();
       } else {
         setState(() {
           _errorMessage = result['message'] ?? '执行任务提交失败';
           _progress = 0.0;
           _remainingTime = '00:00:00';
           _progressStatus = '执行失败';
+          _logs.add('错误: ${_errorMessage}');
         });
       }
     } catch (e) {
@@ -287,6 +336,7 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
         _progress = 0.0;
         _remainingTime = '00:00:00';
         _progressStatus = '执行失败';
+        _logs.add('异常: ${_errorMessage}');
       });
     } finally {
       // 等待任务完成后再取消定时器
@@ -300,6 +350,7 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
       _progress = 0.0;
       _remainingTime = '00:00:00';
       _progressStatus = '已中止';
+      _logs.add('任务已中止');
     });
 
     try {
@@ -311,8 +362,37 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
           SnackBar(content: Text(result['message'] ?? '任务已成功中止')),
         );
       }
+      
+      // 停止定时器
+      _stopStatusTimer();
     } catch (e) {
       print('停止任务失败: $e');
+      _logs.add('停止任务失败: $e');
+    }
+  }
+
+  void _startStatusTimer() {
+    // 停止现有定时器
+    _stopStatusTimer();
+    
+    // 启动新定时器，每2秒获取一次状态
+    _statusTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
+      await _fetchProgress();
+      await _fetchChanges();
+      
+      // 如果任务完成，停止定时器
+      if (_progressStatus == '分析完成' || _progressStatus == '执行完成' || 
+          _progressStatus == '已中止' || _progressStatus == '分析失败' || 
+          _progressStatus == '执行失败') {
+        _stopStatusTimer();
+      }
+    });
+  }
+
+  void _stopStatusTimer() {
+    if (_statusTimer != null) {
+      _statusTimer!.cancel();
+      _statusTimer = null;
     }
   }
 
@@ -334,8 +414,18 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
             const SizedBox(height: 12),
             _buildStatsBar(),
             const SizedBox(height: 12),
-            Expanded(
-              child: _buildPreviewTable(),
+            Row(
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: _buildPreviewTable(),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 1,
+                  child: _buildLogSection(),
+                ),
+              ],
             ),
           ],
         ),
@@ -515,15 +605,71 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
             ],
           ),
           const Spacer(),
+          // 预览和执行按钮
+          Tooltip(
+            message: _isAnalyzing ? '正在分析...' : '分析变更并生成预览',
+            child: ElevatedButton.icon(
+              onPressed: _isAnalyzing ? null : _analyzePipeline,
+              icon: _isAnalyzing ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Icon(Icons.analytics),
+              label: const Text('分析变更'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _isAnalyzing ? Colors.blue.shade300 : Colors.blue,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Tooltip(
+            message: _hasChanges ? '执行变更' : '预览成功且有变更时才能执行',
+            child: ElevatedButton.icon(
+              onPressed: _hasChanges && !_isAnalyzing ? _executePipeline : null,
+              icon: const Icon(Icons.play_arrow),
+              label: const Text('执行'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _hasChanges ? Colors.green : Colors.grey,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          IconButton(
+            icon: const Icon(Icons.stop),
+            onPressed: _isAnalyzing ? _stopPipeline : null,
+            tooltip: '停止分析或执行',
+            iconSize: 20,
+            color: _isAnalyzing ? Colors.red : Colors.grey,
+          ),
+          const SizedBox(width: 10),
           Tooltip(
             message: ParameterDescriptions.previewPage['refresh']!,
             child: IconButton(
               icon: const Icon(Icons.refresh),
-              onPressed: () {
+              onPressed: _isAnalyzing ? null : () {
                 _fetchChanges();
               },
-              tooltip: '刷新',
+              tooltip: '刷新变更记录',
               iconSize: 20,
+              color: _isAnalyzing ? Colors.grey : null,
+            ),
+          ),
+          const SizedBox(width: 10),
+          // 状态显示
+          Tooltip(
+            message: '当前状态',
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                color: _isAnalyzing ? Colors.orange.shade100 : _hasChanges ? Colors.green.shade100 : Colors.grey.shade100,
+              ),
+              child: Text(
+                _isAnalyzing ? '分析中...' : _hasChanges ? '有变更' : '无变更',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: _isAnalyzing ? Colors.orange : _hasChanges ? Colors.green : Colors.grey,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ),
         ],
@@ -858,6 +1004,7 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
   // 从后端获取变更记录
   Future<void> _fetchChanges() async {
     try {
+      _logs.add('获取变更记录...');
       final result = await _pipelineService.getChanges(
         searchFilter: _searchFilter,
         statusFilter: _statusFilter != '全部' ? _statusFilter : null,
@@ -875,9 +1022,15 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
             .toList();
         _totalRecords = result['total'] ?? 0;
         _totalPages = result['pages'] ?? 0;
+        
+        // 更新是否有变更的标志
+        _hasChanges = _totalRecords > 0;
+        
+        _logs.add('获取到 ${_totalRecords} 条变更记录');
       });
     } catch (e) {
       print('获取变更记录失败: $e');
+      _logs.add('获取变更记录失败: $e');
     }
   }
 
@@ -916,6 +1069,79 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
                 : null,
             icon: const Icon(Icons.chevron_right),
             tooltip: '下一页',
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _stopStatusTimer();
+    super.dispose();
+  }
+
+  Widget _buildLogSection() {
+    return Card(
+      elevation: 4,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  '执行日志',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    setState(() {
+                      _logs.clear();
+                    });
+                  },
+                  tooltip: '清空日志',
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.all(12.0),
+              child: _logs.isEmpty
+                  ? const Center(
+                      child: Text(
+                        '暂无日志信息',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: _logs.length,
+                      itemBuilder: (context, index) {
+                        final log = _logs[index];
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2.0),
+                          child: Text(
+                            log,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: log.contains('错误') || log.contains('异常')
+                                  ? Colors.red
+                                  : log.contains('开始') || log.contains('完成')
+                                      ? Colors.blue
+                                      : Colors.black,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
           ),
         ],
       ),

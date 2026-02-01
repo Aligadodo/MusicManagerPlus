@@ -62,24 +62,32 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public boolean executeTask(String taskId) {
+        System.out.println("[Task] 开始执行任务: " + taskId);
         TaskExecution execution = tasks.get(taskId);
         if (execution == null) {
+            System.out.println("[Task] 任务不存在: " + taskId);
             throw new IllegalArgumentException("Task not found: " + taskId);
         }
 
         if (execution.getStatus().getStatus().equals("RUNNING")) {
+            System.out.println("[Task] 任务已经在运行中: " + taskId);
             throw new IllegalStateException("Task is already running");
         }
 
+        System.out.println("[Task] 提交任务到执行线程池: " + taskId);
         Future<?> future = executorService.submit(() -> {
+            System.out.println("[Task] 任务开始执行: " + taskId);
             try {
                 execution.execute(strategyService);
+                System.out.println("[Task] 任务执行完成: " + taskId + ", 状态: " + execution.getStatus().getStatus());
             } catch (Exception e) {
+                System.err.println("[Task] 任务执行异常: " + taskId + ", 错误: " + e.getMessage());
                 execution.setError(e.getMessage());
             }
         });
 
         execution.setFuture(future);
+        System.out.println("[Task] 任务提交成功: " + taskId);
         return true;
     }
 
@@ -143,26 +151,55 @@ public class TaskServiceImpl implements TaskService {
         }
 
         public void execute(StrategyService strategyService) {
+            System.out.println("[TaskExecution] 开始执行任务: " + taskId);
+            System.out.println("[TaskExecution] 策略ID: " + request.getStrategyId());
+            System.out.println("[TaskExecution] 文件数量: " + (request.getFilePaths() != null ? request.getFilePaths().size() : 0));
+            
             status.setStatus("RUNNING");
             status.setProgress(0);
             status.setMessage("Task started");
 
             try {
+                System.out.println("[TaskExecution] 开始获取策略配置: " + request.getStrategyId());
+                // 获取策略配置
+                com.filemanager.domain.service.StrategyService strategyServiceLocal = strategyService;
+                com.filemanager.domain.dto.StrategyConfigDTO config = strategyServiceLocal.getStrategyConfig(request.getStrategyId());
+                System.out.println("[TaskExecution] 策略配置获取成功: " + request.getStrategyId());
+                
+                System.out.println("[TaskExecution] 开始执行策略: " + request.getStrategyId());
                 // 执行任务逻辑
-                results.addAll(strategyService.executeStrategy(
+                java.util.List<com.filemanager.domain.entity.ChangeRecord> executionResults = strategyServiceLocal.executeStrategy(
                         request.getStrategyId(),
                         request.getFilePaths(),
-                        strategyService.getStrategyConfig(request.getStrategyId())
-                ));
+                        config
+                );
+                System.out.println("[TaskExecution] 策略执行完成: " + request.getStrategyId() + ", 结果数量: " + (executionResults != null ? executionResults.size() : 0));
+                
+                if (executionResults != null) {
+                    results.addAll(executionResults);
+                    System.out.println("[TaskExecution] 结果添加完成: " + results.size() + " 条记录");
+                }
 
+                System.out.println("[TaskExecution] 任务执行成功: " + taskId);
                 status.setStatus("COMPLETED");
                 status.setProgress(100);
                 status.setMessage("Task completed successfully");
                 status.setEndTime(System.currentTimeMillis());
+                
+                System.out.println("[TaskExecution] 任务执行完成: " + taskId);
+                System.out.println("[TaskExecution] 最终状态: COMPLETED");
+                System.out.println("[TaskExecution] 处理文件数: " + (request.getFilePaths() != null ? request.getFilePaths().size() : 0));
+                System.out.println("[TaskExecution] 生成结果数: " + results.size());
             } catch (Exception e) {
+                System.err.println("[TaskExecution] 任务执行失败: " + taskId);
+                System.err.println("[TaskExecution] 错误信息: " + e.getMessage());
+                e.printStackTrace();
+                
                 status.setStatus("FAILED");
                 status.setMessage("Task failed: " + e.getMessage());
                 status.setEndTime(System.currentTimeMillis());
+                
+                System.out.println("[TaskExecution] 任务最终状态: FAILED");
             }
         }
 

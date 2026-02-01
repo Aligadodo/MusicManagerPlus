@@ -73,15 +73,22 @@ public class TaskController {
 
     @PostMapping("/{id}/execute")
     public ResponseEntity<Map<String, Object>> executeTask(@PathVariable String id) {
+        System.out.println("[API] 收到执行任务请求: " + id);
         logger.info("[API] POST /api/tasks/{}/execute - 执行任务", id);
         try {
+            System.out.println("[API] 开始执行任务: " + id);
             boolean success = taskService.executeTask(id);
+            System.out.println("[API] 任务执行请求处理完成: " + id + ", 结果: " + success);
+            
             Map<String, Object> result = new HashMap<>();
             result.put("success", success);
             result.put("message", "任务开始执行");
             logger.info("[API] POST /api/tasks/{}/execute - 任务执行{}", id, success ? "成功" : "失败");
+            System.out.println("[API] 返回执行结果: " + result);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
+            System.err.println("[API] 任务执行失败: " + id);
+            System.err.println("[API] 错误信息: " + e.getMessage());
             logger.error("[API] POST /api/tasks/{}/execute - 任务执行失败", id, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }

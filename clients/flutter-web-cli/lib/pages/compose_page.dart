@@ -101,7 +101,24 @@ class _ComposePageState extends ConsumerState<ComposePage> {
       input.onChange.listen((event) {
         if (input.files?.isNotEmpty == true) {
           final file = input.files![0];
-          final path = file.relativePath ?? '';
+          String path = '';
+          
+          // 尝试从relativePath获取目录路径
+          if (file.relativePath != null && file.relativePath!.isNotEmpty) {
+            // relativePath格式: "目录/子目录/文件"
+            // 提取第一个斜杠之前的部分作为目录名
+            final firstSlashIndex = file.relativePath!.indexOf('/');
+            if (firstSlashIndex != -1) {
+              path = file.relativePath!.substring(0, firstSlashIndex);
+            } else {
+              // 如果没有斜杠，说明只选择了一个文件，使用文件名
+              path = file.name;
+            }
+          } else {
+            // 最后的回退方案
+            path = file.name;
+          }
+          
           if (path.isNotEmpty) {
             _doAddDirectory(path);
           }
@@ -118,16 +135,33 @@ class _ComposePageState extends ConsumerState<ComposePage> {
 
   Future<void> _doAddDirectory(String path) async {
     try {
-      final directory = await _sourceDirectoryService.addSourceDirectory(
-        SourceDirectory(path: path, threadCount: 4),
-      );
-      setState(() {
-        _sourceDirectories.add(directory);
+      // 直接使用API客户端发送请求，以正确处理后端响应格式
+      final response = await _apiClient.post('/source-directories', body: {
+        'path': path,
+        'threadCount': 4,
       });
+      if (response.statusCode == 200) {
+        final jsonResponse = json.decode(response.body);
+        if (jsonResponse['success'] == true) {
+          // 重新加载目录列表以确保数据一致性
+          final sources = await _sourceDirectoryService.getSourceDirectories();
+          if (!_isDisposed) {
+            setState(() {
+              _sourceDirectories = sources;
+            });
+          }
+        } else {
+          throw Exception(jsonResponse['message'] ?? '添加目录失败');
+        }
+      } else {
+        throw Exception('Failed to add source directory: ${response.statusCode}');
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('添加目录失败: $e')),
-      );
+      if (!_isDisposed) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('添加目录失败: $e')),
+        );
+      }
     }
   }
 
@@ -454,10 +488,23 @@ class _ComposePageState extends ConsumerState<ComposePage> {
         ),
         const SizedBox(width: 10),
         ElevatedButton.icon(
-          onPressed: () {
-            setState(() {
-              _sourceDirectories.clear();
-            });
+          onPressed: () async {
+            try {
+              // 调用后端API清空目录
+              await _sourceDirectoryService.clearSourceDirectories();
+              // 清空本地状态
+              if (!_isDisposed) {
+                setState(() {
+                  _sourceDirectories.clear();
+                });
+              }
+            } catch (e) {
+              if (!_isDisposed) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('清空目录失败: $e')),
+                );
+              }
+            }
           },
           icon: const Icon(Icons.clear),
           label: const Text('清空'),

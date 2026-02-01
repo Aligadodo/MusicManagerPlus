@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.io.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -28,12 +29,59 @@ public class PipelineController {
     private final List<ChangeRecord> currentChanges = new ArrayList<>();
     private final Map<String, Object> taskStatus = new ConcurrentHashMap<>();
     private final ExecutorService executorService = Executors.newFixedThreadPool(5);
+    private final String configFilePath = "pipeline_config.json";
 
     @Autowired
     private PluginService pluginService;
 
     @Autowired
     private TaskService taskService;
+
+    // 初始化时加载配置
+    @javax.annotation.PostConstruct
+    public void init() {
+        System.out.println("[Pipeline] 初始化配置加载");
+        loadPipelineConfig();
+    }
+
+    // 加载流水线配置
+    private void loadPipelineConfig() {
+        try {
+            File configFile = new File(configFilePath);
+            if (configFile.exists()) {
+                System.out.println("[Pipeline] 找到配置文件，开始加载: " + configFilePath);
+                FileReader reader = new FileReader(configFile);
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                List<Map<String, Object>> pipeline = mapper.readValue(reader, new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, Object>>>() {});
+                pipelines.put("default", pipeline);
+                reader.close();
+                System.out.println("[Pipeline] 配置加载成功，流水线长度: " + pipeline.size());
+            } else {
+                System.out.println("[Pipeline] 配置文件不存在，使用默认空配置: " + configFilePath);
+                pipelines.put("default", new ArrayList<>());
+            }
+        } catch (Exception e) {
+            System.err.println("[Pipeline] 配置加载失败: " + e.getMessage());
+            e.printStackTrace();
+            pipelines.put("default", new ArrayList<>());
+        }
+    }
+
+    // 保存流水线配置
+    private void savePipelineConfig() {
+        try {
+            List<Map<String, Object>> pipeline = pipelines.getOrDefault("default", new ArrayList<>());
+            File configFile = new File(configFilePath);
+            FileWriter writer = new FileWriter(configFile);
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            mapper.writeValue(writer, pipeline);
+            writer.close();
+            System.out.println("[Pipeline] 配置保存成功，流水线长度: " + pipeline.size());
+        } catch (Exception e) {
+            System.err.println("[Pipeline] 配置保存失败: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
 
     @GetMapping
     public ResponseEntity<List<Map<String, Object>>> getPipeline() {
@@ -48,12 +96,18 @@ public class PipelineController {
     @PostMapping
     public ResponseEntity<Map<String, Object>> updatePipeline(@RequestBody List<Map<String, Object>> pipeline) {
         try {
+            System.out.println("[Pipeline] 收到更新流水线请求，长度: " + (pipeline != null ? pipeline.size() : 0));
             pipelines.put("default", pipeline);
+            // 保存配置到文件
+            savePipelineConfig();
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
             result.put("message", "流水线更新成功");
+            System.out.println("[Pipeline] 流水线更新完成并保存");
             return ResponseEntity.ok(result);
         } catch (Exception e) {
+            System.err.println("[Pipeline] 流水线更新失败: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }

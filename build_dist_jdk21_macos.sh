@@ -267,7 +267,8 @@ open -a Terminal "$SCRIPT_DIR/start-frontend.sh"
 
 echo "服务已启动，请在浏览器中访问 http://localhost:8081"
 echo "如果需要停止服务，请关闭对应的终端窗口"
-read -p "按 Enter 键退出..."
+echo "将在 10 秒后自动退出..."
+sleep 10
 EOF
 
 # 生成停止脚本
@@ -312,7 +313,8 @@ fi
 
 if [ "$BACKEND_RUNNING" = "false" ] && [ "$FRONTEND_RUNNING" = "false" ]; then
     echo "[信息] 所有服务均未运行，无需停止。"
-    read -p "按 Enter 键退出..."
+    echo "将在 10 秒后自动退出..."
+    sleep 10
     exit 0
 fi
 
@@ -370,7 +372,8 @@ echo ""
 echo "==========================================="
 echo "停止操作完成！"
 echo "==========================================="
-read -p "按 Enter 键退出..."
+echo "将在 10 秒后自动退出..."
+sleep 10
 EOF
 
 # 生成重启脚本
@@ -446,7 +449,8 @@ if [ -f "$SCRIPT_DIR/start-backend.sh" ]; then
     open -a Terminal "$SCRIPT_DIR/start-backend.sh"
 else
     echo "[错误] 未找到 start-backend.sh 脚本"
-    read -p "按 Enter 键退出..."
+    echo "将在 10 秒后自动退出..."
+    sleep 10
     exit 1
 fi
 
@@ -465,7 +469,8 @@ if [ -f "$SCRIPT_DIR/start-frontend.sh" ]; then
     open -a Terminal "$SCRIPT_DIR/start-frontend.sh"
 else
     echo "[错误] 未找到 start-frontend.sh 脚本"
-    read -p "按 Enter 键退出..."
+    echo "将在 10 秒后自动退出..."
+    sleep 10
     exit 1
 fi
 
@@ -485,7 +490,8 @@ echo "重启操作完成！"
 echo "服务已启动，请在浏览器中访问 http://localhost:8081"
 echo "如果需要停止服务，请关闭对应的终端窗口"
 echo "==========================================="
-read -p "按 Enter 键退出..."
+echo "将在 10 秒后自动退出..."
+sleep 10
 EOF
 
 # 设置脚本执行权限
