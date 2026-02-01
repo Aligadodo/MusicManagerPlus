@@ -222,18 +222,15 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(12.0),
         child: Column(
           children: [
-            // Header部分 - 包含操作按钮
-            _buildHeader(),
-            const SizedBox(height: 20),
             _buildFilterBar(),
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
             _buildProgressSection(),
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
             _buildStatsBar(),
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
             Expanded(
               child: _buildPreviewTable(),
             ),
@@ -279,143 +276,139 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
   }
 
   Widget _buildFilterBar() {
-    return Card(
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          key: const ValueKey('filter_bar_column'),
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              key: const ValueKey('filter_bar_search_row'),
-              children: [
-                SizedBox(
-                  width: 300,
-                  child: TextField(
-                    decoration: const InputDecoration(
-                      labelText: '搜索',
-                      hintText: '请输入关键词进行搜索...',
-                      prefixIcon: Icon(Icons.search),
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
+    return Container(
+      padding: const EdgeInsets.all(12.0),
+      child: Column(
+        key: const ValueKey('filter_bar_column'),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            key: const ValueKey('filter_bar_search_row'),
+            children: [
+              SizedBox(
+                width: 250,
+                child: TextField(
+                  decoration: const InputDecoration(
+                    labelText: '搜索',
+                    hintText: '搜索文件...',
+                    prefixIcon: Icon(Icons.search),
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      _searchFilter = value;
+                      _currentPage = 1;
+                    });
+                    _fetchChanges();
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              DropdownButton<String>(
+                value: _statusFilter,
+                items: const [
+                  DropdownMenuItem(value: '全部', child: Text('全部')),
+                  DropdownMenuItem(value: 'PENDING', child: Text('待执行')),
+                  DropdownMenuItem(value: 'SUCCESS', child: Text('成功')),
+                  DropdownMenuItem(value: 'FAILED', child: Text('失败')),
+                  DropdownMenuItem(value: 'SKIPPED', child: Text('跳过')),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _statusFilter = value ?? '全部';
+                    _currentPage = 1;
+                  });
+                  _fetchChanges();
+                },
+              ),
+              const SizedBox(width: 12),
+              DropdownButton<String>(
+                value: _operationTypeFilter,
+                items: const [
+                  DropdownMenuItem(value: '全部', child: Text('全部')),
+                  DropdownMenuItem(value: 'RENAME', child: Text('重命名')),
+                  DropdownMenuItem(value: 'MOVE', child: Text('移动')),
+                  DropdownMenuItem(value: 'DELETE', child: Text('删除')),
+                  DropdownMenuItem(value: 'COPY', child: Text('复制')),
+                  DropdownMenuItem(value: 'METADATA_UPDATE', child: Text('元数据')),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _operationTypeFilter = value ?? '全部';
+                    _currentPage = 1;
+                  });
+                  _fetchChanges();
+                },
+              ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: () {
+                  _fetchChanges();
+                },
+                tooltip: '刷新',
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            key: const ValueKey('filter_bar_checkbox_row'),
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Checkbox(
+                    value: _hideUnchanged,
                     onChanged: (value) {
                       setState(() {
-                        _searchFilter = value;
+                        _hideUnchanged = value ?? true;
                         _currentPage = 1;
                       });
                       _fetchChanges();
                     },
                   ),
-                ),
-                const SizedBox(width: 16),
-                DropdownButton<String>(
-                  value: _statusFilter,
-                  items: const [
-                    DropdownMenuItem(value: '全部', child: Text('全部')),
-                    DropdownMenuItem(value: 'PENDING', child: Text('待执行')),
-                    DropdownMenuItem(value: 'SUCCESS', child: Text('成功')),
-                    DropdownMenuItem(value: 'FAILED', child: Text('失败')),
-                    DropdownMenuItem(value: 'SKIPPED', child: Text('跳过')),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      _statusFilter = value ?? '全部';
-                      _currentPage = 1;
-                    });
-                    _fetchChanges();
-                  },
-                ),
-                const SizedBox(width: 16),
-                DropdownButton<String>(
-                  value: _operationTypeFilter,
-                  items: const [
-                    DropdownMenuItem(value: '全部', child: Text('全部')),
-                    DropdownMenuItem(value: 'RENAME', child: Text('重命名')),
-                    DropdownMenuItem(value: 'MOVE', child: Text('移动')),
-                    DropdownMenuItem(value: 'DELETE', child: Text('删除')),
-                    DropdownMenuItem(value: 'COPY', child: Text('复制')),
-                    DropdownMenuItem(value: 'METADATA_UPDATE', child: Text('元数据更新')),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      _operationTypeFilter = value ?? '全部';
-                      _currentPage = 1;
-                    });
-                    _fetchChanges();
-                  },
-                ),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.refresh),
-                  onPressed: () {
-                    _fetchChanges();
-                  },
-                  tooltip: '刷新',
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              key: const ValueKey('filter_bar_checkbox_row'),
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Checkbox(
-                      value: _hideUnchanged,
-                      onChanged: (value) {
-                        setState(() {
-                          _hideUnchanged = value ?? true;
-                          _currentPage = 1;
-                        });
-                        _fetchChanges();
-                      },
-                    ),
-                    const Text('仅显示变更'),
-                  ],
-                ),
-                const SizedBox(width: 20),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Checkbox(
-                      value: _autoRefresh,
-                      onChanged: (value) {
-                        setState(() {
-                          _autoRefresh = value ?? true;
-                        });
-                      },
-                    ),
-                    const Text('自动刷新'),
-                  ],
-                ),
-                const SizedBox(width: 20),
-                const Text('分页大小:'),
-                const SizedBox(width: 10),
-                DropdownButton<int>(
-                  value: _pageSize,
-                  items: const [
-                    DropdownMenuItem(value: 10, child: Text('10')),
-                    DropdownMenuItem(value: 20, child: Text('20')),
-                    DropdownMenuItem(value: 50, child: Text('50')),
-                    DropdownMenuItem(value: 100, child: Text('100')),
-                    DropdownMenuItem(value: 200, child: Text('200')),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      _pageSize = value ?? 20;
-                      _currentPage = 1;
-                    });
-                    _fetchChanges();
-                  },
-                ),
-              ],
-            ),
-          ],
-        ),
+                  const Text('仅显示变更'),
+                ],
+              ),
+              const SizedBox(width: 16),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Checkbox(
+                    value: _autoRefresh,
+                    onChanged: (value) {
+                      setState(() {
+                        _autoRefresh = value ?? true;
+                      });
+                    },
+                  ),
+                  const Text('自动刷新'),
+                ],
+              ),
+              const SizedBox(width: 16),
+              const Text('分页:'),
+              const SizedBox(width: 8),
+              DropdownButton<int>(
+                value: _pageSize,
+                items: const [
+                  DropdownMenuItem(value: 10, child: Text('10')),
+                  DropdownMenuItem(value: 20, child: Text('20')),
+                  DropdownMenuItem(value: 50, child: Text('50')),
+                  DropdownMenuItem(value: 100, child: Text('100')),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _pageSize = value ?? 20;
+                    _currentPage = 1;
+                  });
+                  _fetchChanges();
+                },
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -629,22 +622,75 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
     }
   }
 
-  // 进度和过滤条件显示区域
+  // 进度和过滤条件配置区域
   Widget _buildProgressSection() {
-    return Card(
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 过滤条件显示
-            _buildFilterConditions(),
-            const SizedBox(height: 16),
-            // 进度条和剩余时间
-            _buildProgressBar(),
-          ],
-        ),
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 过滤条件配置描述
+          Container(
+            padding: const EdgeInsets.all(12.0),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '过滤条件配置',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: Colors.blue.shade800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '使用顶部过滤栏可以：',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.blue.shade600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '• 输入关键词搜索文件名称和路径',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.blue.shade600,
+                  ),
+                ),
+                Text(
+                  '• 按执行状态筛选（全部、成功、失败等）',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.blue.shade600,
+                  ),
+                ),
+                Text(
+                  '• 按操作类型筛选（移动、重命名、删除等）',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.blue.shade600,
+                  ),
+                ),
+                Text(
+                  '• 选择是否仅显示有变更的文件',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.blue.shade600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          // 进度条和剩余时间
+          _buildProgressBar(),
+        ],
       ),
     );
   }

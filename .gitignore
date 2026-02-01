@@ -49,3 +49,6 @@ pubspec.lock
 version
 .flutter-plugins-dependencies
 pubspec.lock
+backend/backend.pid
+*.log
+*.pid

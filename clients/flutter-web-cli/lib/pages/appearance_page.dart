@@ -69,7 +69,8 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
 
   Future<void> _applyPreset(Map<String, dynamic> preset) async {
     setState(() {
-      _appearanceConfig = Map.from(preset);
+      final config = preset['config'] as Map<String, dynamic>;
+      _appearanceConfig = Map.from(config);
       _isLoading = true;
     });
 

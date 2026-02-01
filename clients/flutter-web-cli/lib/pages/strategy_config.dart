@@ -56,26 +56,25 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
     setState(() {
       _isLoading = true;
       _errorMessage = '';
+      _strategyConfig = null;
     });
 
     try {
       final strategy = await _strategyService.getStrategyInfo(strategyId);
       final config = await _strategyService.getStrategyConfig(strategyId);
+      
       setState(() {
-        try {
-          if (strategy != null) {
-            _selectedStrategy = strategy;
-          }
-          if (config != null) {
-            _strategyConfig = config;
-          }
-        } catch (e) {
-          _errorMessage = '解析策略配置失败: $e';
+        if (strategy != null) {
+          _selectedStrategy = strategy;
+        }
+        if (config != null) {
+          _strategyConfig = config;
         }
       });
     } catch (e) {
       setState(() {
         _errorMessage = '加载策略配置失败: $e';
+        _strategyConfig = null;
       });
     } finally {
       setState(() {
@@ -257,11 +256,11 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
                         ),
                       ),
 
-                    if (_isLoading && _strategyConfig != null)
+                    if (_isLoading && _strategyConfig == null)
                       const Center(
                         child: CircularProgressIndicator(),
                       )
-                    else if (_strategyConfig != null)
+                    else if (_strategyConfig != null && _selectedStrategy != null)
                       Expanded(
                         child: ListView.builder(
                           itemCount: _selectedStrategy!.configFields.length,

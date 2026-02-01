@@ -16,13 +16,20 @@ class StrategyInfo {
   });
 
   factory StrategyInfo.fromJson(Map<String, dynamic> json) {
-    final configFields = (json['configFields'] as List<dynamic>?)?.map((field) => ConfigField.fromJson(field as Map<String, dynamic>)).toList() ?? [];
+    final configFields = (json['configFields'] as List<dynamic>?)?.map((field) {
+      try {
+        return ConfigField.fromJson(field as Map<String, dynamic>);
+      } catch (e) {
+        print('Failed to parse config field: $field, error: $e');
+        rethrow;
+      }
+    }).toList() ?? [];
     return StrategyInfo(
       id: json['id'] as String,
       name: json['name'] as String,
       description: json['description'] as String,
       configFields: configFields,
-      enabled: json['enabled'] as bool,
+      enabled: json['enabled'] as bool? ?? true,
     );
   }
 

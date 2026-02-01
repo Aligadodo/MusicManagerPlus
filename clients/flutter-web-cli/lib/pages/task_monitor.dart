@@ -224,19 +224,10 @@ class _TaskMonitorPageState extends ConsumerState<TaskMonitorPage> {
         ],
       ),
       body: Container(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(12.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '任务列表',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 20),
-
             if (_errorMessage.isNotEmpty)
               Container(
                 padding: const EdgeInsets.all(10),
@@ -261,11 +252,14 @@ class _TaskMonitorPageState extends ConsumerState<TaskMonitorPage> {
                   itemCount: _tasks.length,
                   itemBuilder: (context, index) {
                     final task = _tasks[index];
-                    return Card(
-                      elevation: 2,
-                      margin: const EdgeInsets.symmetric(vertical: 10),
+                    return Container(
+                      margin: const EdgeInsets.symmetric(vertical: 6),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade200),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
                       child: Padding(
-                        padding: const EdgeInsets.all(15.0),
+                        padding: const EdgeInsets.all(12.0),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -289,18 +283,21 @@ class _TaskMonitorPageState extends ConsumerState<TaskMonitorPage> {
                                     ),
                                   ),
                                   backgroundColor: _getStatusBackgroundColor(task.status),
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  visualDensity: VisualDensity.compact,
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 8),
                             LinearProgressIndicator(
                               value: task.progress,
                               backgroundColor: Colors.grey[200],
                               valueColor: AlwaysStoppedAnimation<Color>(
                                 _getProgressColor(task.status),
                               ),
+                              minHeight: 6,
                             ),
-                            const SizedBox(height: 5),
+                            const SizedBox(height: 4),
                             Text(
                               '进度: ${(task.progress * 100).toStringAsFixed(1)}%',
                               style: const TextStyle(
@@ -308,14 +305,14 @@ class _TaskMonitorPageState extends ConsumerState<TaskMonitorPage> {
                                 color: Colors.grey,
                               ),
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 8),
                             Text(
                               task.message,
                               style: const TextStyle(
                                 fontSize: 14,
                               ),
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 8),
                             Text(
                               '变更记录: ${task.changes.length} 条',
                               style: const TextStyle(
@@ -323,15 +320,18 @@ class _TaskMonitorPageState extends ConsumerState<TaskMonitorPage> {
                                 color: Colors.grey,
                               ),
                             ),
-                            const SizedBox(height: 15),
+                            const SizedBox(height: 10),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
                                 if (task.changes.isNotEmpty)
                                   TextButton.icon(
                                     onPressed: () => _showChangeDetails(task),
-                                    icon: const Icon(Icons.list),
-                                    label: const Text('查看详情'),
+                                    icon: const Icon(Icons.list, size: 14),
+                                    label: const Text('查看详情', style: TextStyle(fontSize: 12)),
+                                    style: TextButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    ),
                                   ),
                                 const SizedBox(width: 8),
                                 if (task.status == TaskStatusEnum.PENDING)
@@ -339,7 +339,10 @@ class _TaskMonitorPageState extends ConsumerState<TaskMonitorPage> {
                                     onPressed: () {
                                       _executeTask(task.taskId);
                                     },
-                                    child: const Text('执行'),
+                                    child: const Text('执行', style: TextStyle(fontSize: 12)),
+                                    style: ElevatedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    ),
                                   ),
                                 if (task.status == TaskStatusEnum.RUNNING)
                                   ElevatedButton(
@@ -348,8 +351,9 @@ class _TaskMonitorPageState extends ConsumerState<TaskMonitorPage> {
                                     },
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.orange,
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                     ),
-                                    child: const Text('取消'),
+                                    child: const Text('取消', style: TextStyle(fontSize: 12)),
                                   ),
                               ],
                             ),

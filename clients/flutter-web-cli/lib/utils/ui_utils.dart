@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class UIUtils {
   /// 显示成功消息
   static void showSuccessMessage(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: _CopyableText(message),
         backgroundColor: Colors.green,
       ),
     );
@@ -15,7 +16,7 @@ class UIUtils {
   static void showErrorMessage(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: _CopyableText(message),
         backgroundColor: Colors.red,
       ),
     );
@@ -25,9 +26,19 @@ class UIUtils {
   static void showWarningMessage(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: _CopyableText(message),
         backgroundColor: Colors.orange,
       ),
+    );
+  }
+
+  /// 可双击复制的文本组件
+  static Widget _CopyableText(String text) {
+    return GestureDetector(
+      onDoubleTap: () async {
+        await Clipboard.setData(ClipboardData(text: text));
+      },
+      child: Text(text),
     );
   }
 
@@ -41,8 +52,8 @@ class UIUtils {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text(title),
-          content: Text(message),
+          title: _CopyableText(title),
+          content: _CopyableText(message),
           actions: [
             TextButton(
               onPressed: () {
@@ -80,7 +91,7 @@ class UIUtils {
             children: [
               const CircularProgressIndicator(),
               const SizedBox(width: 20),
-              Text(message),
+              _CopyableText(message),
             ],
           ),
         );

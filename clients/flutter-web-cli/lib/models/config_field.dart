@@ -45,7 +45,7 @@ class ConfigField {
           ? List<String>.from(json['options'] as List) 
           : null,
       subFields: json['subFields'] as Map<String, dynamic>?,
-      isModule: json['isModule'] as bool? ?? false,
+      isModule: json['isModule'] as bool? ?? json['module'] as bool? ?? false,
       moduleType: json['moduleType'] as String?,
     );
   }
