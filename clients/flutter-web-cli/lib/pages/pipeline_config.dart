@@ -6,6 +6,8 @@ import '../api/strategy_service.dart';
 import '../api/pipeline_service.dart';
 import '../models/plugin_info.dart';
 import '../models/strategy_info.dart';
+import '../models/config_field.dart';
+import '../utils/tooltip_utils.dart';
 
 class PipelineConfigPage extends ConsumerStatefulWidget {
   const PipelineConfigPage({super.key});
@@ -116,7 +118,14 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
 
   void _addStrategy(StrategyInfo strategy) {
     setState(() {
-      _pipeline.add(strategy);
+      // 创建策略的副本，确保包含完整的配置字段
+      _pipeline.add(StrategyInfo(
+        id: strategy.id,
+        name: strategy.name,
+        description: strategy.description,
+        configFields: strategy.configFields ?? [],
+        enabled: true,
+      ));
     });
   }
 
@@ -143,6 +152,307 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
         _pipeline[index] = _pipeline[index + 1];
         _pipeline[index + 1] = temp;
       });
+    }
+  }
+
+  Widget _buildConfigField(ConfigField field) {
+    try {
+      switch (field.type) {
+        case 'text':
+          return _buildTextField(field);
+        case 'number':
+          return _buildNumberField(field);
+        case 'boolean':
+          return _buildBooleanField(field);
+        case 'select':
+          return _buildSelectField(field);
+        case 'directory':
+          return _buildDirectoryField(field);
+        case 'list':
+          return _buildListField(field);
+        default:
+          return _buildTextField(field);
+      }
+    } catch (e) {
+      return Card(
+        color: Colors.red.shade50,
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(
+            '字段加载失败: $e',
+            style: const TextStyle(color: Colors.red),
+          ),
+        ),
+      );
+    }
+  }
+
+  Widget _buildTextField(ConfigField field) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Tooltip(
+            message: field.description ?? '',
+            child: Text(
+              field.label,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          const SizedBox(height: 5),
+          Tooltip(
+            message: field.description ?? '',
+            child: TextField(
+              decoration: InputDecoration(
+                border: const OutlineInputBorder(),
+                hintText: field.description,
+              ),
+              controller: TextEditingController(
+                text: field.defaultValue?.toString() ?? '',
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNumberField(ConfigField field) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Tooltip(
+            message: field.description ?? '',
+            child: Text(
+              field.label,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          const SizedBox(height: 5),
+          Tooltip(
+            message: field.description ?? '',
+            child: TextField(
+              decoration: InputDecoration(
+                border: const OutlineInputBorder(),
+                hintText: field.description,
+              ),
+              controller: TextEditingController(
+                text: field.defaultValue?.toString() ?? '',
+              ),
+              keyboardType: TextInputType.number,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBooleanField(ConfigField field) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Tooltip(
+                  message: field.description ?? '',
+                  child: Text(
+                    field.label,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                Text(
+                  field.description ?? '',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+          Tooltip(
+            message: field.description ?? '',
+            child: Checkbox(
+              value: field.defaultValue ?? false,
+              onChanged: (v) {
+                // TODO: 保存配置值
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSelectField(ConfigField field) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Tooltip(
+            message: field.description ?? '',
+            child: Text(
+              field.label,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          const SizedBox(height: 5),
+          Tooltip(
+            message: field.description ?? '',
+            child: DropdownButtonFormField<String>(
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+              ),
+              value: field.defaultValue?.toString(),
+              items: field.options?.map((option) {
+                return DropdownMenuItem<String>(
+                  value: option,
+                  child: Text(option),
+                );
+              }).toList() ?? [],
+              onChanged: (v) {
+                // TODO: 保存配置值
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDirectoryField(ConfigField field) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Tooltip(
+            message: field.description ?? '',
+            child: Text(
+              field.label,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          const SizedBox(height: 5),
+          Tooltip(
+            message: field.description ?? '',
+            child: TextField(
+              decoration: InputDecoration(
+                border: const OutlineInputBorder(),
+                hintText: field.description,
+                suffixIcon: const Icon(Icons.folder),
+              ),
+              controller: TextEditingController(
+                text: field.defaultValue?.toString() ?? '',
+              ),
+              readOnly: true,
+              onTap: () async {
+                // TODO: 实现目录选择器
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildListField(ConfigField field) {
+    try {
+      List<String> listValue = <String>[];
+      if (field.defaultValue is List) {
+        try {
+          listValue = List<String>.from(field.defaultValue);
+        } catch (e) {
+          listValue = (field.defaultValue as List).map((item) => item?.toString() ?? '').toList();
+        }
+      } else if (field.defaultValue != null) {
+        listValue = [field.defaultValue.toString()];
+      }
+      
+      return Container(
+        margin: const EdgeInsets.symmetric(vertical: 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Tooltip(
+              message: field.description ?? '',
+              child: Text(
+                field.label,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            const SizedBox(height: 5),
+            Tooltip(
+              message: field.description ?? '',
+              child: Container(
+                height: 100,
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: ListView.builder(
+                  itemCount: listValue.length,
+                  itemBuilder: (context, index) {
+                    return ListTile(
+                      title: Text(listValue[index]),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () {
+                          // TODO: 移除列表项
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+            const SizedBox(height: 5),
+            Row(
+              children: [
+                Expanded(
+                  child: Tooltip(
+                    message: field.description ?? '',
+                    child: TextField(
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        hintText: '输入新项...',
+                      ),
+                      onSubmitted: (v) {
+                        if (v.isNotEmpty) {
+                          // TODO: 添加新列表项
+                        }
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                ElevatedButton(
+                  onPressed: () {
+                    // TODO: 添加新列表项
+                  },
+                  child: const Text('添加'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      return Card(
+        color: Colors.red.shade50,
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(
+            '列表字段加载失败: $e',
+            style: const TextStyle(color: Colors.red),
+          ),
+        ),
+      );
     }
   }
 
@@ -296,12 +606,12 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
                             const SizedBox(height: 16),
                             const Text('配置:', style: TextStyle(fontWeight: FontWeight.bold)),
                             const SizedBox(height: 8),
-                            const TextField(
-                              decoration: InputDecoration(
-                                labelText: '配置项',
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
+                            if (plugin.configFields != null && plugin.configFields!.isNotEmpty)
+                              ...plugin.configFields!.map((field) {
+                                return _buildConfigField(field);
+                              }).toList()
+                            else
+                              const Text('此插件/策略暂无配置项'),
                             const SizedBox(height: 16),
                             Row(
                               children: [

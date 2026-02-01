@@ -5,6 +5,7 @@ import 'package:filemanager_flutter/api/strategy_service.dart';
 import 'package:filemanager_flutter/models/strategy_info.dart';
 import 'package:filemanager_flutter/models/strategy_config.dart';
 import 'package:filemanager_flutter/models/config_field.dart';
+import 'package:filemanager_flutter/utils/tooltip_utils.dart';
 
 class StrategyConfigPage extends ConsumerStatefulWidget {
   const StrategyConfigPage({super.key});
@@ -379,22 +380,28 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            field.label,
-            style: const TextStyle(fontWeight: FontWeight.bold),
+          Tooltip(
+            message: field.description ?? '',
+            child: Text(
+              field.label,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
           const SizedBox(height: 5),
-          TextField(
-            decoration: InputDecoration(
-              border: const OutlineInputBorder(),
-              hintText: field.description,
+          Tooltip(
+            message: field.description ?? '',
+            child: TextField(
+              decoration: InputDecoration(
+                border: const OutlineInputBorder(),
+                hintText: field.description,
+              ),
+              controller: TextEditingController(
+                text: value?.toString() ?? field.defaultValue?.toString() ?? '',
+              ),
+              onChanged: (v) {
+                _strategyConfig?.setValue(field.name, v);
+              },
             ),
-            controller: TextEditingController(
-              text: value?.toString() ?? field.defaultValue?.toString() ?? '',
-            ),
-            onChanged: (v) {
-              _strategyConfig?.setValue(field.name, v);
-            },
           ),
         ],
       ),
@@ -407,23 +414,29 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            field.label,
-            style: const TextStyle(fontWeight: FontWeight.bold),
+          Tooltip(
+            message: field.description ?? '',
+            child: Text(
+              field.label,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
           const SizedBox(height: 5),
-          TextField(
-            decoration: InputDecoration(
-              border: const OutlineInputBorder(),
-              hintText: field.description,
+          Tooltip(
+            message: field.description ?? '',
+            child: TextField(
+              decoration: InputDecoration(
+                border: const OutlineInputBorder(),
+                hintText: field.description,
+              ),
+              controller: TextEditingController(
+                text: value?.toString() ?? field.defaultValue?.toString() ?? '',
+              ),
+              keyboardType: TextInputType.number,
+              onChanged: (v) {
+                _strategyConfig?.setValue(field.name, int.tryParse(v));
+              },
             ),
-            controller: TextEditingController(
-              text: value?.toString() ?? field.defaultValue?.toString() ?? '',
-            ),
-            keyboardType: TextInputType.number,
-            onChanged: (v) {
-              _strategyConfig?.setValue(field.name, int.tryParse(v));
-            },
           ),
         ],
       ),
@@ -440,22 +453,28 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  field.label,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                Tooltip(
+                  message: field.description ?? '',
+                  child: Text(
+                    field.label,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
                 Text(
-                  field.description,
+                  field.description ?? '',
                   style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ],
             ),
           ),
-          Checkbox(
-            value: value ?? field.defaultValue ?? false,
-            onChanged: (v) {
-              _strategyConfig?.setValue(field.name, v);
-            },
+          Tooltip(
+            message: field.description ?? '',
+            child: Checkbox(
+              value: value ?? field.defaultValue ?? false,
+              onChanged: (v) {
+                _strategyConfig?.setValue(field.name, v);
+              },
+            ),
           ),
         ],
       ),
@@ -468,25 +487,31 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            field.label,
-            style: const TextStyle(fontWeight: FontWeight.bold),
+          Tooltip(
+            message: field.description ?? '',
+            child: Text(
+              field.label,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
           const SizedBox(height: 5),
-          DropdownButtonFormField<String>(
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
+          Tooltip(
+            message: field.description ?? '',
+            child: DropdownButtonFormField<String>(
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+              ),
+              value: value?.toString() ?? field.defaultValue?.toString(),
+              items: field.options?.map((option) {
+                return DropdownMenuItem<String>(
+                  value: option,
+                  child: Text(option),
+                );
+              }).toList() ?? [],
+              onChanged: (v) {
+                _strategyConfig?.setValue(field.name, v);
+              },
             ),
-            value: value?.toString() ?? field.defaultValue?.toString(),
-            items: field.options?.map((option) {
-              return DropdownMenuItem<String>(
-                value: option,
-                child: Text(option),
-              );
-            }).toList() ?? [],
-            onChanged: (v) {
-              _strategyConfig?.setValue(field.name, v);
-            },
           ),
         ],
       ),
@@ -499,24 +524,30 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            field.label,
-            style: const TextStyle(fontWeight: FontWeight.bold),
+          Tooltip(
+            message: field.description ?? '',
+            child: Text(
+              field.label,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
           const SizedBox(height: 5),
-          TextField(
-            decoration: InputDecoration(
-              border: const OutlineInputBorder(),
-              hintText: field.description,
-              suffixIcon: const Icon(Icons.folder),
+          Tooltip(
+            message: field.description ?? '',
+            child: TextField(
+              decoration: InputDecoration(
+                border: const OutlineInputBorder(),
+                hintText: field.description,
+                suffixIcon: const Icon(Icons.folder),
+              ),
+              controller: TextEditingController(
+                text: value?.toString() ?? field.defaultValue?.toString() ?? '',
+              ),
+              readOnly: true,
+              onTap: () async {
+                // TODO: 实现目录选择器
+              },
             ),
-            controller: TextEditingController(
-              text: value?.toString() ?? field.defaultValue?.toString() ?? '',
-            ),
-            readOnly: true,
-            onTap: () async {
-              // TODO: 实现目录选择器
-            },
           ),
         ],
       ),
@@ -541,50 +572,59 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              field.label,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+            Tooltip(
+              message: field.description ?? '',
+              child: Text(
+                field.label,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
             const SizedBox(height: 5),
-            Container(
-              height: 100,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: ListView.builder(
-                itemCount: listValue.length,
-                itemBuilder: (context, index) {
-                  return ListTile(
-                    title: Text(listValue[index]),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () {
-                        final newValue = List<String>.from(listValue);
-                        newValue.removeAt(index);
-                        _strategyConfig?.setValue(field.name, newValue);
-                      },
-                    ),
-                  );
-                },
+            Tooltip(
+              message: field.description ?? '',
+              child: Container(
+                height: 100,
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: ListView.builder(
+                  itemCount: listValue.length,
+                  itemBuilder: (context, index) {
+                    return ListTile(
+                      title: Text(listValue[index]),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () {
+                          final newValue = List<String>.from(listValue);
+                          newValue.removeAt(index);
+                          _strategyConfig?.setValue(field.name, newValue);
+                        },
+                      ),
+                    );
+                  },
+                ),
               ),
             ),
             const SizedBox(height: 5),
             Row(
               children: [
                 Expanded(
-                  child: TextField(
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
-                      hintText: '输入新项...',
+                  child: Tooltip(
+                    message: field.description ?? '',
+                    child: TextField(
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        hintText: '输入新项...',
+                      ),
+                      onSubmitted: (v) {
+                        if (v.isNotEmpty) {
+                          final newValue = List<String>.from(listValue);
+                          newValue.add(v);
+                          _strategyConfig?.setValue(field.name, newValue);
+                        }
+                      },
                     ),
-                    onSubmitted: (v) {
-                      if (v.isNotEmpty) {
-                        final newValue = List<String>.from(listValue);
-                        newValue.add(v);
-                        _strategyConfig?.setValue(field.name, newValue);
-                      }
-                    },
                   ),
                 ),
                 const SizedBox(width: 10),
