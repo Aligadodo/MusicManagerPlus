@@ -48,4 +48,4 @@ echo "服务地址: http://localhost:8080"
 echo "按 Ctrl+C 停止服务"
 echo ""
 
-"$SCRIPT_DIR/jdk/bin/java" -Xms512m -Xmx1g -jar "$SCRIPT_DIR/backend/backend.jar"
+"$SCRIPT_DIR/../../jdk/bin/java" -Xms512m -Xmx1g -jar "$SCRIPT_DIR/../../backend/backend.jar"

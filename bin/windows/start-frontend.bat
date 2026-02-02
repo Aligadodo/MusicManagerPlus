@@ -37,7 +37,7 @@ echo 访问地址: http://localhost:8081
 echo 按 Ctrl+C 停止服务
 echo.
 
-cd "%SCRIPT_DIR%\frontend"
+cd "%SCRIPT_DIR%\..\..\frontend"
 python -m http.server 8081
 
 pause
