@@ -237,9 +237,11 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
         const SnackBar(content: Text('开始预览分析')),
       );
       
-      await Future.delayed(const Duration(seconds: 2));
+      // 切换到预览执行页面
+      _tabController.animateTo(1);
       
-      taskNotifier.complete();
+      // 这里不需要手动执行分析，因为预览执行页面会自动处理
+      // 我们只需要确保状态已经正确设置
     } catch (e) {
       taskNotifier.error(e.toString());
       ScaffoldMessenger.of(context).showSnackBar(
@@ -260,24 +262,14 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
     }
     
     try {
-      final taskId = await _createTask();
-      if (taskId == null) {
-        taskNotifier.error('创建任务失败');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('创建任务失败，请检查配置')),
-        );
-        return;
-      }
+      // 切换到预览执行页面
+      _tabController.animateTo(1);
       
-      taskNotifier.startRunning(taskId);
-      
+      // 这里不需要手动执行任务，因为预览执行页面会自动处理
+      // 我们只需要确保状态已经正确设置
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('开始执行流水线')),
+        const SnackBar(content: Text('请在预览执行页面确认变更后执行')),
       );
-      
-      await _executeTask(taskId);
-      
-      taskNotifier.complete();
     } catch (e) {
       taskNotifier.error(e.toString());
       ScaffoldMessenger.of(context).showSnackBar(
@@ -290,7 +282,7 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
     try {
       final apiClient = ref.read(apiClientProvider);
       final response = await apiClient.post(
-        '/api/tasks',
+        '/tasks',
         body: {
           'strategyId': 'default',
           'filePaths': [],
@@ -314,7 +306,7 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
     try {
       final apiClient = ref.read(apiClientProvider);
       final response = await apiClient.post(
-        '/api/tasks/$taskId/execute',
+        '/tasks/$taskId/execute',
         body: {},
       );
       
@@ -341,13 +333,12 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
     try {
       taskNotifier.stop();
       
-      if (currentState.taskId != null) {
-        final apiClient = ref.read(apiClientProvider);
-        await apiClient.post(
-          '/api/tasks/${currentState.taskId}/cancel',
-          body: {},
-        );
-      }
+      // 切换到预览执行页面
+      _tabController.animateTo(1);
+      
+      // 停止流水线任务
+      final apiClient = ref.read(apiClientProvider);
+      await apiClient.post('/pipeline/stop', body: {});
       
       await Future.delayed(const Duration(seconds: 1));
       

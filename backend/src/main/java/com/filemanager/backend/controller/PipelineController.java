@@ -10,6 +10,7 @@ import com.filemanager.domain.service.TaskService;
 import com.filemanager.domain.dto.TaskRequestDTO;
 import com.filemanager.domain.dto.ChangeRecordQueryDTO;
 import com.filemanager.domain.dto.ChangeRecordResponseDTO;
+import com.filemanager.backend.logging.UnifiedLogger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -39,7 +40,7 @@ public class PipelineController {
 
     @javax.annotation.PostConstruct
     public void init() {
-        System.out.println("[Pipeline] 初始化配置加载");
+        UnifiedLogger.backendOperation("Pipeline", "初始化配置加载");
         loadPipelineConfig();
     }
 
@@ -47,20 +48,19 @@ public class PipelineController {
         try {
             File configFile = new File(configFilePath);
             if (configFile.exists()) {
-                System.out.println("[Pipeline] 找到配置文件，开始加载: " + configFilePath);
+                UnifiedLogger.backendOperation("Pipeline", "找到配置文件，开始加载: " + configFilePath);
                 FileReader reader = new FileReader(configFile);
                 com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
                 List<Map<String, Object>> pipeline = mapper.readValue(reader, new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, Object>>>() {});
                 pipelines.put("default", pipeline);
                 reader.close();
-                System.out.println("[Pipeline] 配置加载成功，流水线长度: " + pipeline.size());
+                UnifiedLogger.backendOperation("Pipeline", "配置加载成功，流水线长度: " + pipeline.size());
             } else {
-                System.out.println("[Pipeline] 配置文件不存在，使用默认空配置: " + configFilePath);
+                UnifiedLogger.backendOperation("Pipeline", "配置文件不存在，使用默认空配置: " + configFilePath);
                 pipelines.put("default", new ArrayList<>());
             }
         } catch (Exception e) {
-            System.err.println("[Pipeline] 配置加载失败: " + e.getMessage());
-            e.printStackTrace();
+            UnifiedLogger.backendError("Pipeline", "配置加载失败: " + e.getMessage(), e);
             pipelines.put("default", new ArrayList<>());
         }
     }
@@ -73,10 +73,9 @@ public class PipelineController {
             com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
             mapper.writeValue(writer, pipeline);
             writer.close();
-            System.out.println("[Pipeline] 配置保存成功，流水线长度: " + pipeline.size());
+            UnifiedLogger.backendOperation("Pipeline", "配置保存成功，流水线长度: " + pipeline.size());
         } catch (Exception e) {
-            System.err.println("[Pipeline] 配置保存失败: " + e.getMessage());
-            e.printStackTrace();
+            UnifiedLogger.backendError("Pipeline", "配置保存失败: " + e.getMessage(), e);
         }
     }
 
@@ -93,17 +92,16 @@ public class PipelineController {
     @PostMapping
     public ResponseEntity<Map<String, Object>> updatePipeline(@RequestBody List<Map<String, Object>> pipeline) {
         try {
-            System.out.println("[Pipeline] 收到更新流水线请求，长度: " + (pipeline != null ? pipeline.size() : 0));
+            UnifiedLogger.backendOperation("Pipeline", "收到更新流水线请求，长度: " + (pipeline != null ? pipeline.size() : 0));
             pipelines.put("default", pipeline);
             savePipelineConfig();
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
             result.put("message", "流水线更新成功");
-            System.out.println("[Pipeline] 流水线更新完成并保存");
+            UnifiedLogger.backendOperation("Pipeline", "流水线更新完成并保存");
             return ResponseEntity.ok(result);
         } catch (Exception e) {
-            System.err.println("[Pipeline] 流水线更新失败: " + e.getMessage());
-            e.printStackTrace();
+            UnifiedLogger.backendError("Pipeline", "流水线更新失败: " + e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
@@ -146,9 +144,9 @@ public class PipelineController {
 
             CompletableFuture.runAsync(() -> {
                 try {
-                    System.out.println("[Pipeline] 开始预览分析，任务ID: " + taskId);
-                    System.out.println("[Pipeline] 源目录: " + sourceDirectories);
-                    System.out.println("[Pipeline] 流水线节点数量: " + pipeline.size());
+                    UnifiedLogger.backendOperation("Pipeline", "开始预览分析，任务ID: " + taskId);
+                    UnifiedLogger.backendOperation("Pipeline", "源目录: " + sourceDirectories);
+                    UnifiedLogger.backendOperation("Pipeline", "流水线节点数量: " + pipeline.size());
 
                     taskManager.updateTaskStep(taskId, "输出流水线配置信息");
                     StringBuilder configSummary = new StringBuilder();
@@ -163,7 +161,7 @@ public class PipelineController {
                         Map<String, Object> pluginConfig = pipeline.get(i);
                         String pluginId = (String) pluginConfig.get("pluginId");
                         Map<String, Object> configMap = (Map<String, Object>) pluginConfig.get("config");
-                        configSummary.append("  节点").append(i + 1).append(": ").append(pluginId);
+                        configSummary.append("  节点").append(i + 1).append(": " ).append(pluginId);
                         if (configMap != null && !configMap.isEmpty()) {
                             configSummary.append(" (参数: ").append(configMap.size()).append("个)");
                         }
@@ -171,12 +169,12 @@ public class PipelineController {
                         
                         if (configMap != null) {
                             for (Map.Entry<String, Object> entry : configMap.entrySet()) {
-                                configSummary.append("    ").append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");
+                                configSummary.append("    ").append(entry.getKey()).append(": " ).append(entry.getValue()).append("\n");
                             }
                         }
                     }
                     
-                    System.out.println(configSummary.toString());
+                    UnifiedLogger.backendOperation("Pipeline", configSummary.toString());
                     taskManager.updateTaskLogMessage(taskId, configSummary.toString());
 
                     taskManager.updateTaskStep(taskId, "扫描文件");
@@ -191,7 +189,7 @@ public class PipelineController {
                         if (dir.exists() && dir.isDirectory()) {
                             int fileCount = countFiles(dir);
                             totalFiles += fileCount;
-                            System.out.println("[Pipeline] 目录 " + directory + " 包含 " + fileCount + " 个文件");
+                            UnifiedLogger.backendOperation("Pipeline", "目录 " + directory + " 包含 " + fileCount + " 个文件");
                         }
                     }
                     
@@ -210,7 +208,7 @@ public class PipelineController {
 
                         taskManager.updateTaskStep(taskId, "执行节点: " + pluginId);
                         taskManager.updateTaskMessage(taskId, "正在执行节点: " + pluginId);
-                        System.out.println("[Pipeline] 执行节点: " + pluginId);
+                        UnifiedLogger.backendOperation("Pipeline", "执行节点: " + pluginId);
 
                         PluginConfigDTO config = new PluginConfigDTO();
                         if (configMap != null) {
@@ -229,7 +227,7 @@ public class PipelineController {
                         
                         String progressMessage = String.format("节点 %d/%d 完成，发现 %d 个变更", completed, pipeline.size(), changes.size());
                         taskManager.updateTaskMessage(taskId, progressMessage);
-                        System.out.println("[Pipeline] " + progressMessage);
+                        UnifiedLogger.backendOperation("Pipeline", progressMessage);
                     }
 
                     currentChanges.addAll(allChanges);
@@ -239,16 +237,15 @@ public class PipelineController {
                         taskManager.updateTaskMessage(taskId, "预览完成，共发现 " + allChanges.size() + " 个变更");
                         taskManager.updateTaskChanges(taskId, !allChanges.isEmpty(), allChanges.size());
                         taskManager.updateTaskScanningInfo(taskId, sourceDirectories.get(0), totalFiles, totalFiles);
-                        System.out.println("[Pipeline] 预览完成，共发现 " + allChanges.size() + " 个变更");
+                        UnifiedLogger.backendOperation("Pipeline", "预览完成，共发现 " + allChanges.size() + " 个变更");
                     } else {
                         taskManager.updateTaskStatus(taskId, TaskStatus.CANCELLED);
                         taskManager.updateTaskMessage(taskId, "任务已中止");
                     }
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    UnifiedLogger.backendError("Pipeline", "预览失败: " + e.getMessage(), e);
                     taskManager.updateTaskStatus(taskId, TaskStatus.PREVIEW_FAILED);
                     taskManager.updateTaskMessage(taskId, "预览失败: " + e.getMessage());
-                    System.err.println("[Pipeline] 预览失败: " + e.getMessage());
                 } finally {
                     taskManager.setCurrentTaskRunning(false);
                 }
@@ -311,9 +308,9 @@ public class PipelineController {
 
             CompletableFuture.runAsync(() -> {
                 try {
-                    System.out.println("[Pipeline] 开始执行，任务ID: " + taskId);
-                    System.out.println("[Pipeline] 源目录: " + sourceDirectories);
-                    System.out.println("[Pipeline] 流水线节点数量: " + pipeline.size());
+                    UnifiedLogger.backendOperation("Pipeline", "开始执行，任务ID: " + taskId);
+                    UnifiedLogger.backendOperation("Pipeline", "源目录: " + sourceDirectories);
+                    UnifiedLogger.backendOperation("Pipeline", "流水线节点数量: " + pipeline.size());
 
                     taskManager.updateTaskStep(taskId, "输出流水线配置信息");
                     StringBuilder configSummary = new StringBuilder();
@@ -328,7 +325,7 @@ public class PipelineController {
                         Map<String, Object> pluginConfig = pipeline.get(i);
                         String pluginId = (String) pluginConfig.get("pluginId");
                         Map<String, Object> configMap = (Map<String, Object>) pluginConfig.get("config");
-                        configSummary.append("  节点").append(i + 1).append(": ").append(pluginId);
+                        configSummary.append("  节点").append(i + 1).append(": " ).append(pluginId);
                         if (configMap != null && !configMap.isEmpty()) {
                             configSummary.append(" (参数: ").append(configMap.size()).append("个)");
                         }
@@ -336,12 +333,12 @@ public class PipelineController {
                         
                         if (configMap != null) {
                             for (Map.Entry<String, Object> entry : configMap.entrySet()) {
-                                configSummary.append("    ").append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");
+                                configSummary.append("    ").append(entry.getKey()).append(": " ).append(entry.getValue()).append("\n");
                             }
                         }
                     }
                     
-                    System.out.println(configSummary.toString());
+                    UnifiedLogger.backendOperation("Pipeline", configSummary.toString());
                     taskManager.updateTaskLogMessage(taskId, configSummary.toString());
 
                     taskManager.updateTaskStep(taskId, "扫描文件");
@@ -356,7 +353,7 @@ public class PipelineController {
                         if (dir.exists() && dir.isDirectory()) {
                             int fileCount = countFiles(dir);
                             totalFiles += fileCount;
-                            System.out.println("[Pipeline] 目录 " + directory + " 包含 " + fileCount + " 个文件");
+                            UnifiedLogger.backendOperation("Pipeline", "目录 " + directory + " 包含 " + fileCount + " 个文件");
                         }
                     }
                     
@@ -375,7 +372,7 @@ public class PipelineController {
 
                         taskManager.updateTaskStep(taskId, "执行节点: " + pluginId);
                         taskManager.updateTaskMessage(taskId, "正在执行节点: " + pluginId);
-                        System.out.println("[Pipeline] 执行节点: " + pluginId);
+                        UnifiedLogger.backendOperation("Pipeline", "执行节点: " + pluginId);
 
                         PluginConfigDTO config = new PluginConfigDTO();
                         if (configMap != null) {
@@ -394,7 +391,7 @@ public class PipelineController {
                         
                         String progressMessage = String.format("节点 %d/%d 完成，处理 %d 个文件", completed, pipeline.size(), changes.size());
                         taskManager.updateTaskMessage(taskId, progressMessage);
-                        System.out.println("[Pipeline] " + progressMessage);
+                        UnifiedLogger.backendOperation("Pipeline", progressMessage);
                     }
 
                     currentChanges.addAll(allChanges);
@@ -404,7 +401,7 @@ public class PipelineController {
                         taskManager.updateTaskMessage(taskId, "执行完成，共处理 " + allChanges.size() + " 个文件");
                         taskManager.updateTaskChanges(taskId, !allChanges.isEmpty(), allChanges.size());
                         taskManager.updateTaskScanningInfo(taskId, sourceDirectories.get(0), totalFiles, totalFiles);
-                        System.out.println("[Pipeline] 执行完成，共处理 " + allChanges.size() + " 个文件");
+                        UnifiedLogger.backendOperation("Pipeline", "执行完成，共处理 " + allChanges.size() + " 个文件");
                         
                         taskService.executeTask(taskServiceId);
                     } else {
@@ -412,10 +409,9 @@ public class PipelineController {
                         taskManager.updateTaskMessage(taskId, "任务已中止");
                     }
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    UnifiedLogger.backendError("Pipeline", "执行失败: " + e.getMessage(), e);
                     taskManager.updateTaskStatus(taskId, TaskStatus.EXECUTION_FAILED);
                     taskManager.updateTaskMessage(taskId, "执行失败: " + e.getMessage());
-                    System.err.println("[Pipeline] 执行失败: " + e.getMessage());
                 } finally {
                     taskManager.setCurrentTaskRunning(false);
                 }

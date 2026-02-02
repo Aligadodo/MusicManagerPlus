@@ -1,17 +1,20 @@
-2026-02-01 15:28:18.213 [main] INFO  com.filemanager.backend.Application - Starting Application v1.0.0 using Java 1.8.0_452 on hrcao-mac-mini.local with PID 79255 (/Users/hrcao/Documents/MusicManagerPlus/backend/target/backend-1.0.0.jar started by hrcao in /Users/hrcao/Documents/MusicManagerPlus/backend)
-2026-02-01 15:28:18.213 [main] INFO  com.filemanager.backend.Application - No active profile set, falling back to 1 default profile: "default"
-2026-02-01 15:28:18.653 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
-2026-02-01 15:28:18.653 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/9.0.83]
-2026-02-01 15:28:18.684 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
-2026-02-01 15:28:18.762 [main] WARN  o.s.b.a.s.s.UserDetailsServiceAutoConfiguration - 
+2026-02-03 00:43:17.931 [main] INFO  com.filemanager.backend.Application - Starting Application v1.0.0 using Java 1.8.0_452 on hrcao-mac-mini.local with PID 28489 (/Users/hrcao/Documents/MusicManagerPlus/backend/target/backend-1.0.0.jar started by hrcao in /Users/hrcao/Documents/MusicManagerPlus/backend)
+2026-02-03 00:43:17.934 [main] INFO  com.filemanager.backend.Application - No active profile set, falling back to 1 default profile: "default"
+2026-02-03 00:43:18.368 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2026-02-03 00:43:18.368 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/9.0.83]
+2026-02-03 00:43:18.402 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-02-03 00:43:18.496 [main] INFO  c.f.b.s.impl.StrategyServiceImpl - [Strategy] 配置文件不存在，使用默认配置: strategy_configs.json
+2026-02-03 00:43:18.499 [main] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 初始化配置加载
+2026-02-03 00:43:18.499 [main] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 配置文件不存在，使用默认空配置: pipeline_config.json
+2026-02-03 00:43:18.554 [main] WARN  o.s.b.a.s.s.UserDetailsServiceAutoConfiguration - 
 
-Using generated security password: 6226c5b8-fc97-4d2d-a89e-e261e53222cf
+Using generated security password: 785cb69d-1dfc-4f90-a0ad-656ed4d04f8c
 
 This generated password is for development use only. Your security configuration must be updated before running your application in production.
 
-2026-02-01 15:28:18.941 [main] WARN  o.s.b.w.s.c.AnnotationConfigServletWebServerApplicationContext - Exception encountered during context initialization - cancelling refresh attempt: org.springframework.context.ApplicationContextException: Failed to start bean 'webServerStartStop'; nested exception is org.springframework.boot.web.server.PortInUseException: Port 8080 is already in use
-2026-02-01 15:28:18.942 [main] INFO  o.a.catalina.core.StandardService - Stopping service [Tomcat]
-2026-02-01 15:28:18.952 [main] ERROR o.s.b.d.LoggingFailureAnalysisReporter - 
+2026-02-03 00:43:18.757 [main] WARN  o.s.b.w.s.c.AnnotationConfigServletWebServerApplicationContext - Exception encountered during context initialization - cancelling refresh attempt: org.springframework.context.ApplicationContextException: Failed to start bean 'webServerStartStop'; nested exception is org.springframework.boot.web.server.PortInUseException: Port 8080 is already in use
+2026-02-03 00:43:18.759 [main] INFO  o.a.catalina.core.StandardService - Stopping service [Tomcat]
+2026-02-03 00:43:18.772 [main] ERROR o.s.b.d.LoggingFailureAnalysisReporter - 
 
 ***************************
 APPLICATION FAILED TO START
@@ -25,166 +28,103 @@ Action:
 
 Identify and stop the process that's listening on port 8080 or configure this application to listen on another port.
 
-2026-02-01 15:29:20.013 [main] INFO  com.filemanager.backend.Application - Starting Application v1.0.0 using Java 1.8.0_452 on hrcao-mac-mini.local with PID 80252 (/Users/hrcao/Documents/MusicManagerPlus/backend/target/backend-1.0.0.jar started by hrcao in /Users/hrcao/Documents/MusicManagerPlus/backend)
-2026-02-01 15:29:20.014 [main] INFO  com.filemanager.backend.Application - No active profile set, falling back to 1 default profile: "default"
-2026-02-01 15:29:20.427 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
-2026-02-01 15:29:20.428 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/9.0.83]
-2026-02-01 15:29:20.454 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
-2026-02-01 15:29:20.542 [main] WARN  o.s.b.a.s.s.UserDetailsServiceAutoConfiguration - 
+2026-02-03 00:43:28.472 [main] INFO  com.filemanager.backend.Application - Starting Application v1.0.0 using Java 1.8.0_452 on hrcao-mac-mini.local with PID 28836 (/Users/hrcao/Documents/MusicManagerPlus/backend/target/backend-1.0.0.jar started by hrcao in /Users/hrcao/Documents/MusicManagerPlus/backend)
+2026-02-03 00:43:28.473 [main] INFO  com.filemanager.backend.Application - No active profile set, falling back to 1 default profile: "default"
+2026-02-03 00:43:28.903 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2026-02-03 00:43:28.903 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/9.0.83]
+2026-02-03 00:43:28.933 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-02-03 00:43:28.978 [main] INFO  c.f.b.s.impl.StrategyServiceImpl - [Strategy] 配置文件不存在，使用默认配置: strategy_configs.json
+2026-02-03 00:43:28.981 [main] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 初始化配置加载
+2026-02-03 00:43:28.981 [main] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 配置文件不存在，使用默认空配置: pipeline_config.json
+2026-02-03 00:43:29.031 [main] WARN  o.s.b.a.s.s.UserDetailsServiceAutoConfiguration - 
 
-Using generated security password: 0af51d6c-0f6b-4f8b-b0f2-c33a42797cf3
+Using generated security password: da01a180-11ac-4e60-8f6a-b81c1aca79d2
 
 This generated password is for development use only. Your security configuration must be updated before running your application in production.
 
-2026-02-01 15:29:20.758 [main] INFO  com.filemanager.backend.Application - Started Application in 0.95 seconds (JVM running for 1.131)
-2026-02-01 15:29:40.435 [http-nio-8080-exec-1] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
-2026-02-01 21:25:52.129 [main] INFO  com.filemanager.backend.Application - Starting Application using Java 1.8.0_452 on hrcao-mac-mini.local with PID 2171 (/Users/hrcao/Documents/MusicManagerPlus/backend/target/classes started by hrcao in /Users/hrcao/Documents/MusicManagerPlus/backend)
-2026-02-01 21:25:52.130 [main] INFO  com.filemanager.backend.Application - No active profile set, falling back to 1 default profile: "default"
-2026-02-01 21:25:52.366 [main] ERROR o.s.boot.SpringApplication - Application run failed
-java.lang.IllegalStateException: Cannot load configuration class: com.filemanager.backend.config.SecurityConfig
-	at org.springframework.context.annotation.ConfigurationClassPostProcessor.enhanceConfigurationClasses(ConfigurationClassPostProcessor.java:415)
-	at org.springframework.context.annotation.ConfigurationClassPostProcessor.postProcessBeanFactory(ConfigurationClassPostProcessor.java:268)
-	at org.springframework.context.support.PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(PostProcessorRegistrationDelegate.java:325)
-	at org.springframework.context.support.PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(PostProcessorRegistrationDelegate.java:147)
-	at org.springframework.context.support.AbstractApplicationContext.invokeBeanFactoryPostProcessors(AbstractApplicationContext.java:756)
-	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:572)
-	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:147)
-	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:732)
-	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:409)
-	at org.springframework.boot.SpringApplication.run(SpringApplication.java:308)
-	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1300)
-	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1289)
-	at com.filemanager.backend.Application.main(Application.java:9)
-Caused by: java.lang.UnsupportedClassVersionError: com/filemanager/backend/config/SecurityConfig has been compiled by a more recent version of the Java Runtime (class file version 65.0), this version of the Java Runtime only recognizes class file versions up to 52.0
-	at java.lang.ClassLoader.defineClass1(Native Method)
-	at java.lang.ClassLoader.defineClass(ClassLoader.java:757)
-	at java.security.SecureClassLoader.defineClass(SecureClassLoader.java:142)
-	at java.net.URLClassLoader.defineClass(URLClassLoader.java:473)
-	at java.net.URLClassLoader.access$100(URLClassLoader.java:74)
-	at java.net.URLClassLoader$1.run(URLClassLoader.java:369)
-	at java.net.URLClassLoader$1.run(URLClassLoader.java:363)
-	at java.security.AccessController.doPrivileged(Native Method)
-	at java.net.URLClassLoader.findClass(URLClassLoader.java:362)
-	at java.lang.ClassLoader.loadClass(ClassLoader.java:419)
-	at sun.misc.Launcher$AppClassLoader.loadClass(Launcher.java:352)
-	at java.lang.ClassLoader.loadClass(ClassLoader.java:352)
-	at java.lang.Class.forName0(Native Method)
-	at java.lang.Class.forName(Class.java:348)
-	at org.springframework.util.ClassUtils.forName(ClassUtils.java:291)
-	at org.springframework.beans.factory.support.AbstractBeanDefinition.resolveBeanClass(AbstractBeanDefinition.java:469)
-	at org.springframework.context.annotation.ConfigurationClassPostProcessor.enhanceConfigurationClasses(ConfigurationClassPostProcessor.java:411)
-	... 12 common frames omitted
-2026-02-01 21:25:52.367 [main] WARN  o.s.boot.SpringApplication - Unable to close ApplicationContext
-org.springframework.beans.factory.CannotLoadBeanClassException: Error loading class [com.filemanager.backend.config.SecurityConfig] for bean with name 'securityConfig' defined in file [/Users/hrcao/Documents/MusicManagerPlus/backend/target/classes/com/filemanager/backend/config/SecurityConfig.class]: problem with class file or dependent class; nested exception is java.lang.UnsupportedClassVersionError: com/filemanager/backend/config/SecurityConfig has been compiled by a more recent version of the Java Runtime (class file version 65.0), this version of the Java Runtime only recognizes class file versions up to 52.0
-	at org.springframework.beans.factory.support.AbstractBeanFactory.resolveBeanClass(AbstractBeanFactory.java:1559)
-	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.determineTargetType(AbstractAutowireCapableBeanFactory.java:704)
-	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.predictBeanType(AbstractAutowireCapableBeanFactory.java:674)
-	at org.springframework.beans.factory.support.AbstractBeanFactory.isFactoryBean(AbstractBeanFactory.java:1684)
-	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doGetBeanNamesForType(DefaultListableBeanFactory.java:570)
-	at org.springframework.beans.factory.support.DefaultListableBeanFactory.getBeanNamesForType(DefaultListableBeanFactory.java:542)
-	at org.springframework.beans.factory.support.DefaultListableBeanFactory.getBeansOfType(DefaultListableBeanFactory.java:669)
-	at org.springframework.beans.factory.support.DefaultListableBeanFactory.getBeansOfType(DefaultListableBeanFactory.java:661)
-	at org.springframework.context.support.AbstractApplicationContext.getBeansOfType(AbstractApplicationContext.java:1314)
-	at org.springframework.boot.SpringApplication.getExitCodeFromMappedException(SpringApplication.java:861)
-	at org.springframework.boot.SpringApplication.getExitCodeFromException(SpringApplication.java:849)
-	at org.springframework.boot.SpringApplication.handleExitCode(SpringApplication.java:836)
-	at org.springframework.boot.SpringApplication.handleRunFailure(SpringApplication.java:776)
-	at org.springframework.boot.SpringApplication.run(SpringApplication.java:318)
-	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1300)
-	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1289)
-	at com.filemanager.backend.Application.main(Application.java:9)
-Caused by: java.lang.UnsupportedClassVersionError: com/filemanager/backend/config/SecurityConfig has been compiled by a more recent version of the Java Runtime (class file version 65.0), this version of the Java Runtime only recognizes class file versions up to 52.0
-	at java.lang.ClassLoader.defineClass1(Native Method)
-	at java.lang.ClassLoader.defineClass(ClassLoader.java:757)
-	at java.security.SecureClassLoader.defineClass(SecureClassLoader.java:142)
-	at java.net.URLClassLoader.defineClass(URLClassLoader.java:473)
-	at java.net.URLClassLoader.access$100(URLClassLoader.java:74)
-	at java.net.URLClassLoader$1.run(URLClassLoader.java:369)
-	at java.net.URLClassLoader$1.run(URLClassLoader.java:363)
-	at java.security.AccessController.doPrivileged(Native Method)
-	at java.net.URLClassLoader.findClass(URLClassLoader.java:362)
-	at java.lang.ClassLoader.loadClass(ClassLoader.java:419)
-	at sun.misc.Launcher$AppClassLoader.loadClass(Launcher.java:352)
-	at java.lang.ClassLoader.loadClass(ClassLoader.java:352)
-	at java.lang.Class.forName0(Native Method)
-	at java.lang.Class.forName(Class.java:348)
-	at org.springframework.util.ClassUtils.forName(ClassUtils.java:291)
-	at org.springframework.beans.factory.support.AbstractBeanDefinition.resolveBeanClass(AbstractBeanDefinition.java:469)
-	at org.springframework.beans.factory.support.AbstractBeanFactory.doResolveBeanClass(AbstractBeanFactory.java:1621)
-	at org.springframework.beans.factory.support.AbstractBeanFactory.resolveBeanClass(AbstractBeanFactory.java:1548)
-	... 16 common frames omitted
-2026-02-01 21:26:20.820 [main] INFO  com.filemanager.backend.Application - Starting Application using Java 1.8.0_452 on hrcao-mac-mini.local with PID 2533 (/Users/hrcao/Documents/MusicManagerPlus/backend/target/classes started by hrcao in /Users/hrcao/Documents/MusicManagerPlus/backend)
-2026-02-01 21:26:20.820 [main] INFO  com.filemanager.backend.Application - No active profile set, falling back to 1 default profile: "default"
-2026-02-01 21:26:21.063 [main] ERROR o.s.boot.SpringApplication - Application run failed
-java.lang.IllegalStateException: Cannot load configuration class: com.filemanager.backend.config.SecurityConfig
-	at org.springframework.context.annotation.ConfigurationClassPostProcessor.enhanceConfigurationClasses(ConfigurationClassPostProcessor.java:415)
-	at org.springframework.context.annotation.ConfigurationClassPostProcessor.postProcessBeanFactory(ConfigurationClassPostProcessor.java:268)
-	at org.springframework.context.support.PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(PostProcessorRegistrationDelegate.java:325)
-	at org.springframework.context.support.PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(PostProcessorRegistrationDelegate.java:147)
-	at org.springframework.context.support.AbstractApplicationContext.invokeBeanFactoryPostProcessors(AbstractApplicationContext.java:756)
-	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:572)
-	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:147)
-	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:732)
-	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:409)
-	at org.springframework.boot.SpringApplication.run(SpringApplication.java:308)
-	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1300)
-	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1289)
-	at com.filemanager.backend.Application.main(Application.java:9)
-Caused by: java.lang.UnsupportedClassVersionError: com/filemanager/backend/config/SecurityConfig has been compiled by a more recent version of the Java Runtime (class file version 65.0), this version of the Java Runtime only recognizes class file versions up to 52.0
-	at java.lang.ClassLoader.defineClass1(Native Method)
-	at java.lang.ClassLoader.defineClass(ClassLoader.java:757)
-	at java.security.SecureClassLoader.defineClass(SecureClassLoader.java:142)
-	at java.net.URLClassLoader.defineClass(URLClassLoader.java:473)
-	at java.net.URLClassLoader.access$100(URLClassLoader.java:74)
-	at java.net.URLClassLoader$1.run(URLClassLoader.java:369)
-	at java.net.URLClassLoader$1.run(URLClassLoader.java:363)
-	at java.security.AccessController.doPrivileged(Native Method)
-	at java.net.URLClassLoader.findClass(URLClassLoader.java:362)
-	at java.lang.ClassLoader.loadClass(ClassLoader.java:419)
-	at sun.misc.Launcher$AppClassLoader.loadClass(Launcher.java:352)
-	at java.lang.ClassLoader.loadClass(ClassLoader.java:352)
-	at java.lang.Class.forName0(Native Method)
-	at java.lang.Class.forName(Class.java:348)
-	at org.springframework.util.ClassUtils.forName(ClassUtils.java:291)
-	at org.springframework.beans.factory.support.AbstractBeanDefinition.resolveBeanClass(AbstractBeanDefinition.java:469)
-	at org.springframework.context.annotation.ConfigurationClassPostProcessor.enhanceConfigurationClasses(ConfigurationClassPostProcessor.java:411)
-	... 12 common frames omitted
-2026-02-01 21:26:21.065 [main] WARN  o.s.boot.SpringApplication - Unable to close ApplicationContext
-org.springframework.beans.factory.CannotLoadBeanClassException: Error loading class [com.filemanager.backend.config.SecurityConfig] for bean with name 'securityConfig' defined in file [/Users/hrcao/Documents/MusicManagerPlus/backend/target/classes/com/filemanager/backend/config/SecurityConfig.class]: problem with class file or dependent class; nested exception is java.lang.UnsupportedClassVersionError: com/filemanager/backend/config/SecurityConfig has been compiled by a more recent version of the Java Runtime (class file version 65.0), this version of the Java Runtime only recognizes class file versions up to 52.0
-	at org.springframework.beans.factory.support.AbstractBeanFactory.resolveBeanClass(AbstractBeanFactory.java:1559)
-	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.determineTargetType(AbstractAutowireCapableBeanFactory.java:704)
-	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.predictBeanType(AbstractAutowireCapableBeanFactory.java:674)
-	at org.springframework.beans.factory.support.AbstractBeanFactory.isFactoryBean(AbstractBeanFactory.java:1684)
-	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doGetBeanNamesForType(DefaultListableBeanFactory.java:570)
-	at org.springframework.beans.factory.support.DefaultListableBeanFactory.getBeanNamesForType(DefaultListableBeanFactory.java:542)
-	at org.springframework.beans.factory.support.DefaultListableBeanFactory.getBeansOfType(DefaultListableBeanFactory.java:669)
-	at org.springframework.beans.factory.support.DefaultListableBeanFactory.getBeansOfType(DefaultListableBeanFactory.java:661)
-	at org.springframework.context.support.AbstractApplicationContext.getBeansOfType(AbstractApplicationContext.java:1314)
-	at org.springframework.boot.SpringApplication.getExitCodeFromMappedException(SpringApplication.java:861)
-	at org.springframework.boot.SpringApplication.getExitCodeFromException(SpringApplication.java:849)
-	at org.springframework.boot.SpringApplication.handleExitCode(SpringApplication.java:836)
-	at org.springframework.boot.SpringApplication.handleRunFailure(SpringApplication.java:776)
-	at org.springframework.boot.SpringApplication.run(SpringApplication.java:318)
-	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1300)
-	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1289)
-	at com.filemanager.backend.Application.main(Application.java:9)
-Caused by: java.lang.UnsupportedClassVersionError: com/filemanager/backend/config/SecurityConfig has been compiled by a more recent version of the Java Runtime (class file version 65.0), this version of the Java Runtime only recognizes class file versions up to 52.0
-	at java.lang.ClassLoader.defineClass1(Native Method)
-	at java.lang.ClassLoader.defineClass(ClassLoader.java:757)
-	at java.security.SecureClassLoader.defineClass(SecureClassLoader.java:142)
-	at java.net.URLClassLoader.defineClass(URLClassLoader.java:473)
-	at java.net.URLClassLoader.access$100(URLClassLoader.java:74)
-	at java.net.URLClassLoader$1.run(URLClassLoader.java:369)
-	at java.net.URLClassLoader$1.run(URLClassLoader.java:363)
-	at java.security.AccessController.doPrivileged(Native Method)
-	at java.net.URLClassLoader.findClass(URLClassLoader.java:362)
-	at java.lang.ClassLoader.loadClass(ClassLoader.java:419)
-	at sun.misc.Launcher$AppClassLoader.loadClass(Launcher.java:352)
-	at java.lang.ClassLoader.loadClass(ClassLoader.java:352)
-	at java.lang.Class.forName0(Native Method)
-	at java.lang.Class.forName(Class.java:348)
-	at org.springframework.util.ClassUtils.forName(ClassUtils.java:291)
-	at org.springframework.beans.factory.support.AbstractBeanDefinition.resolveBeanClass(AbstractBeanDefinition.java:469)
-	at org.springframework.beans.factory.support.AbstractBeanFactory.doResolveBeanClass(AbstractBeanFactory.java:1621)
-	at org.springframework.beans.factory.support.AbstractBeanFactory.resolveBeanClass(AbstractBeanFactory.java:1548)
-	... 16 common frames omitted
+2026-02-03 00:43:29.235 [main] INFO  com.filemanager.backend.Application - Started Application in 0.953 seconds (JVM running for 1.123)
+2026-02-03 00:45:01.152 [http-nio-8080-exec-1] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-02-03 00:45:01.231 [http-nio-8080-exec-5] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 获取所有策略列表
+2026-02-03 00:45:01.232 [http-nio-8080-exec-5] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 成功返回 12 个策略
+2026-02-03 00:59:25.755 [http-nio-8080-exec-2] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 获取所有策略列表
+2026-02-03 00:59:25.756 [http-nio-8080-exec-2] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 成功返回 12 个策略
+2026-02-03 01:00:00.673 [http-nio-8080-exec-10] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 获取所有策略列表
+2026-02-03 01:00:00.673 [http-nio-8080-exec-10] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 成功返回 12 个策略
+2026-02-03 01:02:07.049 [http-nio-8080-exec-10] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 获取所有策略列表
+2026-02-03 01:02:07.050 [http-nio-8080-exec-10] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 成功返回 12 个策略
+2026-02-03 01:21:55.349 [http-nio-8080-exec-9] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 获取所有策略列表
+2026-02-03 01:21:55.350 [http-nio-8080-exec-9] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 成功返回 12 个策略
+2026-02-03 01:22:46.359 [http-nio-8080-exec-8] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 获取所有策略列表
+2026-02-03 01:22:46.359 [http-nio-8080-exec-8] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 成功返回 12 个策略
+2026-02-03 01:22:58.776 [http-nio-8080-exec-5] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 获取所有策略列表
+2026-02-03 01:22:58.777 [http-nio-8080-exec-5] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 成功返回 12 个策略
+2026-02-03 01:23:00.942 [http-nio-8080-exec-1] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 获取所有策略列表
+2026-02-03 01:23:00.943 [http-nio-8080-exec-1] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 成功返回 12 个策略
+2026-02-03 01:23:12.692 [http-nio-8080-exec-5] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 获取所有策略列表
+2026-02-03 01:23:12.692 [http-nio-8080-exec-5] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 成功返回 12 个策略
+2026-02-03 01:25:05.749 [http-nio-8080-exec-2] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 获取所有策略列表
+2026-02-03 01:25:05.749 [http-nio-8080-exec-2] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 成功返回 12 个策略
+2026-02-03 01:33:50.446 [http-nio-8080-exec-9] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 获取所有策略列表
+2026-02-03 01:33:50.446 [http-nio-8080-exec-9] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 成功返回 12 个策略
+2026-02-03 01:34:11.458 [http-nio-8080-exec-9] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 获取所有策略列表
+2026-02-03 01:34:11.459 [http-nio-8080-exec-9] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 成功返回 12 个策略
+2026-02-03 01:34:17.470 [http-nio-8080-exec-5] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 获取所有策略列表
+2026-02-03 01:34:17.470 [http-nio-8080-exec-5] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 成功返回 12 个策略
+2026-02-03 01:34:28.768 [http-nio-8080-exec-1] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 收到更新流水线请求，长度: 1
+2026-02-03 01:34:28.769 [http-nio-8080-exec-1] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 配置保存成功，流水线长度: 1
+2026-02-03 01:34:28.769 [http-nio-8080-exec-1] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 流水线更新完成并保存
+2026-02-03 01:34:31.888 [http-nio-8080-exec-10] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 收到更新流水线请求，长度: 0
+2026-02-03 01:34:31.888 [http-nio-8080-exec-10] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 配置保存成功，流水线长度: 0
+2026-02-03 01:34:31.888 [http-nio-8080-exec-10] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 流水线更新完成并保存
+2026-02-03 01:34:34.288 [http-nio-8080-exec-2] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 收到更新流水线请求，长度: 1
+2026-02-03 01:34:34.289 [http-nio-8080-exec-2] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 配置保存成功，流水线长度: 1
+2026-02-03 01:34:34.289 [http-nio-8080-exec-2] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 流水线更新完成并保存
+2026-02-03 01:34:34.998 [http-nio-8080-exec-4] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 收到更新流水线请求，长度: 2
+2026-02-03 01:34:34.999 [http-nio-8080-exec-4] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 配置保存成功，流水线长度: 2
+2026-02-03 01:34:34.999 [http-nio-8080-exec-4] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 流水线更新完成并保存
+2026-02-03 01:34:37.354 [http-nio-8080-exec-3] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 收到更新流水线请求，长度: 3
+2026-02-03 01:34:37.355 [http-nio-8080-exec-3] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 配置保存成功，流水线长度: 3
+2026-02-03 01:34:37.355 [http-nio-8080-exec-3] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 流水线更新完成并保存
+2026-02-03 01:34:39.305 [http-nio-8080-exec-7] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 收到更新流水线请求，长度: 4
+2026-02-03 01:34:39.306 [http-nio-8080-exec-7] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 配置保存成功，流水线长度: 4
+2026-02-03 01:34:39.306 [http-nio-8080-exec-7] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 流水线更新完成并保存
+2026-02-03 01:34:41.191 [http-nio-8080-exec-5] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 收到更新流水线请求，长度: 5
+2026-02-03 01:34:41.193 [http-nio-8080-exec-5] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 配置保存成功，流水线长度: 5
+2026-02-03 01:34:41.193 [http-nio-8080-exec-5] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 流水线更新完成并保存
+2026-02-03 01:34:43.546 [http-nio-8080-exec-8] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 收到更新流水线请求，长度: 6
+2026-02-03 01:34:43.547 [http-nio-8080-exec-8] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 配置保存成功，流水线长度: 6
+2026-02-03 01:34:43.547 [http-nio-8080-exec-8] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 流水线更新完成并保存
+2026-02-03 01:34:44.358 [http-nio-8080-exec-9] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-unzip/config - 获取策略配置
+2026-02-03 01:34:44.359 [http-nio-8080-exec-9] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 获取策略配置 - strategyId: file-unzip
+2026-02-03 01:34:44.359 [http-nio-8080-exec-9] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 策略配置不存在，创建默认配置 - strategyId: file-unzip
+2026-02-03 01:34:44.359 [http-nio-8080-exec-9] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 返回策略配置 - strategyId: file-unzip, 配置项数量: 11
+2026-02-03 01:34:44.359 [http-nio-8080-exec-9] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-unzip/config - 成功返回配置，包含 11 个参数
+2026-02-03 01:34:44.940 [http-nio-8080-exec-10] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-migrate/config - 获取策略配置
+2026-02-03 01:34:44.941 [http-nio-8080-exec-10] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 获取策略配置 - strategyId: file-migrate
+2026-02-03 01:34:44.941 [http-nio-8080-exec-10] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 策略配置不存在，创建默认配置 - strategyId: file-migrate
+2026-02-03 01:34:44.941 [http-nio-8080-exec-10] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 返回策略配置 - strategyId: file-migrate, 配置项数量: 9
+2026-02-03 01:34:44.941 [http-nio-8080-exec-10] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-migrate/config - 成功返回配置，包含 9 个参数
+2026-02-03 01:34:46.559 [http-nio-8080-exec-2] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-migrate/config - 获取策略配置
+2026-02-03 01:34:46.559 [http-nio-8080-exec-2] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 获取策略配置 - strategyId: file-migrate
+2026-02-03 01:34:46.559 [http-nio-8080-exec-2] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 返回策略配置 - strategyId: file-migrate, 配置项数量: 9
+2026-02-03 01:34:46.559 [http-nio-8080-exec-2] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-migrate/config - 成功返回配置，包含 9 个参数
+2026-02-03 01:34:48.782 [http-nio-8080-exec-4] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-unzip/config - 获取策略配置
+2026-02-03 01:34:48.782 [http-nio-8080-exec-4] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 获取策略配置 - strategyId: file-unzip
+2026-02-03 01:34:48.783 [http-nio-8080-exec-4] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 返回策略配置 - strategyId: file-unzip, 配置项数量: 11
+2026-02-03 01:34:48.783 [http-nio-8080-exec-4] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-unzip/config - 成功返回配置，包含 11 个参数
+2026-02-03 01:34:49.514 [http-nio-8080-exec-3] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-migrate/config - 获取策略配置
+2026-02-03 01:34:49.514 [http-nio-8080-exec-3] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 获取策略配置 - strategyId: file-migrate
+2026-02-03 01:34:49.514 [http-nio-8080-exec-3] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 返回策略配置 - strategyId: file-migrate, 配置项数量: 9
+2026-02-03 01:34:49.514 [http-nio-8080-exec-3] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-migrate/config - 成功返回配置，包含 9 个参数
+2026-02-03 01:34:53.161 [http-nio-8080-exec-7] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-migrate/config - 获取策略配置
+2026-02-03 01:34:53.161 [http-nio-8080-exec-7] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 获取策略配置 - strategyId: file-migrate
+2026-02-03 01:34:53.161 [http-nio-8080-exec-7] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 返回策略配置 - strategyId: file-migrate, 配置项数量: 9
+2026-02-03 01:34:53.161 [http-nio-8080-exec-7] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-migrate/config - 成功返回配置，包含 9 个参数
+2026-02-03 01:34:53.932 [http-nio-8080-exec-5] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-unzip/config - 获取策略配置
+2026-02-03 01:34:53.932 [http-nio-8080-exec-5] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 获取策略配置 - strategyId: file-unzip
+2026-02-03 01:34:53.932 [http-nio-8080-exec-5] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 返回策略配置 - strategyId: file-unzip, 配置项数量: 11
+2026-02-03 01:34:53.932 [http-nio-8080-exec-5] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-unzip/config - 成功返回配置，包含 11 个参数
+2026-02-03 01:34:54.481 [http-nio-8080-exec-8] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-migrate/config - 获取策略配置
+2026-02-03 01:34:54.481 [http-nio-8080-exec-8] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 获取策略配置 - strategyId: file-migrate
+2026-02-03 01:34:54.481 [http-nio-8080-exec-8] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 返回策略配置 - strategyId: file-migrate, 配置项数量: 9
+2026-02-03 01:34:54.481 [http-nio-8080-exec-8] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-migrate/config - 成功返回配置，包含 9 个参数

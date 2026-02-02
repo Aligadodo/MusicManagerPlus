@@ -32,7 +32,7 @@ class _ConfigPageState extends ConsumerState<ConfigPage> {
 
     try {
       final apiClient = ApiClient();
-      final response = await apiClient.get('/api/config');
+      final response = await apiClient.get('/config');
       
       setState(() {
         _config = Map<String, dynamic>.from(jsonDecode(response.body));
@@ -66,7 +66,7 @@ class _ConfigPageState extends ConsumerState<ConfigPage> {
       }
 
       final apiClient = ApiClient();
-      await apiClient.post('/api/config', body: updatedConfig);
+      await apiClient.post('/config', body: updatedConfig);
 
       setState(() {
         _successMessage = '配置保存成功';
@@ -91,7 +91,7 @@ class _ConfigPageState extends ConsumerState<ConfigPage> {
 
     try {
       final apiClient = ApiClient();
-      await apiClient.delete('/api/config');
+      await apiClient.delete('/config');
       await _loadConfig();
       setState(() {
         _successMessage = '配置已重置为默认值';

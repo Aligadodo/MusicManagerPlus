@@ -10,7 +10,11 @@ import '../models/source_directory.dart';
 import '../models/strategy_info.dart';
 import '../utils/tooltip_utils.dart';
 
-enum TaskState {
+// 导入main.dart中的taskStateProvider
+import '../main.dart';
+
+// 保留本地TaskState枚举，用于内部状态管理
+enum LocalTaskState {
   ready,
   previewing,
   previewCompleted,
@@ -48,24 +52,24 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
   int _totalRecords = 0;
   int _totalPages = 0;
 
-  TaskState _taskState = TaskState.ready;
+  LocalTaskState _taskState = LocalTaskState.ready;
+  String _taskId = '';
   int _progress = 0;
-  String _remainingTime = '00:00:00';
+  String _remainingTime = '';
   String _currentStep = '';
   String _message = '';
   bool _hasChanges = false;
   int _changeCount = 0;
-  String _currentDirectory = '';
   int _scannedFiles = 0;
   int _totalFiles = 0;
   String _logMessage = '';
-  
-  // 折叠状态
-  bool _isStatusBarExpanded = true;
-  bool _isLogMessageExpanded = false;
-  
+
   Timer? _statusTimer;
-  String? _taskId;
+  Timer? _progressTimer;
+  Timer? _remainingTimeTimer;
+
+  bool _isStatusBarExpanded = false;
+  bool _isLogMessageExpanded = false;
 
   @override
   void initState() {
@@ -164,8 +168,12 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
       return;
     }
 
+    // 更新全局任务状态
+    final taskNotifier = ref.read(taskStateProvider.notifier);
+    taskNotifier.startAnalyzing();
+
     setState(() {
-      _taskState = TaskState.previewing;
+      _taskState = LocalTaskState.previewing;
       _errorMessage = '';
       _progress = 0;
       _remainingTime = '计算中...';
@@ -190,22 +198,24 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
         _startStatusTimer();
       } else {
         setState(() {
-          _taskState = TaskState.previewFailed;
+          _taskState = LocalTaskState.previewFailed;
           _errorMessage = result['message'] ?? '分析任务提交失败';
         });
         _showError(_errorMessage);
+        taskNotifier.error(_errorMessage);
       }
     } catch (e) {
       setState(() {
-        _taskState = TaskState.previewFailed;
+        _taskState = LocalTaskState.previewFailed;
         _errorMessage = '分析流水线失败: $e';
       });
       _showError(_errorMessage);
+      taskNotifier.error(_errorMessage);
     }
   }
 
   Future<void> _executePipeline() async {
-    if (_taskState != TaskState.previewCompleted) {
+    if (_taskState != LocalTaskState.previewCompleted) {
       _showError('请先完成预览分析');
       return;
     }
@@ -224,7 +234,7 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
     }
 
     setState(() {
-      _taskState = TaskState.executing;
+      _taskState = LocalTaskState.executing;
       _errorMessage = '';
       _progress = 0;
       _remainingTime = '计算中...';
@@ -243,21 +253,33 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
         _taskId = result['taskId'];
         _showSuccess(result['message'] ?? '执行任务已开始执行');
         
+        // 更新全局任务状态
+        final taskNotifier = ref.read(taskStateProvider.notifier);
+        taskNotifier.startRunning(_taskId);
+        
         await _fetchChanges();
         _startStatusTimer();
       } else {
         setState(() {
-          _taskState = TaskState.executionFailed;
+          _taskState = LocalTaskState.executionFailed;
           _errorMessage = result['message'] ?? '执行任务提交失败';
         });
         _showError(_errorMessage);
+        
+        // 更新全局任务状态
+        final taskNotifier = ref.read(taskStateProvider.notifier);
+        taskNotifier.error(_errorMessage);
       }
     } catch (e) {
       setState(() {
-        _taskState = TaskState.executionFailed;
+        _taskState = LocalTaskState.executionFailed;
         _errorMessage = '执行流水线失败: $e';
       });
       _showError(_errorMessage);
+      
+      // 更新全局任务状态
+      final taskNotifier = ref.read(taskStateProvider.notifier);
+      taskNotifier.error(_errorMessage);
     }
   }
 
@@ -265,13 +287,22 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
     try {
       await _pipelineService.stopPipeline();
       setState(() {
-        _taskState = TaskState.cancelled;
+        _taskState = LocalTaskState.cancelled;
         _message = '任务已中止';
       });
       _stopStatusTimer();
       _showSuccess('任务已成功中止');
+      
+      // 更新全局任务状态
+      final taskNotifier = ref.read(taskStateProvider.notifier);
+      taskNotifier.stop();
+      taskNotifier.stopComplete();
     } catch (e) {
       _showError('停止任务失败: $e');
+      
+      // 更新全局任务状态
+      final taskNotifier = ref.read(taskStateProvider.notifier);
+      taskNotifier.error('停止任务失败: $e');
     }
   }
 
@@ -299,26 +330,35 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
           _message = status['message']?.toString() ?? '';
           _hasChanges = status['hasChanges'] as bool? ?? false;
           _changeCount = (status['changeCount'] as num?)?.toInt() ?? 0;
-          _currentDirectory = status['currentDirectory']?.toString() ?? '';
           _scannedFiles = (status['scannedFiles'] as num?)?.toInt() ?? 0;
           _totalFiles = (status['totalFiles'] as num?)?.toInt() ?? 0;
           _logMessage = status['logMessage']?.toString() ?? '';
 
           final statusStr = status['status']?.toString();
           if (statusStr == '预览完成') {
-            _taskState = TaskState.previewCompleted;
+            _taskState = LocalTaskState.previewCompleted;
           } else if (statusStr == '预览失败') {
-            _taskState = TaskState.previewFailed;
+            _taskState = LocalTaskState.previewFailed;
           } else if (statusStr == '执行完成') {
-            _taskState = TaskState.executionCompleted;
+            _taskState = LocalTaskState.executionCompleted;
           } else if (statusStr == '执行失败') {
-            _taskState = TaskState.executionFailed;
+            _taskState = LocalTaskState.executionFailed;
           } else if (statusStr == '已中止') {
-            _taskState = TaskState.cancelled;
+            _taskState = LocalTaskState.cancelled;
           }
         });
 
-        if (_taskState.isCompleted || _taskState.isFailed || _taskState == TaskState.cancelled) {
+        // 更新全局任务状态
+        final taskNotifier = ref.read(taskStateProvider.notifier);
+        if (_taskState.isRunning) {
+          taskNotifier.updateProgress(_progress, _message);
+        } else if (_taskState.isCompleted) {
+          taskNotifier.complete();
+        } else if (_taskState.isFailed) {
+          taskNotifier.error(_errorMessage);
+        }
+
+        if (_taskState.isCompleted || _taskState.isFailed || _taskState == LocalTaskState.cancelled) {
           _stopStatusTimer();
         }
       }
@@ -455,6 +495,13 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
                     DropdownMenuItem(value: 'DELETE', child: Text('删除')),
                     DropdownMenuItem(value: 'COPY', child: Text('复制')),
                     DropdownMenuItem(value: 'METADATA_UPDATE', child: Text('元数据')),
+                    DropdownMenuItem(value: 'CONVERT', child: Text('转换')),
+                    DropdownMenuItem(value: 'UNZIP', child: Text('解压')),
+                    DropdownMenuItem(value: 'FIX_TYPE', child: Text('修复类型')),
+                    DropdownMenuItem(value: 'DEDUP', child: Text('去重')),
+                    DropdownMenuItem(value: 'SPLIT', child: Text('分割')),
+                    DropdownMenuItem(value: 'ALBUM_RENAME', child: Text('专辑重命名')),
+                    DropdownMenuItem(value: 'MERGE', child: Text('合并')),
                   ],
                   onChanged: (value) {
                     setState(() {
@@ -518,40 +565,6 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
             ],
           ),
           const Spacer(),
-          Tooltip(
-            message: _taskState.isRunning ? '正在分析...' : '分析变更并生成预览',
-            child: ElevatedButton.icon(
-              onPressed: _taskState.isRunning ? null : _analyzePipeline,
-              icon: _taskState.isRunning ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Icon(Icons.analytics),
-              label: const Text('分析变更'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _taskState.isRunning ? Colors.blue.shade300 : Colors.blue,
-                foregroundColor: Colors.white,
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Tooltip(
-            message: _hasChanges ? '执行变更' : '预览成功且有变更时才能执行',
-            child: ElevatedButton.icon(
-              onPressed: _hasChanges && !_taskState.isRunning ? _executePipeline : null,
-              icon: const Icon(Icons.play_arrow),
-              label: const Text('执行'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _hasChanges ? Colors.green : Colors.grey,
-                foregroundColor: Colors.white,
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          IconButton(
-            icon: const Icon(Icons.stop),
-            onPressed: _taskState.isRunning ? _stopPipeline : null,
-            tooltip: '停止分析或执行',
-            iconSize: 20,
-            color: _taskState.isRunning ? Colors.red : Colors.grey,
-          ),
-          const SizedBox(width: 10),
           Tooltip(
             message: ParameterDescriptions.previewPage['refresh']!,
             child: IconButton(
@@ -723,63 +736,63 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
 
   IconData _getTaskStateIcon() {
     switch (_taskState) {
-      case TaskState.ready:
+      case LocalTaskState.ready:
         return Icons.check_circle_outline;
-      case TaskState.previewing:
+      case LocalTaskState.previewing:
         return Icons.analytics;
-      case TaskState.previewCompleted:
+      case LocalTaskState.previewCompleted:
         return Icons.check_circle;
-      case TaskState.previewFailed:
+      case LocalTaskState.previewFailed:
         return Icons.error;
-      case TaskState.executing:
+      case LocalTaskState.executing:
         return Icons.play_circle;
-      case TaskState.executionCompleted:
+      case LocalTaskState.executionCompleted:
         return Icons.check_circle;
-      case TaskState.executionFailed:
+      case LocalTaskState.executionFailed:
         return Icons.error;
-      case TaskState.cancelled:
+      case LocalTaskState.cancelled:
         return Icons.cancel;
     }
   }
 
   Color _getTaskStateColor() {
     switch (_taskState) {
-      case TaskState.ready:
+      case LocalTaskState.ready:
         return Colors.grey;
-      case TaskState.previewing:
+      case LocalTaskState.previewing:
         return Colors.blue;
-      case TaskState.previewCompleted:
+      case LocalTaskState.previewCompleted:
         return Colors.green;
-      case TaskState.previewFailed:
+      case LocalTaskState.previewFailed:
         return Colors.red;
-      case TaskState.executing:
+      case LocalTaskState.executing:
         return Colors.orange;
-      case TaskState.executionCompleted:
+      case LocalTaskState.executionCompleted:
         return Colors.green;
-      case TaskState.executionFailed:
+      case LocalTaskState.executionFailed:
         return Colors.red;
-      case TaskState.cancelled:
+      case LocalTaskState.cancelled:
         return Colors.orange;
     }
   }
 
   String _getTaskStateText() {
     switch (_taskState) {
-      case TaskState.ready:
+      case LocalTaskState.ready:
         return '准备就绪';
-      case TaskState.previewing:
+      case LocalTaskState.previewing:
         return '预览中';
-      case TaskState.previewCompleted:
+      case LocalTaskState.previewCompleted:
         return '预览完成';
-      case TaskState.previewFailed:
+      case LocalTaskState.previewFailed:
         return '预览失败';
-      case TaskState.executing:
+      case LocalTaskState.executing:
         return '执行中';
-      case TaskState.executionCompleted:
+      case LocalTaskState.executionCompleted:
         return '执行完成';
-      case TaskState.executionFailed:
+      case LocalTaskState.executionFailed:
         return '执行失败';
-      case TaskState.cancelled:
+      case LocalTaskState.cancelled:
         return '已中止';
     }
   }
@@ -972,8 +985,8 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
   }
 }
 
-extension on TaskState {
-  bool get isRunning => this == TaskState.previewing || this == TaskState.executing;
-  bool get isCompleted => this == TaskState.previewCompleted || this == TaskState.executionCompleted;
-  bool get isFailed => this == TaskState.previewFailed || this == TaskState.executionFailed;
+extension on LocalTaskState {
+  bool get isRunning => this == LocalTaskState.previewing || this == LocalTaskState.executing;
+  bool get isCompleted => this == LocalTaskState.previewCompleted || this == LocalTaskState.executionCompleted;
+  bool get isFailed => this == LocalTaskState.previewFailed || this == LocalTaskState.executionFailed;
 }

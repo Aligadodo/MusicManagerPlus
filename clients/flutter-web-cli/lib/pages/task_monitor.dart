@@ -472,6 +472,16 @@ class _TaskMonitorPageState extends ConsumerState<TaskMonitorPage> {
         return Icons.transform;
       case 'MERGE':
         return Icons.merge_type;
+      case 'UNZIP':
+        return Icons.unarchive;
+      case 'FIX_TYPE':
+        return Icons.build;
+      case 'DEDUP':
+        return Icons.content_copy;
+      case 'SPLIT':
+        return Icons.call_split;
+      case 'ALBUM_RENAME':
+        return Icons.folder;
       default:
         return Icons.description;
     }
@@ -493,6 +503,16 @@ class _TaskMonitorPageState extends ConsumerState<TaskMonitorPage> {
         return Colors.teal;
       case 'MERGE':
         return Colors.indigo;
+      case 'UNZIP':
+        return Colors.amber;
+      case 'FIX_TYPE':
+        return Colors.cyan;
+      case 'DEDUP':
+        return Colors.lime;
+      case 'SPLIT':
+        return Colors.pink;
+      case 'ALBUM_RENAME':
+        return Colors.deepOrange;
       default:
         return Colors.grey;
     }

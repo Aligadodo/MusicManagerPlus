@@ -1209,12 +1209,34 @@ class _ComposePageState extends ConsumerState<ComposePage> {
       children: _selectedStrategy!.configFields.where((field) {
         // 检查条件参数是否满足
         if (field.dependsOn != null && field.dependsValue != null) {
-          final dependentValue = _strategyConfig?.getValue(field.dependsOn!);
-          return dependentValue?.toString() == field.dependsValue;
+          try {
+            final dependentValue = _strategyConfig?.getValue(field.dependsOn!);
+            return dependentValue?.toString() == field.dependsValue;
+          } catch (e) {
+            // 如果获取依赖值失败，默认显示该字段
+            return true;
+          }
         }
         return true;
       }).map((field) {
-        return _buildParameterField(field);
+        try {
+          return _buildParameterField(field);
+        } catch (e) {
+          // 如果构建字段失败，返回一个错误提示
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.red.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.red.shade200),
+            ),
+            child: Text(
+              '构建参数字段失败: $e',
+              style: TextStyle(color: Colors.red),
+            ),
+          );
+        }
       }).toList(),
     );
   }
@@ -1238,13 +1260,28 @@ class _ComposePageState extends ConsumerState<ComposePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            field.label,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-              color: Colors.grey.shade800,
-            ),
+          Row(
+            children: [
+              Text(
+                field.label,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: Colors.grey.shade800,
+                ),
+              ),
+              if (field.description.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                Tooltip(
+                  message: field.description,
+                  child: Icon(
+                    Icons.help_outline,
+                    color: Colors.grey.shade500,
+                    size: 16,
+                  ),
+                ),
+              ],
+            ],
           ),
           const SizedBox(height: 8),
           _buildParameterInput(field),
@@ -1254,261 +1291,282 @@ class _ComposePageState extends ConsumerState<ComposePage> {
   }
 
   Widget _buildParameterInput(ConfigField field) {
-    switch (field.type) {
-      case 'string':
-        return TextField(
-          decoration: InputDecoration(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.blue, width: 2),
-            ),
-            hintText: field.defaultValue?.toString(),
-            hintStyle: TextStyle(color: Colors.grey.shade400),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          ),
-          onChanged: (value) {
-            _updateConfigValue(field.name, value);
-          },
-        );
-      case 'number':
-        return TextField(
-          keyboardType: TextInputType.number,
-          decoration: InputDecoration(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.blue, width: 2),
-            ),
-            hintText: field.defaultValue?.toString(),
-            hintStyle: TextStyle(color: Colors.grey.shade400),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          ),
-          onChanged: (value) {
-            _updateConfigValue(field.name, int.tryParse(value) ?? 0);
-          },
-        );
-      case 'boolean':
-        return Container(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            children: [
-              Checkbox(
-                value: field.defaultValue == true,
-                onChanged: (value) {
-                  _updateConfigValue(field.name, value ?? false);
-                },
-                activeColor: Colors.blue,
-                checkColor: Colors.white,
+    try {
+      final fieldType = field.type ?? 'string';
+      
+      switch (fieldType) {
+        case 'string':
+          return TextField(
+            decoration: InputDecoration(
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: BorderSide(color: Colors.grey.shade300),
               ),
-              const SizedBox(width: 8),
-              Text(
-                '启用',
-                style: TextStyle(color: Colors.grey.shade700),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: BorderSide(color: Colors.blue, width: 2),
+              ),
+              hintText: field.defaultValue?.toString(),
+              hintStyle: TextStyle(color: Colors.grey.shade400),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            ),
+            onChanged: (value) {
+              _updateConfigValue(field.name, value);
+            },
+          );
+        case 'number':
+          return TextField(
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: BorderSide(color: Colors.blue, width: 2),
+              ),
+              hintText: field.defaultValue?.toString(),
+              hintStyle: TextStyle(color: Colors.grey.shade400),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            ),
+            onChanged: (value) {
+              _updateConfigValue(field.name, int.tryParse(value) ?? 0);
+            },
+          );
+        case 'boolean':
+          return Container(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              children: [
+                Checkbox(
+                  value: field.defaultValue == true,
+                  onChanged: (value) {
+                    _updateConfigValue(field.name, value ?? false);
+                  },
+                  activeColor: Colors.blue,
+                  checkColor: Colors.white,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '启用',
+                  style: TextStyle(color: Colors.grey.shade700),
+                ),
+              ],
+            ),
+          );
+        case 'directory':
+          return Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(6),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(6),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(6),
+                      borderSide: BorderSide(color: Colors.blue, width: 2),
+                    ),
+                    hintText: field.defaultValue?.toString(),
+                    hintStyle: TextStyle(color: Colors.grey.shade400),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                  onChanged: (value) {
+                    _updateConfigValue(field.name, value);
+                  },
+                ),
+              ),
+              const SizedBox(width: 10),
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.folder_open, color: Colors.blue),
+                  onPressed: () {},
+                  padding: const EdgeInsets.all(8),
+                ),
               ),
             ],
-          ),
-        );
-      case 'directory':
-        return Row(
-          children: [
-            Expanded(
-              child: TextField(
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(6),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(6),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(6),
-                    borderSide: BorderSide(color: Colors.blue, width: 2),
-                  ),
-                  hintText: field.defaultValue?.toString(),
-                  hintStyle: TextStyle(color: Colors.grey.shade400),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                ),
+          );
+        case 'select':
+          if (field.options != null && field.options!.isNotEmpty) {
+            return Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: DropdownButton<String>(
+                value: field.defaultValue?.toString(),
+                items: field.options!.map((option) {
+                  return DropdownMenuItem<String>(
+                    value: option,
+                    child: Text(option, style: TextStyle(color: Colors.grey.shade700)),
+                  );
+                }).toList(),
                 onChanged: (value) {
                   _updateConfigValue(field.name, value);
                 },
+                isExpanded: true,
+                underline: const SizedBox(),
+                icon: Icon(Icons.keyboard_arrow_down, color: Colors.grey.shade600),
+                hint: Text('请选择...', style: TextStyle(color: Colors.grey.shade400)),
               ),
-            ),
-            const SizedBox(width: 10),
-            Container(
-              decoration: BoxDecoration(
+            );
+          }
+          return TextField(
+            decoration: InputDecoration(
+              border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: Colors.grey.shade300),
+                borderSide: BorderSide(color: Colors.grey.shade300),
               ),
-              child: IconButton(
-                icon: const Icon(Icons.folder_open, color: Colors.blue),
-                onPressed: () {},
-                padding: const EdgeInsets.all(8),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: BorderSide(color: Colors.grey.shade300),
               ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: BorderSide(color: Colors.blue, width: 2),
+              ),
+              hintText: field.defaultValue?.toString(),
+              hintStyle: TextStyle(color: Colors.grey.shade400),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             ),
-          ],
-        );
-      case 'select':
-        if (field.options != null && field.options!.isNotEmpty) {
+            onChanged: (value) {
+              _updateConfigValue(field.name, value);
+            },
+          );
+        case 'list':
+          List<String> items = [];
+          try {
+            if (field.defaultValue is List) {
+              items = (field.defaultValue as List).map((item) => item?.toString() ?? '').toList();
+            }
+          } catch (e) {
+            items = [];
+          }
           return Container(
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(8),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: DropdownButton<String>(
-              value: field.defaultValue?.toString(),
-              items: field.options!.map((option) {
-                return DropdownMenuItem<String>(
-                  value: option,
-                  child: Text(option, style: TextStyle(color: Colors.grey.shade700)),
-                );
-              }).toList(),
-              onChanged: (value) {
-                _updateConfigValue(field.name, value);
-              },
-              isExpanded: true,
-              underline: const SizedBox(),
-              icon: Icon(Icons.keyboard_arrow_down, color: Colors.grey.shade600),
-              hint: Text('请选择...', style: TextStyle(color: Colors.grey.shade400)),
-            ),
-          );
-        }
-        return TextField(
-          decoration: InputDecoration(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.blue, width: 2),
-            ),
-            hintText: field.defaultValue?.toString(),
-            hintStyle: TextStyle(color: Colors.grey.shade400),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          ),
-          onChanged: (value) {
-            _updateConfigValue(field.name, value);
-          },
-        );
-      case 'list':
-        final List<String> items = (field.defaultValue as List<String>?) ?? [];
-        return Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.shade300),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '列表项 (${items.length})',
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                  ElevatedButton.icon(
-                    onPressed: () => _showAddListItemDialog(field.name, items),
-                    icon: const Icon(Icons.add, size: 16),
-                    label: const Text('添加项目'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      minimumSize: const Size(0, 0),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(6),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '列表项 (${items.length})',
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () => _showAddListItemDialog(field.name, items),
+                      icon: const Icon(Icons.add, size: 16),
+                      label: const Text('添加项目'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        minimumSize: const Size(0, 0),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-              if (items.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                ...items.asMap().entries.map((entry) {
-                  int index = entry.key;
-                  String item = entry.value;
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 5),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            item,
-                            style: const TextStyle(fontSize: 13),
+                  ],
+                ),
+                if (items.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  ...items.asMap().entries.map((entry) {
+                    int index = entry.key;
+                    String item = entry.value;
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 5),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              item,
+                              style: const TextStyle(fontSize: 13),
+                            ),
                           ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.edit, size: 16, color: Colors.blue),
-                          onPressed: () => _showEditListItemDialog(field.name, items, index),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.delete, size: 16, color: Colors.red),
-                          onPressed: () => _removeListItem(field.name, items, index),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
+                          IconButton(
+                            icon: const Icon(Icons.edit, size: 16, color: Colors.blue),
+                            onPressed: () => _showEditListItemDialog(field.name, items, index),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: const Icon(Icons.delete, size: 16, color: Colors.red),
+                            onPressed: () => _removeListItem(field.name, items, index),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ],
               ],
-            ],
-          ),
-        );
-      default:
-        return TextField(
-          decoration: InputDecoration(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
             ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.grey.shade300),
+          );
+        default:
+          return TextField(
+            decoration: InputDecoration(
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: BorderSide(color: Colors.blue, width: 2),
+              ),
+              hintText: field.defaultValue?.toString() ?? '请输入...',
+              hintStyle: TextStyle(color: Colors.grey.shade400),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide(color: Colors.blue, width: 2),
-            ),
-            hintText: field.defaultValue?.toString(),
-            hintStyle: TextStyle(color: Colors.grey.shade400),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          ),
-          onChanged: (value) {
-            _updateConfigValue(field.name, value);
-          },
-        );
+            onChanged: (value) {
+              _updateConfigValue(field.name, value);
+            },
+          );
+      }
+    } catch (e) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.red.shade50,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.red.shade200),
+        ),
+        child: Text('构建输入控件失败: $e', style: TextStyle(color: Colors.red)),
+      );
     }
   }
 
