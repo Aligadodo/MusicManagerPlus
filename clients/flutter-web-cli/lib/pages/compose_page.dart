@@ -186,9 +186,11 @@ class _ComposePageState extends ConsumerState<ComposePage> {
     try {
       StrategyInfo? strategy;
       if (_selectedPipelineStrategy != null) {
-        strategy = _selectedPipelineStrategy;
+        // 创建一个带有唯一流水线ID的策略实例
+        strategy = _selectedPipelineStrategy!.copyWithPipelineId();
       } else if (_availableStrategies.isNotEmpty) {
-        strategy = _availableStrategies.first;
+        // 创建一个带有唯一流水线ID的策略实例
+        strategy = _availableStrategies.first.copyWithPipelineId();
       } else {
         throw Exception('没有可用的策略');
       }
@@ -702,7 +704,9 @@ class _ComposePageState extends ConsumerState<ComposePage> {
       itemCount: _pipelineStrategies.length,
       itemBuilder: (context, index) {
         final strategy = _pipelineStrategies[index];
-        final isSelected = _selectedStrategy?.id == strategy.id;
+        // 使用pipelineId或id来判断选中状态，确保同一策略的多个实例能被独立选择
+        final isSelected = _selectedStrategy?.pipelineId == strategy.pipelineId || 
+                          (_selectedStrategy?.pipelineId == null && _selectedStrategy?.id == strategy.id);
         return _buildPipelineListItem(strategy, index, isSelected);
       },
     );

@@ -66,4 +66,22 @@ class ConfigField {
       'moduleType': moduleType,
     };
   }
+
+  // 创建一个新的ConfigField实例
+  ConfigField copyWith() {
+    return ConfigField(
+      name: name,
+      label: label,
+      type: type,
+      defaultValue: defaultValue,
+      description: description,
+      required: required,
+      dependsOn: dependsOn,
+      dependsValue: dependsValue,
+      options: options,
+      subFields: subFields,
+      isModule: isModule,
+      moduleType: moduleType,
+    );
+  }
 }

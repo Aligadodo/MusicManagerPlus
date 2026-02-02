@@ -128,3 +128,24 @@ This generated password is for development use only. Your security configuration
 2026-02-03 01:34:54.481 [http-nio-8080-exec-8] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 获取策略配置 - strategyId: file-migrate
 2026-02-03 01:34:54.481 [http-nio-8080-exec-8] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 返回策略配置 - strategyId: file-migrate, 配置项数量: 9
 2026-02-03 01:34:54.481 [http-nio-8080-exec-8] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-migrate/config - 成功返回配置，包含 9 个参数
+2026-02-03 01:37:30.762 [http-nio-8080-exec-1] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/audio-converter/config - 获取策略配置
+2026-02-03 01:37:30.762 [http-nio-8080-exec-1] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 获取策略配置 - strategyId: audio-converter
+2026-02-03 01:37:30.762 [http-nio-8080-exec-1] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 策略配置不存在，创建默认配置 - strategyId: audio-converter
+2026-02-03 01:37:30.762 [http-nio-8080-exec-1] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 返回策略配置 - strategyId: audio-converter, 配置项数量: 16
+2026-02-03 01:37:30.762 [http-nio-8080-exec-1] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/audio-converter/config - 成功返回配置，包含 16 个参数
+2026-02-03 01:37:31.208 [http-nio-8080-exec-2] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-collection/config - 获取策略配置
+2026-02-03 01:37:31.208 [http-nio-8080-exec-2] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 获取策略配置 - strategyId: file-collection
+2026-02-03 01:37:31.208 [http-nio-8080-exec-2] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 策略配置不存在，创建默认配置 - strategyId: file-collection
+2026-02-03 01:37:31.208 [http-nio-8080-exec-2] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 返回策略配置 - strategyId: file-collection, 配置项数量: 2
+2026-02-03 01:37:31.208 [http-nio-8080-exec-2] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-collection/config - 成功返回配置，包含 2 个参数
+2026-02-03 01:37:31.761 [http-nio-8080-exec-3] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/ncm-integrated/config - 获取策略配置
+2026-02-03 01:37:31.761 [http-nio-8080-exec-3] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 获取策略配置 - strategyId: ncm-integrated
+2026-02-03 01:37:31.761 [http-nio-8080-exec-3] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 策略配置不存在，创建默认配置 - strategyId: ncm-integrated
+2026-02-03 01:37:31.761 [http-nio-8080-exec-3] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 返回策略配置 - strategyId: ncm-integrated, 配置项数量: 3
+2026-02-03 01:37:31.761 [http-nio-8080-exec-3] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/ncm-integrated/config - 成功返回配置，包含 3 个参数
+2026-02-03 01:40:04.442 [http-nio-8080-exec-7] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 获取所有策略列表
+2026-02-03 01:40:04.442 [http-nio-8080-exec-7] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 成功返回 12 个策略
+2026-02-03 01:40:11.227 [http-nio-8080-exec-4] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 获取所有策略列表
+2026-02-03 01:40:11.227 [http-nio-8080-exec-4] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 成功返回 12 个策略
+2026-02-03 01:43:56.550 [http-nio-8080-exec-10] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 获取所有策略列表
+2026-02-03 01:43:56.552 [http-nio-8080-exec-10] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 成功返回 12 个策略
