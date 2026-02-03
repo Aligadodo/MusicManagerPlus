@@ -51,7 +51,7 @@ public class PipelineControllerTest {
                 .content(requestBody))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.message").value("分析任务已开始执行"));
+                .andExpect(jsonPath("$.message").value("预览任务已开始执行"));
     }
 
     @Test
