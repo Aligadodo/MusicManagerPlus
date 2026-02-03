@@ -1,1 +1,6 @@
 com.filemanager.plugin.impl.FileCollectionPlugin
+com.filemanager.plugin.impl.FileCleanupPlugin
+com.filemanager.plugin.impl.FileMigratePlugin
+com.filemanager.plugin.impl.AdvancedRenamePlugin
+com.filemanager.plugin.impl.AudioConverterPlugin
+com.filemanager.plugin.impl.CueSplitterPlugin

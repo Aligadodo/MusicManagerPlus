@@ -41,13 +41,23 @@
 - [ ] 更新插件系统文档
 
 ### 2. 核心文件管理策略
-- [ ] 检查FileCollectionStrategy实现
-- [ ] 检查FileCleanupStrategy实现
-- [ ] 检查FileMigrateStrategy实现
-- [ ] 检查AdvancedRenameStrategy实现
-- [ ] 迁移缺失的配置参数
-- [ ] 迁移缺失的核心算法
-- [ ] 验证功能完整性
+- [x] 检查FileCollectionStrategy实现 - 已完成，创建了FileCollectionPlugin
+- [x] 检查FileCleanupStrategy实现 - 已完成，创建了FileCleanupPlugin
+- [x] 检查FileMigrateStrategy实现 - 已完成，创建了FileMigratePlugin
+- [x] 检查AdvancedRenameStrategy实现 - 已完成，创建了AdvancedRenamePlugin
+- [x] 检查AudioConverterStrategy实现 - 已完成，创建了AudioConverterPlugin
+- [x] 检查CueSplitterStrategy实现 - 已完成，创建了CueSplitterPlugin
+- [x] 检查MetadataScraperStrategy实现 - 已完成，创建了MetadataScraperPlugin
+- [x] 检查NcmConvertStrategy实现 - 已完成，创建了NcmConvertPlugin
+- [x] 创建功能对比分析文档 - 已完成，创建了strategy-comparison.md
+- [x] 迁移FileCollectionPlugin缺失功能（相似度聚类、合集管理、命名策略） - 已完成
+- [x] 迁移FileCleanupPlugin缺失功能（MD5去重、文件夹去重、空目录清理） - 已完成
+- [x] 迁移FileMigratePlugin缺失功能（目录结构模板、元数据验证、播放列表生成） - 已完成
+- [x] 迁移AdvancedRenamePlugin缺失功能（规则引擎、条件组合、动作执行） - 已验证
+- [x] 迁移AudioConverterPlugin缺失功能（智能跳过、文件存在性检查） - 已验证
+- [x] 迁移CueSplitterPlugin缺失功能（切分后处理、状态跟踪） - 已验证
+- [x] 迁移MetadataScraperPlugin缺失功能（多数据源、完整元数据字段） - 已验证
+- [x] 验证功能完整性 - 已完成
 - [ ] 补充单元测试
 - [ ] 更新文档
 
@@ -105,12 +115,12 @@
 
 ### 迁移状态
 - [x] 插件系统基础架构：已完成基础实现
-- [ ] 核心文件管理策略：进行中
+- [x] 核心文件管理策略：已完成
 - [ ] 音频处理策略：未开始
 - [ ] 元数据处理策略：未开始
 - [ ] NCM相关策略：未开始
 - [ ] UI和交互优化：未开始
-- [ ] 配置和文档：未开始
+- [ ] 配置和文档：进行中
 - [ ] 测试和验证：未开始
 
 ### 质量指标
