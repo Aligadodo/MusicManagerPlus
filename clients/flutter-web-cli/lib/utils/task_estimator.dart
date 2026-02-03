@@ -26,8 +26,7 @@ class TaskEstimator {
   /// [totalTasks] 总任务数
   /// [windowSize] 样本窗口大小（建议设为线程数的 5-10 倍）
   TaskEstimator(this.totalTasks, {this.windowSize = 50}) : 
-    completionWindow = Queue<int>() {
-  }
+    completionWindow = Queue<int>();
 
   /// 辅助格式化工具
   static String formatDuration(int milliseconds) {
@@ -154,6 +153,6 @@ class TaskEstimator {
 
   /// 获取显示信息
   String get displayInfo {
-    return '总共：$totalTasks 已处理:$completedTasks 耗时:${formattedElapsedTime} 进度:${progressPercentage}% 预计剩余时间：$formattedRemainingTime';
+    return '总共：$totalTasks 已处理:$completedTasks 耗时:$formattedElapsedTime 进度:$progressPercentage% 预计剩余时间：$formattedRemainingTime';
   }
 }

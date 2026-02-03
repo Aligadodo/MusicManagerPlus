@@ -509,7 +509,7 @@ class _LogPageState extends ConsumerState<LogPage> {
                           context: context,
                           builder: (context) => AlertDialog(
                             title: const Text('堆栈信息'),
-                            content: Container(
+                            content: SizedBox(
                               width: 800,
                               height: 400,
                               child: SingleChildScrollView(
@@ -517,7 +517,7 @@ class _LogPageState extends ConsumerState<LogPage> {
                                   onDoubleTap: () => _copyToClipboard(entry.stackTrace!),
                                   child: SelectableText(
                                     entry.stackTrace!,
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       fontFamily: 'monospace',
                                       fontSize: 12,
                                     ),

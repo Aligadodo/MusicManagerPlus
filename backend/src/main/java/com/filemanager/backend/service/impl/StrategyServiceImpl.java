@@ -52,14 +52,14 @@ public class StrategyServiceImpl implements StrategyService {
             // 转换插件参数为策略配置字段
             List<ConfigFieldDTO> configFields = new ArrayList<>();
             if (plugin.getParameters() != null) {
-                for (com.filemanager.domain.dto.PluginParameterDTO param : plugin.getParameters()) {
+                for (java.util.Map<String, Object> param : plugin.getParameters()) {
                     ConfigFieldDTO field = new ConfigFieldDTO(
-                        param.getName(),
-                        param.getLabel(),
-                        param.getType(),
-                        param.getDefaultValue(),
-                        param.getDescription(),
-                        param.isRequired()
+                        (String) param.get("name"),
+                        (String) param.get("label"),
+                        (String) param.get("type"),
+                        param.get("defaultValue"),
+                        (String) param.get("description"),
+                        (Boolean) param.get("required")
                     );
                     configFields.add(field);
                 }

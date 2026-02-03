@@ -33,8 +33,8 @@ class _ComposePageState extends ConsumerState<ComposePage> {
   StrategyInfo? _selectedStrategy;
   StrategyInfo? _selectedPipelineStrategy;
   StrategyConfig? _strategyConfig;
-  List<PreconditionGroup> _preconditionGroups = [];
-  bool _autoRun = false;
+  final List<PreconditionGroup> _preconditionGroups = [];
+  final bool _autoRun = false;
 
   bool _isLoading = false;
   String _errorMessage = '';
@@ -1237,7 +1237,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
             ),
             child: Text(
               '构建参数字段失败: $e',
-              style: TextStyle(color: Colors.red),
+              style: const TextStyle(color: Colors.red),
             ),
           );
         }
@@ -1256,7 +1256,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
           BoxShadow(
             color: Colors.grey.shade100,
             blurRadius: 2,
-            offset: Offset(0, 1),
+            offset: const Offset(0, 1),
           ),
         ],
       ),
@@ -1312,7 +1312,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(6),
-                borderSide: BorderSide(color: Colors.blue, width: 2),
+                borderSide: const BorderSide(color: Colors.blue, width: 2),
               ),
               hintText: field.defaultValue?.toString(),
               hintStyle: TextStyle(color: Colors.grey.shade400),
@@ -1336,7 +1336,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(6),
-                borderSide: BorderSide(color: Colors.blue, width: 2),
+                borderSide: const BorderSide(color: Colors.blue, width: 2),
               ),
               hintText: field.defaultValue?.toString(),
               hintStyle: TextStyle(color: Colors.grey.shade400),
@@ -1383,7 +1383,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(6),
-                      borderSide: BorderSide(color: Colors.blue, width: 2),
+                      borderSide: const BorderSide(color: Colors.blue, width: 2),
                     ),
                     hintText: field.defaultValue?.toString(),
                     hintStyle: TextStyle(color: Colors.grey.shade400),
@@ -1446,7 +1446,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(6),
-                borderSide: BorderSide(color: Colors.blue, width: 2),
+                borderSide: const BorderSide(color: Colors.blue, width: 2),
               ),
               hintText: field.defaultValue?.toString(),
               hintStyle: TextStyle(color: Colors.grey.shade400),
@@ -1532,7 +1532,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
                         ],
                       ),
                     );
-                  }).toList(),
+                  }),
                 ],
               ],
             ),
@@ -1550,7 +1550,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(6),
-                borderSide: BorderSide(color: Colors.blue, width: 2),
+                borderSide: const BorderSide(color: Colors.blue, width: 2),
               ),
               hintText: field.defaultValue?.toString() ?? '请输入...',
               hintStyle: TextStyle(color: Colors.grey.shade400),
@@ -1569,7 +1569,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: Colors.red.shade200),
         ),
-        child: Text('构建输入控件失败: $e', style: TextStyle(color: Colors.red)),
+        child: Text('构建输入控件失败: $e', style: const TextStyle(color: Colors.red)),
       );
     }
   }
@@ -1657,9 +1657,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
   }
 
   void _updateConfigValue(String fieldName, dynamic value) {
-    if (_strategyConfig == null) {
-      _strategyConfig = StrategyConfig({});
-    }
+    _strategyConfig ??= StrategyConfig({});
     _strategyConfig!.setValue(fieldName, value);
   }
 }

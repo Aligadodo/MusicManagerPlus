@@ -46,7 +46,7 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
   int _maxRecursionDepth = 3;
 
   // 过滤规则
-  List<String> _scanFilterList = [
+  final List<String> _scanFilterList = [
     '*Convert*',
     '*Split*',
     '*System*',
@@ -59,7 +59,7 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
   String _newFilterRule = '';
 
   // 手动输入的文件类型后缀
-  List<String> _customFileTypes = [];
+  final List<String> _customFileTypes = [];
   String _newFileType = '';
 
   // 初始化文件类型树

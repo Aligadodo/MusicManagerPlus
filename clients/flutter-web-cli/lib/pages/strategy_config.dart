@@ -63,20 +63,16 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
     try {
       print('Loading strategy info for: $strategyId');
       final strategy = await _strategyService.getStrategyInfo(strategyId);
-      print('Strategy info loaded: ${strategy?.name}');
+      print('Strategy info loaded: ${strategy.name}');
       
       print('Loading strategy config for: $strategyId');
       final config = await _strategyService.getStrategyConfig(strategyId);
-      print('Strategy config loaded: ${config?.configValues}');
+      print('Strategy config loaded: ${config.configValues}');
       
       setState(() {
-        if (strategy != null) {
-          _selectedStrategy = strategy;
-        }
-        if (config != null) {
-          _strategyConfig = config;
-        }
-      });
+        _selectedStrategy = strategy;
+              _strategyConfig = config;
+            });
     } catch (e, stackTrace) {
       print('Error loading strategy config: $e');
       print('Stack trace: $stackTrace');
@@ -371,9 +367,9 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
                       style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange),
                     ),
                     const SizedBox(height: 4),
-                    Text(
+                    const Text(
                       '该字段将使用默认值或保持为空',
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
                     ),
                   ],
                 ),
@@ -534,7 +530,7 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                 ),
-                value: value?.toString() ?? field.defaultValue?.toString(),
+                initialValue: value?.toString() ?? field.defaultValue?.toString(),
                 items: field.options?.map((option) {
                   return DropdownMenuItem<String>(
                     value: option,
@@ -716,9 +712,9 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
                     style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange),
                   ),
                   const SizedBox(height: 4),
-                  Text(
+                  const Text(
                     '该字段将使用默认值或保持为空',
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                 ],
               ),

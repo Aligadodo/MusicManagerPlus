@@ -119,10 +119,10 @@ class TooltipUtils {
     return Tooltip(
       message: tooltip,
       child: Container(
-        child: child,
         decoration: decoration,
         padding: padding,
         margin: margin,
+        child: child,
       ),
     );
   }

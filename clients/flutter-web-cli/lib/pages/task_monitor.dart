@@ -339,10 +339,10 @@ class _TaskMonitorPageState extends ConsumerState<TaskMonitorPage> {
                                     onPressed: () {
                                       _executeTask(task.taskId);
                                     },
-                                    child: const Text('执行', style: TextStyle(fontSize: 12)),
                                     style: ElevatedButton.styleFrom(
                                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                     ),
+                                    child: const Text('执行', style: TextStyle(fontSize: 12)),
                                   ),
                                 if (task.status == TaskStatusEnum.RUNNING)
                                   ElevatedButton(

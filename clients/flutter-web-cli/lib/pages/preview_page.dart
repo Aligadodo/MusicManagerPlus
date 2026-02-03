@@ -124,15 +124,13 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
     for (int i = 0; i < _pipeline.length; i++) {
       final strategy = _pipeline[i];
       
-      if (strategy.configFields != null) {
-        for (final field in strategy.configFields!) {
-          if (field.required && (field.defaultValue == null || field.defaultValue!.isEmpty)) {
-            _showError('策略 "${strategy.name}" 的参数 "${field.label}" 是必填项，请配置');
-            return false;
-          }
+      for (final field in strategy.configFields!) {
+        if (field.required && (field.defaultValue == null || field.defaultValue!.isEmpty)) {
+          _showError('策略 "${strategy.name}" 的参数 "${field.label}" 是必填项，请配置');
+          return false;
         }
       }
-    }
+        }
 
     return true;
   }
@@ -322,47 +320,45 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
   Future<void> _fetchStatus() async {
     try {
       final status = await _pipelineService.getPipelineStatus();
-      if (status != null) {
-        setState(() {
-          _progress = (status['progress'] as num?)?.toInt() ?? 0;
-          _remainingTime = status['remainingTime']?.toString() ?? '00:00:00';
-          _currentStep = status['currentStep']?.toString() ?? '';
-          _message = status['message']?.toString() ?? '';
-          _hasChanges = status['hasChanges'] as bool? ?? false;
-          _changeCount = (status['changeCount'] as num?)?.toInt() ?? 0;
-          _scannedFiles = (status['scannedFiles'] as num?)?.toInt() ?? 0;
-          _totalFiles = (status['totalFiles'] as num?)?.toInt() ?? 0;
-          _logMessage = status['logMessage']?.toString() ?? '';
+      setState(() {
+        _progress = (status['progress'] as num?)?.toInt() ?? 0;
+        _remainingTime = status['remainingTime']?.toString() ?? '00:00:00';
+        _currentStep = status['currentStep']?.toString() ?? '';
+        _message = status['message']?.toString() ?? '';
+        _hasChanges = status['hasChanges'] as bool? ?? false;
+        _changeCount = (status['changeCount'] as num?)?.toInt() ?? 0;
+        _scannedFiles = (status['scannedFiles'] as num?)?.toInt() ?? 0;
+        _totalFiles = (status['totalFiles'] as num?)?.toInt() ?? 0;
+        _logMessage = status['logMessage']?.toString() ?? '';
 
-          final statusStr = status['status']?.toString();
-          if (statusStr == '预览完成') {
-            _taskState = LocalTaskState.previewCompleted;
-          } else if (statusStr == '预览失败') {
-            _taskState = LocalTaskState.previewFailed;
-          } else if (statusStr == '执行完成') {
-            _taskState = LocalTaskState.executionCompleted;
-          } else if (statusStr == '执行失败') {
-            _taskState = LocalTaskState.executionFailed;
-          } else if (statusStr == '已中止') {
-            _taskState = LocalTaskState.cancelled;
-          }
-        });
-
-        // 更新全局任务状态
-        final taskNotifier = ref.read(taskStateProvider.notifier);
-        if (_taskState.isRunning) {
-          taskNotifier.updateProgress(_progress, _message);
-        } else if (_taskState.isCompleted) {
-          taskNotifier.complete();
-        } else if (_taskState.isFailed) {
-          taskNotifier.error(_errorMessage);
+        final statusStr = status['status']?.toString();
+        if (statusStr == '预览完成') {
+          _taskState = LocalTaskState.previewCompleted;
+        } else if (statusStr == '预览失败') {
+          _taskState = LocalTaskState.previewFailed;
+        } else if (statusStr == '执行完成') {
+          _taskState = LocalTaskState.executionCompleted;
+        } else if (statusStr == '执行失败') {
+          _taskState = LocalTaskState.executionFailed;
+        } else if (statusStr == '已中止') {
+          _taskState = LocalTaskState.cancelled;
         }
+      });
 
-        if (_taskState.isCompleted || _taskState.isFailed || _taskState == LocalTaskState.cancelled) {
-          _stopStatusTimer();
-        }
+      // 更新全局任务状态
+      final taskNotifier = ref.read(taskStateProvider.notifier);
+      if (_taskState.isRunning) {
+        taskNotifier.updateProgress(_progress, _message);
+      } else if (_taskState.isCompleted) {
+        taskNotifier.complete();
+      } else if (_taskState.isFailed) {
+        taskNotifier.error(_errorMessage);
       }
-    } catch (e) {
+
+      if (_taskState.isCompleted || _taskState.isFailed || _taskState == LocalTaskState.cancelled) {
+        _stopStatusTimer();
+      }
+        } catch (e) {
       print('获取状态信息失败: $e');
     }
   }
@@ -617,7 +613,7 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
               if (_taskState.isCompleted)
-                Icon(
+                const Icon(
                   Icons.check_circle,
                   size: 20,
                   color: Colors.green,

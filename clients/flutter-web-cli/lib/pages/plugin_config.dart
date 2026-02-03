@@ -56,7 +56,7 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
           final parameters = config.parameters ?? [];
           for (final param in parameters) {
             try {
-              final value = config.configValues?[param.name] ?? param.defaultValue;
+              final value = config.configValues[param.name] ?? param.defaultValue;
               _formValues[param.name] = value;
 
               if (param.type == 'list' && value is List) {
@@ -289,7 +289,7 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
             ),
           ),
         ),
-        value: value?.toString(),
+        initialValue: value?.toString(),
         items: param.options?.map((option) {
           return DropdownMenuItem<String>(
             value: option,

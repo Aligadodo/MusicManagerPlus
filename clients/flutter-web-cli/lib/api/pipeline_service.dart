@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:filemanager_flutter/api/api_client.dart';
-import 'package:filemanager_flutter/models/change_record.dart';
 import 'package:filemanager_flutter/models/strategy_info.dart';
 
 class PipelineService {

@@ -16,7 +16,7 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
 
   Map<String, dynamic> _appearanceConfig = {};
   List<Map<String, dynamic>> _themePresets = [];
-  int _selectedPresetIndex = -1;
+  final int _selectedPresetIndex = -1;
   bool _isLoading = false;
 
   @override
@@ -371,7 +371,7 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
                 ],
               ),
               if (isApplied)
-                Positioned(
+                const Positioned(
                   top: 5,
                   right: 5,
                   child: Icon(

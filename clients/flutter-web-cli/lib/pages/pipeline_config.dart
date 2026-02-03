@@ -308,7 +308,7 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
               ),
-              value: field.defaultValue?.toString(),
+              initialValue: field.defaultValue?.toString(),
               items: field.options?.map((option) {
                 return DropdownMenuItem<String>(
                   value: option,
@@ -606,10 +606,10 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
                             const SizedBox(height: 16),
                             const Text('配置:', style: TextStyle(fontWeight: FontWeight.bold)),
                             const SizedBox(height: 8),
-                            if (plugin.configFields != null && plugin.configFields!.isNotEmpty)
-                              ...plugin.configFields!.map((field) {
+                            if (plugin.configFields.isNotEmpty)
+                              ...plugin.configFields.map((field) {
                                 return _buildConfigField(field);
-                              }).toList()
+                              })
                             else
                               const Text('此插件/策略暂无配置项'),
                             const SizedBox(height: 16),
