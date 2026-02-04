@@ -3,11 +3,19 @@ package com.filemanager.backend.service.impl;
 import com.filemanager.domain.dto.StrategyInfoDTO;
 import com.filemanager.domain.dto.StrategyConfigDTO;
 import com.filemanager.domain.dto.ConfigFieldDTO;
+import com.filemanager.domain.dto.EnumOptionDTO;
 import com.filemanager.domain.entity.ChangeRecord;
 import com.filemanager.domain.service.StrategyService;
 import com.filemanager.plugin.PluginRegistry;
 import com.filemanager.plugin.StrategyRegistry;
 import com.filemanager.plugin.StrategyConfigurable;
+import com.filemanager.plugin.impl.audioconverter.enums.AudioFormat;
+import com.filemanager.plugin.impl.audioconverter.enums.Channels;
+import com.filemanager.plugin.impl.audioconverter.enums.OutputDirMode;
+import com.filemanager.plugin.impl.audioconverter.enums.SampleRate;
+import com.filemanager.plugin.impl.advancedrename.enums.CrossDriveMode;
+import com.filemanager.plugin.impl.advancedrename.enums.ProcessScope;
+import com.filemanager.plugin.utils.EnumConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +28,7 @@ import java.io.FileWriter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.HashMap;
+import java.util.Arrays;
 
 @Service
 public class StrategyServiceImpl implements StrategyService {
@@ -66,7 +75,7 @@ public class StrategyServiceImpl implements StrategyService {
      * 插件到StrategyConfigurable的适配器类
      * 使插件能够被当作可配置策略使用
      */
-    private static class PluginToStrategyAdapter implements StrategyConfigurable {
+    private class PluginToStrategyAdapter implements StrategyConfigurable {
         private final com.filemanager.plugin.IPlugin plugin;
 
         public PluginToStrategyAdapter(com.filemanager.plugin.IPlugin plugin) {
@@ -96,22 +105,26 @@ public class StrategyServiceImpl implements StrategyService {
         @Override
         public List<ConfigFieldDTO> getConfigFields() {
             List<ConfigFieldDTO> fields = new ArrayList<>();
-            List<Map<String, Object>> parameters = plugin.getParameters();
+            List<com.filemanager.domain.dto.PluginParameterDTO> parameters = plugin.getParameters();
             if (parameters != null) {
-                for (Map<String, Object> param : parameters) {
+                for (com.filemanager.domain.dto.PluginParameterDTO param : parameters) {
                     ConfigFieldDTO field = new ConfigFieldDTO();
-                    field.setName((String) param.get("name"));
-                    field.setLabel((String) param.get("label"));
-                    field.setType((String) param.get("type"));
-                    field.setDefaultValue(param.get("defaultValue"));
-                    field.setDescription((String) param.get("description"));
-                    field.setRequired((Boolean) param.get("required"));
+                    field.setName(param.getName());
+                    field.setLabel(param.getLabel());
+                    field.setType(param.getType());
+                    field.setDefaultValue(param.getDefaultValue());
+                    field.setDescription(param.getDescription());
+                    field.setRequired(param.isRequired());
                     
                     // 处理选项字段
-                    if (param.containsKey("options")) {
-                        Object optionsObj = param.get("options");
-                        if (optionsObj instanceof List) {
-                            field.setOptions((List<String>) optionsObj);
+                    if (param.getOptions() != null && param.getOptions().length > 0) {
+                        field.setOptions(Arrays.asList(param.getOptions()));
+                        
+                        // 尝试为枚举类型字段添加枚举选项
+                        String fieldName = param.getName();
+                        List<EnumOptionDTO> enumOptions = StrategyServiceImpl.this.getEnumOptionsForField(fieldName);
+                        if (enumOptions != null && !enumOptions.isEmpty()) {
+                            field.setEnumOptions(enumOptions);
                         }
                     }
                     
@@ -213,11 +226,11 @@ public class StrategyServiceImpl implements StrategyService {
 
     private void initBuiltInStrategies() {
         // 1. AdvancedRenameStrategy - 高级重命名策略
-        com.filemanager.plugin.impl.AdvancedRenameStrategy advancedRenameStrategy = new com.filemanager.plugin.impl.AdvancedRenameStrategy();
+        com.filemanager.plugin.impl.advancedrename.AdvancedRenameStrategy advancedRenameStrategy = new com.filemanager.plugin.impl.advancedrename.AdvancedRenameStrategy();
         strategyRegistry.registerStrategy(advancedRenameStrategy);
 
         // 2. AudioConverterStrategy - 音频格式转换策略
-        com.filemanager.plugin.impl.AudioConverterStrategy audioConverterStrategy = new com.filemanager.plugin.impl.AudioConverterStrategy();
+        com.filemanager.plugin.impl.audioconverter.AudioConverterStrategy audioConverterStrategy = new com.filemanager.plugin.impl.audioconverter.AudioConverterStrategy();
         strategyRegistry.registerStrategy(audioConverterStrategy);
 
         // 3. FileCleanupStrategy - 文件清理与去重策略
@@ -313,6 +326,25 @@ public class StrategyServiceImpl implements StrategyService {
         }
         logger.info("[Service] 返回策略配置 - strategyId: {}, 配置项数量: {}", strategyId, config.getConfigValues() != null ? config.getConfigValues().size() : 0);
         return config;
+    }
+
+    private List<EnumOptionDTO> getEnumOptionsForField(String fieldName) {
+        switch (fieldName) {
+            case "targetFormat":
+                return EnumConverter.convertEnumToDTOs(AudioFormat.class);
+            case "outputDirMode":
+                return EnumConverter.convertEnumToDTOs(OutputDirMode.class);
+            case "sampleRate":
+                return EnumConverter.convertEnumToDTOs(SampleRate.class);
+            case "channels":
+                return EnumConverter.convertEnumToDTOs(Channels.class);
+            case "crossDriveMode":
+                return EnumConverter.convertEnumToDTOs(CrossDriveMode.class);
+            case "processScope":
+                return EnumConverter.convertEnumToDTOs(ProcessScope.class);
+            default:
+                return null;
+        }
     }
 
     @Override

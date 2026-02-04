@@ -1,3 +1,5 @@
+import 'enum_option.dart';
+
 class ConfigField {
   final String name;
   final String label;
@@ -10,6 +12,7 @@ class ConfigField {
   final String? dependsOn;
   final String? dependsValue;
   final List<String>? options;
+  final List<EnumOption>? enumOptions;
   final Map<String, dynamic>? subFields;
   
   // 模块化配置支持
@@ -26,6 +29,7 @@ class ConfigField {
     this.dependsOn,
     this.dependsValue,
     this.options,
+    this.enumOptions,
     this.subFields,
     this.isModule = false,
     this.moduleType,
@@ -44,6 +48,11 @@ class ConfigField {
       options: json['options'] != null 
           ? List<String>.from((json['options'] as List).where((option) => option != null).cast<String>()) 
           : null,
+      enumOptions: json['enumOptions'] != null
+          ? (json['enumOptions'] as List)
+              .map((option) => EnumOption.fromJson(option as Map<String, dynamic>))
+              .toList()
+          : null,
       subFields: json['subFields'] as Map<String, dynamic>?,
       isModule: json['isModule'] as bool? ?? json['module'] as bool? ?? false,
       moduleType: json['moduleType'] as String?,
@@ -61,6 +70,7 @@ class ConfigField {
       'dependsOn': dependsOn,
       'dependsValue': dependsValue,
       'options': options,
+      'enumOptions': enumOptions?.map((e) => e.toJson()).toList(),
       'subFields': subFields,
       'isModule': isModule,
       'moduleType': moduleType,
@@ -79,6 +89,7 @@ class ConfigField {
       dependsOn: dependsOn,
       dependsValue: dependsValue,
       options: options,
+      enumOptions: enumOptions,
       subFields: subFields,
       isModule: isModule,
       moduleType: moduleType,

@@ -15,6 +15,7 @@ public class ConfigFieldDTO {
     private String dependsOn;
     private String dependsValue;
     private List<String> options;
+    private List<EnumOptionDTO> enumOptions;
     private Map<String, Object> subFields;
     
     // 模块化配置支持
@@ -103,6 +104,14 @@ public class ConfigFieldDTO {
     
     public void setOptions(List<String> options) {
         this.options = options;
+    }
+    
+    public List<EnumOptionDTO> getEnumOptions() {
+        return enumOptions;
+    }
+    
+    public void setEnumOptions(List<EnumOptionDTO> enumOptions) {
+        this.enumOptions = enumOptions;
     }
     
     public Map<String, Object> getSubFields() {

@@ -1,24 +1,20 @@
 package com.filemanager.plugin;
 
 import com.filemanager.domain.dto.PluginConfigDTO;
+import com.filemanager.domain.dto.PluginParameterDTO;
+import com.filemanager.domain.dto.PreconditionGroupDTO;
 import com.filemanager.domain.entity.ChangeRecord;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-/**
- * 插件抽象基类
- * 为具体的策略插件提供通用功能
- */
 public abstract class AbstractPlugin implements IPlugin {
 
     protected String id;
     protected String name;
     protected String description;
     protected String version;
-    protected List<Map<String, Object>> parameters;
+    protected List<PluginParameterDTO> parameters;
     protected PluginConfigDTO defaultConfig;
 
     public AbstractPlugin(String id, String name, String description, String version) {
@@ -32,14 +28,7 @@ public abstract class AbstractPlugin implements IPlugin {
         initDefaultConfig();
     }
 
-    /**
-     * 初始化插件参数
-     */
     protected abstract void initParameters();
-
-    /**
-     * 初始化默认配置
-     */
     protected abstract void initDefaultConfig();
 
     @Override
@@ -63,7 +52,7 @@ public abstract class AbstractPlugin implements IPlugin {
     }
 
     @Override
-    public List<Map<String, Object>> getParameters() {
+    public List<PluginParameterDTO> getParameters() {
         return parameters;
     }
 
@@ -72,65 +61,32 @@ public abstract class AbstractPlugin implements IPlugin {
         return defaultConfig;
     }
 
-    /**
-     * 添加插件参数
-     * @param name 参数名称
-     * @param label 参数标签
-     * @param type 参数类型
-     * @param defaultValue 默认值
-     * @param description 参数描述
-     * @param required 是否必填
-     */
+    @Override
+    public List<PreconditionGroupDTO> getDefaultPreconditionGroups() {
+        return new ArrayList<>();
+    }
+
     protected void addParameter(String name, String label, String type, Object defaultValue, String description, boolean required) {
-        Map<String, Object> parameter = new HashMap<>();
-        parameter.put("name", name);
-        parameter.put("label", label);
-        parameter.put("type", type);
-        parameter.put("defaultValue", defaultValue);
-        parameter.put("description", description);
-        parameter.put("required", required);
+        PluginParameterDTO parameter = new PluginParameterDTO(name, label, description, type, defaultValue, required);
         parameters.add(parameter);
     }
 
-    /**
-     * 添加带选项的插件参数
-     * @param name 参数名称
-     * @param label 参数标签
-     * @param type 参数类型
-     * @param defaultValue 默认值
-     * @param description 参数描述
-     * @param required 是否必填
-     * @param options 选项列表
-     */
+    protected void addParameter(String name, String label, String type, Object defaultValue, String description, boolean required, String[] options) {
+        PluginParameterDTO parameter = new PluginParameterDTO(name, label, description, type, defaultValue, required);
+        parameter.setOptions(options);
+        parameters.add(parameter);
+    }
+
     protected void addParameter(String name, String label, String type, Object defaultValue, String description, boolean required, List<String> options) {
-        Map<String, Object> parameter = new HashMap<>();
-        parameter.put("name", name);
-        parameter.put("label", label);
-        parameter.put("type", type);
-        parameter.put("defaultValue", defaultValue);
-        parameter.put("description", description);
-        parameter.put("required", required);
-        parameter.put("options", options);
+        PluginParameterDTO parameter = new PluginParameterDTO(name, label, description, type, defaultValue, required);
+        parameter.setOptions(options.toArray(new String[0]));
         parameters.add(parameter);
     }
 
-    /**
-     * 设置默认配置值
-     * @param key 配置键
-     * @param value 配置值
-     */
     protected void setDefaultConfigValue(String key, Object value) {
         defaultConfig.setValue(key, value);
     }
 
-    /**
-     * 从配置中获取值
-     * @param config 配置对象
-     * @param key 配置键
-     * @param defaultValue 默认值
-     * @param <T> 值类型
-     * @return 配置值
-     */
     protected <T> T getConfigValue(PluginConfigDTO config, String key, T defaultValue) {
         if (config != null) {
             Object value = config.getValue(key);
@@ -141,13 +97,6 @@ public abstract class AbstractPlugin implements IPlugin {
         return defaultValue;
     }
 
-    /**
-     * 创建变更记录
-     * @param originalPath 原始路径
-     * @param newPath 新路径
-     * @param status 状态
-     * @return 变更记录
-     */
     protected ChangeRecord createChangeRecord(String originalPath, String newPath, String status) {
         ChangeRecord record = new ChangeRecord();
         record.setId("change-" + System.currentTimeMillis() + "-" + originalPath.hashCode());
@@ -159,13 +108,6 @@ public abstract class AbstractPlugin implements IPlugin {
         return record;
     }
 
-    /**
-     * 执行预览操作
-     * @param filePaths 文件路径列表
-     * @param config 插件配置
-     * @param context 执行上下文
-     * @return 变更记录列表
-     */
     @Override
     public List<ChangeRecord> preview(List<String> filePaths, PluginConfigDTO config, ExecutionContext context) {
         context.logInfo("Previewing plugin: " + name);
@@ -190,22 +132,8 @@ public abstract class AbstractPlugin implements IPlugin {
         return changes;
     }
 
-    /**
-     * 创建预览记录
-     * @param filePath 文件路径
-     * @param config 插件配置
-     * @param context 执行上下文
-     * @return 变更记录
-     */
     protected abstract ChangeRecord createPreviewRecord(String filePath, PluginConfigDTO config, ExecutionContext context);
 
-    /**
-     * 执行插件操作
-     * @param filePaths 文件路径列表
-     * @param config 插件配置
-     * @param context 执行上下文
-     * @return 变更记录列表
-     */
     @Override
     public List<ChangeRecord> execute(List<String> filePaths, PluginConfigDTO config, ExecutionContext context) {
         context.logInfo("Executing plugin: " + name);
@@ -236,12 +164,5 @@ public abstract class AbstractPlugin implements IPlugin {
         return changes;
     }
 
-    /**
-     * 执行单个文件操作
-     * @param filePath 文件路径
-     * @param config 插件配置
-     * @param context 执行上下文
-     * @return 变更记录
-     */
     protected abstract ChangeRecord executeForFile(String filePath, PluginConfigDTO config, ExecutionContext context);
 }

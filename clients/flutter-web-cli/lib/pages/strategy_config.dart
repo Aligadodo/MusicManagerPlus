@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:filemanager_flutter/api/api_client.dart';
 import 'package:filemanager_flutter/api/strategy_service.dart';
+import 'package:filemanager_flutter/api/enum_service.dart';
 import 'package:filemanager_flutter/models/strategy_info.dart';
 import 'package:filemanager_flutter/models/strategy_config.dart';
 import 'package:filemanager_flutter/models/config_field.dart';
+import 'package:filemanager_flutter/models/enum_option.dart';
 import 'package:filemanager_flutter/utils/tooltip_utils.dart';
 
 class StrategyConfigPage extends ConsumerStatefulWidget {
@@ -17,17 +19,20 @@ class StrategyConfigPage extends ConsumerStatefulWidget {
 class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
   late ApiClient _apiClient;
   late StrategyService _strategyService;
+  late EnumService _enumService;
   List<StrategyInfo> _strategies = [];
   bool _isLoading = false;
   String _errorMessage = '';
   StrategyInfo? _selectedStrategy;
   StrategyConfig? _strategyConfig;
+  Map<String, List<EnumOption>> _enumOptionsCache = {};
 
   @override
   void initState() {
     super.initState();
     _apiClient = ApiClient();
     _strategyService = StrategyService(_apiClient);
+    _enumService = EnumService(_apiClient);
     _loadStrategies();
   }
 
@@ -531,12 +536,7 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
                   border: OutlineInputBorder(),
                 ),
                 initialValue: value?.toString() ?? field.defaultValue?.toString(),
-                items: field.options?.map((option) {
-                  return DropdownMenuItem<String>(
-                    value: option,
-                    child: Text(option),
-                  );
-                }).toList() ?? [],
+                items: _buildDropdownItems(field),
                 onChanged: (v) {
                   if (_strategyConfig != null) {
                     _strategyConfig?.setValue(field.name, v);
@@ -551,6 +551,42 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
       print('构建选择字段 ${field.name} 失败: $e');
       return _buildErrorField(field, e);
     }
+  }
+
+  List<DropdownMenuItem<String>> _buildDropdownItems(ConfigField field) {
+    if (field.enumOptions != null && field.enumOptions!.isNotEmpty) {
+      return field.enumOptions!.map((enumOption) {
+        return DropdownMenuItem<String>(
+          value: enumOption.code,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                enumOption.displayName,
+                style: const TextStyle(fontWeight: FontWeight.w500),
+              ),
+              if (enumOption.displayDescription.isNotEmpty)
+                Text(
+                  enumOption.displayDescription,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+            ],
+          ),
+        );
+      }).toList();
+    } else if (field.options != null && field.options!.isNotEmpty) {
+      return field.options!.map((option) {
+        return DropdownMenuItem<String>(
+          value: option,
+          child: Text(option),
+        );
+      }).toList();
+    }
+    return [];
   }
 
   Widget _buildDirectoryField(ConfigField field, dynamic value) {
