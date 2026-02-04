@@ -1,0 +1,8 @@
+# Flutter Web 配置文件
+
+# Web 服务器端口
+web_port=8081
+
+# 其他配置选项
+# debug_mode=true
+# verbose=false

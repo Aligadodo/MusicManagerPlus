@@ -36,6 +36,36 @@ class ConfigField {
   });
 
   factory ConfigField.fromJson(Map<String, dynamic> json) {
+    List<String>? parsedOptions;
+    if (json['options'] != null) {
+      try {
+        final optionsList = json['options'] as List<dynamic>?;
+        if (optionsList != null) {
+          parsedOptions = optionsList
+              .where((option) => option != null && option is String)
+              .cast<String>()
+              .toList();
+        }
+      } catch (e) {
+        print('Failed to parse options: ${json['options']}, error: $e');
+      }
+    }
+
+    List<EnumOption>? parsedEnumOptions;
+    if (json['enumOptions'] != null) {
+      try {
+        final enumOptionsList = json['enumOptions'] as List<dynamic>?;
+        if (enumOptionsList != null) {
+          parsedEnumOptions = enumOptionsList
+              .where((option) => option != null && option is Map<String, dynamic>)
+              .map((option) => EnumOption.fromJson(option as Map<String, dynamic>))
+              .toList();
+        }
+      } catch (e) {
+        print('Failed to parse enumOptions: ${json['enumOptions']}, error: $e');
+      }
+    }
+
     return ConfigField(
       name: json['name'] as String? ?? 'unknown',
       label: json['label'] as String? ?? 'Unknown Field',
@@ -45,14 +75,8 @@ class ConfigField {
       required: json['required'] as bool? ?? false,
       dependsOn: json['dependsOn'] as String?,
       dependsValue: json['dependsValue'] as String?,
-      options: json['options'] != null 
-          ? List<String>.from((json['options'] as List).where((option) => option != null).cast<String>()) 
-          : null,
-      enumOptions: json['enumOptions'] != null
-          ? (json['enumOptions'] as List)
-              .map((option) => EnumOption.fromJson(option as Map<String, dynamic>))
-              .toList()
-          : null,
+      options: parsedOptions,
+      enumOptions: parsedEnumOptions,
       subFields: json['subFields'] as Map<String, dynamic>?,
       isModule: json['isModule'] as bool? ?? json['module'] as bool? ?? false,
       moduleType: json['moduleType'] as String?,

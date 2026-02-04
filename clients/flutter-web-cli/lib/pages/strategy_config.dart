@@ -7,7 +7,9 @@ import 'package:filemanager_flutter/models/strategy_info.dart';
 import 'package:filemanager_flutter/models/strategy_config.dart';
 import 'package:filemanager_flutter/models/config_field.dart';
 import 'package:filemanager_flutter/models/enum_option.dart';
+import 'package:filemanager_flutter/models/rename_rule.dart';
 import 'package:filemanager_flutter/utils/tooltip_utils.dart';
+import 'package:filemanager_flutter/widgets/rename_rule_editor.dart';
 
 class StrategyConfigPage extends ConsumerStatefulWidget {
   const StrategyConfigPage({super.key});
@@ -69,6 +71,10 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
       print('Loading strategy info for: $strategyId');
       final strategy = await _strategyService.getStrategyInfo(strategyId);
       print('Strategy info loaded: ${strategy.name}');
+      print('Strategy config fields count: ${strategy.configFields.length}');
+      for (var field in strategy.configFields) {
+        print('Field: ${field.name}, Type: ${field.type}');
+      }
       
       print('Loading strategy config for: $strategyId');
       final config = await _strategyService.getStrategyConfig(strategyId);
@@ -92,6 +98,46 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
     }
   }
 
+  Future<void> _saveStrategyConfig() async {
+    if (_selectedStrategy == null || _strategyConfig == null) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
+
+    try {
+      print('Saving strategy config for: ${_selectedStrategy!.id}');
+      print('Config values: ${_strategyConfig!.configValues}');
+      
+      await _strategyService.updateStrategyConfig(
+        _selectedStrategy!.id,
+        _strategyConfig!,
+      );
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('策略配置保存成功')),
+      );
+      
+      print('Strategy config saved successfully');
+    } catch (e, stackTrace) {
+      print('Error saving strategy config: $e');
+      print('Stack trace: $stackTrace');
+      setState(() {
+        _errorMessage = '保存策略配置失败: $e';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('保存失败: $e')),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     try {
@@ -104,6 +150,14 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
               Navigator.pop(context);
             },
           ),
+          actions: [
+            if (_selectedStrategy != null && _strategyConfig != null)
+              IconButton(
+                icon: const Icon(Icons.save),
+                onPressed: _saveStrategyConfig,
+                tooltip: '保存配置',
+              ),
+          ],
         ),
         body: Container(
           padding: const EdgeInsets.all(20.0),
@@ -333,6 +387,7 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
 
   Widget _buildConfigField(ConfigField field) {
     try {
+      print('Building config field: ${field.name}, Type: ${field.type}');
       // 安全获取字段值，即使_strategyConfig为null
       final value = _strategyConfig?.getValue(field.name);
 
@@ -348,8 +403,13 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
         case 'directory':
           return _buildDirectoryField(field, value);
         case 'list':
+          if (field.name == 'rules') {
+            print('Building rename rules field');
+            return _buildRenameRulesField(field, value);
+          }
           return _buildListField(field, value);
         default:
+          print('Unknown field type: ${field.type}, using text field');
           return _buildTextField(field, value);
       }
     } catch (e) {
@@ -725,6 +785,58 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
       );
     } catch (e) {
       print('构建列表字段 ${field.name} 失败: $e');
+      return _buildErrorField(field, e);
+    }
+  }
+
+  Widget _buildRenameRulesField(ConfigField field, dynamic value) {
+    try {
+      List<RenameRule> rules = <RenameRule>[];
+      if (value != null && value is List) {
+        try {
+          rules = value.map((item) {
+            if (item is Map<String, dynamic>) {
+              return RenameRule.fromJson(item);
+            } else if (item is RenameRule) {
+              return item;
+            }
+            return RenameRule(name: '未命名规则');
+          }).toList();
+        } catch (e) {
+          print('解析重命名规则失败: $e');
+          rules = [];
+        }
+      }
+      
+      return Container(
+        margin: const EdgeInsets.symmetric(vertical: 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Tooltip(
+              message: field.description ?? '',
+              child: Text(
+                field.label,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            const SizedBox(height: 5),
+            SizedBox(
+              height: 500,
+              child: RenameRuleEditor(
+                rules: rules,
+                onChanged: (newRules) {
+                  if (_strategyConfig != null) {
+                    _strategyConfig?.setValue(field.name, newRules.map((rule) => rule.toJson()).toList());
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      print('构建重命名规则字段 ${field.name} 失败: $e');
       return _buildErrorField(field, e);
     }
   }
