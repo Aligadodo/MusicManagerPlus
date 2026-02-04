@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/api_client.dart';
 import '../api/config_service.dart';
 import '../providers/config_provider.dart';
+import '../utils/ui_utils.dart';
 
 class AppearancePage extends ConsumerStatefulWidget {
   const AppearancePage({super.key});
@@ -17,6 +18,7 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
   Map<String, dynamic> _appearanceConfig = {};
   List<Map<String, dynamic>> _themePresets = [];
   final int _selectedPresetIndex = -1;
+  int _selectedSection = 0;
   bool _isLoading = false;
 
   @override
@@ -265,7 +267,7 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
     );
   }
 
-  int _selectedSection = 0;
+
 
   Widget _buildPresetTabContent() {
     return SingleChildScrollView(
