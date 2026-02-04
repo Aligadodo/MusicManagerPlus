@@ -7,9 +7,14 @@ import com.filemanager.domain.entity.ChangeRecord;
 import com.filemanager.plugin.ExecutionContext;
 import com.filemanager.plugin.IPlugin;
 
+import java.io.File;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class AlbumDirNormalizePlugin implements IPlugin {
     @Override
@@ -136,16 +141,75 @@ public class AlbumDirNormalizePlugin implements IPlugin {
     public List<ChangeRecord> execute(List<String> filePaths, PluginConfigDTO config, ExecutionContext context) {
         List<ChangeRecord> changes = new ArrayList<>();
         
+        String template = (String) config.getValue("template", "%artist% - %year% - %album%");
+        String customTemplate = (String) config.getValue("customTemplate", "");
+        boolean cleanSpecialChars = (Boolean) config.getValue("cleanSpecialChars", true);
+        boolean removeYearPrefix = (Boolean) config.getValue("removeYearPrefix", true);
+        boolean useConsensusMetadata = (Boolean) config.getValue("useConsensusMetadata", true);
+        boolean preserveOriginalName = (Boolean) config.getValue("preserveOriginalName", false);
+        boolean validateAlbumInfo = (Boolean) config.getValue("validateAlbumInfo", true);
+        
         for (String filePath : filePaths) {
-            ChangeRecord record = new ChangeRecord();
-            record.setId("change-" + System.currentTimeMillis() + "-" + filePath.hashCode());
-            record.setOriginalName(filePath);
-            record.setNewName(getNormalizedDirName(filePath, config));
-            record.setFilePath(filePath);
-            record.setChanged(true);
-            record.setOperationType(ChangeRecord.OperationType.ALBUM_RENAME);
-            record.setStatus(ChangeRecord.ExecStatus.PENDING);
-            changes.add(record);
+            File dir = new File(filePath);
+            
+            if (!dir.isDirectory()) {
+                continue;
+            }
+            
+            List<File> audioFiles = getAudioFiles(dir);
+            
+            if (audioFiles.isEmpty()) {
+                continue;
+            }
+            
+            Map<String, String> consensus;
+            if (useConsensusMetadata) {
+                consensus = extractConsensusMetadata(audioFiles);
+            } else {
+                consensus = extractMetadata(audioFiles.get(0));
+            }
+            
+            if (validateAlbumInfo) {
+                String artist = consensus.getOrDefault("artist", "");
+                String album = consensus.getOrDefault("album", "");
+                
+                if (artist.isEmpty() || artist.equals("Unknown Artist") ||
+                    album.isEmpty() || album.equals("Unknown Album")) {
+                    continue;
+                }
+            }
+            
+            String actualTemplate = "custom".equals(template) ? customTemplate : template;
+            if (actualTemplate == null || actualTemplate.trim().isEmpty()) {
+                actualTemplate = "%artist% - %year% - %album%";
+            }
+            
+            String newDirName = applyTemplate(actualTemplate, consensus);
+            
+            if (cleanSpecialChars) {
+                newDirName = cleanDirectoryName(newDirName);
+            }
+            
+            if (removeYearPrefix) {
+                newDirName = removeYearPrefix(newDirName);
+            }
+            
+            newDirName = newDirName.trim();
+            if (newDirName.endsWith(" - ")) {
+                newDirName = newDirName.substring(0, newDirName.length() - 3);
+            }
+            
+            if (!dir.getName().equals(newDirName)) {
+                ChangeRecord record = new ChangeRecord();
+                record.setId("change-" + System.currentTimeMillis() + "-" + filePath.hashCode());
+                record.setOriginalName(filePath);
+                record.setNewName(dir.getParent() + File.separator + newDirName);
+                record.setFilePath(filePath);
+                record.setChanged(true);
+                record.setOperationType(ChangeRecord.OperationType.ALBUM_RENAME);
+                record.setStatus(ChangeRecord.ExecStatus.PENDING);
+                changes.add(record);
+            }
         }
         
         return changes;
@@ -155,32 +219,172 @@ public class AlbumDirNormalizePlugin implements IPlugin {
     public List<ChangeRecord> preview(List<String> filePaths, PluginConfigDTO config, ExecutionContext context) {
         return execute(filePaths, config, context);
     }
+    
+    private List<File> getAudioFiles(File dir) {
+        List<File> audioFiles = new ArrayList<>();
+        String[] audioExtensions = {".mp3", ".flac", ".wav", ".aac", ".ogg", ".m4a", ".wma"};
+        
+        File[] files = dir.listFiles();
+        if (files != null) {
+            for (File file : files) {
+                if (file.isFile()) {
+                    String fileName = file.getName().toLowerCase();
+                    for (String ext : audioExtensions) {
+                        if (fileName.endsWith(ext)) {
+                            audioFiles.add(file);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        
+        return audioFiles;
+    }
+    
+    private Map<String, String> extractMetadata(File file) {
+        Map<String, String> metadata = new HashMap<>();
+        
+        String fileName = file.getName();
+        
+        int lastDotIndex = fileName.lastIndexOf('.');
+        if (lastDotIndex > 0) {
+            fileName = fileName.substring(0, lastDotIndex);
+        }
+        
+        if (fileName.contains(" - ")) {
+            String[] parts = fileName.split(" - ");
+            if (parts.length >= 2) {
+                metadata.put("artist", parts[0].trim());
+                metadata.put("album", parts[1].trim());
+            }
+        }
+        
+        String yearMatch = extractYear(fileName);
+        if (yearMatch != null) {
+            metadata.put("year", yearMatch);
+        }
+        
+        return metadata;
+    }
+    
+    private Map<String, String> extractConsensusMetadata(List<File> audioFiles) {
+        Map<String, Integer> artists = new HashMap<>();
+        Map<String, Integer> albums = new HashMap<>();
+        Map<String, Integer> years = new HashMap<>();
+        Map<String, Integer> genres = new HashMap<>();
 
-    private String getNormalizedDirName(String filePath, PluginConfigDTO config) {
-        String template = (String) config.getValue("template", "%artist% - %year% - %album%");
-        String customTemplate = (String) config.getValue("customTemplate", "");
-        boolean cleanSpecialChars = (Boolean) config.getValue("cleanSpecialChars", true);
-        boolean removeYearPrefix = (Boolean) config.getValue("removeYearPrefix", true);
+        for (File file : audioFiles) {
+            Map<String, String> metadata = extractMetadata(file);
+            
+            String artist = metadata.getOrDefault("artist", "");
+            if (!artist.isEmpty()) {
+                artists.merge(normalizeArtistName(artist), 1, Integer::sum);
+            }
+            
+            String album = metadata.getOrDefault("album", "");
+            if (!album.isEmpty()) {
+                albums.merge(normalizeAlbumName(album), 1, Integer::sum);
+            }
+            
+            String year = metadata.getOrDefault("year", "");
+            if (!year.isEmpty()) {
+                years.merge(year, 1, Integer::sum);
+            }
+            
+            String genre = metadata.getOrDefault("genre", "");
+            if (!genre.isEmpty()) {
+                genres.merge(genre, 1, Integer::sum);
+            }
+        }
+
+        Map<String, String> consensus = new HashMap<>();
+        consensus.put("artist", getTopKey(artists, "Unknown Artist"));
+        consensus.put("album", getTopKey(albums, "Unknown Album"));
+        consensus.put("year", getTopKey(years, ""));
+        consensus.put("genre", getTopKey(genres, ""));
+
+        return consensus;
+    }
+    
+    private String normalizeArtistName(String artist) {
+        if (artist == null || artist.isEmpty()) {
+            return "";
+        }
+        String normalized = artist.trim();
+        normalized = normalized.replaceAll("\\s+", " ");
+        normalized = normalized.replaceAll("、", ",");
+        normalized = normalized.replaceAll("，", ",");
+        normalized = normalized.replaceAll("&", ",");
+        normalized = normalized.replaceAll("feat\\..*", "");
+        normalized = normalized.replaceAll("ft\\..*", "");
+        normalized = normalized.replaceAll("\\(.*\\)", "");
+        normalized = normalized.replaceAll("\\[.*\\]", "");
+        return normalized.trim();
+    }
+    
+    private String normalizeAlbumName(String album) {
+        if (album == null || album.isEmpty()) {
+            return "";
+        }
+        String normalized = album.trim();
+        normalized = normalized.replaceAll("\\s+", " ");
+        normalized = normalized.replaceAll("\\(.*\\)", "");
+        normalized = normalized.replaceAll("\\[.*\\]", "");
+        normalized = normalized.replaceAll("-\\s*CD\\s*\\d+", "");
+        normalized = normalized.replaceAll("-\\s*Disc\\s*\\d+", "");
+        normalized = normalized.replaceAll("-\\s*Vol\\.?\\s*\\d+", "");
+        return normalized.trim();
+    }
+    
+    private String applyTemplate(String template, Map<String, String> metadata) {
+        String result = template;
         
-        String dirName = filePath.substring(filePath.lastIndexOf('/') + 1);
+        result = result.replaceAll("%artist%", metadata.getOrDefault("artist", ""));
+        result = result.replaceAll("%album%", metadata.getOrDefault("album", ""));
+        result = result.replaceAll("%year%", metadata.getOrDefault("year", ""));
+        result = result.replaceAll("%genre%", metadata.getOrDefault("genre", ""));
         
-        if ("custom".equals(template) && !customTemplate.isEmpty()) {
-            dirName = customTemplate;
-        } else if (!"custom".equals(template)) {
-            dirName = template;
+        return result;
+    }
+    
+    private String cleanDirectoryName(String name) {
+        if (name == null || name.isEmpty()) {
+            return "";
+        }
+        String cleaned = name;
+        cleaned = cleaned.replaceAll("[\\\\/:*?\"<>|]", "-");
+        cleaned = cleaned.replaceAll("\\s+", " ");
+        cleaned = cleaned.replaceAll("[-_]{2,}", "-");
+        cleaned = cleaned.trim();
+        return cleaned;
+    }
+    
+    private String removeYearPrefix(String name) {
+        if (name == null || name.isEmpty()) {
+            return "";
+        }
+        String cleaned = name;
+        cleaned = cleaned.replaceAll("^\\d{4}[-\\s]+", "");
+        cleaned = cleaned.replaceAll("^\\d{4}\\.\\s+", "");
+        return cleaned.trim();
+    }
+    
+    private String extractYear(String text) {
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("\\b(19|20)\\d{2}\\b");
+        java.util.regex.Matcher matcher = pattern.matcher(text);
+        
+        if (matcher.find()) {
+            return matcher.group();
         }
         
-        if (cleanSpecialChars) {
-            dirName = dirName.replaceAll("[\\\\/:*?\"<>|]", "-");
-            dirName = dirName.replaceAll("\\s+", " ");
-            dirName = dirName.replaceAll("[-_]{2,}", "-");
-        }
-        
-        if (removeYearPrefix) {
-            dirName = dirName.replaceAll("^\\d{4}[-\\s]+", "");
-            dirName = dirName.replaceAll("^\\d{4}\\.\\s+", "");
-        }
-        
-        return dirName.trim();
+        return null;
+    }
+    
+    private String getTopKey(Map<String, Integer> map, String def) {
+        return map.entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .orElse(def);
     }
 }

@@ -33,11 +33,24 @@ FileManager Plus项目采用分层测试策略：
 | TaskController | TaskControllerTest | 10 |
 | LogController | LogControllerTest | 8 |
 | ConfigController | ConfigControllerTest | 7 |
-| PipelineController | PipelineControllerTest | 8 |
+| PipelineController | PipelineControllerTest | 10 |
 | SourceDirectoryController | SourceDirectoryControllerTest | 13 |
 | ThreadPoolController | ThreadPoolControllerTest | 13 |
 
-**总计：85个测试用例**
+**插件测试覆盖**：
+
+| 插件 | 测试类 | 测试数量 |
+|------|--------|----------|
+| FileCollectionPlugin | FileCollectionPluginTest | 8 |
+| FileCleanupPlugin | FileCleanupPluginTest | 7 |
+| FileMigratePlugin | FileMigratePluginTest | 6 |
+| AdvancedRenamePlugin | AdvancedRenamePluginTest | 5 |
+| AudioConverterPlugin | AudioConverterPluginTest | 6 |
+| CueSplitterPlugin | CueSplitterPluginTest | 5 |
+| MetadataScraperPlugin | MetadataScraperPluginTest | 5 |
+| NcmConvertPlugin | NcmConvertPluginTest | 4 |
+
+**总计：191个测试用例**
 
 ### 运行测试
 
@@ -101,6 +114,64 @@ public void testGetPlugins_Success() {
     assertNotNull(response.getBody());
     assertEquals(1, response.getBody().size());
     assertEquals("test-plugin", response.getBody().get(0).getId());
+}
+```
+
+#### FileCollectionPluginTest
+
+```java
+@Test
+public void testPluginInitialization() {
+    assertEquals("file-collection", plugin.getId());
+    assertEquals("文件收集与归类", plugin.getName());
+    assertNotNull(plugin.getParameters());
+    assertFalse(plugin.getParameters().isEmpty());
+}
+
+@Test
+public void testPreview_WithFiles() throws IOException {
+    File testFile1 = tempDir.resolve("test1.txt").toFile();
+    File testFile2 = tempDir.resolve("test2.txt").toFile();
+    Files.write(testFile1.toPath(), "test content 1".getBytes());
+    Files.write(testFile2.toPath(), "test content 2".getBytes());
+
+    List<String> filePaths = new ArrayList<>();
+    filePaths.add(testFile1.getAbsolutePath());
+    filePaths.add(testFile2.getAbsolutePath());
+
+    List<ChangeRecord> records = plugin.preview(filePaths, config, context);
+    assertNotNull(records);
+    assertEquals(2, records.size());
+    assertEquals("PENDING", records.get(0).getStatus());
+}
+```
+
+#### TrackNumberPluginTest
+
+```java
+@Test
+public void testPluginInitialization() {
+    assertEquals("track-number", plugin.getId());
+    assertEquals("音轨编号插件", plugin.getName());
+    assertNotNull(plugin.getParameters());
+    assertFalse(plugin.getParameters().isEmpty());
+}
+
+@Test
+public void testExecute_WithAudioFiles() throws IOException {
+    File testFile = tempDir.resolve("test.mp3").toFile();
+    Files.write(testFile.toPath(), "test content".getBytes());
+
+    List<String> filePaths = new ArrayList<>();
+    filePaths.add(testFile.getAbsolutePath());
+
+    config.setValue("mode", "default");
+    config.setValue("startNumber", 1);
+    config.setValue("padZero", true);
+
+    List<ChangeRecord> records = plugin.execute(filePaths, config, context);
+    assertNotNull(records);
+    assertEquals(1, records.size());
 }
 ```
 
