@@ -12,6 +12,7 @@ import 'package:filemanager_flutter/models/strategy_config.dart';
 import 'package:filemanager_flutter/models/config_field.dart';
 import 'package:filemanager_flutter/models/precondition.dart';
 import 'package:filemanager_flutter/models/precondition_group.dart';
+import 'package:filemanager_flutter/models/precondition_field_config.dart';
 import 'package:filemanager_flutter/pages/preview_page.dart';
 
 class ComposePage extends ConsumerStatefulWidget {
@@ -34,6 +35,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
   StrategyInfo? _selectedPipelineStrategy;
   StrategyConfig? _strategyConfig;
   final List<PreconditionGroup> _preconditionGroups = [];
+  final Set<String> _editingConditionIds = {};
   final bool _autoRun = false;
 
   bool _isLoading = false;
@@ -705,8 +707,10 @@ class _ComposePageState extends ConsumerState<ComposePage> {
       itemBuilder: (context, index) {
         final strategy = _pipelineStrategies[index];
         // 使用pipelineId或id来判断选中状态，确保同一策略的多个实例能被独立选择
-        final isSelected = _selectedStrategy?.pipelineId == strategy.pipelineId || 
-                          (_selectedStrategy?.pipelineId == null && _selectedStrategy?.id == strategy.id);
+        final isSelected = _selectedStrategy != null && 
+                          (_selectedStrategy?.pipelineId == strategy.pipelineId || 
+                          (_selectedStrategy?.pipelineId == null && _selectedStrategy?.id == strategy.id));
+        print('策略 ${strategy.name} (id: ${strategy.id}, pipelineId: ${strategy.pipelineId}) 选中状态: $isSelected, 当前选中策略: ${_selectedStrategy?.name} (id: ${_selectedStrategy?.id}, pipelineId: ${_selectedStrategy?.pipelineId})');
         return _buildPipelineListItem(strategy, index, isSelected);
       },
     );
@@ -857,20 +861,63 @@ class _ComposePageState extends ConsumerState<ComposePage> {
 
   Widget _buildConditionsUI() {
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(8),
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Row(
+            children: [
+              Icon(Icons.filter_list, color: Colors.blue.shade700, size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                '前置条件配置',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Tooltip(
+                message: '设置文件处理的前置条件，只有满足条件的文件才会被处理',
+                child: Icon(Icons.help_outline, color: Colors.grey.shade600, size: 18),
+              ),
+            ],
+          ),
+          const SizedBox(height: 15),
           if (_preconditionGroups.isEmpty)
-            const Text(
-              '(点击下方按钮添加条件组)',
-              style: TextStyle(
-                color: Colors.grey,
-                fontSize: 14,
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade300, style: BorderStyle.solid),
+              ),
+              child: Column(
+                children: [
+                  Icon(Icons.inbox, color: Colors.grey.shade400, size: 48),
+                  const SizedBox(height: 12),
+                  Text(
+                    '暂无前置条件',
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '点击下方按钮添加条件组开始配置',
+                    style: TextStyle(
+                      color: Colors.grey.shade500,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
               ),
             ),
           if (_preconditionGroups.isNotEmpty)
@@ -881,14 +928,18 @@ class _ComposePageState extends ConsumerState<ComposePage> {
                 return _buildPreconditionGroup(index, group);
               }).toList(),
             ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 15),
           ElevatedButton.icon(
             onPressed: _addPreconditionGroup,
-            icon: const Icon(Icons.add),
+            icon: const Icon(Icons.add_circle_outline),
             label: const Text('添加条件组'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
+              backgroundColor: Colors.blue.shade700,
               foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
           ),
         ],
@@ -916,12 +967,19 @@ class _ComposePageState extends ConsumerState<ComposePage> {
 
   Widget _buildPreconditionGroup(int index, PreconditionGroup group) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(10),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.blue.shade100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
           key: ValueKey('precondition_group_column_$index'),
@@ -931,72 +989,134 @@ class _ComposePageState extends ConsumerState<ComposePage> {
               key: ValueKey('precondition_group_header_row_$index'),
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  group.name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
+                Row(
+                  children: [
+                    Icon(Icons.folder_open, color: Colors.blue.shade600, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      group.name,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ],
                 ),
                 IconButton(
                   key: ValueKey('precondition_group_delete_$index'),
-                  icon: const Icon(Icons.delete, color: Colors.red),
+                  icon: Icon(Icons.delete_outline, color: Colors.red.shade400),
                   onPressed: () => _removePreconditionGroup(index),
+                  tooltip: '删除条件组',
                 ),
               ],
             ),
-            const SizedBox(height: 10),
-            Row(
-              key: ValueKey('precondition_logic_type_row_$index'),
-              children: [
-              const Text('逻辑类型:'),
-              const SizedBox(width: 10),
-              DropdownButton<String>(
-                value: group.logicType,
-                items: const [
-                  DropdownMenuItem(value: 'AND', child: Text('AND')),
-                  DropdownMenuItem(value: 'OR', child: Text('OR')),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                key: ValueKey('precondition_logic_type_row_$index'),
+                children: [
+                  Icon(Icons.merge_type, color: Colors.grey.shade600, size: 18),
+                  const SizedBox(width: 8),
+                  const Text(
+                    '逻辑关系:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: DropdownButton<String>(
+                      value: group.logicType,
+                      items: const [
+                        DropdownMenuItem(value: 'AND', child: Text('AND (全部满足)')),
+                        DropdownMenuItem(value: 'OR', child: Text('OR (任一满足)')),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          _preconditionGroups[index] = PreconditionGroup(
+                            id: group.id,
+                            name: group.name,
+                            description: group.description,
+                            logicType: value ?? 'AND',
+                            preconditions: group.preconditions,
+                          );
+                        });
+                      },
+                      style: const TextStyle(fontSize: 14),
+                      dropdownColor: Colors.white,
+                      underline: const SizedBox.shrink(),
+                      icon: Icon(Icons.arrow_drop_down, color: Colors.grey.shade600),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Tooltip(
+                    message: group.logicType == 'AND' 
+                      ? '组内所有条件都必须满足' 
+                      : '组内任一条件满足即可',
+                    child: Icon(Icons.info_outline, color: Colors.blue.shade400, size: 16),
+                  ),
                 ],
-                onChanged: (value) {
-                  setState(() {
-                    _preconditionGroups[index] = PreconditionGroup(
-                      id: group.id,
-                      name: group.name,
-                      description: group.description,
-                      logicType: value ?? 'AND',
-                      preconditions: group.preconditions,
-                    );
-                  });
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          if (group.preconditions.isEmpty)
-            const Text(
-              '暂无条件，点击下方按钮添加',
-              style: TextStyle(
-                color: Colors.grey,
-                fontSize: 12,
               ),
             ),
-          if (group.preconditions.isNotEmpty)
-            Column(
-              children: group.preconditions.asMap().entries.map((entry) {
-                int conditionIndex = entry.key;
-                Precondition condition = entry.value;
-                return _buildPrecondition(index, conditionIndex, condition);
-              }).toList(),
-            ),
-          ElevatedButton.icon(
-            onPressed: () => _addPrecondition(index),
-            icon: const Icon(Icons.add, size: 16),
-            label: const Text('添加条件'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              minimumSize: const Size(0, 0),
+            const SizedBox(height: 12),
+            if (group.preconditions.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.shade200, style: BorderStyle.solid),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.rule, color: Colors.grey.shade400, size: 24),
+                    const SizedBox(width: 8),
+                    Text(
+                      '暂无条件，请添加条件',
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            if (group.preconditions.isNotEmpty)
+              Column(
+                children: group.preconditions.asMap().entries.map((entry) {
+                  int conditionIndex = entry.key;
+                  Precondition condition = entry.value;
+                  return _buildPrecondition(index, conditionIndex, condition);
+                }).toList(),
+              ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => _addPrecondition(index),
+              icon: Icon(Icons.add, size: 18, color: Colors.green.shade700),
+              label: Text('添加条件', style: TextStyle(color: Colors.green.shade700)),
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: Colors.green.shade300),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ),
             ),
           ),
         ],
@@ -1008,13 +1128,17 @@ class _ComposePageState extends ConsumerState<ComposePage> {
     setState(() {
       final group = _preconditionGroups[groupIndex];
       final newPreconditions = List<Precondition>.from(group.preconditions);
+      String newConditionId = 'condition_${DateTime.now().millisecondsSinceEpoch}';
+      PreconditionFieldConfig defaultField = PreconditionFieldConfigs.fields.first;
+      String defaultOperator = defaultField.operators.first.code;
       newPreconditions.add(Precondition(
-        id: 'condition_${DateTime.now().millisecondsSinceEpoch}',
-        field: 'file',
-        operator: 'contains',
+        id: newConditionId,
+        field: defaultField.code,
+        operator: defaultOperator,
         value: '',
         description: '条件描述',
       ));
+      _editingConditionIds.add(newConditionId);
       _preconditionGroups[groupIndex] = PreconditionGroup(
         id: group.id,
         name: group.name,
@@ -1040,163 +1164,297 @@ class _ComposePageState extends ConsumerState<ComposePage> {
     });
   }
 
+  String? _validatePrecondition(Precondition condition) {
+    PreconditionFieldConfig? fieldConfig = PreconditionFieldConfigs.getFieldConfig(condition.field);
+    if (fieldConfig == null) return '无效的字段类型';
+
+    if (!fieldConfig.requiresValue) {
+      return null;
+    }
+
+    if (condition.value == null || condition.value.toString().isEmpty) {
+      return '条件值不能为空';
+    }
+    
+    String field = condition.field;
+    String operator = condition.operator;
+    String value = condition.value.toString();
+
+    switch (field) {
+      case 'size':
+      case 'modified':
+        if (operator == 'contains' || operator == 'startsWith' || operator == 'endsWith') {
+          return '数值类型字段不支持包含、以...开头、以...结尾操作';
+        }
+        try {
+          double.parse(value);
+        } catch (e) {
+          return '请输入有效的数值';
+        }
+        break;
+      case 'extension':
+        if (operator == 'equals' && !value.startsWith('.')) {
+          return '扩展名应以点号开头，如 .mp3';
+        }
+        if (operator == 'in') {
+          List<String> extensions = value.split(',').map((e) => e.trim()).toList();
+          for (String ext in extensions) {
+            if (!ext.startsWith('.')) {
+              return '扩展名列表中的每一项都应以点号开头，如 .mp3,.wav';
+            }
+          }
+        }
+        break;
+    }
+
+    return null;
+  }
+
   Widget _buildPrecondition(int groupIndex, int conditionIndex, Precondition condition) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 5),
-      padding: const EdgeInsets.all(8),
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(6),
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blue.shade100),
       ),
       child: Column(
         key: ValueKey('precondition_column_${groupIndex}_$conditionIndex'),
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            key: ValueKey('precondition_field_row_${groupIndex}_$conditionIndex'),
-            mainAxisSize: MainAxisSize.min,
             children: [
-              DropdownButton<String>(
-                value: condition.field,
-                items: const [
-                  DropdownMenuItem(value: 'file', child: Text('文件')),
-                  DropdownMenuItem(value: 'directory', child: Text('目录')),
-                  DropdownMenuItem(value: 'extension', child: Text('扩展名')),
-                  DropdownMenuItem(value: 'size', child: Text('文件大小')),
-                  DropdownMenuItem(value: 'modified', child: Text('修改时间')),
-                  DropdownMenuItem(value: 'created', child: Text('创建时间')),
-                  DropdownMenuItem(value: 'name', child: Text('文件名')),
-                  DropdownMenuItem(value: 'path', child: Text('文件路径')),
-                ],
-                onChanged: (value) {
-                  setState(() {
-                    final group = _preconditionGroups[groupIndex];
-                    final newPreconditions = List<Precondition>.from(group.preconditions);
-                    newPreconditions[conditionIndex] = Precondition(
-                      id: condition.id,
-                      field: value ?? 'file',
-                      operator: condition.operator,
-                      value: condition.value,
-                      description: condition.description,
-                    );
-                    _preconditionGroups[groupIndex] = PreconditionGroup(
-                      id: group.id,
-                      name: group.name,
-                      description: group.description,
-                      logicType: group.logicType,
-                      preconditions: newPreconditions,
-                    );
-                  });
-                },
+              Icon(Icons.tune, color: Colors.blue.shade600, size: 16),
+              const SizedBox(width: 6),
+              Text(
+                '条件 ${conditionIndex + 1}',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                  color: Colors.blue.shade700,
+                ),
               ),
-              const SizedBox(width: 10),
-              DropdownButton<String>(
-                value: condition.operator,
-                items: const [
-                  DropdownMenuItem(value: 'contains', child: Text('包含')),
-                  DropdownMenuItem(value: 'equals', child: Text('等于')),
-                  DropdownMenuItem(value: 'startsWith', child: Text('以...开头')),
-                  DropdownMenuItem(value: 'endsWith', child: Text('以...结尾')),
-                  DropdownMenuItem(value: 'greaterThan', child: Text('大于')),
-                  DropdownMenuItem(value: 'lessThan', child: Text('小于')),
-                  DropdownMenuItem(value: 'greaterThanOrEqual', child: Text('大于等于')),
-                  DropdownMenuItem(value: 'lessThanOrEqual', child: Text('小于等于')),
-                  DropdownMenuItem(value: 'notEquals', child: Text('不等于')),
-                ],
-                onChanged: (value) {
-                  setState(() {
-                    final group = _preconditionGroups[groupIndex];
-                    final newPreconditions = List<Precondition>.from(group.preconditions);
-                    newPreconditions[conditionIndex] = Precondition(
-                      id: condition.id,
-                      field: condition.field,
-                      operator: value ?? 'contains',
-                      value: condition.value,
-                      description: condition.description,
-                    );
-                    _preconditionGroups[groupIndex] = PreconditionGroup(
-                      id: group.id,
-                      name: group.name,
-                      description: group.description,
-                      logicType: group.logicType,
-                      preconditions: newPreconditions,
-                    );
-                  });
-                },
+              const Spacer(),
+              IconButton(
+                icon: Icon(Icons.close, color: Colors.red.shade400, size: 18),
+                onPressed: () => _removePrecondition(groupIndex, conditionIndex),
+                tooltip: '删除条件',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
               ),
             ],
           ),
-          const SizedBox(height: 5),
-          Row(
-            key: ValueKey('precondition_value_row_${groupIndex}_$conditionIndex'),
-            children: [
-              Expanded(
-                flex: 3,
-                child: TextField(
-                  controller: TextEditingController(text: condition.value.toString()),
-                  onChanged: (value) {
-                    setState(() {
-                      final group = _preconditionGroups[groupIndex];
-                      final newPreconditions = List<Precondition>.from(group.preconditions);
-                      newPreconditions[conditionIndex] = Precondition(
-                        id: condition.id,
-                        field: condition.field,
-                        operator: condition.operator,
-                        value: value,
-                        description: condition.description,
-                      );
-                      _preconditionGroups[groupIndex] = PreconditionGroup(
-                        id: group.id,
-                        name: group.name,
-                        description: group.description,
-                        logicType: group.logicType,
-                        preconditions: newPreconditions,
-                      );
-                    });
-                  },
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  key: ValueKey('precondition_field_row_${groupIndex}_$conditionIndex'),
+                  children: [
+                    Icon(Icons.label, color: Colors.grey.shade600, size: 16),
+                    const SizedBox(width: 8),
+                    const Text(
+                      '字段:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: DropdownButton<String>(
+                          value: condition.field,
+                          isExpanded: true,
+                          items: const [
+                            DropdownMenuItem(value: 'file', child: Text('文件')),
+                            DropdownMenuItem(value: 'directory', child: Text('目录')),
+                            DropdownMenuItem(value: 'extension', child: Text('扩展名')),
+                            DropdownMenuItem(value: 'size', child: Text('文件大小')),
+                            DropdownMenuItem(value: 'modified', child: Text('修改时间')),
+                            DropdownMenuItem(value: 'created', child: Text('创建时间')),
+                            DropdownMenuItem(value: 'name', child: Text('文件名')),
+                            DropdownMenuItem(value: 'path', child: Text('文件路径')),
+                          ],
+                          onChanged: (value) {
+                            setState(() {
+                              final group = _preconditionGroups[groupIndex];
+                              final newPreconditions = List<Precondition>.from(group.preconditions);
+                              newPreconditions[conditionIndex] = Precondition(
+                                id: condition.id,
+                                field: value ?? 'file',
+                                operator: condition.operator,
+                                value: condition.value,
+                                description: condition.description,
+                              );
+                              _preconditionGroups[groupIndex] = PreconditionGroup(
+                                id: group.id,
+                                name: group.name,
+                                description: group.description,
+                                logicType: group.logicType,
+                                preconditions: newPreconditions,
+                              );
+                            });
+                          },
+                          style: const TextStyle(fontSize: 13),
+                          dropdownColor: Colors.white,
+                          underline: const SizedBox.shrink(),
+                          icon: Icon(Icons.arrow_drop_down, color: Colors.grey.shade600),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(width: 5),
-              Expanded(
-                flex: 2,
-                child: TextField(
-                  controller: TextEditingController(text: condition.description),
-                  onChanged: (value) {
-                    setState(() {
-                      final group = _preconditionGroups[groupIndex];
-                      final newPreconditions = List<Precondition>.from(group.preconditions);
-                      newPreconditions[conditionIndex] = Precondition(
-                        id: condition.id,
-                        field: condition.field,
-                        operator: condition.operator,
-                        value: condition.value,
-                        description: value,
-                      );
-                      _preconditionGroups[groupIndex] = PreconditionGroup(
-                        id: group.id,
-                        name: group.name,
-                        description: group.description,
-                        logicType: group.logicType,
-                        preconditions: newPreconditions,
-                      );
-                    });
-                  },
-                  decoration: const InputDecoration(
-                    labelText: '描述',
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  ),
+                const SizedBox(height: 8),
+                Row(
+                  key: ValueKey('precondition_operator_row_${groupIndex}_$conditionIndex'),
+                  children: [
+                    Icon(Icons.compare_arrows, color: Colors.grey.shade600, size: 16),
+                    const SizedBox(width: 8),
+                    const Text(
+                      '操作符:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: DropdownButton<String>(
+                          value: condition.operator,
+                          isExpanded: true,
+                          items: const [
+                            DropdownMenuItem(value: 'contains', child: Text('包含')),
+                            DropdownMenuItem(value: 'equals', child: Text('等于')),
+                            DropdownMenuItem(value: 'startsWith', child: Text('以...开头')),
+                            DropdownMenuItem(value: 'endsWith', child: Text('以...结尾')),
+                            DropdownMenuItem(value: 'greaterThan', child: Text('大于')),
+                            DropdownMenuItem(value: 'lessThan', child: Text('小于')),
+                            DropdownMenuItem(value: 'greaterThanOrEqual', child: Text('大于等于')),
+                            DropdownMenuItem(value: 'lessThanOrEqual', child: Text('小于等于')),
+                            DropdownMenuItem(value: 'notEquals', child: Text('不等于')),
+                          ],
+                          onChanged: (value) {
+                            setState(() {
+                              final group = _preconditionGroups[groupIndex];
+                              final newPreconditions = List<Precondition>.from(group.preconditions);
+                              newPreconditions[conditionIndex] = Precondition(
+                                id: condition.id,
+                                field: condition.field,
+                                operator: value ?? 'contains',
+                                value: condition.value,
+                                description: condition.description,
+                              );
+                              _preconditionGroups[groupIndex] = PreconditionGroup(
+                                id: group.id,
+                                name: group.name,
+                                description: group.description,
+                                logicType: group.logicType,
+                                preconditions: newPreconditions,
+                              );
+                            });
+                          },
+                          style: const TextStyle(fontSize: 13),
+                          dropdownColor: Colors.white,
+                          underline: const SizedBox.shrink(),
+                          icon: Icon(Icons.arrow_drop_down, color: Colors.grey.shade600),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red, size: 16),
-                onPressed: () => _removePrecondition(groupIndex, conditionIndex),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Row(
+                  key: ValueKey('precondition_value_row_${groupIndex}_$conditionIndex'),
+                  children: [
+                    Icon(Icons.input, color: Colors.grey.shade600, size: 16),
+                    const SizedBox(width: 8),
+                    const Text(
+                      '值:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: TextEditingController(text: condition.value.toString()),
+                        onChanged: (value) {
+                          setState(() {
+                            final group = _preconditionGroups[groupIndex];
+                            final newPreconditions = List<Precondition>.from(group.preconditions);
+                            newPreconditions[conditionIndex] = Precondition(
+                              id: condition.id,
+                              field: condition.field,
+                              operator: condition.operator,
+                              value: value,
+                              description: condition.description,
+                            );
+                            _preconditionGroups[groupIndex] = PreconditionGroup(
+                              id: group.id,
+                              name: group.name,
+                              description: group.description,
+                              logicType: group.logicType,
+                              preconditions: newPreconditions,
+                            );
+                          });
+                        },
+                        decoration: InputDecoration(
+                          hintText: '请输入值',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(4),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          isDense: true,
+                          errorText: _validatePrecondition(condition),
+                          errorStyle: TextStyle(fontSize: 11, color: Colors.red.shade700),
+                        ),
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+                if (_validatePrecondition(condition) != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Row(
+                      children: [
+                        Icon(Icons.warning_amber_rounded, color: Colors.amber.shade700, size: 14),
+                        const SizedBox(width: 4),
+                        Text(
+                          _validatePrecondition(condition)!,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.amber.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
           ),
         ],
       ),

@@ -2,6 +2,7 @@ package com.filemanager.backend.controller;
 
 import com.filemanager.domain.dto.PluginConfigDTO;
 import com.filemanager.domain.dto.PipelineTaskStatusDTO;
+import com.filemanager.domain.dto.PreconditionGroupDTO;
 import com.filemanager.domain.entity.ChangeRecord;
 import com.filemanager.domain.enums.TaskStatus;
 import com.filemanager.domain.service.PluginService;
@@ -205,6 +206,7 @@ public class PipelineController {
 
                         String pluginId = (String) pluginConfig.get("pluginId");
                         Map<String, Object> configMap = (Map<String, Object>) pluginConfig.get("config");
+                        List<Map<String, Object>> preconditionGroupsData = (List<Map<String, Object>>) pluginConfig.get("preconditionGroups");
 
                         taskManager.updateTaskStep(taskId, "执行节点: " + pluginId);
                         taskManager.updateTaskMessage(taskId, "正在执行节点: " + pluginId);
@@ -217,7 +219,13 @@ public class PipelineController {
                             }
                         }
 
-                        List<ChangeRecord> changes = pluginService.previewPlugin(pluginId, sourceDirectories, config);
+                        List<PreconditionGroupDTO> preconditionGroups = convertPreconditionGroups(preconditionGroupsData);
+                        List<ChangeRecord> changes;
+                        if (preconditionGroups != null && !preconditionGroups.isEmpty()) {
+                            changes = pluginService.previewPlugin(pluginId, sourceDirectories, config, preconditionGroups);
+                        } else {
+                            changes = pluginService.previewPlugin(pluginId, sourceDirectories, config);
+                        }
                         allChanges.addAll(changes);
                         completed++;
 
@@ -369,6 +377,7 @@ public class PipelineController {
 
                         String pluginId = (String) pluginConfig.get("pluginId");
                         Map<String, Object> configMap = (Map<String, Object>) pluginConfig.get("config");
+                        List<Map<String, Object>> preconditionGroupsData = (List<Map<String, Object>>) pluginConfig.get("preconditionGroups");
 
                         taskManager.updateTaskStep(taskId, "执行节点: " + pluginId);
                         taskManager.updateTaskMessage(taskId, "正在执行节点: " + pluginId);
@@ -381,7 +390,13 @@ public class PipelineController {
                             }
                         }
 
-                        List<ChangeRecord> changes = pluginService.executePlugin(pluginId, sourceDirectories, config);
+                        List<PreconditionGroupDTO> preconditionGroups = convertPreconditionGroups(preconditionGroupsData);
+                        List<ChangeRecord> changes;
+                        if (preconditionGroups != null && !preconditionGroups.isEmpty()) {
+                            changes = pluginService.executePlugin(pluginId, sourceDirectories, config, preconditionGroups);
+                        } else {
+                            changes = pluginService.executePlugin(pluginId, sourceDirectories, config);
+                        }
                         allChanges.addAll(changes);
                         completed++;
 
@@ -567,6 +582,44 @@ public class PipelineController {
         if (a == null) return -1;
         if (b == null) return 1;
         return a.compareTo(b);
+    }
+
+    private List<PreconditionGroupDTO> convertPreconditionGroups(List<Map<String, Object>> preconditionGroupsData) {
+        if (preconditionGroupsData == null || preconditionGroupsData.isEmpty()) {
+            return null;
+        }
+
+        List<PreconditionGroupDTO> groups = new ArrayList<>();
+        for (Map<String, Object> groupData : preconditionGroupsData) {
+            PreconditionGroupDTO group = new PreconditionGroupDTO();
+            group.setId((String) groupData.get("id"));
+            group.setName((String) groupData.get("name"));
+            group.setDescription((String) groupData.get("description"));
+            group.setLogicType((String) groupData.get("logicType"));
+
+            List<Map<String, Object>> preconditionsData = (List<Map<String, Object>>) groupData.get("preconditions");
+            if (preconditionsData != null && !preconditionsData.isEmpty()) {
+                List<com.filemanager.domain.dto.PreconditionDTO> preconditions = new ArrayList<>();
+                for (Map<String, Object> preconditionData : preconditionsData) {
+                    com.filemanager.domain.dto.PreconditionDTO precondition = new com.filemanager.domain.dto.PreconditionDTO();
+                    precondition.setId((String) preconditionData.get("id"));
+                    precondition.setField((String) preconditionData.get("field"));
+                    
+                    String operatorStr = (String) preconditionData.get("operator");
+                    com.filemanager.domain.dto.PreconditionDTO.OperatorType operator = 
+                        com.filemanager.domain.dto.PreconditionDTO.OperatorType.valueOf(operatorStr.toUpperCase());
+                    precondition.setOperator(operator);
+                    
+                    precondition.setValue(preconditionData.get("value"));
+                    precondition.setDescription((String) preconditionData.get("description"));
+                    preconditions.add(precondition);
+                }
+                group.setPreconditions(preconditions);
+            }
+
+            groups.add(group);
+        }
+        return groups;
     }
 
     private int countFiles(File directory) {

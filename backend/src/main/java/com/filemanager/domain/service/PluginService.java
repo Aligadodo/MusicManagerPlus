@@ -2,6 +2,7 @@ package com.filemanager.domain.service;
 
 import com.filemanager.domain.dto.PluginConfigDTO;
 import com.filemanager.domain.dto.PluginInfoDTO;
+import com.filemanager.domain.dto.PreconditionGroupDTO;
 import com.filemanager.domain.entity.ChangeRecord;
 
 import java.util.List;
@@ -20,6 +21,16 @@ public interface PluginService {
     List<ChangeRecord> previewPlugin(String pluginId, List<String> sourceDirectories, PluginConfigDTO config);
 
     /**
+     * 预览插件执行结果（带前置条件）
+     * @param pluginId 插件ID
+     * @param sourceDirectories 源目录列表
+     * @param config 插件配置
+     * @param preconditionGroups 前置条件组
+     * @return 变更记录列表
+     */
+    List<ChangeRecord> previewPlugin(String pluginId, List<String> sourceDirectories, PluginConfigDTO config, List<PreconditionGroupDTO> preconditionGroups);
+
+    /**
      * 执行插件
      * @param pluginId 插件ID
      * @param sourceDirectories 源目录列表
@@ -27,6 +38,16 @@ public interface PluginService {
      * @return 变更记录列表
      */
     List<ChangeRecord> executePlugin(String pluginId, List<String> sourceDirectories, PluginConfigDTO config);
+
+    /**
+     * 执行插件（带前置条件）
+     * @param pluginId 插件ID
+     * @param sourceDirectories 源目录列表
+     * @param config 插件配置
+     * @param preconditionGroups 前置条件组
+     * @return 变更记录列表
+     */
+    List<ChangeRecord> executePlugin(String pluginId, List<String> sourceDirectories, PluginConfigDTO config, List<PreconditionGroupDTO> preconditionGroups);
 
     /**
      * 获取可用插件列表

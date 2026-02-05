@@ -19,7 +19,8 @@ public class PreconditionDTO {
         STARTS_WITH,
         ENDS_WITH,
         REGEX_MATCH,
-        IN
+        IN,
+        IS
     }
 
     public PreconditionDTO() {

@@ -2,17 +2,21 @@ package com.filemanager.backend.service.impl;
 
 import com.filemanager.domain.dto.PluginInfoDTO;
 import com.filemanager.domain.dto.PluginConfigDTO;
+import com.filemanager.domain.dto.PreconditionGroupDTO;
 import com.filemanager.domain.entity.ChangeRecord;
 import com.filemanager.domain.service.PluginService;
 import com.filemanager.plugin.IPlugin;
 import com.filemanager.plugin.PluginRegistry;
+import com.filemanager.plugin.util.PreconditionEvaluator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 @Service
 public class PluginServiceImpl implements PluginService {
@@ -88,6 +92,17 @@ public class PluginServiceImpl implements PluginService {
     }
 
     @Override
+    public List<ChangeRecord> previewPlugin(String pluginId, List<String> filePaths, PluginConfigDTO config, List<PreconditionGroupDTO> preconditionGroups) {
+        IPlugin plugin = pluginRegistry.getPlugin(pluginId);
+        if (plugin == null) {
+            return new ArrayList<>();
+        }
+
+        List<String> filteredFilePaths = filterFilesByPreconditions(filePaths, preconditionGroups);
+        return plugin.preview(filteredFilePaths, config, new com.filemanager.plugin.ExecutionContext());
+    }
+
+    @Override
     public List<ChangeRecord> executePlugin(String pluginId, List<String> filePaths, PluginConfigDTO config) {
         IPlugin plugin = pluginRegistry.getPlugin(pluginId);
         if (plugin == null) {
@@ -95,6 +110,30 @@ public class PluginServiceImpl implements PluginService {
         }
         
         return plugin.execute(filePaths, config, new com.filemanager.plugin.ExecutionContext());
+    }
+
+    @Override
+    public List<ChangeRecord> executePlugin(String pluginId, List<String> filePaths, PluginConfigDTO config, List<PreconditionGroupDTO> preconditionGroups) {
+        IPlugin plugin = pluginRegistry.getPlugin(pluginId);
+        if (plugin == null) {
+            return new ArrayList<>();
+        }
+
+        List<String> filteredFilePaths = filterFilesByPreconditions(filePaths, preconditionGroups);
+        return plugin.execute(filteredFilePaths, config, new com.filemanager.plugin.ExecutionContext());
+    }
+
+    private List<String> filterFilesByPreconditions(List<String> filePaths, List<PreconditionGroupDTO> preconditionGroups) {
+        if (preconditionGroups == null || preconditionGroups.isEmpty()) {
+            return filePaths;
+        }
+
+        return filePaths.stream()
+            .filter(filePath -> {
+                File file = new File(filePath);
+                return PreconditionEvaluator.evaluate(file, preconditionGroups);
+            })
+            .collect(Collectors.toList());
     }
 
     @Override
