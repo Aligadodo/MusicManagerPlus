@@ -52,3 +52,4 @@ pubspec.lock
 backend/backend.pid
 *.log
 *.pid
+backend/logs/filemanager.log
