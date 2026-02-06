@@ -20,7 +20,15 @@ public class PreconditionDTO {
         ENDS_WITH,
         REGEX_MATCH,
         IN,
-        IS
+        NOT_IN,
+        BETWEEN,
+        LAST_DAYS,
+        IS,
+        IS_EMPTY,
+        HAS_SUBDIRECTORIES,
+        DEPTH_GREATER_THAN,
+        FILE_COUNT_GREATER_THAN,
+        FORMAT_IN
     }
 
     public PreconditionDTO() {

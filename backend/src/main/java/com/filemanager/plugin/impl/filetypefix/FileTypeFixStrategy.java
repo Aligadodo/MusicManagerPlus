@@ -1,8 +1,8 @@
-package com.filemanager.plugin.impl;
+package com.filemanager.plugin.impl.filetypefix;
 
 import com.filemanager.domain.dto.StrategyConfigDTO;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
-import java.util.Arrays;
+import com.filemanager.plugin.impl.filetypefix.enums.TargetFormat;
 
 public class FileTypeFixStrategy extends AbstractConfigurableStrategy {
 
@@ -32,9 +32,9 @@ public class FileTypeFixStrategy extends AbstractConfigurableStrategy {
 
     @Override
     protected void initConfigFields() {
-        addConfigField("targetFormat", "目标格式", "select", (Object) "自动检测", 
+        addConfigField("targetFormat", "目标格式", "select", (Object) TargetFormat.AUTO_DETECT.getCode(), 
             "修复后的文件格式", true, 
-            Arrays.asList("自动检测", "WAV", "FLAC", "MP3", "AAC", "OGG"));
+            getTargetFormatOptions());
         addConfigField("keepOriginal", "保留原始文件", "boolean", (Object) true, 
             "是否保留原始文件", false);
         addConfigField("backupOriginal", "备份原始文件", "boolean", (Object) true, 
@@ -43,8 +43,19 @@ public class FileTypeFixStrategy extends AbstractConfigurableStrategy {
 
     @Override
     protected void initDefaultConfigValues(StrategyConfigDTO config) {
-        setConfigValue(config, "targetFormat", (Object) "自动检测");
+        setConfigValue(config, "targetFormat", (Object) TargetFormat.AUTO_DETECT.getCode());
         setConfigValue(config, "keepOriginal", (Object) true);
         setConfigValue(config, "backupOriginal", (Object) true);
+    }
+    
+    private java.util.List<String> getTargetFormatOptions() {
+        return java.util.Arrays.asList(
+            TargetFormat.AUTO_DETECT.getCode(),
+            TargetFormat.WAV.getCode(),
+            TargetFormat.FLAC.getCode(),
+            TargetFormat.MP3.getCode(),
+            TargetFormat.AAC.getCode(),
+            TargetFormat.OGG.getCode()
+        );
     }
 }

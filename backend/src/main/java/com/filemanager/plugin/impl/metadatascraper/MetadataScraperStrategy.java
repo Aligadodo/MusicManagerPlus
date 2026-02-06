@@ -1,8 +1,8 @@
-package com.filemanager.plugin.impl;
+package com.filemanager.plugin.impl.metadatascraper;
 
 import com.filemanager.domain.dto.StrategyConfigDTO;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
-import java.util.Arrays;
+import com.filemanager.plugin.impl.metadatascraper.enums.DataSource;
 
 public class MetadataScraperStrategy extends AbstractConfigurableStrategy {
 
@@ -32,12 +32,9 @@ public class MetadataScraperStrategy extends AbstractConfigurableStrategy {
 
     @Override
     protected void initConfigFields() {
-        addConfigField("source", "数据源", "select", (Object) "本地推断 (仅生成清单)", 
+        addConfigField("source", "数据源", "select", (Object) DataSource.LOCAL_INFERENCE.getCode(), 
             "元数据数据源", true, 
-            Arrays.asList("本地推断 (仅生成清单)", "网易云音乐 (中文歌曲) (不完善)", 
-                      "咪咕音乐 (版权歌曲) (不完善)", "MusicBrainz (开源数据库)", 
-                      "iTunes (苹果音乐)", "Last.fm (全球音乐平台) (不完善)", 
-                      "Discogs (音乐数据库) (不完善)"));
+            getDataSourceOptions());
         addConfigField("threads", "线程数", "number", (Object) 4, 
             "并发抓取的线程数", false);
         addConfigField("lyricsEnabled", "启用歌词模块", "boolean", (Object) true, 
@@ -54,12 +51,24 @@ public class MetadataScraperStrategy extends AbstractConfigurableStrategy {
 
     @Override
     protected void initDefaultConfigValues(StrategyConfigDTO config) {
-        setConfigValue(config, "source", (Object) "本地推断 (仅生成清单)");
+        setConfigValue(config, "source", (Object) DataSource.LOCAL_INFERENCE.getCode());
         setConfigValue(config, "threads", (Object) 4);
         setConfigValue(config, "lyricsEnabled", (Object) true);
         setConfigValue(config, "coverEnabled", (Object) true);
         setConfigValue(config, "albumInfoEnabled", (Object) true);
         setConfigValue(config, "maxRequests", (Object) 10);
         setConfigValue(config, "periodMs", (Object) 1000);
+    }
+    
+    private java.util.List<String> getDataSourceOptions() {
+        return java.util.Arrays.asList(
+            DataSource.LOCAL_INFERENCE.getCode(),
+            DataSource.NETEASE_MUSIC.getCode(),
+            DataSource.MIGU_MUSIC.getCode(),
+            DataSource.MUSICBRAINZ.getCode(),
+            DataSource.ITUNES.getCode(),
+            DataSource.LAST_FM.getCode(),
+            DataSource.DISCOGS.getCode()
+        );
     }
 }

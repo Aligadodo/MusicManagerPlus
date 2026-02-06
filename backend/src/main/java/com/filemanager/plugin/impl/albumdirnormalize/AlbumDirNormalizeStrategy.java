@@ -1,8 +1,8 @@
-package com.filemanager.plugin.impl;
+package com.filemanager.plugin.impl.albumdirnormalize;
 
 import com.filemanager.domain.dto.StrategyConfigDTO;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
-import java.util.Arrays;
+import com.filemanager.plugin.impl.albumdirnormalize.enums.DirectoryTemplate;
 
 public class AlbumDirNormalizeStrategy extends AbstractConfigurableStrategy {
 
@@ -32,12 +32,9 @@ public class AlbumDirNormalizeStrategy extends AbstractConfigurableStrategy {
 
     @Override
     protected void initConfigFields() {
-        addConfigField("template", "目录命名模板", "select", (Object) "%artist% - %year% - %album%", 
+        addConfigField("template", "目录命名模板", "select", (Object) DirectoryTemplate.ARTIST_YEAR_ALBUM.getCode(), 
             "专辑目录的命名模板", true, 
-            Arrays.asList("%artist% - %year% - %album%", "[%year%] %artist% - %album%", 
-                      "%artist%/%album% (%year%)", "%year% - %album% - %artist%", 
-                      "%album% - %artist% [%year%]", "%artist% - %album%", 
-                      "%album% (%year%)", "自定义模板"));
+            getDirectoryTemplateOptions());
         addConfigField("customTemplate", "自定义模板", "string", (Object) "", 
             "自定义命名模板", false);
         addConfigField("cleanSpecialChars", "清理特殊字符", "boolean", (Object) true, 
@@ -54,12 +51,25 @@ public class AlbumDirNormalizeStrategy extends AbstractConfigurableStrategy {
 
     @Override
     protected void initDefaultConfigValues(StrategyConfigDTO config) {
-        setConfigValue(config, "template", (Object) "%artist% - %year% - %album%");
+        setConfigValue(config, "template", (Object) DirectoryTemplate.ARTIST_YEAR_ALBUM.getCode());
         setConfigValue(config, "customTemplate", (Object) "");
         setConfigValue(config, "cleanSpecialChars", (Object) true);
         setConfigValue(config, "removeYearPrefix", (Object) false);
         setConfigValue(config, "useConsensusMetadata", (Object) true);
         setConfigValue(config, "preserveOriginalName", (Object) true);
         setConfigValue(config, "validateAlbumInfo", (Object) true);
+    }
+    
+    private java.util.List<String> getDirectoryTemplateOptions() {
+        return java.util.Arrays.asList(
+            DirectoryTemplate.ARTIST_YEAR_ALBUM.getCode(),
+            DirectoryTemplate.YEAR_ARTIST_ALBUM.getCode(),
+            DirectoryTemplate.ARTIST_ALBUM_YEAR.getCode(),
+            DirectoryTemplate.YEAR_ALBUM_ARTIST.getCode(),
+            DirectoryTemplate.ALBUM_ARTIST_YEAR.getCode(),
+            DirectoryTemplate.ARTIST_ALBUM.getCode(),
+            DirectoryTemplate.ALBUM_YEAR.getCode(),
+            DirectoryTemplate.CUSTOM.getCode()
+        );
     }
 }

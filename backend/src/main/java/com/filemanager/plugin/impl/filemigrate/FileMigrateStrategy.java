@@ -1,8 +1,10 @@
-package com.filemanager.plugin.impl;
+package com.filemanager.plugin.impl.filemigrate;
 
 import com.filemanager.domain.dto.StrategyConfigDTO;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
-import java.util.Arrays;
+import com.filemanager.plugin.impl.audioconverter.enums.OutputDirMode;
+import com.filemanager.plugin.impl.filemigrate.enums.OperationMode;
+import com.filemanager.plugin.impl.filemigrate.enums.ScopeMode;
 
 public class FileMigrateStrategy extends AbstractConfigurableStrategy {
 
@@ -32,17 +34,17 @@ public class FileMigrateStrategy extends AbstractConfigurableStrategy {
 
     @Override
     protected void initConfigFields() {
-        addConfigField("operationMode", "操作模式", "select", (Object) "移动 (MOVE)", 
+        addConfigField("operationMode", "操作模式", "select", (Object) OperationMode.MOVE.getCode(), 
             "文件的操作方式", true, 
-            Arrays.asList("移动 (MOVE)", "复制 (COPY)"));
-        addConfigField("outputDirMode", "输出目录模式", "select", (Object) "子目录", 
+            getOperationModeOptions());
+        addConfigField("outputDirMode", "输出目录模式", "select", (Object) OutputDirMode.SUBDIRECTORY.getCode(), 
             "输出目录模式", true, 
-            Arrays.asList("子目录", "指定目录", "根目录"));
+            getOutputDirModeOptions());
         addConfigField("outputPath", "输出路径", "directory", (Object) "Archive", 
             "目标路径", true);
-        addConfigField("scope", "生效范围", "select", (Object) "全部", 
+        addConfigField("scope", "生效范围", "select", (Object) ScopeMode.ALL.getCode(), 
             "文件处理的生效范围", false, 
-            Arrays.asList("全部", "当前目录", "指定深度"));
+            getScopeModeOptions());
         addConfigField("depth", "深度值", "number", (Object) 0, 
             "指定生效范围的深度值", false);
         addConfigField("keepLargest", "保留最大文件", "boolean", (Object) true, 
@@ -57,14 +59,37 @@ public class FileMigrateStrategy extends AbstractConfigurableStrategy {
 
     @Override
     protected void initDefaultConfigValues(StrategyConfigDTO config) {
-        setConfigValue(config, "operationMode", (Object) "移动 (MOVE)");
-        setConfigValue(config, "outputDirMode", (Object) "子目录");
+        setConfigValue(config, "operationMode", (Object) OperationMode.MOVE.getCode());
+        setConfigValue(config, "outputDirMode", (Object) OutputDirMode.SUBDIRECTORY.getCode());
         setConfigValue(config, "outputPath", (Object) "Archive");
-        setConfigValue(config, "scope", (Object) "全部");
+        setConfigValue(config, "scope", (Object) ScopeMode.ALL.getCode());
         setConfigValue(config, "depth", (Object) 0);
         setConfigValue(config, "keepLargest", (Object) true);
         setConfigValue(config, "keepEarliest", (Object) true);
         setConfigValue(config, "keepExt", (Object) "wav");
         setConfigValue(config, "audioSpecial", (Object) true);
+    }
+    
+    private java.util.List<String> getOperationModeOptions() {
+        return java.util.Arrays.asList(
+            OperationMode.MOVE.getCode(),
+            OperationMode.COPY.getCode()
+        );
+    }
+    
+    private java.util.List<String> getOutputDirModeOptions() {
+        return java.util.Arrays.asList(
+            OutputDirMode.SUBDIRECTORY.getCode(),
+            OutputDirMode.SPECIFIED_DIR.getCode(),
+            OutputDirMode.ROOT_DIR.getCode()
+        );
+    }
+    
+    private java.util.List<String> getScopeModeOptions() {
+        return java.util.Arrays.asList(
+            ScopeMode.ALL.getCode(),
+            ScopeMode.CURRENT_DIRECTORY.getCode(),
+            ScopeMode.SPECIFIED_DEPTH.getCode()
+        );
     }
 }

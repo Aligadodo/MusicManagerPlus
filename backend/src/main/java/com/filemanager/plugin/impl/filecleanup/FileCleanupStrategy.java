@@ -1,8 +1,10 @@
-package com.filemanager.plugin.impl;
+package com.filemanager.plugin.impl.filecleanup;
 
 import com.filemanager.domain.dto.StrategyConfigDTO;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
-import java.util.Arrays;
+import com.filemanager.plugin.impl.filecleanup.enums.CleanupMode;
+import com.filemanager.plugin.impl.filecleanup.enums.DeleteMethod;
+import com.filemanager.plugin.impl.filecleanup.enums.FileSizeRange;
 
 public class FileCleanupStrategy extends AbstractConfigurableStrategy {
 
@@ -32,12 +34,12 @@ public class FileCleanupStrategy extends AbstractConfigurableStrategy {
 
     @Override
     protected void initConfigFields() {
-        addConfigField("mode", "清理模式", "select", (Object) "文件去重", 
+        addConfigField("mode", "清理模式", "select", (Object) CleanupMode.FILE_DUPLICATE.getCode(), 
             "清理的逻辑规则", true, 
-            Arrays.asList("文件去重", "文件夹去重", "清理空目录", "直接清理"));
-        addConfigField("method", "删除方式", "select", (Object) "伪删除", 
+            getCleanupModeOptions());
+        addConfigField("method", "删除方式", "select", (Object) DeleteMethod.PSEUDO_DELETE.getCode(), 
             "删除的方式", true, 
-            Arrays.asList("伪删除", "直接删除", "可回滚删除"));
+            getDeleteMethodOptions());
         addConfigField("trashPath", "回收站路径", "string", (Object) ".EchoTrash", 
             "回收站的位置", false);
         addConfigField("keepLargest", "保留体积/质量最佳的副本", "boolean", (Object) true, 
@@ -52,18 +54,17 @@ public class FileCleanupStrategy extends AbstractConfigurableStrategy {
             "将文件名转换为大写后进行比较", false);
         addConfigField("preprocessSimplified", "文件名转简体中文", "boolean", (Object) false, 
             "将文件名中的繁体中文转换为简体中文后进行比较", false);
-        addConfigField("sizeRange", "文件大小范围", "select", (Object) "全部", 
+        addConfigField("sizeRange", "文件大小范围", "select", (Object) FileSizeRange.ALL.getCode(), 
             "要处理的文件大小范围", false, 
-            Arrays.asList("全部", "小于1MB", "小于10MB", "小于100MB", "小于1GB", 
-                      "大于1MB", "大于10MB", "大于100MB", "大于1GB"));
+            getFileSizeRangeOptions());
         addConfigField("audioSpecial", "音频文件特殊处理", "boolean", (Object) true, 
             "对音频文件进行特殊处理，确保时间长度一致时优先保留质量较高的文件", false);
     }
 
     @Override
     protected void initDefaultConfigValues(StrategyConfigDTO config) {
-        setConfigValue(config, "mode", (Object) "文件去重");
-        setConfigValue(config, "method", (Object) "伪删除");
+        setConfigValue(config, "mode", (Object) CleanupMode.FILE_DUPLICATE.getCode());
+        setConfigValue(config, "method", (Object) DeleteMethod.PSEUDO_DELETE.getCode());
         setConfigValue(config, "trashPath", (Object) ".EchoTrash");
         setConfigValue(config, "keepLargest", (Object) true);
         setConfigValue(config, "keepEarliest", (Object) true);
@@ -71,7 +72,38 @@ public class FileCleanupStrategy extends AbstractConfigurableStrategy {
         setConfigValue(config, "preprocessLower", (Object) true);
         setConfigValue(config, "preprocessUpper", (Object) false);
         setConfigValue(config, "preprocessSimplified", (Object) false);
-        setConfigValue(config, "sizeRange", (Object) "全部");
+        setConfigValue(config, "sizeRange", (Object) FileSizeRange.ALL.getCode());
         setConfigValue(config, "audioSpecial", (Object) true);
+    }
+    
+    private java.util.List<String> getCleanupModeOptions() {
+        return java.util.Arrays.asList(
+            CleanupMode.FILE_DUPLICATE.getCode(),
+            CleanupMode.DIRECTORY_DUPLICATE.getCode(),
+            CleanupMode.EMPTY_DIRECTORY.getCode(),
+            CleanupMode.DIRECT_CLEANUP.getCode()
+        );
+    }
+    
+    private java.util.List<String> getDeleteMethodOptions() {
+        return java.util.Arrays.asList(
+            DeleteMethod.PSEUDO_DELETE.getCode(),
+            DeleteMethod.DIRECT_DELETE.getCode(),
+            DeleteMethod.ROLLBACK_DELETE.getCode()
+        );
+    }
+    
+    private java.util.List<String> getFileSizeRangeOptions() {
+        return java.util.Arrays.asList(
+            FileSizeRange.ALL.getCode(),
+            FileSizeRange.LESS_THAN_1MB.getCode(),
+            FileSizeRange.LESS_THAN_10MB.getCode(),
+            FileSizeRange.LESS_THAN_100MB.getCode(),
+            FileSizeRange.LESS_THAN_1GB.getCode(),
+            FileSizeRange.GREATER_THAN_1MB.getCode(),
+            FileSizeRange.GREATER_THAN_10MB.getCode(),
+            FileSizeRange.GREATER_THAN_100MB.getCode(),
+            FileSizeRange.GREATER_THAN_1GB.getCode()
+        );
     }
 }

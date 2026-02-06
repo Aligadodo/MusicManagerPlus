@@ -15,7 +15,19 @@ import com.filemanager.plugin.impl.audioconverter.enums.OutputDirMode;
 import com.filemanager.plugin.impl.audioconverter.enums.SampleRate;
 import com.filemanager.plugin.impl.advancedrename.enums.CrossDriveMode;
 import com.filemanager.plugin.impl.advancedrename.enums.ProcessScope;
+import com.filemanager.plugin.impl.albumdirnormalize.enums.DirectoryTemplate;
+import com.filemanager.plugin.impl.cuesplitter.enums.AfterSplitAction;
+import com.filemanager.plugin.impl.filecleanup.enums.CleanupMode;
+import com.filemanager.plugin.impl.filecleanup.enums.DeleteMethod;
+import com.filemanager.plugin.impl.filecleanup.enums.FileSizeRange;
+import com.filemanager.plugin.impl.filemigrate.enums.OperationMode;
+import com.filemanager.plugin.impl.filemigrate.enums.ScopeMode;
+import com.filemanager.plugin.impl.filetypefix.enums.TargetFormat;
+import com.filemanager.plugin.impl.fileunzip.enums.OutputMode;
+import com.filemanager.plugin.impl.fileunzip.enums.UnzipEngine;
+import com.filemanager.plugin.impl.metadatascraper.enums.DataSource;
 import com.filemanager.plugin.utils.EnumConverter;
+import com.filemanager.plugin.utils.EnumOptionProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -120,9 +132,10 @@ public class StrategyServiceImpl implements StrategyService {
                     if (param.getOptions() != null && param.getOptions().length > 0) {
                         field.setOptions(Arrays.asList(param.getOptions()));
                         
-                        // 尝试为枚举类型字段添加枚举选项
+                        // 尝试为枚举类型字段添加枚举选项（基于策略ID和字段名）
+                        String strategyId = plugin.getId();
                         String fieldName = param.getName();
-                        List<EnumOptionDTO> enumOptions = StrategyServiceImpl.this.getEnumOptionsForField(fieldName);
+                        List<EnumOptionDTO> enumOptions = EnumOptionProvider.getEnumOptionsForField(strategyId, fieldName);
                         if (enumOptions != null && !enumOptions.isEmpty()) {
                             field.setEnumOptions(enumOptions);
                         }
@@ -234,27 +247,27 @@ public class StrategyServiceImpl implements StrategyService {
         strategyRegistry.registerStrategy(audioConverterStrategy);
 
         // 3. FileCleanupStrategy - 文件清理与去重策略
-        com.filemanager.plugin.impl.FileCleanupStrategy cleanupStrategy = new com.filemanager.plugin.impl.FileCleanupStrategy();
+        com.filemanager.plugin.impl.filecleanup.FileCleanupStrategy cleanupStrategy = new com.filemanager.plugin.impl.filecleanup.FileCleanupStrategy();
         strategyRegistry.registerStrategy(cleanupStrategy);
 
         // 4. MetadataScraperStrategy - 元数据抓取策略
-        com.filemanager.plugin.impl.MetadataScraperStrategy metadataScraperStrategy = new com.filemanager.plugin.impl.MetadataScraperStrategy();
+        com.filemanager.plugin.impl.metadatascraper.MetadataScraperStrategy metadataScraperStrategy = new com.filemanager.plugin.impl.metadatascraper.MetadataScraperStrategy();
         strategyRegistry.registerStrategy(metadataScraperStrategy);
 
         // 5. CueSplitterStrategy - CUE分轨策略
-        com.filemanager.plugin.impl.CueSplitterStrategy cueSplitterStrategy = new com.filemanager.plugin.impl.CueSplitterStrategy();
+        com.filemanager.plugin.impl.cuesplitter.CueSplitterStrategy cueSplitterStrategy = new com.filemanager.plugin.impl.cuesplitter.CueSplitterStrategy();
         strategyRegistry.registerStrategy(cueSplitterStrategy);
 
         // 6. FileMigrateStrategy - 文件批量归档和移动策略
-        com.filemanager.plugin.impl.FileMigrateStrategy fileMigrateStrategy = new com.filemanager.plugin.impl.FileMigrateStrategy();
+        com.filemanager.plugin.impl.filemigrate.FileMigrateStrategy fileMigrateStrategy = new com.filemanager.plugin.impl.filemigrate.FileMigrateStrategy();
         strategyRegistry.registerStrategy(fileMigrateStrategy);
 
         // 7. AlbumDirNormalizeStrategy - 专辑目录标准化策略
-        com.filemanager.plugin.impl.AlbumDirNormalizeStrategy albumDirNormalizeStrategy = new com.filemanager.plugin.impl.AlbumDirNormalizeStrategy();
+        com.filemanager.plugin.impl.albumdirnormalize.AlbumDirNormalizeStrategy albumDirNormalizeStrategy = new com.filemanager.plugin.impl.albumdirnormalize.AlbumDirNormalizeStrategy();
         strategyRegistry.registerStrategy(albumDirNormalizeStrategy);
 
         // 8. FileUnzipStrategy - 批量智能解压策略
-        com.filemanager.plugin.impl.FileUnzipStrategy fileUnzipStrategy = new com.filemanager.plugin.impl.FileUnzipStrategy();
+        com.filemanager.plugin.impl.fileunzip.FileUnzipStrategy fileUnzipStrategy = new com.filemanager.plugin.impl.fileunzip.FileUnzipStrategy();
         strategyRegistry.registerStrategy(fileUnzipStrategy);
 
         // 9. FileCollectionStrategy - 文件收集策略
@@ -262,7 +275,7 @@ public class StrategyServiceImpl implements StrategyService {
         strategyRegistry.registerStrategy(fileCollectionStrategy);
 
         // 10. FileTypeFixStrategy - 文件类型修复策略
-        com.filemanager.plugin.impl.FileTypeFixStrategy fileTypeFixStrategy = new com.filemanager.plugin.impl.FileTypeFixStrategy();
+        com.filemanager.plugin.impl.filetypefix.FileTypeFixStrategy fileTypeFixStrategy = new com.filemanager.plugin.impl.filetypefix.FileTypeFixStrategy();
         strategyRegistry.registerStrategy(fileTypeFixStrategy);
 
         // 11. CueFileRenameStrategy - CUE文件重命名策略
@@ -326,25 +339,6 @@ public class StrategyServiceImpl implements StrategyService {
         }
         logger.info("[Service] 返回策略配置 - strategyId: {}, 配置项数量: {}", strategyId, config.getConfigValues() != null ? config.getConfigValues().size() : 0);
         return config;
-    }
-
-    private List<EnumOptionDTO> getEnumOptionsForField(String fieldName) {
-        switch (fieldName) {
-            case "targetFormat":
-                return EnumConverter.convertEnumToDTOs(AudioFormat.class);
-            case "outputDirMode":
-                return EnumConverter.convertEnumToDTOs(OutputDirMode.class);
-            case "sampleRate":
-                return EnumConverter.convertEnumToDTOs(SampleRate.class);
-            case "channels":
-                return EnumConverter.convertEnumToDTOs(Channels.class);
-            case "crossDriveMode":
-                return EnumConverter.convertEnumToDTOs(CrossDriveMode.class);
-            case "processScope":
-                return EnumConverter.convertEnumToDTOs(ProcessScope.class);
-            default:
-                return null;
-        }
     }
 
     @Override

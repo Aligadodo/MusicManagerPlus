@@ -1,9 +1,9 @@
-package com.filemanager.plugin.impl;
+package com.filemanager.plugin.impl.fileunzip;
 
 import com.filemanager.domain.dto.StrategyConfigDTO;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
-import java.util.Arrays;
-import java.util.ArrayList;
+import com.filemanager.plugin.impl.fileunzip.enums.OutputMode;
+import com.filemanager.plugin.impl.fileunzip.enums.UnzipEngine;
 
 public class FileUnzipStrategy extends AbstractConfigurableStrategy {
 
@@ -33,14 +33,14 @@ public class FileUnzipStrategy extends AbstractConfigurableStrategy {
 
     @Override
     protected void initConfigFields() {
-        addConfigField("engine", "解压引擎", "select", (Object) "Java 内置引擎", 
+        addConfigField("engine", "解压引擎", "select", (Object) UnzipEngine.JAVA_BUILTIN.getCode(), 
             "解压引擎选择", true, 
-            Arrays.asList("Java 内置引擎", "7-Zip 引擎", "Bandizip 命令行工具"));
+            getUnzipEngineOptions());
         addConfigField("exePath", "可执行文件路径", "string", (Object) "", 
             "外部解压工具的可执行文件路径", false);
-        addConfigField("outputMode", "输出模式", "select", (Object) "自动创建子目录", 
+        addConfigField("outputMode", "输出模式", "select", (Object) OutputMode.AUTO_SUBDIRECTORY.getCode(), 
             "输出目录模式", true, 
-            Arrays.asList("自动创建子目录", "解压到当前目录", "指定目录"));
+            getOutputModeOptions());
         addConfigField("customPath", "自定义路径", "directory", (Object) "", 
             "自定义输出路径", false);
         addConfigField("smartFolder", "智能文件夹", "boolean", (Object) true, 
@@ -55,15 +55,15 @@ public class FileUnzipStrategy extends AbstractConfigurableStrategy {
             "解压失败后删除原始压缩文件", false);
         addConfigField("nestedFolderMerge", "嵌套文件夹合并", "boolean", (Object) false, 
             "合并嵌套的文件夹", false);
-        addConfigField("passwords", "密码列表", "list", (Object) new ArrayList<>(), 
+        addConfigField("passwords", "密码列表", "list", (Object) new java.util.ArrayList<>(), 
             "解压密码列表", false);
     }
 
     @Override
     protected void initDefaultConfigValues(StrategyConfigDTO config) {
-        setConfigValue(config, "engine", (Object) "Java 内置引擎");
+        setConfigValue(config, "engine", (Object) UnzipEngine.JAVA_BUILTIN.getCode());
         setConfigValue(config, "exePath", (Object) "");
-        setConfigValue(config, "outputMode", (Object) "自动创建子目录");
+        setConfigValue(config, "outputMode", (Object) OutputMode.AUTO_SUBDIRECTORY.getCode());
         setConfigValue(config, "customPath", (Object) "");
         setConfigValue(config, "smartFolder", (Object) true);
         setConfigValue(config, "mergeSameName", (Object) false);
@@ -71,6 +71,22 @@ public class FileUnzipStrategy extends AbstractConfigurableStrategy {
         setConfigValue(config, "overwrite", (Object) false);
         setConfigValue(config, "deleteOnFail", (Object) false);
         setConfigValue(config, "nestedFolderMerge", (Object) false);
-        setConfigValue(config, "passwords", (Object) new ArrayList<>());
+        setConfigValue(config, "passwords", (Object) new java.util.ArrayList<>());
+    }
+    
+    private java.util.List<String> getUnzipEngineOptions() {
+        return java.util.Arrays.asList(
+            UnzipEngine.JAVA_BUILTIN.getCode(),
+            UnzipEngine.SEVEN_ZIP.getCode(),
+            UnzipEngine.BANDIZIP.getCode()
+        );
+    }
+    
+    private java.util.List<String> getOutputModeOptions() {
+        return java.util.Arrays.asList(
+            OutputMode.AUTO_SUBDIRECTORY.getCode(),
+            OutputMode.CURRENT_DIRECTORY.getCode(),
+            OutputMode.SPECIFIED_DIRECTORY.getCode()
+        );
     }
 }

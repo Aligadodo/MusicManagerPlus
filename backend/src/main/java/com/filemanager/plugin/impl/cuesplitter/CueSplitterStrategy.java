@@ -1,8 +1,12 @@
-package com.filemanager.plugin.impl;
+package com.filemanager.plugin.impl.cuesplitter;
 
 import com.filemanager.domain.dto.StrategyConfigDTO;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
-import java.util.Arrays;
+import com.filemanager.plugin.impl.audioconverter.enums.AudioFormat;
+import com.filemanager.plugin.impl.audioconverter.enums.Channels;
+import com.filemanager.plugin.impl.audioconverter.enums.OutputDirMode;
+import com.filemanager.plugin.impl.audioconverter.enums.SampleRate;
+import com.filemanager.plugin.impl.cuesplitter.enums.AfterSplitAction;
 
 public class CueSplitterStrategy extends AbstractConfigurableStrategy {
 
@@ -32,20 +36,20 @@ public class CueSplitterStrategy extends AbstractConfigurableStrategy {
 
     @Override
     protected void initConfigFields() {
-        addConfigField("targetFormat", "目标格式", "select", (Object) "WAV (CD标准)", 
+        addConfigField("targetFormat", "目标格式", "select", (Object) AudioFormat.WAV_CD_STANDARD.getCode(), 
             "转换后的音频文件格式", true, 
-            Arrays.asList("WAV (CD标准)", "FLAC", "WAV", "MP3", "ALAC", "AAC", "OGG"));
-        addConfigField("outputDirMode", "输出目录模式", "select", (Object) "子目录", 
+            getAudioFormatOptions());
+        addConfigField("outputDirMode", "输出目录模式", "select", (Object) OutputDirMode.SUBDIRECTORY.getCode(), 
             "输出目录模式", true, 
-            Arrays.asList("子目录", "指定目录", "根目录"));
+            getOutputDirModeOptions());
         addConfigField("outputPath", "输出路径", "directory", (Object) "Split - WAV", 
             "转换后文件的输出路径", true);
-        addConfigField("sampleRate", "采样率", "select", (Object) "44100", 
+        addConfigField("sampleRate", "采样率", "select", (Object) SampleRate.SR_44100.getCode(), 
             "转换后的音频采样率", false, 
-            Arrays.asList("保持原样 (Original)", "44100", "48000", "88200", "96000", "192000"));
-        addConfigField("channels", "声道数", "select", (Object) "2 (Stereo)", 
+            getSampleRateOptions());
+        addConfigField("channels", "声道数", "select", (Object) Channels.STEREO.getCode(), 
             "转换后的音频声道数", false, 
-            Arrays.asList("保持原样 (Original)", "1 (Mono)", "2 (Stereo)", "6 (5.1)"));
+            getChannelsOptions());
         addConfigField("overwrite", "强制覆盖", "boolean", (Object) false, 
             "是否覆盖已存在的目标文件", false);
         addConfigField("ffmpegThreads", "FFmpeg线程数", "number", (Object) 4, 
@@ -66,9 +70,9 @@ public class CueSplitterStrategy extends AbstractConfigurableStrategy {
             "忽略原始文件标签，强制用文件名重构元数据", false);
         addConfigField("autoFormatFilename", "自动格式化目标文件名", "boolean", (Object) true, 
             "自动将目标文件名转换为简体中文并去除首尾空格", false);
-        addConfigField("afterSplitAction", "切分后操作", "select", (Object) "什么都不做 (默认)", 
+        addConfigField("afterSplitAction", "切分后操作", "select", (Object) AfterSplitAction.DO_NOTHING.getCode(), 
             "切分完成后对原始文件的处理方式", false, 
-            Arrays.asList("什么都不做 (默认)", "删除原始文件", "归档原始文件"));
+            getAfterSplitActionOptions());
         addConfigField("enableArchive", "启用归档目录", "boolean", (Object) false, 
             "启用时，将原始文件移动到指定的归档目录", false);
         addConfigField("archiveDir", "归档目录路径", "directory", (Object) "", 
@@ -77,11 +81,11 @@ public class CueSplitterStrategy extends AbstractConfigurableStrategy {
 
     @Override
     protected void initDefaultConfigValues(StrategyConfigDTO config) {
-        setConfigValue(config, "targetFormat", (Object) "WAV (CD标准)");
-        setConfigValue(config, "outputDirMode", (Object) "子目录");
+        setConfigValue(config, "targetFormat", (Object) AudioFormat.WAV_CD_STANDARD.getCode());
+        setConfigValue(config, "outputDirMode", (Object) OutputDirMode.SUBDIRECTORY.getCode());
         setConfigValue(config, "outputPath", (Object) "Split - WAV");
-        setConfigValue(config, "sampleRate", (Object) "44100");
-        setConfigValue(config, "channels", (Object) "2 (Stereo)");
+        setConfigValue(config, "sampleRate", (Object) SampleRate.SR_44100.getCode());
+        setConfigValue(config, "channels", (Object) Channels.STEREO.getCode());
         setConfigValue(config, "overwrite", (Object) false);
         setConfigValue(config, "ffmpegThreads", (Object) 4);
         setConfigValue(config, "ffmpegPath", (Object) "ffmpeg");
@@ -92,8 +96,56 @@ public class CueSplitterStrategy extends AbstractConfigurableStrategy {
         setConfigValue(config, "enableTempSuffix", (Object) true);
         setConfigValue(config, "forceFilenameMeta", (Object) false);
         setConfigValue(config, "autoFormatFilename", (Object) true);
-        setConfigValue(config, "afterSplitAction", (Object) "什么都不做 (默认)");
+        setConfigValue(config, "afterSplitAction", (Object) AfterSplitAction.DO_NOTHING.getCode());
         setConfigValue(config, "enableArchive", (Object) false);
         setConfigValue(config, "archiveDir", (Object) "");
+    }
+    
+    private java.util.List<String> getAudioFormatOptions() {
+        return java.util.Arrays.asList(
+            AudioFormat.WAV_CD_STANDARD.getCode(),
+            AudioFormat.FLAC.getCode(),
+            AudioFormat.WAV.getCode(),
+            AudioFormat.MP3.getCode(),
+            AudioFormat.ALAC.getCode(),
+            AudioFormat.AAC.getCode(),
+            AudioFormat.OGG.getCode()
+        );
+    }
+    
+    private java.util.List<String> getOutputDirModeOptions() {
+        return java.util.Arrays.asList(
+            OutputDirMode.SUBDIRECTORY.getCode(),
+            OutputDirMode.SPECIFIED_DIR.getCode(),
+            OutputDirMode.ROOT_DIR.getCode()
+        );
+    }
+    
+    private java.util.List<String> getSampleRateOptions() {
+        return java.util.Arrays.asList(
+            SampleRate.ORIGINAL.getCode(),
+            SampleRate.SR_44100.getCode(),
+            SampleRate.SR_48000.getCode(),
+            SampleRate.SR_88200.getCode(),
+            SampleRate.SR_96000.getCode(),
+            SampleRate.SR_192000.getCode()
+        );
+    }
+    
+    private java.util.List<String> getChannelsOptions() {
+        return java.util.Arrays.asList(
+            Channels.ORIGINAL.getCode(),
+            Channels.MONO.getCode(),
+            Channels.STEREO.getCode(),
+            Channels.SURROUND_5_1.getCode()
+        );
+    }
+    
+    private java.util.List<String> getAfterSplitActionOptions() {
+        return java.util.Arrays.asList(
+            AfterSplitAction.DO_NOTHING.getCode(),
+            AfterSplitAction.DELETE_SOURCE.getCode(),
+            AfterSplitAction.ARCHIVE_SOURCE.getCode()
+        );
     }
 }
