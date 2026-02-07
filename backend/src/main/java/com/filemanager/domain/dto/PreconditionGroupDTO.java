@@ -2,27 +2,20 @@ package com.filemanager.domain.dto;
 
 import java.util.List;
 
+/**
+ * 前置条件组DTO
+ * 用于存储和传输前置条件组的信息
+ */
 public class PreconditionGroupDTO {
-    public static class LogicType {
-        public static final String AND = "AND";
-        public static final String OR = "OR";
-    }
-    
+
     private String id;
     private String name;
     private String description;
+    private String logicOperator;
     private String logicType;
     private List<PreconditionDTO> preconditions;
 
     public PreconditionGroupDTO() {
-    }
-
-    public PreconditionGroupDTO(String id, String name, String description, String logicType, List<PreconditionDTO> preconditions) {
-        this.id = id;
-        this.name = name;
-        this.description = description;
-        this.logicType = logicType;
-        this.preconditions = preconditions;
     }
 
     public String getId() {
@@ -47,6 +40,14 @@ public class PreconditionGroupDTO {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getLogicOperator() {
+        return logicOperator;
+    }
+
+    public void setLogicOperator(String logicOperator) {
+        this.logicOperator = logicOperator;
     }
 
     public String getLogicType() {

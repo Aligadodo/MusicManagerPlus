@@ -35,6 +35,22 @@ class PipelineService {
     }
   }
 
+  Future<Map<String, dynamic>> resetPipeline() async {
+    try {
+      print('发送重置流水线请求...');
+      final response = await _apiClient.post('/pipeline/reset');
+      print('重置流水线请求响应: ${response.statusCode}, ${response.body}');
+      if (response.statusCode == 200) {
+        return Map<String, dynamic>.from(json.decode(response.body));
+      } else {
+        throw Exception('Failed to reset pipeline: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('重置流水线请求失败: $e');
+      rethrow;
+    }
+  }
+
   Future<Map<String, dynamic>> analyzePipeline(List<String> sourceDirectories, List<StrategyInfo> pipeline) async {
     try {
       final response = await _apiClient.post('/pipeline/analyze', body: {

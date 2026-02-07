@@ -36,4 +36,20 @@ class PreconditionGroup {
       'preconditions': preconditions.map((x) => x.toJson()).toList(),
     };
   }
+
+  PreconditionGroup copyWith({
+    String? id,
+    String? name,
+    String? description,
+    String? logicType,
+    List<Precondition>? preconditions,
+  }) {
+    return PreconditionGroup(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      logicType: logicType ?? this.logicType,
+      preconditions: preconditions ?? this.preconditions,
+    );
+  }
 }

@@ -7,7 +7,7 @@ import '../api/pipeline_service.dart';
 import '../models/plugin_info.dart';
 import '../models/strategy_info.dart';
 import '../models/config_field.dart';
-import '../utils/tooltip_utils.dart';
+import '../widgets/strategy_config_card.dart';
 
 class PipelineConfigPage extends ConsumerStatefulWidget {
   const PipelineConfigPage({super.key});
@@ -111,28 +111,56 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
         name: plugin.name,
         description: plugin.description,
         configFields: [],
+        preconditionGroups: [],
         enabled: true,
       ));
     });
+    // 添加后立即保存
+    _updatePipeline();
   }
 
   void _addStrategy(StrategyInfo strategy) {
     setState(() {
-      // 创建策略的副本，确保包含完整的配置字段
+      // 创建策略的深拷贝，确保包含完整的配置字段和前置条件组，并且每个策略都有独立的配置
+      final copiedConfigFields = strategy.configFields?.map((field) => ConfigField(
+        name: field.name,
+        label: field.label,
+        type: field.type,
+        defaultValue: field.defaultValue,
+        description: field.description,
+        required: field.required,
+        dependsOn: field.dependsOn,
+        dependsValue: field.dependsValue,
+        options: field.options,
+        enumOptions: field.enumOptions,
+        subFields: field.subFields,
+        isModule: field.isModule,
+        moduleType: field.moduleType,
+      )).toList() ?? [];
+      
+      final copiedPreconditionGroups = strategy.preconditionGroups?.map((group) => group.copyWith(
+        preconditions: group.preconditions.map((condition) => condition.copyWith()).toList(),
+      )).toList() ?? [];
+      
       _pipeline.add(StrategyInfo(
         id: strategy.id,
         name: strategy.name,
         description: strategy.description,
-        configFields: strategy.configFields ?? [],
+        configFields: copiedConfigFields,
+        preconditionGroups: copiedPreconditionGroups,
         enabled: true,
       ));
     });
+    // 添加后立即保存
+    _updatePipeline();
   }
 
   void _removePlugin(int index) {
     setState(() {
       _pipeline.removeAt(index);
     });
+    // 删除后立即保存
+    _updatePipeline();
   }
 
   void _movePluginUp(int index) {
@@ -142,6 +170,8 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
         _pipeline[index] = _pipeline[index - 1];
         _pipeline[index - 1] = temp;
       });
+      // 移动后立即保存
+      _updatePipeline();
     }
   }
 
@@ -152,307 +182,61 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
         _pipeline[index] = _pipeline[index + 1];
         _pipeline[index + 1] = temp;
       });
+      // 移动后立即保存
+      _updatePipeline();
     }
   }
 
-  Widget _buildConfigField(ConfigField field) {
-    try {
-      switch (field.type) {
-        case 'text':
-          return _buildTextField(field);
-        case 'number':
-          return _buildNumberField(field);
-        case 'boolean':
-          return _buildBooleanField(field);
-        case 'select':
-          return _buildSelectField(field);
-        case 'directory':
-          return _buildDirectoryField(field);
-        case 'list':
-          return _buildListField(field);
-        default:
-          return _buildTextField(field);
-      }
-    } catch (e) {
-      return Card(
-        color: Colors.red.shade50,
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Text(
-            '字段加载失败: $e',
-            style: const TextStyle(color: Colors.red),
-          ),
-        ),
-      );
-    }
+  void _handleStrategyChanged(int index, StrategyInfo updatedStrategy) {
+    setState(() {
+      _pipeline[index] = updatedStrategy;
+    });
+    // 策略配置变化后立即保存
+    _updatePipeline();
   }
 
-  Widget _buildTextField(ConfigField field) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Tooltip(
-            message: field.description ?? '',
-            child: Text(
-              field.label,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
+  Future<void> _resetPipeline() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('确认重置'),
+        content: const Text('确定要重置流水线配置吗？这将清空所有策略和配置。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
           ),
-          const SizedBox(height: 5),
-          Tooltip(
-            message: field.description ?? '',
-            child: TextField(
-              decoration: InputDecoration(
-                border: const OutlineInputBorder(),
-                hintText: field.description,
-              ),
-              controller: TextEditingController(
-                text: field.defaultValue?.toString() ?? '',
-              ),
-            ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('确定'),
           ),
         ],
       ),
     );
-  }
 
-  Widget _buildNumberField(ConfigField field) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Tooltip(
-            message: field.description ?? '',
-            child: Text(
-              field.label,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          const SizedBox(height: 5),
-          Tooltip(
-            message: field.description ?? '',
-            child: TextField(
-              decoration: InputDecoration(
-                border: const OutlineInputBorder(),
-                hintText: field.description,
-              ),
-              controller: TextEditingController(
-                text: field.defaultValue?.toString() ?? '',
-              ),
-              keyboardType: TextInputType.number,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBooleanField(ConfigField field) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Tooltip(
-                  message: field.description ?? '',
-                  child: Text(
-                    field.label,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                Text(
-                  field.description ?? '',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-              ],
-            ),
-          ),
-          Tooltip(
-            message: field.description ?? '',
-            child: Checkbox(
-              value: field.defaultValue ?? false,
-              onChanged: (v) {
-                // TODO: 保存配置值
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSelectField(ConfigField field) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Tooltip(
-            message: field.description ?? '',
-            child: Text(
-              field.label,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          const SizedBox(height: 5),
-          Tooltip(
-            message: field.description ?? '',
-            child: DropdownButtonFormField<String>(
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-              ),
-              initialValue: field.defaultValue?.toString(),
-              items: field.options?.map((option) {
-                return DropdownMenuItem<String>(
-                  value: option,
-                  child: Text(option),
-                );
-              }).toList() ?? [],
-              onChanged: (v) {
-                // TODO: 保存配置值
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDirectoryField(ConfigField field) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Tooltip(
-            message: field.description ?? '',
-            child: Text(
-              field.label,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          const SizedBox(height: 5),
-          Tooltip(
-            message: field.description ?? '',
-            child: TextField(
-              decoration: InputDecoration(
-                border: const OutlineInputBorder(),
-                hintText: field.description,
-                suffixIcon: const Icon(Icons.folder),
-              ),
-              controller: TextEditingController(
-                text: field.defaultValue?.toString() ?? '',
-              ),
-              readOnly: true,
-              onTap: () async {
-                // TODO: 实现目录选择器
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildListField(ConfigField field) {
-    try {
-      List<String> listValue = <String>[];
-      if (field.defaultValue is List) {
-        try {
-          listValue = List<String>.from(field.defaultValue);
-        } catch (e) {
-          listValue = (field.defaultValue as List).map((item) => item?.toString() ?? '').toList();
+    if (confirmed == true) {
+      try {
+        print('开始重置流水线配置...');
+        final result = await _pipelineService.resetPipeline();
+        print('重置流水线配置成功: $result');
+        
+        // 重置后重新加载流水线配置，确保界面正确更新
+        await _loadPipeline();
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('流水线重置成功')),
+          );
         }
-      } else if (field.defaultValue != null) {
-        listValue = [field.defaultValue.toString()];
+      } catch (e) {
+        print('重置流水线配置失败: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('重置失败: $e')),
+          );
+        }
       }
-      
-      return Container(
-        margin: const EdgeInsets.symmetric(vertical: 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Tooltip(
-              message: field.description ?? '',
-              child: Text(
-                field.label,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-            const SizedBox(height: 5),
-            Tooltip(
-              message: field.description ?? '',
-              child: Container(
-                height: 100,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: ListView.builder(
-                  itemCount: listValue.length,
-                  itemBuilder: (context, index) {
-                    return ListTile(
-                      title: Text(listValue[index]),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () {
-                          // TODO: 移除列表项
-                        },
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-            const SizedBox(height: 5),
-            Row(
-              children: [
-                Expanded(
-                  child: Tooltip(
-                    message: field.description ?? '',
-                    child: TextField(
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
-                        hintText: '输入新项...',
-                      ),
-                      onSubmitted: (v) {
-                        if (v.isNotEmpty) {
-                          // TODO: 添加新列表项
-                        }
-                      },
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                ElevatedButton(
-                  onPressed: () {
-                    // TODO: 添加新列表项
-                  },
-                  child: const Text('添加'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
-    } catch (e) {
-      return Card(
-        color: Colors.red.shade50,
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Text(
-            '列表字段加载失败: $e',
-            style: const TextStyle(color: Colors.red),
-          ),
-        ),
-      );
     }
   }
 
@@ -556,9 +340,22 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                ElevatedButton(
-                  onPressed: _updatePipeline,
-                  child: const Text('保存流水线'),
+                Row(
+                  children: [
+                    ElevatedButton(
+                      onPressed: _resetPipeline,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red.shade600,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('重置配置'),
+                    ),
+                    const SizedBox(width: 10),
+                    ElevatedButton(
+                      onPressed: _updatePipeline,
+                      child: const Text('保存流水线'),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -576,60 +373,15 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
                 child: ListView.builder(
                   itemCount: _pipeline.length,
                   itemBuilder: (context, index) {
-                    final plugin = _pipeline[index];
-                    return Card(
-                      elevation: 2,
-                      margin: const EdgeInsets.only(bottom: 10),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  plugin.name,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete, color: Colors.red),
-                                  onPressed: () => _removePlugin(index),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Text('ID: ${plugin.id}'),
-                            const SizedBox(height: 16),
-                            const Text('配置:', style: TextStyle(fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 8),
-                            if (plugin.configFields.isNotEmpty)
-                              ...plugin.configFields.map((field) {
-                                return _buildConfigField(field);
-                              })
-                            else
-                              const Text('此插件/策略暂无配置项'),
-                            const SizedBox(height: 16),
-                            Row(
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.arrow_upward),
-                                  onPressed: index > 0 ? () => _movePluginUp(index) : null,
-                                  disabledColor: Colors.grey,
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.arrow_downward),
-                                  onPressed: index < _pipeline.length - 1 ? () => _movePluginDown(index) : null,
-                                  disabledColor: Colors.grey,
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
+                    final strategy = _pipeline[index];
+                    return StrategyConfigCard(
+                      key: ValueKey('pipeline_strategy_$index'),
+                      strategy: strategy,
+                      index: index,
+                      onDelete: () => _removePlugin(index),
+                      onMoveUp: () => _movePluginUp(index),
+                      onMoveDown: () => _movePluginDown(index),
+                      onStrategyChanged: (updatedStrategy) => _handleStrategyChanged(index, updatedStrategy),
                     );
                   },
                 ),

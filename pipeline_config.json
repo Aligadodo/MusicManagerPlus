@@ -1,0 +1,1 @@
+[{"id":"1","name":"文件收集策略","pluginId":"fileCollection","enabled":true,"preconditionGroups":[]},{"id":"2","name":"文件清理插件","pluginId":"fileCleanup","enabled":true,"preconditionGroups":[]}]

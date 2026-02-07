@@ -149,3 +149,586 @@ This generated password is for development use only. Your security configuration
 2026-02-03 01:40:11.227 [http-nio-8080-exec-4] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 成功返回 12 个策略
 2026-02-03 01:43:56.550 [http-nio-8080-exec-10] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 获取所有策略列表
 2026-02-03 01:43:56.552 [http-nio-8080-exec-10] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 成功返回 12 个策略
+2026-02-07 22:40:52.996 [main] INFO  com.filemanager.backend.Application - Starting Application v1.0.0 using Java 1.8.0_452 on hrcao-mac-mini.local with PID 69649 (/Users/hrcao/Documents/MusicManagerPlus/backend/target/backend-1.0.0.jar started by hrcao in /Users/hrcao/Documents/MusicManagerPlus/backend)
+2026-02-07 22:40:52.997 [main] INFO  com.filemanager.backend.Application - No active profile set, falling back to 1 default profile: "default"
+2026-02-07 22:40:53.414 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2026-02-07 22:40:53.415 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/9.0.83]
+2026-02-07 22:40:53.448 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-02-07 22:40:53.481 [main] INFO  c.filemanager.plugin.PluginRegistry - Loaded internal plugin: 文件收集策略 v1.0.0
+2026-02-07 22:40:53.482 [main] INFO  c.filemanager.plugin.PluginRegistry - Loaded internal plugin: 文件清理与去重 v1.0.0
+2026-02-07 22:40:53.482 [main] INFO  c.filemanager.plugin.PluginRegistry - Loaded internal plugin: 文件批量归档和移动 v1.0.0
+2026-02-07 22:40:53.483 [main] INFO  c.filemanager.plugin.PluginRegistry - Loaded internal plugin: 高级重命名策略 v1.0.0
+2026-02-07 22:40:53.484 [main] INFO  c.filemanager.plugin.PluginRegistry - Loaded internal plugin: 音频格式转换 v1.0.0
+2026-02-07 22:40:53.484 [main] INFO  c.filemanager.plugin.PluginRegistry - Loaded internal plugin: CUE分轨 v1.0.0
+2026-02-07 22:40:53.485 [main] INFO  c.filemanager.plugin.PluginRegistry - Loaded internal plugin: 文件清理插件 v1.0.0
+2026-02-07 22:40:53.489 [main] INFO  c.f.b.s.impl.StrategyServiceImpl - [Strategy] 加载插件并注册为策略: 文件批量归档和移动 v1.0.0
+2026-02-07 22:40:53.489 [main] INFO  c.f.b.s.impl.StrategyServiceImpl - [Strategy] 加载插件并注册为策略: 文件收集策略 v1.0.0
+2026-02-07 22:40:53.489 [main] INFO  c.f.b.s.impl.StrategyServiceImpl - [Strategy] 加载插件并注册为策略: 文件清理插件 v1.0.0
+2026-02-07 22:40:53.489 [main] INFO  c.f.b.s.impl.StrategyServiceImpl - [Strategy] 加载插件并注册为策略: CUE分轨 v1.0.0
+2026-02-07 22:40:53.489 [main] INFO  c.f.b.s.impl.StrategyServiceImpl - [Strategy] 加载插件并注册为策略: 高级重命名策略 v1.0.0
+2026-02-07 22:40:53.489 [main] INFO  c.f.b.s.impl.StrategyServiceImpl - [Strategy] 加载插件并注册为策略: 音频格式转换 v1.0.0
+2026-02-07 22:40:53.489 [main] INFO  c.f.b.s.impl.StrategyServiceImpl - [Strategy] 配置文件不存在，使用默认配置: strategy_configs.json
+2026-02-07 22:40:53.491 [main] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 初始化配置加载
+2026-02-07 22:40:53.491 [main] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 找到配置文件，开始加载: pipeline_config.json
+2026-02-07 22:40:53.504 [main] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 配置加载成功，流水线长度: 8
+2026-02-07 22:40:53.549 [main] WARN  o.s.b.a.s.s.UserDetailsServiceAutoConfiguration - 
+
+Using generated security password: d6df3afa-b00e-4ab4-a168-acfad70f0cbe
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2026-02-07 22:40:53.749 [main] INFO  com.filemanager.backend.Application - Started Application in 0.941 seconds (JVM running for 1.108)
+2026-02-07 22:49:22.857 [http-nio-8080-exec-2] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-02-07 22:49:22.912 [http-nio-8080-exec-3] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 获取所有策略列表
+2026-02-07 22:49:22.913 [http-nio-8080-exec-3] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 成功返回 12 个策略
+2026-02-07 22:49:24.337 [http-nio-8080-exec-5] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-migrate/config - 获取策略配置
+2026-02-07 22:49:24.337 [http-nio-8080-exec-5] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 获取策略配置 - strategyId: file-migrate
+2026-02-07 22:49:24.338 [http-nio-8080-exec-5] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 策略配置不存在，创建默认配置 - strategyId: file-migrate
+2026-02-07 22:49:24.338 [http-nio-8080-exec-5] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 返回策略配置 - strategyId: file-migrate, 配置项数量: 15
+2026-02-07 22:49:24.338 [http-nio-8080-exec-5] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-migrate/config - 成功返回配置，包含 15 个参数
+2026-02-07 22:49:25.028 [http-nio-8080-exec-6] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-migrate/config - 获取策略配置
+2026-02-07 22:49:25.028 [http-nio-8080-exec-6] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 获取策略配置 - strategyId: file-migrate
+2026-02-07 22:49:25.028 [http-nio-8080-exec-6] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 返回策略配置 - strategyId: file-migrate, 配置项数量: 15
+2026-02-07 22:49:25.028 [http-nio-8080-exec-6] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-migrate/config - 成功返回配置，包含 15 个参数
+2026-02-07 22:49:26.793 [http-nio-8080-exec-7] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/ncm-integrated/config - 获取策略配置
+2026-02-07 22:49:26.793 [http-nio-8080-exec-7] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 获取策略配置 - strategyId: ncm-integrated
+2026-02-07 22:49:26.793 [http-nio-8080-exec-7] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 策略配置不存在，创建默认配置 - strategyId: ncm-integrated
+2026-02-07 22:49:26.794 [http-nio-8080-exec-7] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 返回策略配置 - strategyId: ncm-integrated, 配置项数量: 3
+2026-02-07 22:49:26.794 [http-nio-8080-exec-7] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/ncm-integrated/config - 成功返回配置，包含 3 个参数
+2026-02-07 22:49:36.758 [http-nio-8080-exec-2] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 获取所有策略列表
+2026-02-07 22:49:36.759 [http-nio-8080-exec-2] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 成功返回 12 个策略
+2026-02-07 22:55:25.369 [http-nio-8080-exec-5] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 收到重置流水线请求
+2026-02-07 22:55:25.370 [http-nio-8080-exec-5] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 配置保存成功，流水线长度: 0
+2026-02-07 22:55:25.370 [http-nio-8080-exec-5] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 流水线重置完成并保存
+2026-02-07 22:57:46.831 [http-nio-8080-exec-8] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 收到更新流水线请求，长度: 1
+2026-02-07 22:57:46.832 [http-nio-8080-exec-8] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 配置保存成功，流水线长度: 1
+2026-02-07 22:57:46.832 [http-nio-8080-exec-8] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 流水线更新完成并保存
+2026-02-07 23:09:56.315 [http-nio-8080-exec-1] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 获取所有策略列表
+2026-02-07 23:09:56.316 [http-nio-8080-exec-1] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 成功返回 12 个策略
+2026-02-07 23:09:57.771 [http-nio-8080-exec-5] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/test-strategy/config - 获取策略配置
+2026-02-07 23:09:57.771 [http-nio-8080-exec-5] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 获取策略配置 - strategyId: test-strategy
+2026-02-07 23:09:57.771 [http-nio-8080-exec-5] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 策略配置不存在，创建默认配置 - strategyId: test-strategy
+2026-02-07 23:09:57.772 [http-nio-8080-exec-5] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 返回策略配置 - strategyId: test-strategy, 配置项数量: 0
+2026-02-07 23:09:57.772 [http-nio-8080-exec-5] WARN  c.f.b.controller.StrategyController - [API] GET /api/strategies/test-strategy/config - 配置为空或不存在
+2026-02-07 23:10:02.385 [http-nio-8080-exec-6] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 收到更新流水线请求，长度: 0
+2026-02-07 23:10:02.385 [http-nio-8080-exec-6] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 配置保存成功，流水线长度: 0
+2026-02-07 23:10:02.385 [http-nio-8080-exec-6] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 流水线更新完成并保存
+2026-02-07 23:10:06.638 [http-nio-8080-exec-10] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 获取所有策略列表
+2026-02-07 23:10:06.638 [http-nio-8080-exec-10] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 成功返回 12 个策略
+2026-02-07 23:10:11.506 [http-nio-8080-exec-9] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 收到更新流水线请求，长度: 1
+2026-02-07 23:10:11.508 [http-nio-8080-exec-9] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 配置保存成功，流水线长度: 1
+2026-02-07 23:10:11.508 [http-nio-8080-exec-9] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 流水线更新完成并保存
+2026-02-07 23:10:12.131 [http-nio-8080-exec-3] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/album-dir-normalize/config - 获取策略配置
+2026-02-07 23:10:12.131 [http-nio-8080-exec-3] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 获取策略配置 - strategyId: album-dir-normalize
+2026-02-07 23:10:12.131 [http-nio-8080-exec-3] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 策略配置不存在，创建默认配置 - strategyId: album-dir-normalize
+2026-02-07 23:10:12.131 [http-nio-8080-exec-3] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 返回策略配置 - strategyId: album-dir-normalize, 配置项数量: 7
+2026-02-07 23:10:12.131 [http-nio-8080-exec-3] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/album-dir-normalize/config - 成功返回配置，包含 7 个参数
+2026-02-07 23:10:13.622 [http-nio-8080-exec-4] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 收到更新流水线请求，长度: 2
+2026-02-07 23:10:13.624 [http-nio-8080-exec-4] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 配置保存成功，流水线长度: 2
+2026-02-07 23:10:13.625 [http-nio-8080-exec-4] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 流水线更新完成并保存
+2026-02-07 23:10:14.496 [http-nio-8080-exec-5] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/album-dir-normalize/config - 获取策略配置
+2026-02-07 23:10:14.497 [http-nio-8080-exec-5] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 获取策略配置 - strategyId: album-dir-normalize
+2026-02-07 23:10:14.497 [http-nio-8080-exec-5] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 返回策略配置 - strategyId: album-dir-normalize, 配置项数量: 7
+2026-02-07 23:10:14.497 [http-nio-8080-exec-5] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/album-dir-normalize/config - 成功返回配置，包含 7 个参数
+2026-02-07 23:10:16.848 [http-nio-8080-exec-6] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 收到更新流水线请求，长度: 3
+2026-02-07 23:10:16.850 [http-nio-8080-exec-6] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 配置保存成功，流水线长度: 3
+2026-02-07 23:10:16.850 [http-nio-8080-exec-6] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 流水线更新完成并保存
+2026-02-07 23:10:17.542 [http-nio-8080-exec-8] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-collection/config - 获取策略配置
+2026-02-07 23:10:17.543 [http-nio-8080-exec-8] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 获取策略配置 - strategyId: file-collection
+2026-02-07 23:10:17.543 [http-nio-8080-exec-8] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 策略配置不存在，创建默认配置 - strategyId: file-collection
+2026-02-07 23:10:17.543 [http-nio-8080-exec-8] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 返回策略配置 - strategyId: file-collection, 配置项数量: 8
+2026-02-07 23:10:17.543 [http-nio-8080-exec-8] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-collection/config - 成功返回配置，包含 8 个参数
+2026-02-07 23:10:19.416 [http-nio-8080-exec-7] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/album-dir-normalize/config - 获取策略配置
+2026-02-07 23:10:19.417 [http-nio-8080-exec-7] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 获取策略配置 - strategyId: album-dir-normalize
+2026-02-07 23:10:19.417 [http-nio-8080-exec-7] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 返回策略配置 - strategyId: album-dir-normalize, 配置项数量: 7
+2026-02-07 23:10:19.417 [http-nio-8080-exec-7] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/album-dir-normalize/config - 成功返回配置，包含 7 个参数
+2026-02-07 23:10:25.160 [http-nio-8080-exec-10] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/album-dir-normalize/config - 获取策略配置
+2026-02-07 23:10:25.160 [http-nio-8080-exec-10] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 获取策略配置 - strategyId: album-dir-normalize
+2026-02-07 23:10:25.160 [http-nio-8080-exec-10] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 返回策略配置 - strategyId: album-dir-normalize, 配置项数量: 7
+2026-02-07 23:10:25.160 [http-nio-8080-exec-10] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/album-dir-normalize/config - 成功返回配置，包含 7 个参数
+2026-02-07 23:10:25.863 [http-nio-8080-exec-2] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-collection/config - 获取策略配置
+2026-02-07 23:10:25.864 [http-nio-8080-exec-2] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 获取策略配置 - strategyId: file-collection
+2026-02-07 23:10:25.864 [http-nio-8080-exec-2] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 返回策略配置 - strategyId: file-collection, 配置项数量: 8
+2026-02-07 23:10:25.864 [http-nio-8080-exec-2] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-collection/config - 成功返回配置，包含 8 个参数
+2026-02-07 23:10:26.623 [http-nio-8080-exec-9] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/album-dir-normalize/config - 获取策略配置
+2026-02-07 23:10:26.624 [http-nio-8080-exec-9] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 获取策略配置 - strategyId: album-dir-normalize
+2026-02-07 23:10:26.624 [http-nio-8080-exec-9] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 返回策略配置 - strategyId: album-dir-normalize, 配置项数量: 7
+2026-02-07 23:10:26.624 [http-nio-8080-exec-9] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/album-dir-normalize/config - 成功返回配置，包含 7 个参数
+2026-02-07 23:10:27.949 [http-nio-8080-exec-1] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/album-dir-normalize/config - 获取策略配置
+2026-02-07 23:10:27.949 [http-nio-8080-exec-1] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 获取策略配置 - strategyId: album-dir-normalize
+2026-02-07 23:10:27.950 [http-nio-8080-exec-1] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 返回策略配置 - strategyId: album-dir-normalize, 配置项数量: 7
+2026-02-07 23:10:27.950 [http-nio-8080-exec-1] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/album-dir-normalize/config - 成功返回配置，包含 7 个参数
+2026-02-07 23:10:28.386 [http-nio-8080-exec-3] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/album-dir-normalize/config - 获取策略配置
+2026-02-07 23:10:28.386 [http-nio-8080-exec-3] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 获取策略配置 - strategyId: album-dir-normalize
+2026-02-07 23:10:28.386 [http-nio-8080-exec-3] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 返回策略配置 - strategyId: album-dir-normalize, 配置项数量: 7
+2026-02-07 23:10:28.387 [http-nio-8080-exec-3] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/album-dir-normalize/config - 成功返回配置，包含 7 个参数
+2026-02-07 23:10:28.822 [http-nio-8080-exec-4] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-collection/config - 获取策略配置
+2026-02-07 23:10:28.822 [http-nio-8080-exec-4] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 获取策略配置 - strategyId: file-collection
+2026-02-07 23:10:28.822 [http-nio-8080-exec-4] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 返回策略配置 - strategyId: file-collection, 配置项数量: 8
+2026-02-07 23:10:28.822 [http-nio-8080-exec-4] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-collection/config - 成功返回配置，包含 8 个参数
+2026-02-07 23:10:36.377 [http-nio-8080-exec-7] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 获取所有策略列表
+2026-02-07 23:10:36.378 [http-nio-8080-exec-7] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 成功返回 12 个策略
+2026-02-07 23:10:37.453 [http-nio-8080-exec-1] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 获取所有策略列表
+2026-02-07 23:10:37.454 [http-nio-8080-exec-1] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 成功返回 12 个策略
+2026-02-07 23:13:06.810 [http-nio-8080-exec-6] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 收到重置流水线请求
+2026-02-07 23:13:06.811 [http-nio-8080-exec-6] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 配置保存成功，流水线长度: 0
+2026-02-07 23:13:06.811 [http-nio-8080-exec-6] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 流水线重置完成并保存
+2026-02-07 23:37:08.862 [http-nio-8080-exec-3] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 获取所有策略列表
+2026-02-07 23:37:08.864 [http-nio-8080-exec-3] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies - 成功返回 12 个策略
+2026-02-07 23:37:12.306 [http-nio-8080-exec-6] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 收到更新流水线请求，长度: 1
+2026-02-07 23:37:12.307 [http-nio-8080-exec-6] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 配置保存成功，流水线长度: 1
+2026-02-07 23:37:12.307 [http-nio-8080-exec-6] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 流水线更新完成并保存
+2026-02-07 23:37:12.841 [http-nio-8080-exec-7] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-unzip/config - 获取策略配置
+2026-02-07 23:37:12.841 [http-nio-8080-exec-7] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 获取策略配置 - strategyId: file-unzip
+2026-02-07 23:37:12.841 [http-nio-8080-exec-7] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 策略配置不存在，创建默认配置 - strategyId: file-unzip
+2026-02-07 23:37:12.841 [http-nio-8080-exec-7] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 返回策略配置 - strategyId: file-unzip, 配置项数量: 11
+2026-02-07 23:37:12.842 [http-nio-8080-exec-7] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-unzip/config - 成功返回配置，包含 11 个参数
+2026-02-07 23:37:19.465 [http-nio-8080-exec-10] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 收到更新流水线请求，长度: 2
+2026-02-07 23:37:19.468 [http-nio-8080-exec-10] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 配置保存成功，流水线长度: 2
+2026-02-07 23:37:19.468 [http-nio-8080-exec-10] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 流水线更新完成并保存
+2026-02-07 23:37:20.077 [http-nio-8080-exec-9] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-cleanup/config - 获取策略配置
+2026-02-07 23:37:20.077 [http-nio-8080-exec-9] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 获取策略配置 - strategyId: file-cleanup
+2026-02-07 23:37:20.077 [http-nio-8080-exec-9] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 策略配置不存在，创建默认配置 - strategyId: file-cleanup
+2026-02-07 23:37:20.092 [http-nio-8080-exec-9] ERROR o.a.c.c.C.[.[.[.[dispatcherServlet] - Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception [Handler dispatch failed; nested exception is java.lang.NoSuchMethodError: com.filemanager.domain.dto.PluginConfigDTO.setParameters(Ljava/util/List;)V] with root cause
+java.lang.NoSuchMethodError: com.filemanager.domain.dto.PluginConfigDTO.setParameters(Ljava/util/List;)V
+	at com.filemanager.plugin.cleanup.FileCleanupPlugin.getDefaultConfig(FileCleanupPlugin.java:70)
+	at com.filemanager.backend.service.impl.StrategyServiceImpl$PluginToStrategyAdapter.initializeDefaultConfig(StrategyServiceImpl.java:155)
+	at com.filemanager.backend.service.impl.StrategyServiceImpl.getStrategyConfig(StrategyServiceImpl.java:393)
+	at com.filemanager.backend.controller.StrategyController.getStrategyConfig(StrategyController.java:61)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:498)
+	at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:205)
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:150)
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:117)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:895)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:808)
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87)
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1072)
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:965)
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1006)
+	at org.springframework.web.servlet.FrameworkServlet.doGet(FrameworkServlet.java:898)
+	at javax.servlet.http.HttpServlet.service(HttpServlet.java:529)
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:883)
+	at javax.servlet.http.HttpServlet.service(HttpServlet.java:623)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:209)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:153)
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:178)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:153)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:337)
+	at org.springframework.security.web.access.intercept.FilterSecurityInterceptor.invoke(FilterSecurityInterceptor.java:115)
+	at org.springframework.security.web.access.intercept.FilterSecurityInterceptor.doFilter(FilterSecurityInterceptor.java:81)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:122)
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:126)
+	at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:81)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.authentication.AnonymousAuthenticationFilter.doFilter(AnonymousAuthenticationFilter.java:109)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter.doFilter(SecurityContextHolderAwareRequestFilter.java:149)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.savedrequest.RequestCacheAwareFilter.doFilter(RequestCacheAwareFilter.java:63)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.authentication.www.BasicAuthenticationFilter.doFilterInternal(BasicAuthenticationFilter.java:164)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:117)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:103)
+	at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:89)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.web.filter.CorsFilter.doFilterInternal(CorsFilter.java:91)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:117)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.header.HeaderWriterFilter.doHeadersAfter(HeaderWriterFilter.java:90)
+	at org.springframework.security.web.header.HeaderWriterFilter.doFilterInternal(HeaderWriterFilter.java:75)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:117)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.context.SecurityContextPersistenceFilter.doFilter(SecurityContextPersistenceFilter.java:112)
+	at org.springframework.security.web.context.SecurityContextPersistenceFilter.doFilter(SecurityContextPersistenceFilter.java:82)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter.doFilterInternal(WebAsyncManagerIntegrationFilter.java:55)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:117)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.session.DisableEncodeUrlFilter.doFilterInternal(DisableEncodeUrlFilter.java:42)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:117)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.FilterChainProxy.doFilterInternal(FilterChainProxy.java:221)
+	at org.springframework.security.web.FilterChainProxy.doFilter(FilterChainProxy.java:186)
+	at org.springframework.web.filter.DelegatingFilterProxy.invokeDelegate(DelegatingFilterProxy.java:354)
+	at org.springframework.web.filter.DelegatingFilterProxy.doFilter(DelegatingFilterProxy.java:267)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:178)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:153)
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:117)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:178)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:153)
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:117)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:178)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:153)
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:117)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:178)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:153)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:168)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:481)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:130)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:342)
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:390)
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63)
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:928)
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1794)
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1191)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:659)
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:61)
+	at java.lang.Thread.run(Thread.java:750)
+2026-02-07 23:37:22.260 [http-nio-8080-exec-1] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-cleanup/config - 获取策略配置
+2026-02-07 23:37:22.260 [http-nio-8080-exec-1] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 获取策略配置 - strategyId: file-cleanup
+2026-02-07 23:37:22.260 [http-nio-8080-exec-1] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 策略配置不存在，创建默认配置 - strategyId: file-cleanup
+2026-02-07 23:37:22.261 [http-nio-8080-exec-1] ERROR o.a.c.c.C.[.[.[.[dispatcherServlet] - Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception [Handler dispatch failed; nested exception is java.lang.NoSuchMethodError: com.filemanager.domain.dto.PluginConfigDTO.setParameters(Ljava/util/List;)V] with root cause
+java.lang.NoSuchMethodError: com.filemanager.domain.dto.PluginConfigDTO.setParameters(Ljava/util/List;)V
+	at com.filemanager.plugin.cleanup.FileCleanupPlugin.getDefaultConfig(FileCleanupPlugin.java:70)
+	at com.filemanager.backend.service.impl.StrategyServiceImpl$PluginToStrategyAdapter.initializeDefaultConfig(StrategyServiceImpl.java:155)
+	at com.filemanager.backend.service.impl.StrategyServiceImpl.getStrategyConfig(StrategyServiceImpl.java:393)
+	at com.filemanager.backend.controller.StrategyController.getStrategyConfig(StrategyController.java:61)
+	at sun.reflect.GeneratedMethodAccessor29.invoke(Unknown Source)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:498)
+	at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:205)
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:150)
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:117)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:895)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:808)
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87)
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1072)
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:965)
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1006)
+	at org.springframework.web.servlet.FrameworkServlet.doGet(FrameworkServlet.java:898)
+	at javax.servlet.http.HttpServlet.service(HttpServlet.java:529)
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:883)
+	at javax.servlet.http.HttpServlet.service(HttpServlet.java:623)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:209)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:153)
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:178)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:153)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:337)
+	at org.springframework.security.web.access.intercept.FilterSecurityInterceptor.invoke(FilterSecurityInterceptor.java:115)
+	at org.springframework.security.web.access.intercept.FilterSecurityInterceptor.doFilter(FilterSecurityInterceptor.java:81)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:122)
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:126)
+	at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:81)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.authentication.AnonymousAuthenticationFilter.doFilter(AnonymousAuthenticationFilter.java:109)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter.doFilter(SecurityContextHolderAwareRequestFilter.java:149)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.savedrequest.RequestCacheAwareFilter.doFilter(RequestCacheAwareFilter.java:63)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.authentication.www.BasicAuthenticationFilter.doFilterInternal(BasicAuthenticationFilter.java:164)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:117)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:103)
+	at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:89)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.web.filter.CorsFilter.doFilterInternal(CorsFilter.java:91)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:117)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.header.HeaderWriterFilter.doHeadersAfter(HeaderWriterFilter.java:90)
+	at org.springframework.security.web.header.HeaderWriterFilter.doFilterInternal(HeaderWriterFilter.java:75)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:117)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.context.SecurityContextPersistenceFilter.doFilter(SecurityContextPersistenceFilter.java:112)
+	at org.springframework.security.web.context.SecurityContextPersistenceFilter.doFilter(SecurityContextPersistenceFilter.java:82)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter.doFilterInternal(WebAsyncManagerIntegrationFilter.java:55)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:117)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.session.DisableEncodeUrlFilter.doFilterInternal(DisableEncodeUrlFilter.java:42)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:117)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.FilterChainProxy.doFilterInternal(FilterChainProxy.java:221)
+	at org.springframework.security.web.FilterChainProxy.doFilter(FilterChainProxy.java:186)
+	at org.springframework.web.filter.DelegatingFilterProxy.invokeDelegate(DelegatingFilterProxy.java:354)
+	at org.springframework.web.filter.DelegatingFilterProxy.doFilter(DelegatingFilterProxy.java:267)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:178)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:153)
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:117)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:178)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:153)
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:117)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:178)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:153)
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:117)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:178)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:153)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:168)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:481)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:130)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:342)
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:390)
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63)
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:928)
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1794)
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1191)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:659)
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:61)
+	at java.lang.Thread.run(Thread.java:750)
+2026-02-07 23:37:52.098 [http-nio-8080-exec-3] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-unzip/config - 获取策略配置
+2026-02-07 23:37:52.098 [http-nio-8080-exec-3] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 获取策略配置 - strategyId: file-unzip
+2026-02-07 23:37:52.098 [http-nio-8080-exec-3] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 返回策略配置 - strategyId: file-unzip, 配置项数量: 11
+2026-02-07 23:37:52.098 [http-nio-8080-exec-3] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-unzip/config - 成功返回配置，包含 11 个参数
+2026-02-07 23:37:52.656 [http-nio-8080-exec-4] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-cleanup/config - 获取策略配置
+2026-02-07 23:37:52.657 [http-nio-8080-exec-4] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 获取策略配置 - strategyId: file-cleanup
+2026-02-07 23:37:52.657 [http-nio-8080-exec-4] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 策略配置不存在，创建默认配置 - strategyId: file-cleanup
+2026-02-07 23:37:52.659 [http-nio-8080-exec-4] ERROR o.a.c.c.C.[.[.[.[dispatcherServlet] - Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception [Handler dispatch failed; nested exception is java.lang.NoSuchMethodError: com.filemanager.domain.dto.PluginConfigDTO.setParameters(Ljava/util/List;)V] with root cause
+java.lang.NoSuchMethodError: com.filemanager.domain.dto.PluginConfigDTO.setParameters(Ljava/util/List;)V
+	at com.filemanager.plugin.cleanup.FileCleanupPlugin.getDefaultConfig(FileCleanupPlugin.java:70)
+	at com.filemanager.backend.service.impl.StrategyServiceImpl$PluginToStrategyAdapter.initializeDefaultConfig(StrategyServiceImpl.java:155)
+	at com.filemanager.backend.service.impl.StrategyServiceImpl.getStrategyConfig(StrategyServiceImpl.java:393)
+	at com.filemanager.backend.controller.StrategyController.getStrategyConfig(StrategyController.java:61)
+	at sun.reflect.GeneratedMethodAccessor29.invoke(Unknown Source)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:498)
+	at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:205)
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:150)
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:117)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:895)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:808)
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87)
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1072)
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:965)
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1006)
+	at org.springframework.web.servlet.FrameworkServlet.doGet(FrameworkServlet.java:898)
+	at javax.servlet.http.HttpServlet.service(HttpServlet.java:529)
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:883)
+	at javax.servlet.http.HttpServlet.service(HttpServlet.java:623)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:209)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:153)
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:178)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:153)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:337)
+	at org.springframework.security.web.access.intercept.FilterSecurityInterceptor.invoke(FilterSecurityInterceptor.java:115)
+	at org.springframework.security.web.access.intercept.FilterSecurityInterceptor.doFilter(FilterSecurityInterceptor.java:81)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:122)
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:126)
+	at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:81)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.authentication.AnonymousAuthenticationFilter.doFilter(AnonymousAuthenticationFilter.java:109)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter.doFilter(SecurityContextHolderAwareRequestFilter.java:149)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.savedrequest.RequestCacheAwareFilter.doFilter(RequestCacheAwareFilter.java:63)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.authentication.www.BasicAuthenticationFilter.doFilterInternal(BasicAuthenticationFilter.java:164)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:117)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:103)
+	at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:89)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.web.filter.CorsFilter.doFilterInternal(CorsFilter.java:91)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:117)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.header.HeaderWriterFilter.doHeadersAfter(HeaderWriterFilter.java:90)
+	at org.springframework.security.web.header.HeaderWriterFilter.doFilterInternal(HeaderWriterFilter.java:75)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:117)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.context.SecurityContextPersistenceFilter.doFilter(SecurityContextPersistenceFilter.java:112)
+	at org.springframework.security.web.context.SecurityContextPersistenceFilter.doFilter(SecurityContextPersistenceFilter.java:82)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter.doFilterInternal(WebAsyncManagerIntegrationFilter.java:55)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:117)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.session.DisableEncodeUrlFilter.doFilterInternal(DisableEncodeUrlFilter.java:42)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:117)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.FilterChainProxy.doFilterInternal(FilterChainProxy.java:221)
+	at org.springframework.security.web.FilterChainProxy.doFilter(FilterChainProxy.java:186)
+	at org.springframework.web.filter.DelegatingFilterProxy.invokeDelegate(DelegatingFilterProxy.java:354)
+	at org.springframework.web.filter.DelegatingFilterProxy.doFilter(DelegatingFilterProxy.java:267)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:178)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:153)
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:117)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:178)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:153)
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:117)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:178)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:153)
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:117)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:178)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:153)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:168)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:481)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:130)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:342)
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:390)
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63)
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:928)
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1794)
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1191)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:659)
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:61)
+	at java.lang.Thread.run(Thread.java:750)
+2026-02-07 23:38:32.926 [http-nio-8080-exec-5] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-unzip/config - 获取策略配置
+2026-02-07 23:38:32.927 [http-nio-8080-exec-5] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 获取策略配置 - strategyId: file-unzip
+2026-02-07 23:38:32.928 [http-nio-8080-exec-5] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 返回策略配置 - strategyId: file-unzip, 配置项数量: 11
+2026-02-07 23:38:32.928 [http-nio-8080-exec-5] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-unzip/config - 成功返回配置，包含 11 个参数
+2026-02-07 23:38:34.266 [http-nio-8080-exec-6] INFO  c.f.b.controller.StrategyController - [API] GET /api/strategies/file-cleanup/config - 获取策略配置
+2026-02-07 23:38:34.267 [http-nio-8080-exec-6] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 获取策略配置 - strategyId: file-cleanup
+2026-02-07 23:38:34.267 [http-nio-8080-exec-6] INFO  c.f.b.s.impl.StrategyServiceImpl - [Service] 策略配置不存在，创建默认配置 - strategyId: file-cleanup
+2026-02-07 23:38:34.268 [http-nio-8080-exec-6] ERROR o.a.c.c.C.[.[.[.[dispatcherServlet] - Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception [Handler dispatch failed; nested exception is java.lang.NoSuchMethodError: com.filemanager.domain.dto.PluginConfigDTO.setParameters(Ljava/util/List;)V] with root cause
+java.lang.NoSuchMethodError: com.filemanager.domain.dto.PluginConfigDTO.setParameters(Ljava/util/List;)V
+	at com.filemanager.plugin.cleanup.FileCleanupPlugin.getDefaultConfig(FileCleanupPlugin.java:70)
+	at com.filemanager.backend.service.impl.StrategyServiceImpl$PluginToStrategyAdapter.initializeDefaultConfig(StrategyServiceImpl.java:155)
+	at com.filemanager.backend.service.impl.StrategyServiceImpl.getStrategyConfig(StrategyServiceImpl.java:393)
+	at com.filemanager.backend.controller.StrategyController.getStrategyConfig(StrategyController.java:61)
+	at sun.reflect.GeneratedMethodAccessor29.invoke(Unknown Source)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:498)
+	at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:205)
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:150)
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:117)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:895)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:808)
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87)
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1072)
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:965)
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1006)
+	at org.springframework.web.servlet.FrameworkServlet.doGet(FrameworkServlet.java:898)
+	at javax.servlet.http.HttpServlet.service(HttpServlet.java:529)
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:883)
+	at javax.servlet.http.HttpServlet.service(HttpServlet.java:623)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:209)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:153)
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:178)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:153)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:337)
+	at org.springframework.security.web.access.intercept.FilterSecurityInterceptor.invoke(FilterSecurityInterceptor.java:115)
+	at org.springframework.security.web.access.intercept.FilterSecurityInterceptor.doFilter(FilterSecurityInterceptor.java:81)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:122)
+	at org.springframework.security.web.access.ExceptionTranslationFilter.doFilter(ExceptionTranslationFilter.java:116)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:126)
+	at org.springframework.security.web.session.SessionManagementFilter.doFilter(SessionManagementFilter.java:81)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.authentication.AnonymousAuthenticationFilter.doFilter(AnonymousAuthenticationFilter.java:109)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter.doFilter(SecurityContextHolderAwareRequestFilter.java:149)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.savedrequest.RequestCacheAwareFilter.doFilter(RequestCacheAwareFilter.java:63)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.authentication.www.BasicAuthenticationFilter.doFilterInternal(BasicAuthenticationFilter.java:164)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:117)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:103)
+	at org.springframework.security.web.authentication.logout.LogoutFilter.doFilter(LogoutFilter.java:89)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.web.filter.CorsFilter.doFilterInternal(CorsFilter.java:91)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:117)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.header.HeaderWriterFilter.doHeadersAfter(HeaderWriterFilter.java:90)
+	at org.springframework.security.web.header.HeaderWriterFilter.doFilterInternal(HeaderWriterFilter.java:75)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:117)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.context.SecurityContextPersistenceFilter.doFilter(SecurityContextPersistenceFilter.java:112)
+	at org.springframework.security.web.context.SecurityContextPersistenceFilter.doFilter(SecurityContextPersistenceFilter.java:82)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter.doFilterInternal(WebAsyncManagerIntegrationFilter.java:55)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:117)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.session.DisableEncodeUrlFilter.doFilterInternal(DisableEncodeUrlFilter.java:42)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:117)
+	at org.springframework.security.web.FilterChainProxy$VirtualFilterChain.doFilter(FilterChainProxy.java:346)
+	at org.springframework.security.web.FilterChainProxy.doFilterInternal(FilterChainProxy.java:221)
+	at org.springframework.security.web.FilterChainProxy.doFilter(FilterChainProxy.java:186)
+	at org.springframework.web.filter.DelegatingFilterProxy.invokeDelegate(DelegatingFilterProxy.java:354)
+	at org.springframework.web.filter.DelegatingFilterProxy.doFilter(DelegatingFilterProxy.java:267)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:178)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:153)
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:117)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:178)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:153)
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:117)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:178)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:153)
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:117)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:178)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:153)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:168)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:90)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:481)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:130)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:93)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:74)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:342)
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:390)
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63)
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:928)
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1794)
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1191)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:659)
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:61)
+	at java.lang.Thread.run(Thread.java:750)
+2026-02-07 23:39:31.786 [main] INFO  com.filemanager.backend.Application - Starting Application v1.0.0 using Java 1.8.0_452 on hrcao-mac-mini.local with PID 89262 (/Users/hrcao/Documents/MusicManagerPlus/backend/target/backend-1.0.0.jar started by hrcao in /Users/hrcao/Documents/MusicManagerPlus/backend)
+2026-02-07 23:39:31.787 [main] INFO  com.filemanager.backend.Application - No active profile set, falling back to 1 default profile: "default"
+2026-02-07 23:39:32.208 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2026-02-07 23:39:32.208 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/9.0.83]
+2026-02-07 23:39:32.239 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-02-07 23:39:32.291 [main] INFO  c.filemanager.plugin.PluginRegistry - Loaded internal plugin: 文件收集策略 v1.0.0
+2026-02-07 23:39:32.292 [main] INFO  c.filemanager.plugin.PluginRegistry - Loaded internal plugin: 文件清理与去重 v1.0.0
+2026-02-07 23:39:32.293 [main] INFO  c.filemanager.plugin.PluginRegistry - Loaded internal plugin: 文件批量归档和移动 v1.0.0
+2026-02-07 23:39:32.294 [main] INFO  c.filemanager.plugin.PluginRegistry - Loaded internal plugin: 高级重命名策略 v1.0.0
+2026-02-07 23:39:32.294 [main] INFO  c.filemanager.plugin.PluginRegistry - Loaded internal plugin: 音频格式转换 v1.0.0
+2026-02-07 23:39:32.295 [main] INFO  c.filemanager.plugin.PluginRegistry - Loaded internal plugin: CUE分轨 v1.0.0
+2026-02-07 23:39:32.296 [main] INFO  c.filemanager.plugin.PluginRegistry - Loaded internal plugin: 文件清理插件 v1.0.0
+2026-02-07 23:39:32.300 [main] INFO  c.f.b.s.impl.StrategyServiceImpl - [Strategy] 加载插件并注册为策略: 文件批量归档和移动 v1.0.0
+2026-02-07 23:39:32.300 [main] INFO  c.f.b.s.impl.StrategyServiceImpl - [Strategy] 加载插件并注册为策略: 文件收集策略 v1.0.0
+2026-02-07 23:39:32.300 [main] INFO  c.f.b.s.impl.StrategyServiceImpl - [Strategy] 加载插件并注册为策略: 文件清理插件 v1.0.0
+2026-02-07 23:39:32.300 [main] INFO  c.f.b.s.impl.StrategyServiceImpl - [Strategy] 加载插件并注册为策略: CUE分轨 v1.0.0
+2026-02-07 23:39:32.300 [main] INFO  c.f.b.s.impl.StrategyServiceImpl - [Strategy] 加载插件并注册为策略: 高级重命名策略 v1.0.0
+2026-02-07 23:39:32.300 [main] INFO  c.f.b.s.impl.StrategyServiceImpl - [Strategy] 加载插件并注册为策略: 音频格式转换 v1.0.0
+2026-02-07 23:39:32.300 [main] INFO  c.f.b.s.impl.StrategyServiceImpl - [Strategy] 配置文件不存在，使用默认配置: strategy_configs.json
+2026-02-07 23:39:32.303 [main] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 初始化配置加载
+2026-02-07 23:39:32.303 [main] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 找到配置文件，开始加载: pipeline_config.json
+2026-02-07 23:39:32.316 [main] INFO  c.f.backend.logging.UnifiedLogger - [BACKEND] Pipeline - 配置加载成功，流水线长度: 2
+2026-02-07 23:39:32.363 [main] WARN  o.s.b.a.s.s.UserDetailsServiceAutoConfiguration - 
+
+Using generated security password: 7ce6f841-d6cf-45a6-b5ab-53e107457d9c
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2026-02-07 23:39:32.567 [main] INFO  com.filemanager.backend.Application - Started Application in 0.978 seconds (JVM running for 1.149)

@@ -229,12 +229,9 @@ public class StrategyServiceImpl implements StrategyService {
                                     
                                     String operatorStr = (String) conditionData.get("operator");
                                     if (operatorStr != null) {
-                                        try {
-                                            condition.setOperator(com.filemanager.domain.dto.PreconditionDTO.OperatorType.valueOf(operatorStr));
-                                        } catch (IllegalArgumentException e) {
-                                            logger.warn("[Strategy] 未知的操作符类型: {}, 使用默认值 EQUALS", operatorStr);
-                                            condition.setOperator(com.filemanager.domain.dto.PreconditionDTO.OperatorType.EQUALS);
-                                        }
+                                        condition.setOperator(operatorStr);
+                                    } else {
+                                        condition.setOperator(com.filemanager.domain.dto.PreconditionDTO.OperatorType.EQUALS);
                                     }
                                     
                                     condition.setValue(conditionData.get("value"));

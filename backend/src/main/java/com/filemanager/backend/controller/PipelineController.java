@@ -107,6 +107,23 @@ public class PipelineController {
         }
     }
 
+    @PostMapping("/reset")
+    public ResponseEntity<Map<String, Object>> resetPipeline() {
+        try {
+            UnifiedLogger.backendOperation("Pipeline", "收到重置流水线请求");
+            pipelines.put("default", new ArrayList<>());
+            savePipelineConfig();
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("message", "流水线重置成功");
+            UnifiedLogger.backendOperation("Pipeline", "流水线重置完成并保存");
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            UnifiedLogger.backendError("Pipeline", "流水线重置失败: " + e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
     @PostMapping("/analyze")
     public ResponseEntity<Map<String, Object>> analyzePipeline(@RequestBody Map<String, Object> request) {
         try {
@@ -606,9 +623,11 @@ public class PipelineController {
                     precondition.setField((String) preconditionData.get("field"));
                     
                     String operatorStr = (String) preconditionData.get("operator");
-                    com.filemanager.domain.dto.PreconditionDTO.OperatorType operator = 
-                        com.filemanager.domain.dto.PreconditionDTO.OperatorType.valueOf(operatorStr.toUpperCase());
-                    precondition.setOperator(operator);
+                    if (operatorStr != null) {
+                        precondition.setOperator(operatorStr);
+                    } else {
+                        precondition.setOperator(com.filemanager.domain.dto.PreconditionDTO.OperatorType.EQUALS);
+                    }
                     
                     precondition.setValue(preconditionData.get("value"));
                     precondition.setDescription((String) preconditionData.get("description"));

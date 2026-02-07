@@ -36,4 +36,22 @@ class Precondition {
       'description': description,
     };
   }
+
+  Precondition copyWith({
+    String? id,
+    String? field,
+    String? subField,
+    String? operator,
+    dynamic value,
+    String? description,
+  }) {
+    return Precondition(
+      id: id ?? this.id,
+      field: field ?? this.field,
+      subField: subField ?? this.subField,
+      operator: operator ?? this.operator,
+      value: value ?? this.value,
+      description: description ?? this.description,
+    );
+  }
 }

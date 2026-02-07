@@ -89,7 +89,7 @@ public class PreconditionEvaluator {
         }
 
         String field = precondition.getField();
-        PreconditionDTO.OperatorType operator = precondition.getOperator();
+        String operator = precondition.getOperator();
         Object value = precondition.getValue();
         String subField = precondition.getSubField();
 
@@ -110,7 +110,7 @@ public class PreconditionEvaluator {
         return compareValues(file, fieldValue, operator, value);
     }
 
-    private static boolean evaluateFileTypeCondition(File file, String subField, PreconditionDTO.OperatorType operator, Object value) {
+    private static boolean evaluateFileTypeCondition(File file, String subField, String operator, Object value) {
         Object fieldValue = getFileTypeFieldValue(file, subField);
         if (fieldValue == null) {
             return false;
@@ -282,68 +282,68 @@ public class PreconditionEvaluator {
         return -1;
     }
 
-    private static boolean compareValues(File file, Object fieldValue, PreconditionDTO.OperatorType operator, Object conditionValue) {
+    private static boolean compareValues(File file, Object fieldValue, String operator, Object conditionValue) {
         try {
-            // 使用 if-else 语句代替 switch 语句，避免枚举常量限定名称的问题
-            if (operator == PreconditionDTO.OperatorType.EQUALS) {
+            // 使用字符串比较代替枚举比较
+            if (PreconditionDTO.OperatorType.EQUALS.equals(operator)) {
                 return fieldValue.equals(conditionValue);
-            } else if (operator == PreconditionDTO.OperatorType.NOT_EQUALS) {
+            } else if (PreconditionDTO.OperatorType.NOT_EQUALS.equals(operator)) {
                 return !fieldValue.equals(conditionValue);
-            } else if (operator == PreconditionDTO.OperatorType.GREATER_THAN) {
+            } else if (PreconditionDTO.OperatorType.GREATER_THAN.equals(operator)) {
                 return compareNumbers(fieldValue, conditionValue) > 0;
-            } else if (operator == PreconditionDTO.OperatorType.LESS_THAN) {
+            } else if (PreconditionDTO.OperatorType.LESS_THAN.equals(operator)) {
                 return compareNumbers(fieldValue, conditionValue) < 0;
-            } else if (operator == PreconditionDTO.OperatorType.GREATER_THAN_EQUALS) {
+            } else if (PreconditionDTO.OperatorType.GREATER_THAN_OR_EQUAL.equals(operator)) {
                 return compareNumbers(fieldValue, conditionValue) >= 0;
-            } else if (operator == PreconditionDTO.OperatorType.LESS_THAN_EQUALS) {
+            } else if (PreconditionDTO.OperatorType.LESS_THAN_OR_EQUAL.equals(operator)) {
                 return compareNumbers(fieldValue, conditionValue) <= 0;
-            } else if (operator == PreconditionDTO.OperatorType.CONTAINS) {
+            } else if (PreconditionDTO.OperatorType.CONTAINS.equals(operator)) {
                 return fieldValue.toString().contains(conditionValue.toString());
-            } else if (operator == PreconditionDTO.OperatorType.NOT_CONTAINS) {
+            } else if (PreconditionDTO.OperatorType.NOT_CONTAINS.equals(operator)) {
                 return !fieldValue.toString().contains(conditionValue.toString());
-            } else if (operator == PreconditionDTO.OperatorType.STARTS_WITH) {
+            } else if (PreconditionDTO.OperatorType.STARTS_WITH.equals(operator)) {
                 return fieldValue.toString().startsWith(conditionValue.toString());
-            } else if (operator == PreconditionDTO.OperatorType.ENDS_WITH) {
+            } else if (PreconditionDTO.OperatorType.ENDS_WITH.equals(operator)) {
                 return fieldValue.toString().endsWith(conditionValue.toString());
-            } else if (operator == PreconditionDTO.OperatorType.REGEX_MATCH) {
+            } else if (PreconditionDTO.OperatorType.MATCHES_REGEX.equals(operator)) {
                 return Pattern.matches(conditionValue.toString(), fieldValue.toString());
-            } else if (operator == PreconditionDTO.OperatorType.IN) {
+            } else if (PreconditionDTO.OperatorType.IN.equals(operator)) {
                 return checkInList(fieldValue, conditionValue.toString());
-            } else if (operator == PreconditionDTO.OperatorType.NOT_IN) {
+            } else if (PreconditionDTO.OperatorType.NOT_IN.equals(operator)) {
                 return !checkInList(fieldValue, conditionValue.toString());
-            } else if (operator == PreconditionDTO.OperatorType.BETWEEN) {
+            } else if (PreconditionDTO.OperatorType.BETWEEN.equals(operator)) {
                 return checkInRange(fieldValue, conditionValue.toString());
-            } else if (operator == PreconditionDTO.OperatorType.LAST_DAYS) {
+            } else if (PreconditionDTO.OperatorType.LAST_DAYS.equals(operator)) {
                 return checkLastDays(fieldValue, conditionValue.toString());
-            } else if (operator == PreconditionDTO.OperatorType.IS) {
+            } else if (PreconditionDTO.OperatorType.IS.equals(operator)) {
                 if (fieldValue instanceof Boolean) {
                     return fieldValue.equals(Boolean.parseBoolean(conditionValue.toString()));
                 }
                 return fieldValue.equals(conditionValue);
-            } else if (operator == PreconditionDTO.OperatorType.IS_NOT) {
+            } else if (PreconditionDTO.OperatorType.IS_NOT.equals(operator)) {
                 if (fieldValue instanceof Boolean) {
                     return !fieldValue.equals(Boolean.parseBoolean(conditionValue.toString()));
                 }
                 return !fieldValue.equals(conditionValue);
-            } else if (operator == PreconditionDTO.OperatorType.IS_EMPTY) {
+            } else if (PreconditionDTO.OperatorType.IS_EMPTY.equals(operator)) {
                 return isDirectoryEmpty(file);
-            } else if (operator == PreconditionDTO.OperatorType.IS_NOT_EMPTY) {
+            } else if (PreconditionDTO.OperatorType.IS_NOT_EMPTY.equals(operator)) {
                 return !isDirectoryEmpty(file);
-            } else if (operator == PreconditionDTO.OperatorType.HAS_SUBDIRECTORIES) {
+            } else if (PreconditionDTO.OperatorType.HAS_SUBDIRECTORIES.equals(operator)) {
                 return hasSubdirectories(file);
-            } else if (operator == PreconditionDTO.OperatorType.HAS_NO_SUBDIRECTORIES) {
+            } else if (PreconditionDTO.OperatorType.HAS_NO_SUBDIRECTORIES.equals(operator)) {
                 return !hasSubdirectories(file);
-            } else if (operator == PreconditionDTO.OperatorType.DEPTH_GREATER_THAN) {
+            } else if (PreconditionDTO.OperatorType.DEPTH_GREATER_THAN.equals(operator)) {
                 return compareNumbers(getDirectoryDepth(file), conditionValue) > 0;
-            } else if (operator == PreconditionDTO.OperatorType.DEPTH_LESS_THAN) {
+            } else if (PreconditionDTO.OperatorType.DEPTH_LESS_THAN.equals(operator)) {
                 return compareNumbers(getDirectoryDepth(file), conditionValue) < 0;
-            } else if (operator == PreconditionDTO.OperatorType.FILE_COUNT_GREATER_THAN) {
+            } else if (PreconditionDTO.OperatorType.FILE_COUNT_GREATER_THAN.equals(operator)) {
                 return compareNumbers(getFileCount(file), conditionValue) > 0;
-            } else if (operator == PreconditionDTO.OperatorType.FILE_COUNT_LESS_THAN) {
+            } else if (PreconditionDTO.OperatorType.FILE_COUNT_LESS_THAN.equals(operator)) {
                 return compareNumbers(getFileCount(file), conditionValue) < 0;
-            } else if (operator == PreconditionDTO.OperatorType.FORMAT_IN) {
+            } else if (PreconditionDTO.OperatorType.FORMAT_IN.equals(operator)) {
                 return checkFormatInList(fieldValue, conditionValue.toString());
-            } else if (operator == PreconditionDTO.OperatorType.FORMAT_NOT_IN) {
+            } else if (PreconditionDTO.OperatorType.FORMAT_NOT_IN.equals(operator)) {
                 return !checkFormatInList(fieldValue, conditionValue.toString());
             } else {
                 return false;
