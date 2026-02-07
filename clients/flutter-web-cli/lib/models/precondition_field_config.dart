@@ -5,6 +5,13 @@ enum PreconditionFieldType {
   number,
   boolean,
   fileType,
+  directoryType,
+  audioType,
+  videoType,
+  imageType,
+  textType,
+  documentType,
+  archiveType,
   date,
 }
 
@@ -34,12 +41,29 @@ class PreconditionOperatorConfig {
   });
 }
 
+class PreconditionSubFieldConfig {
+  final String code;
+  final String name;
+  final String description;
+  final PreconditionFieldType type;
+  final List<PreconditionOperatorConfig> operators;
+
+  PreconditionSubFieldConfig({
+    required this.code,
+    required this.name,
+    required this.description,
+    required this.type,
+    required this.operators,
+  });
+}
+
 class PreconditionFieldConfig {
   final String code;
   final String name;
   final String description;
   final List<PreconditionOperatorConfig> operators;
   final PreconditionFieldType type;
+  final List<PreconditionSubFieldConfig>? subFields;
 
   PreconditionFieldConfig({
     required this.code,
@@ -47,6 +71,7 @@ class PreconditionFieldConfig {
     required this.description,
     required this.operators,
     required this.type,
+    this.subFields,
   });
 
   PreconditionOperatorConfig? getOperatorConfig(String operatorCode) {
@@ -66,323 +91,356 @@ class PreconditionFieldConfig {
     final operatorConfig = getOperatorConfig(operatorCode);
     return operatorConfig?.inputType != PreconditionInputType.none;
   }
+
+  PreconditionSubFieldConfig? getSubFieldConfig(String subFieldCode) {
+    if (subFields == null) return null;
+    try {
+      return subFields!.firstWhere((subField) => subField.code == subFieldCode);
+    } catch (e) {
+      return null;
+    }
+  }
 }
 
 class PreconditionFieldConfigs {
   static final List<PreconditionFieldConfig> fields = [
     PreconditionFieldConfig(
-      code: 'file',
-      name: '文件',
-      description: '判断是否为文件',
+      code: 'fileType',
+      name: '文件类型',
+      description: '文件类型相关判断',
       type: PreconditionFieldType.fileType,
       operators: [
         PreconditionOperatorConfig(
           code: 'is',
-          name: '是文件',
+          name: '是',
+          description: '判断是否为指定类型',
+          valuePlaceholder: '',
+          inputType: PreconditionInputType.none,
+        ),
+        PreconditionOperatorConfig(
+          code: 'isNot',
+          name: '不是',
+          description: '判断是否不是指定类型',
+          valuePlaceholder: '',
+          inputType: PreconditionInputType.none,
+        ),
+      ],
+      subFields: [
+        PreconditionSubFieldConfig(
+          code: 'file',
+          name: '文件',
           description: '判断是否为文件',
-          valuePlaceholder: '',
-          inputType: PreconditionInputType.none,
+          type: PreconditionFieldType.fileType,
+          operators: [
+            PreconditionOperatorConfig(
+              code: 'is',
+              name: '是文件',
+              description: '判断是否为文件',
+              valuePlaceholder: '',
+              inputType: PreconditionInputType.none,
+            ),
+            PreconditionOperatorConfig(
+              code: 'isNot',
+              name: '不是文件',
+              description: '判断是否不是文件',
+              valuePlaceholder: '',
+              inputType: PreconditionInputType.none,
+            ),
+          ],
         ),
-        PreconditionOperatorConfig(
-          code: 'isNot',
-          name: '不是文件',
-          description: '判断是否不是文件',
-          valuePlaceholder: '',
-          inputType: PreconditionInputType.none,
-        ),
-      ],
-    ),
-    PreconditionFieldConfig(
-      code: 'directory',
-      name: '文件夹',
-      description: '判断是否为文件夹',
-      type: PreconditionFieldType.fileType,
-      operators: [
-        PreconditionOperatorConfig(
-          code: 'is',
-          name: '是文件夹',
+        PreconditionSubFieldConfig(
+          code: 'directory',
+          name: '文件夹',
           description: '判断是否为文件夹',
-          valuePlaceholder: '',
-          inputType: PreconditionInputType.none,
+          type: PreconditionFieldType.directoryType,
+          operators: [
+            PreconditionOperatorConfig(
+              code: 'is',
+              name: '是文件夹',
+              description: '判断是否为文件夹',
+              valuePlaceholder: '',
+              inputType: PreconditionInputType.none,
+            ),
+            PreconditionOperatorConfig(
+              code: 'isNot',
+              name: '不是文件夹',
+              description: '判断是否不是文件夹',
+              valuePlaceholder: '',
+              inputType: PreconditionInputType.none,
+            ),
+            PreconditionOperatorConfig(
+              code: 'isEmpty',
+              name: '是空文件夹',
+              description: '判断文件夹是否为空',
+              valuePlaceholder: '',
+              inputType: PreconditionInputType.none,
+            ),
+            PreconditionOperatorConfig(
+              code: 'isNotEmpty',
+              name: '不是空文件夹',
+              description: '判断文件夹是否不为空',
+              valuePlaceholder: '',
+              inputType: PreconditionInputType.none,
+            ),
+            PreconditionOperatorConfig(
+              code: 'hasSubdirectories',
+              name: '有子文件夹',
+              description: '判断文件夹是否包含子文件夹',
+              valuePlaceholder: '',
+              inputType: PreconditionInputType.none,
+            ),
+            PreconditionOperatorConfig(
+              code: 'hasNoSubdirectories',
+              name: '没有子文件夹',
+              description: '判断文件夹是否不包含子文件夹',
+              valuePlaceholder: '',
+              inputType: PreconditionInputType.none,
+            ),
+            PreconditionOperatorConfig(
+              code: 'depthGreaterThan',
+              name: '深度大于',
+              description: '判断文件夹深度是否大于指定值',
+              valuePlaceholder: '请输入深度值',
+              inputType: PreconditionInputType.single,
+            ),
+            PreconditionOperatorConfig(
+              code: 'depthLessThan',
+              name: '深度小于',
+              description: '判断文件夹深度是否小于指定值',
+              valuePlaceholder: '请输入深度值',
+              inputType: PreconditionInputType.single,
+            ),
+            PreconditionOperatorConfig(
+              code: 'fileCountGreaterThan',
+              name: '文件数量大于',
+              description: '判断文件夹内文件数量是否大于指定值',
+              valuePlaceholder: '请输入文件数量',
+              inputType: PreconditionInputType.single,
+            ),
+            PreconditionOperatorConfig(
+              code: 'fileCountLessThan',
+              name: '文件数量小于',
+              description: '判断文件夹内文件数量是否小于指定值',
+              valuePlaceholder: '请输入文件数量',
+              inputType: PreconditionInputType.single,
+            ),
+          ],
         ),
-        PreconditionOperatorConfig(
-          code: 'isNot',
-          name: '不是文件夹',
-          description: '判断是否不是文件夹',
-          valuePlaceholder: '',
-          inputType: PreconditionInputType.none,
-        ),
-        PreconditionOperatorConfig(
-          code: 'isEmpty',
-          name: '是空文件夹',
-          description: '判断文件夹是否为空',
-          valuePlaceholder: '',
-          inputType: PreconditionInputType.none,
-        ),
-        PreconditionOperatorConfig(
-          code: 'isNotEmpty',
-          name: '不是空文件夹',
-          description: '判断文件夹是否不为空',
-          valuePlaceholder: '',
-          inputType: PreconditionInputType.none,
-        ),
-        PreconditionOperatorConfig(
-          code: 'hasSubdirectories',
-          name: '有子文件夹',
-          description: '判断文件夹是否包含子文件夹',
-          valuePlaceholder: '',
-          inputType: PreconditionInputType.none,
-        ),
-        PreconditionOperatorConfig(
-          code: 'hasNoSubdirectories',
-          name: '没有子文件夹',
-          description: '判断文件夹是否不包含子文件夹',
-          valuePlaceholder: '',
-          inputType: PreconditionInputType.none,
-        ),
-        PreconditionOperatorConfig(
-          code: 'depthGreaterThan',
-          name: '深度大于',
-          description: '判断文件夹深度是否大于指定值',
-          valuePlaceholder: '请输入深度值',
-          inputType: PreconditionInputType.single,
-        ),
-        PreconditionOperatorConfig(
-          code: 'depthLessThan',
-          name: '深度小于',
-          description: '判断文件夹深度是否小于指定值',
-          valuePlaceholder: '请输入深度值',
-          inputType: PreconditionInputType.single,
-        ),
-        PreconditionOperatorConfig(
-          code: 'fileCountGreaterThan',
-          name: '文件数量大于',
-          description: '判断文件夹内文件数量是否大于指定值',
-          valuePlaceholder: '请输入文件数量',
-          inputType: PreconditionInputType.single,
-        ),
-        PreconditionOperatorConfig(
-          code: 'fileCountLessThan',
-          name: '文件数量小于',
-          description: '判断文件夹内文件数量是否小于指定值',
-          valuePlaceholder: '请输入文件数量',
-          inputType: PreconditionInputType.single,
-        ),
-      ],
-    ),
-    PreconditionFieldConfig(
-      code: 'audioFile',
-      name: '音频文件',
-      description: '判断是否为音频文件',
-      type: PreconditionFieldType.fileType,
-      operators: [
-        PreconditionOperatorConfig(
-          code: 'is',
-          name: '是音频文件',
+        PreconditionSubFieldConfig(
+          code: 'audioFile',
+          name: '音频文件',
           description: '判断是否为音频文件',
-          valuePlaceholder: '',
-          inputType: PreconditionInputType.none,
+          type: PreconditionFieldType.audioType,
+          operators: [
+            PreconditionOperatorConfig(
+              code: 'is',
+              name: '是音频文件',
+              description: '判断是否为音频文件',
+              valuePlaceholder: '',
+              inputType: PreconditionInputType.none,
+            ),
+            PreconditionOperatorConfig(
+              code: 'isNot',
+              name: '不是音频文件',
+              description: '判断是否不是音频文件',
+              valuePlaceholder: '',
+              inputType: PreconditionInputType.none,
+            ),
+            PreconditionOperatorConfig(
+              code: 'formatIn',
+              name: '格式在列表中',
+              description: '判断音频格式是否在指定列表中',
+              valuePlaceholder: '请输入格式列表（如mp3,wav,flac）',
+              inputType: PreconditionInputType.list,
+            ),
+            PreconditionOperatorConfig(
+              code: 'formatNotIn',
+              name: '格式不在列表中',
+              description: '判断音频格式是否不在指定列表中',
+              valuePlaceholder: '请输入格式列表（如mp3,wav,flac）',
+              inputType: PreconditionInputType.list,
+            ),
+          ],
         ),
-        PreconditionOperatorConfig(
-          code: 'isNot',
-          name: '不是音频文件',
-          description: '判断是否不是音频文件',
-          valuePlaceholder: '',
-          inputType: PreconditionInputType.none,
-        ),
-        PreconditionOperatorConfig(
-          code: 'formatIn',
-          name: '格式在列表中',
-          description: '判断音频格式是否在指定列表中',
-          valuePlaceholder: '请输入格式列表（如mp3,wav,flac）',
-          inputType: PreconditionInputType.list,
-        ),
-        PreconditionOperatorConfig(
-          code: 'formatNotIn',
-          name: '格式不在列表中',
-          description: '判断音频格式是否不在指定列表中',
-          valuePlaceholder: '请输入格式列表（如mp3,wav,flac）',
-          inputType: PreconditionInputType.list,
-        ),
-      ],
-    ),
-    PreconditionFieldConfig(
-      code: 'videoFile',
-      name: '视频文件',
-      description: '判断是否为视频文件',
-      type: PreconditionFieldType.fileType,
-      operators: [
-        PreconditionOperatorConfig(
-          code: 'is',
-          name: '是视频文件',
+        PreconditionSubFieldConfig(
+          code: 'videoFile',
+          name: '视频文件',
           description: '判断是否为视频文件',
-          valuePlaceholder: '',
-          inputType: PreconditionInputType.none,
+          type: PreconditionFieldType.videoType,
+          operators: [
+            PreconditionOperatorConfig(
+              code: 'is',
+              name: '是视频文件',
+              description: '判断是否为视频文件',
+              valuePlaceholder: '',
+              inputType: PreconditionInputType.none,
+            ),
+            PreconditionOperatorConfig(
+              code: 'isNot',
+              name: '不是视频文件',
+              description: '判断是否不是视频文件',
+              valuePlaceholder: '',
+              inputType: PreconditionInputType.none,
+            ),
+            PreconditionOperatorConfig(
+              code: 'formatIn',
+              name: '格式在列表中',
+              description: '判断视频格式是否在指定列表中',
+              valuePlaceholder: '请输入格式列表（如mp4,mkv,avi）',
+              inputType: PreconditionInputType.list,
+            ),
+            PreconditionOperatorConfig(
+              code: 'formatNotIn',
+              name: '格式不在列表中',
+              description: '判断视频格式是否不在指定列表中',
+              valuePlaceholder: '请输入格式列表（如mp4,mkv,avi）',
+              inputType: PreconditionInputType.list,
+            ),
+          ],
         ),
-        PreconditionOperatorConfig(
-          code: 'isNot',
-          name: '不是视频文件',
-          description: '判断是否不是视频文件',
-          valuePlaceholder: '',
-          inputType: PreconditionInputType.none,
-        ),
-        PreconditionOperatorConfig(
-          code: 'formatIn',
-          name: '格式在列表中',
-          description: '判断视频格式是否在指定列表中',
-          valuePlaceholder: '请输入格式列表（如mp4,mkv,avi）',
-          inputType: PreconditionInputType.list,
-        ),
-        PreconditionOperatorConfig(
-          code: 'formatNotIn',
-          name: '格式不在列表中',
-          description: '判断视频格式是否不在指定列表中',
-          valuePlaceholder: '请输入格式列表（如mp4,mkv,avi）',
-          inputType: PreconditionInputType.list,
-        ),
-      ],
-    ),
-    PreconditionFieldConfig(
-      code: 'imageFile',
-      name: '图片文件',
-      description: '判断是否为图片文件',
-      type: PreconditionFieldType.fileType,
-      operators: [
-        PreconditionOperatorConfig(
-          code: 'is',
-          name: '是图片文件',
+        PreconditionSubFieldConfig(
+          code: 'imageFile',
+          name: '图片文件',
           description: '判断是否为图片文件',
-          valuePlaceholder: '',
-          inputType: PreconditionInputType.none,
+          type: PreconditionFieldType.imageType,
+          operators: [
+            PreconditionOperatorConfig(
+              code: 'is',
+              name: '是图片文件',
+              description: '判断是否为图片文件',
+              valuePlaceholder: '',
+              inputType: PreconditionInputType.none,
+            ),
+            PreconditionOperatorConfig(
+              code: 'isNot',
+              name: '不是图片文件',
+              description: '判断是否不是图片文件',
+              valuePlaceholder: '',
+              inputType: PreconditionInputType.none,
+            ),
+            PreconditionOperatorConfig(
+              code: 'formatIn',
+              name: '格式在列表中',
+              description: '判断图片格式是否在指定列表中',
+              valuePlaceholder: '请输入格式列表（如jpg,png,gif）',
+              inputType: PreconditionInputType.list,
+            ),
+            PreconditionOperatorConfig(
+              code: 'formatNotIn',
+              name: '格式不在列表中',
+              description: '判断图片格式是否不在指定列表中',
+              valuePlaceholder: '请输入格式列表（如jpg,png,gif）',
+              inputType: PreconditionInputType.list,
+            ),
+          ],
         ),
-        PreconditionOperatorConfig(
-          code: 'isNot',
-          name: '不是图片文件',
-          description: '判断是否不是图片文件',
-          valuePlaceholder: '',
-          inputType: PreconditionInputType.none,
-        ),
-        PreconditionOperatorConfig(
-          code: 'formatIn',
-          name: '格式在列表中',
-          description: '判断图片格式是否在指定列表中',
-          valuePlaceholder: '请输入格式列表（如jpg,png,gif）',
-          inputType: PreconditionInputType.list,
-        ),
-        PreconditionOperatorConfig(
-          code: 'formatNotIn',
-          name: '格式不在列表中',
-          description: '判断图片格式是否不在指定列表中',
-          valuePlaceholder: '请输入格式列表（如jpg,png,gif）',
-          inputType: PreconditionInputType.list,
-        ),
-      ],
-    ),
-    PreconditionFieldConfig(
-      code: 'textFile',
-      name: '文本文件',
-      description: '判断是否为文本文件',
-      type: PreconditionFieldType.fileType,
-      operators: [
-        PreconditionOperatorConfig(
-          code: 'is',
-          name: '是文本文件',
+        PreconditionSubFieldConfig(
+          code: 'textFile',
+          name: '文本文件',
           description: '判断是否为文本文件',
-          valuePlaceholder: '',
-          inputType: PreconditionInputType.none,
+          type: PreconditionFieldType.textType,
+          operators: [
+            PreconditionOperatorConfig(
+              code: 'is',
+              name: '是文本文件',
+              description: '判断是否为文本文件',
+              valuePlaceholder: '',
+              inputType: PreconditionInputType.none,
+            ),
+            PreconditionOperatorConfig(
+              code: 'isNot',
+              name: '不是文本文件',
+              description: '判断是否不是文本文件',
+              valuePlaceholder: '',
+              inputType: PreconditionInputType.none,
+            ),
+            PreconditionOperatorConfig(
+              code: 'formatIn',
+              name: '格式在列表中',
+              description: '判断文本格式是否在指定列表中',
+              valuePlaceholder: '请输入格式列表（如txt,csv,md）',
+              inputType: PreconditionInputType.list,
+            ),
+            PreconditionOperatorConfig(
+              code: 'formatNotIn',
+              name: '格式不在列表中',
+              description: '判断文本格式是否不在指定列表中',
+              valuePlaceholder: '请输入格式列表（如txt,csv,md）',
+              inputType: PreconditionInputType.list,
+            ),
+          ],
         ),
-        PreconditionOperatorConfig(
-          code: 'isNot',
-          name: '不是文本文件',
-          description: '判断是否不是文本文件',
-          valuePlaceholder: '',
-          inputType: PreconditionInputType.none,
-        ),
-        PreconditionOperatorConfig(
-          code: 'formatIn',
-          name: '格式在列表中',
-          description: '判断文本格式是否在指定列表中',
-          valuePlaceholder: '请输入格式列表（如txt,csv,md）',
-          inputType: PreconditionInputType.list,
-        ),
-        PreconditionOperatorConfig(
-          code: 'formatNotIn',
-          name: '格式不在列表中',
-          description: '判断文本格式是否不在指定列表中',
-          valuePlaceholder: '请输入格式列表（如txt,csv,md）',
-          inputType: PreconditionInputType.list,
-        ),
-      ],
-    ),
-    PreconditionFieldConfig(
-      code: 'documentFile',
-      name: '文档文件',
-      description: '判断是否为文档文件',
-      type: PreconditionFieldType.fileType,
-      operators: [
-        PreconditionOperatorConfig(
-          code: 'is',
-          name: '是文档文件',
+        PreconditionSubFieldConfig(
+          code: 'documentFile',
+          name: '文档文件',
           description: '判断是否为文档文件',
-          valuePlaceholder: '',
-          inputType: PreconditionInputType.none,
+          type: PreconditionFieldType.documentType,
+          operators: [
+            PreconditionOperatorConfig(
+              code: 'is',
+              name: '是文档文件',
+              description: '判断是否为文档文件',
+              valuePlaceholder: '',
+              inputType: PreconditionInputType.none,
+            ),
+            PreconditionOperatorConfig(
+              code: 'isNot',
+              name: '不是文档文件',
+              description: '判断是否不是文档文件',
+              valuePlaceholder: '',
+              inputType: PreconditionInputType.none,
+            ),
+            PreconditionOperatorConfig(
+              code: 'formatIn',
+              name: '格式在列表中',
+              description: '判断文档格式是否在指定列表中',
+              valuePlaceholder: '请输入格式列表（如pdf,docx,xlsx）',
+              inputType: PreconditionInputType.list,
+            ),
+            PreconditionOperatorConfig(
+              code: 'formatNotIn',
+              name: '格式不在列表中',
+              description: '判断文档格式是否不在指定列表中',
+              valuePlaceholder: '请输入格式列表（如pdf,docx,xlsx）',
+              inputType: PreconditionInputType.list,
+            ),
+          ],
         ),
-        PreconditionOperatorConfig(
-          code: 'isNot',
-          name: '不是文档文件',
-          description: '判断是否不是文档文件',
-          valuePlaceholder: '',
-          inputType: PreconditionInputType.none,
-        ),
-        PreconditionOperatorConfig(
-          code: 'formatIn',
-          name: '格式在列表中',
-          description: '判断文档格式是否在指定列表中',
-          valuePlaceholder: '请输入格式列表（如pdf,docx,xlsx）',
-          inputType: PreconditionInputType.list,
-        ),
-        PreconditionOperatorConfig(
-          code: 'formatNotIn',
-          name: '格式不在列表中',
-          description: '判断文档格式是否不在指定列表中',
-          valuePlaceholder: '请输入格式列表（如pdf,docx,xlsx）',
-          inputType: PreconditionInputType.list,
-        ),
-      ],
-    ),
-    PreconditionFieldConfig(
-      code: 'archiveFile',
-      name: '压缩文件',
-      description: '判断是否为压缩文件',
-      type: PreconditionFieldType.fileType,
-      operators: [
-        PreconditionOperatorConfig(
-          code: 'is',
-          name: '是压缩文件',
+        PreconditionSubFieldConfig(
+          code: 'archiveFile',
+          name: '压缩文件',
           description: '判断是否为压缩文件',
-          valuePlaceholder: '',
-          inputType: PreconditionInputType.none,
-        ),
-        PreconditionOperatorConfig(
-          code: 'isNot',
-          name: '不是压缩文件',
-          description: '判断是否不是压缩文件',
-          valuePlaceholder: '',
-          inputType: PreconditionInputType.none,
-        ),
-        PreconditionOperatorConfig(
-          code: 'formatIn',
-          name: '格式在列表中',
-          description: '判断压缩格式是否在指定列表中',
-          valuePlaceholder: '请输入格式列表（如zip,rar,7z）',
-          inputType: PreconditionInputType.list,
-        ),
-        PreconditionOperatorConfig(
-          code: 'formatNotIn',
-          name: '格式不在列表中',
-          description: '判断压缩格式是否不在指定列表中',
-          valuePlaceholder: '请输入格式列表（如zip,rar,7z）',
-          inputType: PreconditionInputType.list,
+          type: PreconditionFieldType.archiveType,
+          operators: [
+            PreconditionOperatorConfig(
+              code: 'is',
+              name: '是压缩文件',
+              description: '判断是否为压缩文件',
+              valuePlaceholder: '',
+              inputType: PreconditionInputType.none,
+            ),
+            PreconditionOperatorConfig(
+              code: 'isNot',
+              name: '不是压缩文件',
+              description: '判断是否不是压缩文件',
+              valuePlaceholder: '',
+              inputType: PreconditionInputType.none,
+            ),
+            PreconditionOperatorConfig(
+              code: 'formatIn',
+              name: '格式在列表中',
+              description: '判断压缩格式是否在指定列表中',
+              valuePlaceholder: '请输入格式列表（如zip,rar,7z）',
+              inputType: PreconditionInputType.list,
+            ),
+            PreconditionOperatorConfig(
+              code: 'formatNotIn',
+              name: '格式不在列表中',
+              description: '判断压缩格式是否不在指定列表中',
+              valuePlaceholder: '请输入格式列表（如zip,rar,7z）',
+              inputType: PreconditionInputType.list,
+            ),
+          ],
         ),
       ],
     ),
@@ -661,6 +719,34 @@ class PreconditionFieldConfigs {
   static String getConditionDescription(Precondition condition) {
     PreconditionFieldConfig? fieldConfig = getFieldConfig(condition.field);
     if (fieldConfig == null) return '';
+
+    // 处理文件类型的层级结构
+    if (fieldConfig.code == 'fileType' && condition.subField != null) {
+      PreconditionSubFieldConfig? subFieldConfig = fieldConfig.getSubFieldConfig(condition.subField!);
+      if (subFieldConfig == null) return '';
+
+      PreconditionOperatorConfig? operatorConfig;
+      try {
+        operatorConfig = subFieldConfig.operators.firstWhere((op) => op.code == condition.operator);
+      } catch (e) {
+        return '';
+      }
+
+      if (operatorConfig.inputType == PreconditionInputType.none) {
+        return '${subFieldConfig.name}${operatorConfig.name}';
+      }
+
+      if (operatorConfig.inputType == PreconditionInputType.range) {
+        final values = parseRangeValue(condition.value);
+        return '${subFieldConfig.name}${operatorConfig.name} ${values['start']} - ${values['end']}';
+      }
+
+      if (operatorConfig.inputType == PreconditionInputType.list) {
+        return '${subFieldConfig.name}${operatorConfig.name} [${condition.value}]';
+      }
+
+      return '${subFieldConfig.name}${operatorConfig.name} ${condition.value}';
+    }
 
     PreconditionOperatorConfig? operatorConfig;
     try {

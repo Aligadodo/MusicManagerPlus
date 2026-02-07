@@ -1,6 +1,7 @@
 class Precondition {
   final String id;
   final String field;
+  final String? subField;
   final String operator;
   final dynamic value;
   final String description;
@@ -8,6 +9,7 @@ class Precondition {
   Precondition({
     required this.id,
     required this.field,
+    this.subField,
     required this.operator,
     required this.value,
     required this.description,
@@ -17,6 +19,7 @@ class Precondition {
     return Precondition(
       id: json['id'] ?? '',
       field: json['field'] ?? '',
+      subField: json['subField'],
       operator: json['operator'] ?? '',
       value: json['value'],
       description: json['description'] ?? '',
@@ -27,6 +30,7 @@ class Precondition {
     return {
       'id': id,
       'field': field,
+      'subField': subField,
       'operator': operator,
       'value': value,
       'description': description,

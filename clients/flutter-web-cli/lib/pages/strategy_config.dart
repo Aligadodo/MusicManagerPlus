@@ -10,6 +10,8 @@ import 'package:filemanager_flutter/models/enum_option.dart';
 import 'package:filemanager_flutter/models/rename_rule.dart';
 import 'package:filemanager_flutter/utils/tooltip_utils.dart';
 import 'package:filemanager_flutter/widgets/rename_rule_editor.dart';
+import 'package:filemanager_flutter/widgets/precondition_config_panel.dart';
+import 'package:filemanager_flutter/models/precondition_group.dart';
 
 class StrategyConfigPage extends ConsumerStatefulWidget {
   const StrategyConfigPage({super.key});
@@ -325,25 +327,43 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
                       )
                     else if (_strategyConfig != null && _selectedStrategy != null)
                       Expanded(
-                        child: ListView.builder(
-                          itemCount: _selectedStrategy!.configFields.length,
-                          itemBuilder: (context, index) {
-                            try {
-                              final ConfigField field = _selectedStrategy!.configFields[index];
-                              return _buildConfigField(field);
-                            } catch (e) {
-                              return Card(
-                                color: Colors.red.shade50,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    '字段加载失败: $e',
-                                    style: const TextStyle(color: Colors.red),
-                                  ),
-                                ),
-                              );
-                            }
-                          },
+                        child: ListView(
+                          children: [
+                            ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: _selectedStrategy!.configFields.length,
+                              itemBuilder: (context, index) {
+                                try {
+                                  final ConfigField field = _selectedStrategy!.configFields[index];
+                                  return _buildConfigField(field);
+                                } catch (e) {
+                                  return Card(
+                                    color: Colors.red.shade50,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        '字段加载失败: $e',
+                                        style: const TextStyle(color: Colors.red),
+                                      ),
+                                    ),
+                                  );
+                                }
+                              },
+                            ),
+                            const SizedBox(height: 20),
+                            PreconditionConfigPanel(
+                              preconditionGroups: _strategyConfig?.preconditionGroups,
+                              onPreconditionGroupsChanged: (groups) {
+                                setState(() {
+                                  _strategyConfig = StrategyConfig(
+                                    _strategyConfig!.configValues,
+                                    preconditionGroups: groups,
+                                  );
+                                });
+                              },
+                            ),
+                          ],
                         ),
                       ),
 
@@ -576,6 +596,11 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
 
   Widget _buildSelectField(ConfigField field, dynamic value) {
     try {
+      final dropdownItems = _buildDropdownItems(field);
+      final itemValues = dropdownItems.map((item) => item.value).toList();
+      final currentValue = value?.toString() ?? field.defaultValue?.toString();
+      final initialValue = itemValues.contains(currentValue) ? currentValue : (itemValues.isNotEmpty ? itemValues.first : null);
+      
       return Container(
         margin: const EdgeInsets.symmetric(vertical: 10),
         child: Column(
@@ -595,8 +620,8 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                 ),
-                initialValue: value?.toString() ?? field.defaultValue?.toString(),
-                items: _buildDropdownItems(field),
+                initialValue: initialValue,
+                items: dropdownItems,
                 onChanged: (v) {
                   if (_strategyConfig != null) {
                     _strategyConfig?.setValue(field.name, v);
@@ -696,9 +721,10 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
       if (value != null) {
         if (value is List) {
           try {
-            listValue = List<String>.from(value);
+            listValue = List<String>.from(value.map((item) => item?.toString() ?? ''));
           } catch (e) {
-            listValue = value.map((item) => item?.toString() ?? '').toList();
+            print('List conversion error: $e');
+            listValue = [];
           }
         } else {
           listValue = [value.toString()];

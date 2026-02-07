@@ -9,6 +9,7 @@ import com.filemanager.domain.service.StrategyService;
 import com.filemanager.plugin.PluginRegistry;
 import com.filemanager.plugin.StrategyRegistry;
 import com.filemanager.plugin.StrategyConfigurable;
+import com.filemanager.plugin.util.PreconditionEvaluator;
 import com.filemanager.plugin.impl.audioconverter.enums.AudioFormat;
 import com.filemanager.plugin.impl.audioconverter.enums.Channels;
 import com.filemanager.plugin.impl.audioconverter.enums.OutputDirMode;
@@ -41,6 +42,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.HashMap;
 import java.util.Arrays;
+import java.util.stream.Collectors;
 
 @Service
 public class StrategyServiceImpl implements StrategyService {
@@ -198,11 +200,59 @@ public class StrategyServiceImpl implements StrategyService {
                 
                 for (Map.Entry<String, Map<String, Object>> entry : configMap.entrySet()) {
                     String strategyId = entry.getKey();
-                    Map<String, Object> configValues = entry.getValue();
+                    Map<String, Object> strategyData = entry.getValue();
+                    
                     StrategyConfigDTO config = new StrategyConfigDTO();
-                    config.setConfigValues(configValues);
+                    
+                    if (strategyData.containsKey("configValues")) {
+                        config.setConfigValues((Map<String, Object>) strategyData.get("configValues"));
+                    }
+                    
+                    if (strategyData.containsKey("preconditionGroups")) {
+                        List<Map<String, Object>> preconditionGroupsData = (List<Map<String, Object>>) strategyData.get("preconditionGroups");
+                        List<com.filemanager.domain.dto.PreconditionGroupDTO> preconditionGroups = new ArrayList<>();
+                        for (Map<String, Object> groupData : preconditionGroupsData) {
+                            com.filemanager.domain.dto.PreconditionGroupDTO group = new com.filemanager.domain.dto.PreconditionGroupDTO();
+                            group.setId((String) groupData.get("id"));
+                            group.setName((String) groupData.get("name"));
+                            group.setDescription((String) groupData.get("description"));
+                            group.setLogicType((String) groupData.get("logicType"));
+                            
+                            if (groupData.containsKey("preconditions")) {
+                                List<Map<String, Object>> preconditionsData = (List<Map<String, Object>>) groupData.get("preconditions");
+                                List<com.filemanager.domain.dto.PreconditionDTO> preconditions = new ArrayList<>();
+                                for (Map<String, Object> conditionData : preconditionsData) {
+                                    com.filemanager.domain.dto.PreconditionDTO condition = new com.filemanager.domain.dto.PreconditionDTO();
+                                    condition.setId((String) conditionData.get("id"));
+                                    condition.setField((String) conditionData.get("field"));
+                                    condition.setSubField((String) conditionData.get("subField"));
+                                    
+                                    String operatorStr = (String) conditionData.get("operator");
+                                    if (operatorStr != null) {
+                                        try {
+                                            condition.setOperator(com.filemanager.domain.dto.PreconditionDTO.OperatorType.valueOf(operatorStr));
+                                        } catch (IllegalArgumentException e) {
+                                            logger.warn("[Strategy] 未知的操作符类型: {}, 使用默认值 EQUALS", operatorStr);
+                                            condition.setOperator(com.filemanager.domain.dto.PreconditionDTO.OperatorType.EQUALS);
+                                        }
+                                    }
+                                    
+                                    condition.setValue(conditionData.get("value"));
+                                    condition.setDescription((String) conditionData.get("description"));
+                                    preconditions.add(condition);
+                                }
+                                group.setPreconditions(preconditions);
+                            }
+                            preconditionGroups.add(group);
+                        }
+                        config.setPreconditionGroups(preconditionGroups);
+                    }
+                    
                     strategyConfigs.put(strategyId, config);
-                    logger.info("[Strategy] 加载策略配置: {}，配置项数量: {}", strategyId, configValues.size());
+                    logger.info("[Strategy] 加载策略配置: {}，配置项数量: {}，前置条件组数量: {}", 
+                        strategyId, 
+                        config.getConfigValues() != null ? config.getConfigValues().size() : 0,
+                        config.getPreconditionGroups() != null ? config.getPreconditionGroups().size() : 0);
                 }
                 logger.info("[Strategy] 配置加载成功，共加载 {} 个策略配置", configMap.size());
             } else {
@@ -216,12 +266,22 @@ public class StrategyServiceImpl implements StrategyService {
 
     private void saveStrategyConfigs() {
         try {
-            Map<String, Map<String, Object>> configMap = new HashMap<>();
+            Map<String, Object> configMap = new HashMap<>();
             for (Map.Entry<String, StrategyConfigDTO> entry : strategyConfigs.entrySet()) {
                 String strategyId = entry.getKey();
                 StrategyConfigDTO config = entry.getValue();
+                Map<String, Object> strategyConfig = new HashMap<>();
+                
                 if (config.getConfigValues() != null && !config.getConfigValues().isEmpty()) {
-                    configMap.put(strategyId, config.getConfigValues());
+                    strategyConfig.put("configValues", config.getConfigValues());
+                }
+                
+                if (config.getPreconditionGroups() != null && !config.getPreconditionGroups().isEmpty()) {
+                    strategyConfig.put("preconditionGroups", config.getPreconditionGroups());
+                }
+                
+                if (!strategyConfig.isEmpty()) {
+                    configMap.put(strategyId, strategyConfig);
                 }
             }
             
@@ -381,6 +441,10 @@ public class StrategyServiceImpl implements StrategyService {
         
         long startTime = System.currentTimeMillis();
         
+        // 检查前置条件，过滤文件
+        List<String> filteredFilePaths = filterFilesByPreconditions(filePaths, config);
+        System.out.println("[Strategy] 前置条件过滤后文件数量: " + (filteredFilePaths != null ? filteredFilePaths.size() : 0));
+        
         // 尝试从插件系统获取对应的插件
         System.out.println("[Strategy] 开始查找插件: " + strategyId);
         com.filemanager.plugin.IPlugin plugin = pluginRegistry.getPlugin(strategyId);
@@ -395,7 +459,7 @@ public class StrategyServiceImpl implements StrategyService {
             System.out.println("[Strategy] 配置转换完成，开始执行插件");
             
             try {
-                changes = plugin.execute(filePaths, pluginConfig, new com.filemanager.plugin.ExecutionContext());
+                changes = plugin.execute(filteredFilePaths, pluginConfig, new com.filemanager.plugin.ExecutionContext());
                 System.out.println("[Strategy] 插件执行完成，结果数量: " + (changes != null ? changes.size() : 0));
                 
                 // 更新执行状态
@@ -414,7 +478,7 @@ public class StrategyServiceImpl implements StrategyService {
             System.out.println("[Strategy] 未找到插件，使用默认实现: " + strategyId);
             // 如果没有对应的插件，使用默认实现
             try {
-                changes = analyzeFiles(strategyId, filePaths, config);
+                changes = analyzeFiles(strategyId, filteredFilePaths, config);
                 System.out.println("[Strategy] 默认实现执行完成，结果数量: " + (changes != null ? changes.size() : 0));
                 
                 if (changes != null) {
@@ -436,6 +500,19 @@ public class StrategyServiceImpl implements StrategyService {
         System.out.println("[Strategy] 最终结果数量: " + (changes != null ? changes.size() : 0));
         
         return changes;
+    }
+
+    private List<String> filterFilesByPreconditions(List<String> filePaths, StrategyConfigDTO config) {
+        if (config == null || config.getPreconditionGroups() == null || config.getPreconditionGroups().isEmpty()) {
+            return filePaths;
+        }
+
+        return filePaths.stream()
+            .filter(filePath -> {
+                File file = new File(filePath);
+                return PreconditionEvaluator.evaluate(file, config.getPreconditionGroups());
+            })
+            .collect(Collectors.toList());
     }
 
     private String getTargetPath(String filePath, String strategyId, StrategyConfigDTO config) {

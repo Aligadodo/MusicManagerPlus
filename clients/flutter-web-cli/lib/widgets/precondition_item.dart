@@ -59,6 +59,28 @@ class _PreconditionItemState extends State<PreconditionItem> {
     PreconditionFieldConfig? fieldConfig = PreconditionFieldConfigs.getFieldConfig(condition.field);
     if (fieldConfig == null) return '无效的字段类型';
 
+    // 处理文件类型的层级结构
+    if (fieldConfig.code == 'fileType' && condition.subField != null) {
+      PreconditionSubFieldConfig? subFieldConfig = fieldConfig.getSubFieldConfig(condition.subField!);
+      if (subFieldConfig == null) return '无效的子字段类型';
+
+      bool requiresValue = false;
+      try {
+        var operatorConfig = subFieldConfig.operators.firstWhere((op) => op.code == condition.operator);
+        requiresValue = operatorConfig.inputType != PreconditionInputType.none;
+      } catch (e) {
+        return '无效的操作符';
+      }
+
+      if (requiresValue) {
+        if (condition.value == null || condition.value.toString().isEmpty) {
+          return '条件值不能为空';
+        }
+      }
+
+      return null;
+    }
+
     if (!fieldConfig.operatorRequiresValue(condition.operator)) {
       return null;
     }
@@ -106,9 +128,19 @@ class _PreconditionItemState extends State<PreconditionItem> {
     PreconditionFieldConfig? fieldConfig = PreconditionFieldConfigs.getFieldConfig(widget.condition.field);
     if (fieldConfig == null) return const SizedBox.shrink();
 
+    // 处理文件类型的层级结构
+    PreconditionSubFieldConfig? subFieldConfig;
+    if (fieldConfig.code == 'fileType' && widget.condition.subField != null) {
+      subFieldConfig = fieldConfig.getSubFieldConfig(widget.condition.subField!);
+    }
+
     PreconditionOperatorConfig? operatorConfig;
     try {
-      operatorConfig = fieldConfig.operators.firstWhere((op) => op.code == widget.condition.operator);
+      if (subFieldConfig != null) {
+        operatorConfig = subFieldConfig.operators.firstWhere((op) => op.code == widget.condition.operator);
+      } else {
+        operatorConfig = fieldConfig.operators.firstWhere((op) => op.code == widget.condition.operator);
+      }
     } catch (e) {
       return const SizedBox.shrink();
     }
@@ -193,12 +225,21 @@ class _PreconditionItemState extends State<PreconditionItem> {
                           child: _buildFieldDropdown(fieldConfig),
                         ),
                         const SizedBox(width: 8),
+                        if (fieldConfig.code == 'fileType') ...[
+                          Expanded(
+                            child: _buildSubFieldDropdown(fieldConfig),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
                         Expanded(
-                          child: _buildOperatorDropdown(fieldConfig),
+                          child: _buildOperatorDropdown(fieldConfig, subFieldConfig),
                         ),
                       ],
                     ),
-                    if (fieldConfig.operatorRequiresValue(widget.condition.operator)) ...[
+                    if ((subFieldConfig != null ? 
+                        subFieldConfig.operators.firstWhere((op) => op.code == widget.condition.operator).inputType != PreconditionInputType.none : 
+                        fieldConfig.operatorRequiresValue(widget.condition.operator)))
+                    ...[
                       const SizedBox(height: 8),
                       _buildValueInput(operatorConfig),
                     ],
@@ -286,9 +327,20 @@ class _PreconditionItemState extends State<PreconditionItem> {
         onChanged: (value) {
           PreconditionFieldConfig? newFieldConfig = PreconditionFieldConfigs.getFieldConfig(value ?? 'file');
           String defaultOperator = newFieldConfig?.operators.first.code ?? 'equals';
+          String? defaultSubField;
+          
+          // 如果是文件类型，设置默认子字段
+          if (value == 'fileType' && newFieldConfig?.subFields != null && newFieldConfig!.subFields!.isNotEmpty) {
+            defaultSubField = newFieldConfig.subFields!.first.code;
+            // 获取子字段的默认操作符
+            PreconditionSubFieldConfig subFieldConfig = newFieldConfig.subFields!.first;
+            defaultOperator = subFieldConfig.operators.first.code;
+          }
+          
           _updateCondition(Precondition(
             id: widget.condition.id,
             field: value ?? 'file',
+            subField: defaultSubField,
             operator: defaultOperator,
             value: '',
             description: widget.condition.description,
@@ -305,7 +357,13 @@ class _PreconditionItemState extends State<PreconditionItem> {
     );
   }
 
-  Widget _buildOperatorDropdown(PreconditionFieldConfig fieldConfig) {
+  Widget _buildSubFieldDropdown(PreconditionFieldConfig fieldConfig) {
+    final subFields = fieldConfig.subFields ?? [];
+    final subFieldCodes = subFields.map((sf) => sf.code).toList();
+    final currentSubField = widget.condition.subField != null && subFieldCodes.contains(widget.condition.subField)
+        ? widget.condition.subField
+        : (subFields.isNotEmpty ? subFields.first.code : '');
+    
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -314,9 +372,53 @@ class _PreconditionItemState extends State<PreconditionItem> {
       ),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: DropdownButton<String>(
-        value: widget.condition.operator,
+        value: currentSubField,
         isExpanded: true,
-        items: fieldConfig.operators.map((op) {
+        items: subFields.map((subField) {
+          return DropdownMenuItem(
+            value: subField.code,
+            child: Text(subField.name, style: const TextStyle(fontSize: 12)),
+          );
+        }).toList(),
+        onChanged: (value) {
+          PreconditionSubFieldConfig? subFieldConfig = fieldConfig.getSubFieldConfig(value ?? '');
+          String defaultOperator = subFieldConfig?.operators.first.code ?? 'is';
+          
+          _updateCondition(Precondition(
+            id: widget.condition.id,
+            field: widget.condition.field,
+            subField: value,
+            operator: defaultOperator,
+            value: '',
+            description: widget.condition.description,
+          ));
+        },
+        style: const TextStyle(fontSize: 12),
+        dropdownColor: Colors.white,
+        underline: const SizedBox.shrink(),
+        icon: Icon(Icons.arrow_drop_down, color: Colors.grey.shade600, size: 20),
+      ),
+    );
+  }
+
+  Widget _buildOperatorDropdown(PreconditionFieldConfig fieldConfig, PreconditionSubFieldConfig? subFieldConfig) {
+    final operators = subFieldConfig != null ? subFieldConfig.operators : fieldConfig.operators;
+    final operatorCodes = operators.map((op) => op.code).toList();
+    final currentOperator = operatorCodes.contains(widget.condition.operator) 
+        ? widget.condition.operator 
+        : operators.first.code;
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: DropdownButton<String>(
+        value: currentOperator,
+        isExpanded: true,
+        items: operators.map((op) {
           return DropdownMenuItem(
             value: op.code,
             child: Text(op.name, style: const TextStyle(fontSize: 12)),
@@ -326,6 +428,7 @@ class _PreconditionItemState extends State<PreconditionItem> {
           _updateCondition(Precondition(
             id: widget.condition.id,
             field: widget.condition.field,
+            subField: widget.condition.subField,
             operator: value ?? 'equals',
             value: widget.condition.value,
             description: widget.condition.description,
@@ -346,6 +449,7 @@ class _PreconditionItemState extends State<PreconditionItem> {
         _updateCondition(Precondition(
           id: widget.condition.id,
           field: widget.condition.field,
+          subField: widget.condition.subField,
           operator: widget.condition.operator,
           value: value,
           description: widget.condition.description,

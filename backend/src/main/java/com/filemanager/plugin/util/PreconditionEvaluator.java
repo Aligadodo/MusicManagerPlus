@@ -91,9 +91,15 @@ public class PreconditionEvaluator {
         String field = precondition.getField();
         PreconditionDTO.OperatorType operator = precondition.getOperator();
         Object value = precondition.getValue();
+        String subField = precondition.getSubField();
 
         if (operator == null) {
             return false;
+        }
+
+        // 处理文件类型的层级结构
+        if ("fileType".equalsIgnoreCase(field) && subField != null) {
+            return evaluateFileTypeCondition(file, subField, operator, value);
         }
 
         Object fieldValue = getFieldValue(file, field);
@@ -104,12 +110,17 @@ public class PreconditionEvaluator {
         return compareValues(file, fieldValue, operator, value);
     }
 
+    private static boolean evaluateFileTypeCondition(File file, String subField, PreconditionDTO.OperatorType operator, Object value) {
+        Object fieldValue = getFileTypeFieldValue(file, subField);
+        if (fieldValue == null) {
+            return false;
+        }
+
+        return compareValues(file, fieldValue, operator, value);
+    }
+
     private static Object getFieldValue(File file, String field) {
         switch (field.toLowerCase()) {
-            case "file":
-                return file.isFile();
-            case "directory":
-                return file.isDirectory();
             case "extension":
                 String name = file.getName();
                 int dotIndex = name.lastIndexOf('.');
@@ -126,6 +137,17 @@ public class PreconditionEvaluator {
                 return getAudioDuration(file);
             case "bitrate":
                 return getAudioBitrate(file);
+            default:
+                return null;
+        }
+    }
+
+    private static Object getFileTypeFieldValue(File file, String subField) {
+        switch (subField.toLowerCase()) {
+            case "file":
+                return file.isFile();
+            case "directory":
+                return file.isDirectory();
             case "audiofile":
                 return isAudioFile(file);
             case "videofile":
@@ -298,16 +320,31 @@ public class PreconditionEvaluator {
                     return fieldValue.equals(Boolean.parseBoolean(conditionValue.toString()));
                 }
                 return fieldValue.equals(conditionValue);
+            } else if (operator == PreconditionDTO.OperatorType.IS_NOT) {
+                if (fieldValue instanceof Boolean) {
+                    return !fieldValue.equals(Boolean.parseBoolean(conditionValue.toString()));
+                }
+                return !fieldValue.equals(conditionValue);
             } else if (operator == PreconditionDTO.OperatorType.IS_EMPTY) {
                 return isDirectoryEmpty(file);
+            } else if (operator == PreconditionDTO.OperatorType.IS_NOT_EMPTY) {
+                return !isDirectoryEmpty(file);
             } else if (operator == PreconditionDTO.OperatorType.HAS_SUBDIRECTORIES) {
                 return hasSubdirectories(file);
+            } else if (operator == PreconditionDTO.OperatorType.HAS_NO_SUBDIRECTORIES) {
+                return !hasSubdirectories(file);
             } else if (operator == PreconditionDTO.OperatorType.DEPTH_GREATER_THAN) {
                 return compareNumbers(getDirectoryDepth(file), conditionValue) > 0;
+            } else if (operator == PreconditionDTO.OperatorType.DEPTH_LESS_THAN) {
+                return compareNumbers(getDirectoryDepth(file), conditionValue) < 0;
             } else if (operator == PreconditionDTO.OperatorType.FILE_COUNT_GREATER_THAN) {
                 return compareNumbers(getFileCount(file), conditionValue) > 0;
+            } else if (operator == PreconditionDTO.OperatorType.FILE_COUNT_LESS_THAN) {
+                return compareNumbers(getFileCount(file), conditionValue) < 0;
             } else if (operator == PreconditionDTO.OperatorType.FORMAT_IN) {
                 return checkFormatInList(fieldValue, conditionValue.toString());
+            } else if (operator == PreconditionDTO.OperatorType.FORMAT_NOT_IN) {
+                return !checkFormatInList(fieldValue, conditionValue.toString());
             } else {
                 return false;
             }
