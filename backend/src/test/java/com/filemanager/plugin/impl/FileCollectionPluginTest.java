@@ -31,7 +31,7 @@ public class FileCollectionPluginTest {
     public void setUp() {
         plugin = new FileCollectionPlugin();
         config = new PluginConfigDTO();
-        config.setConfigMap(new HashMap<>());
+        config.setConfigValues(new HashMap<>());
         context = new ExecutionContext();
     }
 
@@ -47,7 +47,7 @@ public class FileCollectionPluginTest {
     public void testGetDefaultConfig() {
         PluginConfigDTO defaultConfig = plugin.getDefaultConfig();
         assertNotNull(defaultConfig);
-        assertNotNull(defaultConfig.getConfigMap());
+        assertNotNull(defaultConfig.getConfigValues());
     }
 
     @Test

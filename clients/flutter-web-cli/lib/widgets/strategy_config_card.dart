@@ -3,6 +3,7 @@ import '../models/strategy_info.dart';
 import '../models/config_field.dart';
 import '../models/precondition_group.dart';
 import '../widgets/precondition_config_panel.dart';
+import '../widgets/selectable_text_widget.dart';
 
 class StrategyConfigCard extends StatefulWidget {
   final StrategyInfo strategy;
@@ -82,12 +83,12 @@ class _StrategyConfigCardState extends State<StrategyConfigCard> {
     );
   }
 
-  void _handlePreconditionGroupsChanged(List<PreconditionGroup> groups) {
+  void _handlePreconditionGroupsChanged(List<PreconditionGroup>? groups) {
     setState(() {
       // 创建前置条件组的深拷贝
-      final copiedGroups = groups.map((group) => group.copyWith(
+      final copiedGroups = groups?.map((group) => group.copyWith(
         preconditions: group.preconditions.map((condition) => condition.copyWith()).toList(),
-      )).toList();
+      )).toList() ?? [];
       
       final copiedConfigFields = _currentStrategy.configFields.map((field) => ConfigField(
         name: field.name,
@@ -182,16 +183,16 @@ class _StrategyConfigCardState extends State<StrategyConfigCard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        _currentStrategy.name,
+                      SelectableTextWidget(
+                        text: _currentStrategy.name,
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height:4),
-                      Text(
-                        'ID: ${_currentStrategy.id}',
+                      SelectableTextWidget(
+                        text: 'ID: ${_currentStrategy.id}',
                         style: const TextStyle(
                           fontSize: 12,
                           color: Colors.grey,

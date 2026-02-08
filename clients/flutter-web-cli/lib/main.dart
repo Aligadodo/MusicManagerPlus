@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:filemanager_flutter/api/api_client.dart';
+import 'package:filemanager_flutter/api/pipeline_service.dart';
+import 'package:filemanager_flutter/api/source_directory_service.dart';
 import 'package:filemanager_flutter/pages/compose_page.dart';
 import 'package:filemanager_flutter/pages/preview_page.dart';
 import 'package:filemanager_flutter/pages/log_page.dart';
@@ -475,10 +477,17 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
 
             if (confirmed == true) {
               try {
+                final apiClient = ApiClient();
+                final pipelineService = PipelineService(apiClient);
+                final sourceDirectoryService = SourceDirectoryService(apiClient);
+                
+                await pipelineService.resetPipeline();
+                await sourceDirectoryService.clearSourceDirectories();
                 await configNotifier.resetConfig();
+                
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('配置已重置为默认值')),
+                    const SnackBar(content: Text('所有配置已重置为默认值')),
                   );
                 }
               } catch (e) {

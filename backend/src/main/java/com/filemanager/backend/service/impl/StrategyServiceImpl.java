@@ -153,8 +153,8 @@ public class StrategyServiceImpl implements StrategyService {
         public StrategyConfigDTO initializeDefaultConfig() {
             StrategyConfigDTO config = new StrategyConfigDTO();
             com.filemanager.domain.dto.PluginConfigDTO pluginConfig = plugin.getDefaultConfig();
-            if (pluginConfig != null && pluginConfig.getConfigMap() != null) {
-                config.setConfigValues(pluginConfig.getConfigMap());
+            if (pluginConfig != null && pluginConfig.getConfigValues() != null) {
+                config.setConfigValues(pluginConfig.getConfigValues());
             } else {
                 config.setConfigValues(new HashMap<>());
             }

@@ -56,3 +56,21 @@ logs/
 **/*.log
 backend/logs/
 backend/*.log
+
+### Test Output ###
+.EchoTrash/
+.EchoTrash/**
+**/.EchoTrash/
+**/.EchoTrash/**
+**/test-results/
+**/test-results/**
+**/surefire-reports/
+**/surefire-reports/**
+**/test-output/
+**/test-output/**
+**/jacoco/
+**/jacoco/**
+**/*.tmp
+**/*.temp
+**/tmp/
+**/tmp/**

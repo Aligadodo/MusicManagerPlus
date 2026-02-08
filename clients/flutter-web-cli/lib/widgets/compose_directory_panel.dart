@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:filemanager_flutter/models/source_directory.dart';
 import 'package:filemanager_flutter/api/source_directory_service.dart';
 import 'package:filemanager_flutter/widgets/directory_list_item.dart';
+import 'package:filemanager_flutter/widgets/selectable_text_widget.dart';
 
 class ComposeDirectoryPanel extends StatefulWidget {
   final List<SourceDirectory> sourceDirectories;
@@ -31,6 +32,85 @@ class _ComposeDirectoryPanelState extends State<ComposeDirectoryPanel> {
   }
 
   Future<void> _addDirectory() async {
+    try {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          final TextEditingController pathController = TextEditingController();
+          return AlertDialog(
+            title: const Text('添加目录'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '选择添加方式：',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    _selectDirectoryByFilePicker();
+                  },
+                  icon: const Icon(Icons.folder_open, size: 20),
+                  label: const Text('通过文件选择器选择'),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 48),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  '（仅获取目录路径，不会上传文件）',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  '或手动输入路径：',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: pathController,
+                  decoration: const InputDecoration(
+                    labelText: '目录路径',
+                    hintText: '例如: /Users/username/Music',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text('取消'),
+              ),
+              TextButton(
+                onPressed: () {
+                  final path = pathController.text.trim();
+                  Navigator.of(context).pop();
+                  if (path.isNotEmpty) {
+                    _doAddDirectory(path);
+                  }
+                },
+                child: const Text('确定'),
+              ),
+            ],
+          );
+        },
+      );
+    } catch (e) {
+      if (!_isDisposed) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: SelectableTextWidget(text: '选择目录失败: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _selectDirectoryByFilePicker() async {
     try {
       final input = html.InputElement(type: 'file')
         ..attributes['webkitdirectory'] = 'true'
@@ -63,7 +143,7 @@ class _ComposeDirectoryPanelState extends State<ComposeDirectoryPanel> {
     } catch (e) {
       if (!_isDisposed) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('选择目录失败: $e')),
+          SnackBar(content: SelectableTextWidget(text: '文件选择器选择目录失败: $e')),
         );
       }
     }
@@ -80,7 +160,7 @@ class _ComposeDirectoryPanelState extends State<ComposeDirectoryPanel> {
     } catch (e) {
       if (!_isDisposed) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('添加目录失败: $e')),
+          SnackBar(content: SelectableTextWidget(text: '添加目录失败: $e')),
         );
       }
     }
@@ -101,7 +181,7 @@ class _ComposeDirectoryPanelState extends State<ComposeDirectoryPanel> {
     } catch (e) {
       if (!_isDisposed) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('清空目录失败: $e')),
+          SnackBar(content: SelectableTextWidget(text: '清空目录失败: $e')),
         );
       }
     }
@@ -134,7 +214,34 @@ class _ComposeDirectoryPanelState extends State<ComposeDirectoryPanel> {
           _buildTools(),
           const SizedBox(height: 10),
           Expanded(
-            child: _buildSourceList(),
+            child: DragTarget<String>(
+              onAccept: (path) {
+                _doAddDirectory(path);
+              },
+              onWillAccept: (data) => true,
+              onLeave: (data) {},
+              builder: (context, candidateData, rejectedData) {
+                return Stack(
+                  children: [
+                    _buildSourceList(),
+                    if (candidateData.isNotEmpty)
+                      Container(
+                        color: Colors.blue.withOpacity(0.2),
+                        child: Center(
+                          child: Text(
+                            '释放以添加目录',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue.shade700,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
           ),
         ],
       ),

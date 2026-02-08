@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:filemanager_flutter/models/precondition.dart';
 import 'package:filemanager_flutter/models/precondition_group.dart';
 import 'package:filemanager_flutter/widgets/precondition_item.dart';
+import 'package:filemanager_flutter/widgets/selectable_text_widget.dart';
 
 class PreconditionGroupItem extends StatelessWidget {
   final int index;
@@ -79,8 +80,8 @@ class PreconditionGroupItem extends StatelessWidget {
           Icon(Icons.folder_open, color: Colors.blue.shade600, size: 18),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              group.name,
+            child: SelectableTextWidget(
+              text: group.name,
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 14,

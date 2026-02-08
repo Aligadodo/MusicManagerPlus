@@ -160,7 +160,6 @@ class _ComposePageState extends ConsumerState<ComposePage> {
             ],
           ),
         ),
-        _buildActionButtons(),
       ],
     );
   }
@@ -227,89 +226,6 @@ class _ComposePageState extends ConsumerState<ComposePage> {
             style: TextStyle(
               fontSize: 12,
               color: Colors.grey.shade600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionButtons() {
-    return Container(
-      key: const ValueKey('action_buttons_container'),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Row(
-        key: const ValueKey('action_buttons_row'),
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          ElevatedButton.icon(
-            key: const ValueKey('load_config_button'),
-            onPressed: () async {
-              try {
-                final pipeline = await _pipelineService.getPipeline();
-                if (!_isDisposed) {
-                  setState(() {
-                    _pipelineStrategies = pipeline;
-                  });
-                }
-              } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('加载配置失败: $e')),
-                );
-              }
-            },
-            icon: const Icon(Icons.upload_file),
-            label: const Text('加载配置'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
-              foregroundColor: Colors.white,
-            ),
-          ),
-          const SizedBox(width: 10),
-          ElevatedButton.icon(
-            key: const ValueKey('save_config_button'),
-            onPressed: () async {
-              try {
-                await _pipelineService.updatePipeline(_pipelineStrategies);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('配置已保存')),
-                );
-              } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('保存配置失败: $e')),
-                );
-              }
-            },
-            icon: const Icon(Icons.save),
-            label: const Text('保存配置'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-            ),
-          ),
-          const SizedBox(width: 10),
-          ElevatedButton.icon(
-            key: const ValueKey('preview_button'),
-            onPressed: _sourceDirectories.isEmpty || _pipelineStrategies.isEmpty
-                ? null
-                : () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const PreviewPage(),
-                      ),
-                    );
-                  },
-            icon: const Icon(Icons.visibility),
-            label: const Text('预览'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
             ),
           ),
         ],

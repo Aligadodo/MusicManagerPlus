@@ -99,7 +99,7 @@ public class PluginControllerTest {
     @Test
     public void testGetPluginConfig_Success() {
         PluginConfigDTO mockConfig = new PluginConfigDTO();
-        mockConfig.setConfigMap(new HashMap<>());
+        mockConfig.setConfigValues(new HashMap<>());
 
         when(pluginService.getPluginConfig("test-plugin")).thenReturn(mockConfig);
 
@@ -112,7 +112,7 @@ public class PluginControllerTest {
     @Test
     public void testUpdatePluginConfig_Success() {
         PluginConfigDTO config = new PluginConfigDTO();
-        config.setConfigMap(new HashMap<>());
+        config.setConfigValues(new HashMap<>());
 
         when(pluginService.updatePluginConfig(eq("test-plugin"), any(PluginConfigDTO.class)))
             .thenReturn(true);
@@ -134,7 +134,7 @@ public class PluginControllerTest {
         request.put("filePaths", filePaths);
 
         PluginConfigDTO config = new PluginConfigDTO();
-        config.setConfigMap(new HashMap<>());
+        config.setConfigValues(new HashMap<>());
         request.put("config", config);
 
         List<ChangeRecord> mockChanges = new ArrayList<>();
@@ -164,7 +164,7 @@ public class PluginControllerTest {
         request.put("filePaths", filePaths);
 
         PluginConfigDTO config = new PluginConfigDTO();
-        config.setConfigMap(new HashMap<>());
+        config.setConfigValues(new HashMap<>());
         request.put("config", config);
 
         List<ChangeRecord> mockChanges = new ArrayList<>();

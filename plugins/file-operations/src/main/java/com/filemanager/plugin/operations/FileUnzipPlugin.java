@@ -217,7 +217,7 @@ public class FileUnzipPlugin implements IPlugin {
         group.setId("default");
         group.setName("默认条件组");
         group.setDescription("文件解压的默认前置条件");
-        group.setLogicType(PreconditionGroupDTO.LogicType.AND);
+        group.setLogicType("AND");
         
         List<PreconditionDTO> preconditions = new ArrayList<>();
         

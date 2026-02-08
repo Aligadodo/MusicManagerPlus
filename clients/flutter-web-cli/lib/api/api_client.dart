@@ -26,7 +26,7 @@ class ApiClient {
     final response = await _client.post(
       Uri.parse('$baseUrl$endpoint'),
       headers: headers ?? _getDefaultHeaders(),
-      body: jsonEncode(body),
+      body: body != null ? jsonEncode(body) : null,
     );
     return response;
   }
@@ -55,7 +55,7 @@ class ApiClient {
     final response = await _client.put(
       Uri.parse('$baseUrl$endpoint'),
       headers: headers ?? _getDefaultHeaders(),
-      body: jsonEncode(body),
+      body: body != null ? jsonEncode(body) : null,
     );
     return response;
   }

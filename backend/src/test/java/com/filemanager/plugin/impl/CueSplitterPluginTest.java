@@ -30,7 +30,7 @@ public class CueSplitterPluginTest {
     public void setUp() {
         plugin = new CueSplitterPlugin();
         config = new PluginConfigDTO();
-        config.setConfigMap(new HashMap<>());
+        config.setConfigValues(new HashMap<>());
         context = new ExecutionContext();
     }
 
@@ -46,7 +46,7 @@ public class CueSplitterPluginTest {
     public void testGetDefaultConfig() {
         PluginConfigDTO defaultConfig = plugin.getDefaultConfig();
         assertNotNull(defaultConfig);
-        assertNotNull(defaultConfig.getConfigMap());
+        assertNotNull(defaultConfig.getConfigValues());
     }
 
     @Test

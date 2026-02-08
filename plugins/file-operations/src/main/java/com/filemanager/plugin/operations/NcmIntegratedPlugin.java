@@ -140,7 +140,7 @@ public class NcmIntegratedPlugin implements IPlugin {
         group.setId("default");
         group.setName("默认条件组");
         group.setDescription("网易云音乐工具的默认前置条件");
-        group.setLogicType(PreconditionGroupDTO.LogicType.AND);
+        group.setLogicType("AND");
         
         List<PreconditionDTO> preconditions = new ArrayList<>();
         

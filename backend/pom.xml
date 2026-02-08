@@ -55,8 +55,8 @@
         </dependency>
         <dependency>
             <groupId>com.filemanager</groupId>
-            <artifactId>plugin-file-cleanup</artifactId>
-            <version>1.0.0</version>
+            <artifactId>file-operations</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
         </dependency>
 
         <!-- 工具依赖 -->

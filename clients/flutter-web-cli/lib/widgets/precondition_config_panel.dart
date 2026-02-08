@@ -3,6 +3,7 @@ import '../models/precondition.dart';
 import '../models/precondition_group.dart';
 import '../models/precondition_field_config.dart';
 import 'precondition_group_item.dart';
+import 'selectable_text_widget.dart';
 
 class PreconditionConfigPanel extends StatefulWidget {
   final List<PreconditionGroup>? preconditionGroups;
@@ -152,8 +153,8 @@ class _PreconditionConfigPanelState extends State<PreconditionConfigPanel> {
                   children: [
                     Icon(Icons.filter_list, color: Colors.blue.shade700, size: 20),
                     const SizedBox(width: 8),
-                    Text(
-                      '前置条件配置',
+                    SelectableTextWidget(
+                      text: '前置条件配置',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -187,16 +188,16 @@ class _PreconditionConfigPanelState extends State<PreconditionConfigPanel> {
                   children: [
                     Icon(Icons.filter_list_outlined, color: Colors.grey.shade400, size: 48),
                     const SizedBox(height: 8),
-                    Text(
-                      '暂无前置条件',
+                    SelectableTextWidget(
+                      text: '暂无前置条件',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey.shade600,
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      '点击上方按钮添加条件组',
+                    SelectableTextWidget(
+                      text: '点击上方按钮添加条件组',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey.shade500,
@@ -223,8 +224,8 @@ class _PreconditionConfigPanelState extends State<PreconditionConfigPanel> {
                         Icon(Icons.info_outline, color: Colors.blue.shade700, size: 16),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: Text(
-                            '前置条件用于在策略执行前过滤文件，只有符合前置条件的文件才会被处理。',
+                          child: SelectableTextWidget(
+                            text: '前置条件用于在策略执行前过滤文件，只有符合前置条件的文件才会被处理。',
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.blue.shade900,

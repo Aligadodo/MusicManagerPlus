@@ -70,8 +70,6 @@ public class FileCleanupPlugin implements IPlugin {
         config.setValue("audioSpecial", true);
         config.setValue("minFileSizeKB", 0);
         config.setValue("maxFileSizeKB", 10240);
-        config.setParameters(getParameters());
-        config.setPreconditionGroups(getDefaultPreconditionGroups());
         return config;
     }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:filemanager_flutter/models/precondition.dart';
 import 'package:filemanager_flutter/models/precondition_field_config.dart';
+import 'package:filemanager_flutter/widgets/selectable_text_widget.dart';
 
 class PreconditionItem extends StatefulWidget {
   final int groupIndex;
@@ -182,8 +183,8 @@ class _PreconditionItemState extends State<PreconditionItem> {
                   ),
                   const SizedBox(width: 6),
                   Expanded(
-                    child: Text(
-                      description,
+                    child: SelectableTextWidget(
+                      text: description,
                       style: TextStyle(
                         fontWeight: FontWeight.w500,
                         fontSize: 12,

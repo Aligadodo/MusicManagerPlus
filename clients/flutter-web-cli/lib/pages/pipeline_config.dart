@@ -8,6 +8,7 @@ import '../models/plugin_info.dart';
 import '../models/strategy_info.dart';
 import '../models/config_field.dart';
 import '../widgets/strategy_config_card.dart';
+import '../widgets/selectable_text_widget.dart';
 
 class PipelineConfigPage extends ConsumerStatefulWidget {
   const PipelineConfigPage({super.key});
@@ -121,7 +122,7 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
 
   void _addStrategy(StrategyInfo strategy) {
     setState(() {
-      // 创建策略的深拷贝，确保包含完整的配置字段和前置条件组，并且每个策略都有独立的配置
+      // 创建策略的深拷贝，确保包含完整的配置字段
       final copiedConfigFields = strategy.configFields?.map((field) => ConfigField(
         name: field.name,
         label: field.label,
@@ -138,16 +139,15 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
         moduleType: field.moduleType,
       )).toList() ?? [];
       
-      final copiedPreconditionGroups = strategy.preconditionGroups?.map((group) => group.copyWith(
-        preconditions: group.preconditions.map((condition) => condition.copyWith()).toList(),
-      )).toList() ?? [];
+      // 创建空的前置条件面板，而不是复制现有配置
+      final emptyPreconditionGroups = <PreconditionGroup>[];
       
       _pipeline.add(StrategyInfo(
         id: strategy.id,
         name: strategy.name,
         description: strategy.description,
         configFields: copiedConfigFields,
-        preconditionGroups: copiedPreconditionGroups,
+        preconditionGroups: emptyPreconditionGroups,
         enabled: true,
       ));
     });
@@ -324,8 +324,8 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
               Container(
                 padding: const EdgeInsets.all(10),
                 color: Colors.red[100],
-                child: Text(
-                  _errorMessage,
+                child: SelectableTextWidget(
+                  text: _errorMessage,
                   style: const TextStyle(color: Colors.red),
                 ),
               ),
@@ -375,7 +375,7 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
                   itemBuilder: (context, index) {
                     final strategy = _pipeline[index];
                     return StrategyConfigCard(
-                      key: ValueKey('pipeline_strategy_$index'),
+                      key: ValueKey('pipeline_strategy_${strategy.id}_${strategy.hashCode}'),
                       strategy: strategy,
                       index: index,
                       onDelete: () => _removePlugin(index),
