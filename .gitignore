@@ -74,3 +74,8 @@ backend/*.log
 **/*.temp
 **/tmp/
 **/tmp/**
+
+### Flutter Web Build Output ###
+frontend/
+clients/flutter-web-cli/build/web/
+clients/flutter-web-cli/.dart_tool/
