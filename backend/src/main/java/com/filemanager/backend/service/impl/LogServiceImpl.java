@@ -37,7 +37,10 @@ public class LogServiceImpl implements LogService {
 
         try (Stream<Path> paths = Files.list(logDir)) {
             paths.filter(Files::isRegularFile)
-                 .filter(path -> path.toString().endsWith(".log"))
+                 .filter(path -> {
+                     String fileName = path.getFileName().toString().toLowerCase();
+                     return fileName.endsWith(".log") || fileName.endsWith(".txt");
+                 })
                  .sorted((p1, p2) -> {
                      try {
                          return Files.getLastModifiedTime(p2).compareTo(Files.getLastModifiedTime(p1));
@@ -153,6 +156,9 @@ public class LogServiceImpl implements LogService {
                         .collect(Collectors.toList());
             }
 
+            // 反转日志顺序，让最新的日志在最前面
+            Collections.reverse(finalEntries);
+
             int total = finalEntries.size();
             int totalPages = (int) Math.ceil((double) total / size);
 
@@ -220,7 +226,10 @@ public class LogServiceImpl implements LogService {
 
             try (Stream<Path> paths = Files.list(logDir)) {
                 List<Path> toDelete = paths.filter(Files::isRegularFile)
-                        .filter(path -> path.toString().endsWith(".log"))
+                        .filter(path -> {
+                            String fileName = path.getFileName().toString().toLowerCase();
+                            return fileName.endsWith(".log") || fileName.endsWith(".txt");
+                        })
                         .filter(path -> {
                             try {
                                 LocalDateTime fileTime = Files.getLastModifiedTime(path)

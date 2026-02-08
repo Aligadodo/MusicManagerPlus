@@ -16,6 +16,8 @@ filemanager:
   base-dir: /tmp
   max-file-size: 104857600
   max-request-size: 104857600
+  log:
+    directory: logs
 
 logging:
   level:

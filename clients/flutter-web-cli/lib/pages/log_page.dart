@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'dart:html' as html;
+import 'dart:async';
 import '../api/api_client.dart';
 import '../api/log_service.dart';
 
@@ -26,6 +27,10 @@ class _LogPageState extends ConsumerState<LogPage> {
   int _totalRecords = 0;
   int _totalPages = 0;
 
+  Timer? _autoRefreshTimer;
+  bool _autoRefreshEnabled = true;
+  static const Duration _refreshInterval = Duration(seconds: 5);
+
   void _copyToClipboard(String text) {
     Clipboard.setData(ClipboardData(text: text));
     if (mounted) {
@@ -45,6 +50,38 @@ class _LogPageState extends ConsumerState<LogPage> {
   void initState() {
     super.initState();
     _loadLogFiles();
+    _startAutoRefresh();
+  }
+
+  @override
+  void dispose() {
+    _stopAutoRefresh();
+    super.dispose();
+  }
+
+  void _startAutoRefresh() {
+    _stopAutoRefresh();
+    if (_autoRefreshEnabled) {
+      _autoRefreshTimer = Timer.periodic(_refreshInterval, (_) {
+        _loadLogEntries();
+      });
+    }
+  }
+
+  void _stopAutoRefresh() {
+    _autoRefreshTimer?.cancel();
+    _autoRefreshTimer = null;
+  }
+
+  void _toggleAutoRefresh() {
+    setState(() {
+      _autoRefreshEnabled = !_autoRefreshEnabled;
+      if (_autoRefreshEnabled) {
+        _startAutoRefresh();
+      } else {
+        _stopAutoRefresh();
+      }
+    });
   }
 
   Future<void> _loadLogFiles() async {
@@ -230,6 +267,15 @@ class _LogPageState extends ConsumerState<LogPage> {
                 icon: const Icon(Icons.refresh, size: 16),
                 tooltip: '刷新',
               ),
+              IconButton(
+                onPressed: _toggleAutoRefresh,
+                icon: Icon(
+                  _autoRefreshEnabled ? Icons.autorenew : Icons.play_disabled,
+                  size: 16,
+                  color: _autoRefreshEnabled ? Colors.green : Colors.grey,
+                ),
+                tooltip: _autoRefreshEnabled ? '自动刷新已开启' : '自动刷新已关闭',
+              ),
             ],
           ),
         ),
@@ -265,7 +311,10 @@ class _LogPageState extends ConsumerState<LogPage> {
     final isSelected = file.fileName == _selectedLogFile;
 
     return GestureDetector(
-      onTap: () => _selectLogFile(file.fileName),
+      onDoubleTap: () {
+        _selectLogFile(file.fileName);
+        _copyToClipboard(file.fileName);
+      },
       child: Container(
         decoration: BoxDecoration(
           color: isSelected ? Colors.blue.shade50 : Colors.transparent,
@@ -274,27 +323,32 @@ class _LogPageState extends ConsumerState<LogPage> {
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           child: Row(
             children: [
+              Radio<String>(
+                value: file.fileName,
+                groupValue: _selectedLogFile,
+                onChanged: (value) {
+                  if (value != null) {
+                    _selectLogFile(value);
+                  }
+                },
+                visualDensity: VisualDensity.compact,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    GestureDetector(
-                      onDoubleTap: () => _copyToClipboard(file.fileName),
-                      child: SelectableText(
-                        file.fileName,
-                        style: TextStyle(
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                          fontSize: 13,
-                        ),
+                    Text(
+                      file.fileName,
+                      style: TextStyle(
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        fontSize: 13,
                       ),
                     ),
-                    GestureDetector(
-                      onDoubleTap: () => _copyToClipboard('${file.fileSize} | ${file.createTime}'),
-                      child: SelectableText(
-                        '${file.fileSize} | ${file.createTime}',
-                        style: const TextStyle(fontSize: 11),
-                      ),
+                    Text(
+                      '${file.fileSize} | ${file.createTime}',
+                      style: const TextStyle(fontSize: 11),
                     ),
                   ],
                 ),
