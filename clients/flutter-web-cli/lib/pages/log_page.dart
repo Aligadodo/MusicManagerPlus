@@ -331,8 +331,9 @@ class _LogPageState extends ConsumerState<LogPage> {
                     _selectLogFile(value);
                   }
                 },
-                visualDensity: VisualDensity.compact,
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                activeColor: Colors.blue,
+                visualDensity: VisualDensity.standard,
+                materialTapTargetSize: MaterialTapTargetSize.padded,
               ),
               Expanded(
                 child: Column(
