@@ -15,7 +15,6 @@
     <modules>
         <module>base</module>
         <module>file-operations</module>
-        <module>file-cleanup</module>
         <module>file-collection</module>
         <module>metadata-scraper</module>
         <module>file-rename</module>

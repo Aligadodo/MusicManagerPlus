@@ -148,8 +148,8 @@ public class NcmIntegratedPlugin implements IPlugin {
         typeCondition.setId("type-condition");
         typeCondition.setField("fileExtension");
         typeCondition.setOperator(PreconditionDTO.OperatorType.IN);
-        typeCondition.setValue(Arrays.asList("ncm", "uc", "cache"));
-        typeCondition.setDescription("文件是网易云音乐相关文件");
+        typeCondition.setValue(Arrays.asList("ncm"));
+        typeCondition.setDescription("文件是NCM加密文件");
         preconditions.add(typeCondition);
         
         group.setPreconditions(preconditions);

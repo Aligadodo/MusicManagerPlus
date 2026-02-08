@@ -15,6 +15,7 @@ public class StrategyConfigDTO {
 
     public StrategyConfigDTO() {
         this.configValues = new HashMap<>();
+        this.preconditionGroups = new java.util.ArrayList<>();
     }
 
     public Map<String, Object> getConfigValues() {

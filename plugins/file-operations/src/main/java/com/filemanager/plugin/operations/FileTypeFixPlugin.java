@@ -74,7 +74,7 @@ public class FileTypeFixPlugin implements IPlugin {
         typeCondition.setId("type-condition");
         typeCondition.setField("fileExtension");
         typeCondition.setOperator(PreconditionDTO.OperatorType.IN);
-        typeCondition.setValue(Arrays.asList("mp3", "wav", "flac", "ogg", "aac", "m4a", "wma"));
+        typeCondition.setValue(Arrays.asList("mp3", "flac", "wav", "aac", "m4a", "ogg", "wma"));
         typeCondition.setDescription("文件是音频文件");
         preconditions.add(typeCondition);
         

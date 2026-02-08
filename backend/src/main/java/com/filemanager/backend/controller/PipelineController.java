@@ -623,11 +623,7 @@ public class PipelineController {
                     precondition.setField((String) preconditionData.get("field"));
                     
                     String operatorStr = (String) preconditionData.get("operator");
-                    if (operatorStr != null) {
-                        precondition.setOperator(operatorStr);
-                    } else {
-                        precondition.setOperator(com.filemanager.domain.dto.PreconditionDTO.OperatorType.EQUALS);
-                    }
+                    precondition.setOperator(com.filemanager.domain.dto.PreconditionDTO.OperatorType.fromValue(operatorStr));
                     
                     precondition.setValue(preconditionData.get("value"));
                     precondition.setDescription((String) preconditionData.get("description"));

@@ -9,6 +9,9 @@ public class PluginConfigDTO {
     private List<PreconditionGroupDTO> preconditionGroups;
 
     public PluginConfigDTO() {
+        this.configValues = new java.util.HashMap<>();
+        this.parameters = new java.util.ArrayList<>();
+        this.preconditionGroups = new java.util.ArrayList<>();
     }
 
     public PluginConfigDTO(Map<String, Object> configValues) {

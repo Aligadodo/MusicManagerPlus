@@ -158,6 +158,7 @@ public class StrategyServiceImpl implements StrategyService {
             } else {
                 config.setConfigValues(new HashMap<>());
             }
+            config.setPreconditionGroups(new ArrayList<>());
             return config;
         }
 
@@ -206,43 +207,49 @@ public class StrategyServiceImpl implements StrategyService {
                     
                     if (strategyData.containsKey("configValues")) {
                         config.setConfigValues((Map<String, Object>) strategyData.get("configValues"));
+                    } else {
+                        config.setConfigValues(new HashMap<>());
                     }
                     
                     if (strategyData.containsKey("preconditionGroups")) {
                         List<Map<String, Object>> preconditionGroupsData = (List<Map<String, Object>>) strategyData.get("preconditionGroups");
                         List<com.filemanager.domain.dto.PreconditionGroupDTO> preconditionGroups = new ArrayList<>();
-                        for (Map<String, Object> groupData : preconditionGroupsData) {
-                            com.filemanager.domain.dto.PreconditionGroupDTO group = new com.filemanager.domain.dto.PreconditionGroupDTO();
-                            group.setId((String) groupData.get("id"));
-                            group.setName((String) groupData.get("name"));
-                            group.setDescription((String) groupData.get("description"));
-                            group.setLogicType((String) groupData.get("logicType"));
-                            
-                            if (groupData.containsKey("preconditions")) {
-                                List<Map<String, Object>> preconditionsData = (List<Map<String, Object>>) groupData.get("preconditions");
-                                List<com.filemanager.domain.dto.PreconditionDTO> preconditions = new ArrayList<>();
-                                for (Map<String, Object> conditionData : preconditionsData) {
-                                    com.filemanager.domain.dto.PreconditionDTO condition = new com.filemanager.domain.dto.PreconditionDTO();
-                                    condition.setId((String) conditionData.get("id"));
-                                    condition.setField((String) conditionData.get("field"));
-                                    condition.setSubField((String) conditionData.get("subField"));
-                                    
-                                    String operatorStr = (String) conditionData.get("operator");
-                                    if (operatorStr != null) {
-                                        condition.setOperator(operatorStr);
-                                    } else {
-                                        condition.setOperator(com.filemanager.domain.dto.PreconditionDTO.OperatorType.EQUALS);
+                        if (preconditionGroupsData != null) {
+                            for (Map<String, Object> groupData : preconditionGroupsData) {
+                                com.filemanager.domain.dto.PreconditionGroupDTO group = new com.filemanager.domain.dto.PreconditionGroupDTO();
+                                group.setId((String) groupData.get("id"));
+                                group.setName((String) groupData.get("name"));
+                                group.setDescription((String) groupData.get("description"));
+                                group.setLogicType((String) groupData.get("logicType"));
+                                
+                                if (groupData.containsKey("preconditions")) {
+                                    List<Map<String, Object>> preconditionsData = (List<Map<String, Object>>) groupData.get("preconditions");
+                                    List<com.filemanager.domain.dto.PreconditionDTO> preconditions = new ArrayList<>();
+                                    if (preconditionsData != null) {
+                                        for (Map<String, Object> conditionData : preconditionsData) {
+                                            com.filemanager.domain.dto.PreconditionDTO condition = new com.filemanager.domain.dto.PreconditionDTO();
+                                            condition.setId((String) conditionData.get("id"));
+                                            condition.setField((String) conditionData.get("field"));
+                                            condition.setSubField((String) conditionData.get("subField"));
+                                            
+                                            String operatorStr = (String) conditionData.get("operator");
+                                            condition.setOperator(com.filemanager.domain.dto.PreconditionDTO.OperatorType.fromValue(operatorStr));
+                                            
+                                            condition.setValue(conditionData.get("value"));
+                                            condition.setDescription((String) conditionData.get("description"));
+                                            preconditions.add(condition);
+                                        }
                                     }
-                                    
-                                    condition.setValue(conditionData.get("value"));
-                                    condition.setDescription((String) conditionData.get("description"));
-                                    preconditions.add(condition);
+                                    group.setPreconditions(preconditions);
+                                } else {
+                                    group.setPreconditions(new ArrayList<>());
                                 }
-                                group.setPreconditions(preconditions);
+                                preconditionGroups.add(group);
                             }
-                            preconditionGroups.add(group);
                         }
                         config.setPreconditionGroups(preconditionGroups);
+                    } else {
+                        config.setPreconditionGroups(new ArrayList<>());
                     }
                     
                     strategyConfigs.put(strategyId, config);
@@ -391,6 +398,8 @@ public class StrategyServiceImpl implements StrategyService {
             } else {
                 // 如果策略不存在，创建空配置
                 config = new StrategyConfigDTO();
+                config.setConfigValues(new HashMap<>());
+                config.setPreconditionGroups(new ArrayList<>());
             }
             strategyConfigs.put(strategyId, config);
         }
@@ -539,7 +548,7 @@ public class StrategyServiceImpl implements StrategyService {
 
     private com.filemanager.domain.dto.PluginConfigDTO convertToPluginConfig(StrategyConfigDTO config) {
         com.filemanager.domain.dto.PluginConfigDTO pluginConfig = new com.filemanager.domain.dto.PluginConfigDTO();
-        if (config.getConfigValues() != null) {
+        if (config != null && config.getConfigValues() != null) {
             for (Map.Entry<String, Object> entry : config.getConfigValues().entrySet()) {
                 pluginConfig.setValue(entry.getKey(), entry.getValue());
             }

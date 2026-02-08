@@ -1,5 +1,8 @@
 package com.filemanager.domain.dto;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+
 public class PreconditionDTO {
     private String id;
     private String field;
@@ -35,7 +38,24 @@ public class PreconditionDTO {
         FILE_COUNT_GREATER_THAN,
         FILE_COUNT_LESS_THAN,
         FORMAT_IN,
-        FORMAT_NOT_IN
+        FORMAT_NOT_IN;
+
+        @JsonValue
+        public String toValue() {
+            return this.name().toLowerCase();
+        }
+
+        @JsonCreator
+        public static OperatorType fromValue(String value) {
+            if (value == null) {
+                return EQUALS;
+            }
+            try {
+                return OperatorType.valueOf(value.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                return EQUALS;
+            }
+        }
     }
 
     public PreconditionDTO() {
