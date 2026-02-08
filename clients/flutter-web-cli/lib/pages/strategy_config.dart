@@ -356,9 +356,13 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
                               preconditionGroups: _strategyConfig?.preconditionGroups,
                               onPreconditionGroupsChanged: (groups) {
                                 setState(() {
+                                  final copiedGroups = groups?.map((group) => group.copyWith(
+                                    preconditions: group.preconditions.map((condition) => condition.copyWith()).toList(),
+                                  )).toList() ?? <PreconditionGroup>[];
+                                  
                                   _strategyConfig = StrategyConfig(
                                     _strategyConfig!.configValues,
-                                    preconditionGroups: groups,
+                                    preconditionGroups: copiedGroups,
                                   );
                                 });
                               },

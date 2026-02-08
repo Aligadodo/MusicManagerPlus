@@ -35,6 +35,7 @@ public abstract class AbstractConfigurableStrategy implements StrategyConfigurab
     public StrategyConfigDTO initializeDefaultConfig() {
         StrategyConfigDTO config = new StrategyConfigDTO();
         initDefaultConfigValues(config);
+        config.setPreconditionGroups(new java.util.ArrayList<>());
         return config;
     }
 

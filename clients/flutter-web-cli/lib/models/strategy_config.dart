@@ -2,9 +2,10 @@ import 'precondition_group.dart';
 
 class StrategyConfig {
   final Map<String, dynamic> configValues;
-  final List<PreconditionGroup>? preconditionGroups;
+  final List<PreconditionGroup> preconditionGroups;
 
-  StrategyConfig(this.configValues, {this.preconditionGroups});
+  StrategyConfig(this.configValues, {List<PreconditionGroup>? preconditionGroups})
+      : preconditionGroups = preconditionGroups ?? <PreconditionGroup>[];
 
   factory StrategyConfig.fromJson(Map<String, dynamic> json) {
     return StrategyConfig(
@@ -13,7 +14,7 @@ class StrategyConfig {
           ? (json['preconditionGroups'] as List)
               .map((e) => PreconditionGroup.fromJson(e as Map<String, dynamic>))
               .toList()
-          : null,
+          : <PreconditionGroup>[],
     );
   }
 

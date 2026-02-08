@@ -32,11 +32,14 @@ class _PreconditionConfigPanelState extends State<PreconditionConfigPanel> {
   void didUpdateWidget(covariant PreconditionConfigPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
     // 当父组件传递新的 preconditionGroups 时，更新内部状态
-    // 比较引用和长度，确保即使是相同长度的不同列表也能触发更新
-    if (widget.preconditionGroups != oldWidget.preconditionGroups ||
-        (widget.preconditionGroups?.length ?? 0) != (oldWidget.preconditionGroups?.length ?? 0)) {
+    // 使用深拷贝确保每个策略都有独立的前置条件配置
+    if (widget.preconditionGroups != oldWidget.preconditionGroups) {
+      final newGroups = widget.preconditionGroups?.map((group) => group.copyWith(
+        preconditions: group.preconditions.map((condition) => condition.copyWith()).toList(),
+      )).toList() ?? [];
+      
       setState(() {
-        _preconditionGroups = widget.preconditionGroups ?? [];
+        _preconditionGroups = newGroups;
       });
     }
   }
