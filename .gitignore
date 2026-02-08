@@ -48,8 +48,11 @@ package_graph.json
 pubspec.lock
 version
 .flutter-plugins-dependencies
-pubspec.lock
 backend/backend.pid
 *.log
 *.pid
-backend/logs/filemanager.log
+logs/
+**/logs/
+**/*.log
+backend/logs/
+backend/*.log
