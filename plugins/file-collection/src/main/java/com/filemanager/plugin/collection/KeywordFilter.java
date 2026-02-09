@@ -28,7 +28,7 @@ public class KeywordFilter {
         File file = new File(filePath);
         String fileName = file.getName();
         
-        return matchesFileName(fileName);
+        return matches(fileName);
     }
     
     public boolean matches(String fileName) {

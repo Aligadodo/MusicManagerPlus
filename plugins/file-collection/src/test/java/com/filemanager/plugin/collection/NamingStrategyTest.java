@@ -36,7 +36,7 @@ class NamingStrategyTest {
         NamingStrategy strategy = new ExactNamingStrategy();
         FileCluster cluster = new FileCluster();
         cluster.addFilePath("/path/song1.mp3");
-        cluster.addFilePath("/path/song2.mp3");
+        cluster.addFilePath("/path/other2.mp3");
         cluster.calculateCommonPrefix();
         
         Map<String, Object> context = new HashMap<>();

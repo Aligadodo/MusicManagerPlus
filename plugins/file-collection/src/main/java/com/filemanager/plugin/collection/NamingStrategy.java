@@ -1,5 +1,6 @@
 package com.filemanager.plugin.collection;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -187,12 +188,12 @@ class NamingStrategyFactory {
     }
     
     public static List<NamingStrategy> getAllStrategies() {
-        return List.of(
-            new ExactNamingStrategy(),
-            new SimpleNamingStrategy(),
-            new TemplateNamingStrategy(),
-            new UniversalNamingStrategy()
-        );
+        List<NamingStrategy> strategies = new ArrayList<>();
+        strategies.add(new ExactNamingStrategy());
+        strategies.add(new SimpleNamingStrategy());
+        strategies.add(new TemplateNamingStrategy());
+        strategies.add(new UniversalNamingStrategy());
+        return strategies;
     }
     
     public static NamingStrategy getDefaultStrategy() {

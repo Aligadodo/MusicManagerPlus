@@ -353,4 +353,87 @@ class FileClusterer {
         SIMILARITY,
         NAME
     }
+    
+    /**
+     * 聚类文件，使用增强版相似度计算，支持系列文件识别
+     */
+    public static List<FileCluster> clusterFilesWithSeriesRecognition(List<String> filePaths, double threshold) {
+        if (filePaths == null || filePaths.isEmpty()) {
+            return new ArrayList<>();
+        }
+        
+        if (filePaths.size() == 1) {
+            FileCluster cluster = new FileCluster();
+            cluster.addFilePath(filePaths.get(0));
+            cluster.calculateAverageSimilarity();
+            cluster.calculateCommonPrefix();
+            return Collections.singletonList(cluster);
+        }
+        
+        List<FileCluster> clusters = new ArrayList<>();
+        boolean[] assigned = new boolean[filePaths.size()];
+        
+        for (int i = 0; i < filePaths.size(); i++) {
+            if (assigned[i]) {
+                continue;
+            }
+            
+            FileCluster cluster = new FileCluster();
+            cluster.addFilePath(filePaths.get(i));
+            assigned[i] = true;
+            
+            for (int j = i + 1; j < filePaths.size(); j++) {
+                if (assigned[j]) {
+                    continue;
+                }
+                
+                double similarity = SimilarityCalculator.calculateEnhancedSimilarity(
+                    filePaths.get(i),
+                    filePaths.get(j)
+                );
+                
+                if (similarity >= threshold) {
+                    cluster.addFilePath(filePaths.get(j));
+                    assigned[j] = true;
+                }
+            }
+            
+            cluster.calculateAverageSimilarity();
+            cluster.calculateCommonPrefix();
+            
+            if (!cluster.isEmpty()) {
+                clusters.add(cluster);
+            }
+        }
+        
+        return clusters;
+    }
+    
+    /**
+     * 识别系列文件并生成合集名称
+     */
+    public static List<FileCluster> identifySeriesAndGenerateNames(List<FileCluster> clusters) {
+        if (clusters == null || clusters.isEmpty()) {
+            return new ArrayList<>();
+        }
+        
+        List<FileCluster> result = new ArrayList<>();
+        
+        for (FileCluster cluster : clusters) {
+            // 提取文件路径中的文件名
+            List<String> filenames = cluster.getFilePaths().stream()
+                .map(path -> {
+                    int lastSlashIndex = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
+                    return lastSlashIndex >= 0 ? path.substring(lastSlashIndex + 1) : path;
+                })
+                .collect(Collectors.toList());
+            
+            // 生成合集名称
+            String collectionName = CollectionNameGenerator.generateCollectionName(filenames);
+            cluster.setClusterName(collectionName);
+            result.add(cluster);
+        }
+        
+        return result;
+    }
 }

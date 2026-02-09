@@ -209,37 +209,37 @@ public class FileCollectionPlugin implements IPlugin {
         List<ChangeRecord> changes = new ArrayList<>();
         
         try {
-            context.log("INFO", "开始文件收集，共 " + filePaths.size() + " 个文件");
+            // 开始文件收集，共 " + filePaths.size() + " 个文件
             
             String targetDirectory = (String) config.getValue("targetDirectory");
             if (targetDirectory == null) {
                 targetDirectory = DEFAULT_TARGET_DIRECTORY;
             }
             
-            boolean recursive = (Boolean) config.getValueOrDefault("recursive", true);
-            double similarityThreshold = (Double) config.getValueOrDefault("similarityThreshold", DEFAULT_SIMILARITY_THRESHOLD);
-            String namingStrategyId = (String) config.getValueOrDefault("namingStrategy", DEFAULT_NAMING_STRATEGY);
-            int minClusterSize = (Integer) config.getValueOrDefault("minClusterSize", DEFAULT_MIN_CLUSTER_SIZE);
-            boolean autoDetectKeywords = (Boolean) config.getValueOrDefault("autoDetectKeywords", true);
+            boolean recursive = (Boolean) config.getValue("recursive", true);
+            double similarityThreshold = (Double) config.getValue("similarityThreshold", DEFAULT_SIMILARITY_THRESHOLD);
+            String namingStrategyId = (String) config.getValue("namingStrategy", DEFAULT_NAMING_STRATEGY);
+            int minClusterSize = (Integer) config.getValue("minClusterSize", DEFAULT_MIN_CLUSTER_SIZE);
+            boolean autoDetectKeywords = (Boolean) config.getValue("autoDetectKeywords", true);
             
             KeywordFilter keywordFilter = buildKeywordFilter(config);
             
             List<String> filteredFiles = filterFiles(filePaths, keywordFilter, context);
             
-            context.log("INFO", "过滤后剩余 " + filteredFiles.size() + " 个文件");
+            // 过滤后剩余 " + filteredFiles.size() + " 个文件
             
             if (filteredFiles.isEmpty()) {
-                context.log("WARN", "没有符合条件的文件");
+            // 没有符合条件的文件
                 return changes;
             }
             
             List<FileCluster> clusters = FileClusterer.clusterFiles(filteredFiles, similarityThreshold);
             
-            context.log("INFO", "聚类后生成 " + clusters.size() + " 个合集");
+            // 聚类后生成 " + clusters.size() + " 个合集
             
             List<FileCluster> optimizedClusters = FileClusterer.optimizeClusters(clusters, minClusterSize);
             
-            context.log("INFO", "优化后剩余 " + optimizedClusters.size() + " 个合集");
+            // 优化后剩余 " + optimizedClusters.size() + " 个合集
             
             NamingStrategy namingStrategy = NamingStrategyFactory.getStrategy(namingStrategyId);
             
@@ -255,10 +255,10 @@ public class FileCollectionPlugin implements IPlugin {
                 }
             }
             
-            context.log("INFO", "文件收集完成，共生成 " + changes.size() + " 条变更记录");
+            // 文件收集完成，共生成 " + changes.size() + " 条变更记录
             
         } catch (Exception e) {
-            context.log("ERROR", "文件收集失败: " + e.getMessage());
+            // 文件收集失败: " + e.getMessage()
             e.printStackTrace();
         }
         
@@ -270,23 +270,23 @@ public class FileCollectionPlugin implements IPlugin {
         List<ChangeRecord> changes = new ArrayList<>();
         
         try {
-            context.log("INFO", "开始预览文件收集，共 " + filePaths.size() + " 个文件");
+            // 开始预览文件收集，共 " + filePaths.size() + " 个文件
             
             String targetDirectory = (String) config.getValue("targetDirectory");
             if (targetDirectory == null) {
                 targetDirectory = DEFAULT_TARGET_DIRECTORY;
             }
             
-            double similarityThreshold = (Double) config.getValueOrDefault("similarityThreshold", DEFAULT_SIMILARITY_THRESHOLD);
-            String namingStrategyId = (String) config.getValueOrDefault("namingStrategy", DEFAULT_NAMING_STRATEGY);
-            int minClusterSize = (Integer) config.getValueOrDefault("minClusterSize", DEFAULT_MIN_CLUSTER_SIZE);
+            double similarityThreshold = (Double) config.getValue("similarityThreshold", DEFAULT_SIMILARITY_THRESHOLD);
+            String namingStrategyId = (String) config.getValue("namingStrategy", DEFAULT_NAMING_STRATEGY);
+            int minClusterSize = (Integer) config.getValue("minClusterSize", DEFAULT_MIN_CLUSTER_SIZE);
             
             KeywordFilter keywordFilter = buildKeywordFilter(config);
             
             List<String> filteredFiles = filterFiles(filePaths, keywordFilter, context);
             
             if (filteredFiles.isEmpty()) {
-                context.log("WARN", "没有符合条件的文件");
+                // 没有符合条件的文件
                 return changes;
             }
             
@@ -305,10 +305,10 @@ public class FileCollectionPlugin implements IPlugin {
                 }
             }
             
-            context.log("INFO", "预览完成，共生成 " + changes.size() + " 条变更记录");
+            // 预览完成，共生成 " + changes.size() + " 条变更记录
             
         } catch (Exception e) {
-            context.log("ERROR", "预览失败: " + e.getMessage());
+            // 预览失败: " + e.getMessage()
             e.printStackTrace();
         }
         
@@ -316,10 +316,10 @@ public class FileCollectionPlugin implements IPlugin {
     }
     
     private KeywordFilter buildKeywordFilter(PluginConfigDTO config) {
-        String mustIncludeStr = (String) config.getValueOrDefault("mustIncludeKeywords", "");
-        String mustNotIncludeStr = (String) config.getValueOrDefault("mustNotIncludeKeywords", "");
-        boolean caseSensitive = (Boolean) config.getValueOrDefault("caseSensitive", false);
-        boolean useRegex = (Boolean) config.getValueOrDefault("useRegex", false);
+        String mustIncludeStr = (String) config.getValue("mustIncludeKeywords", "");
+        String mustNotIncludeStr = (String) config.getValue("mustNotIncludeKeywords", "");
+        boolean caseSensitive = (Boolean) config.getValue("caseSensitive", false);
+        boolean useRegex = (Boolean) config.getValue("useRegex", false);
         
         KeywordFilter.Builder builder = KeywordFilter.builder()
             .setCaseSensitive(caseSensitive)
@@ -341,7 +341,7 @@ public class FileCollectionPlugin implements IPlugin {
     private List<String> filterFiles(List<String> filePaths, KeywordFilter keywordFilter, ExecutionContext context) {
         List<String> filtered = keywordFilter.filterFilePaths(filePaths);
         
-        context.reportProgress(10, "文件过滤完成");
+        // 文件过滤完成
         
         return filtered;
     }
@@ -373,10 +373,10 @@ public class FileCollectionPlugin implements IPlugin {
             Path path = Paths.get(clusterPath);
             if (!Files.exists(path)) {
                 Files.createDirectories(path);
-                context.log("INFO", "创建合集目录: " + clusterPath);
+                // 创建合集目录: " + clusterPath
             }
         } catch (Exception e) {
-            context.log("ERROR", "创建合集目录失败: " + clusterPath + ", " + e.getMessage());
+            // 创建合集目录失败: " + clusterPath + ", " + e.getMessage()
         }
     }
     
@@ -400,9 +400,9 @@ public class FileCollectionPlugin implements IPlugin {
             record.setChanged(true);
             record.setOperationType(ChangeRecord.OperationType.MOVE);
             record.setStatus(ChangeRecord.ExecStatus.SUCCESS);
-            record.setMessage("文件移动成功");
+            record.setReason("文件移动成功");
             
-            context.log("INFO", "移动文件: " + filePath + " -> " + targetPath);
+            // 移动文件: " + filePath + " -> " + targetPath
             
         } catch (Exception e) {
             record.setNewName(filePath);
@@ -410,9 +410,9 @@ public class FileCollectionPlugin implements IPlugin {
             record.setChanged(false);
             record.setOperationType(ChangeRecord.OperationType.MOVE);
             record.setStatus(ChangeRecord.ExecStatus.FAILED);
-            record.setMessage("文件移动失败: " + e.getMessage());
+            record.setReason("文件移动失败: " + e.getMessage());
             
-            context.log("ERROR", "移动文件失败: " + filePath + ", " + e.getMessage());
+            // 移动文件失败: " + filePath + ", " + e.getMessage()
         }
         
         return record;
@@ -432,7 +432,7 @@ public class FileCollectionPlugin implements IPlugin {
         record.setChanged(true);
         record.setOperationType(ChangeRecord.OperationType.MOVE);
         record.setStatus(ChangeRecord.ExecStatus.PENDING);
-        record.setMessage("预览模式，文件未被修改");
+        record.setReason("预览模式，文件未被修改");
         
         return record;
     }

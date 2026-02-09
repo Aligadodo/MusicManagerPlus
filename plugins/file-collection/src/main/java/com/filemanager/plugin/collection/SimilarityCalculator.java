@@ -44,6 +44,72 @@ public class SimilarityCalculator {
         return calculateSimilarity(str1, str2, SimilarityType.LEVENSHTEIN);
     }
     
+    /**
+     * 处理特殊符号和序号，使用更通用的策略
+     */
+    public static String processSpecialSymbolsAndNumbers(String input) {
+        String result = input;
+        
+        // 1. 处理各种类型的序号
+        // 阿拉伯数字（如 1, 2, 3, 01, 02, 03 等）
+        result = result.replaceAll("\\b\\d+\\b", "__NUMBER__");
+        
+        // 2. 处理中文序号
+        // 中文数字（如 一, 二, 三, 十, 百 等）
+        result = result.replaceAll("[一二三四五六七八九十百千万壹贰叁肆伍陆柒捌玖拾佰仟]", "__CHINESE_NUM__");
+        
+        // 3. 处理特殊符号序号
+        // 圆形序号（如 ①, ②, ③ 等）
+        result = result.replaceAll("[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳]", "__CIRCLE_NUM__");
+        
+        // 4. 处理其他常见的序号格式
+        // 字母序号（如 A, B, C, a, b, c 等）
+        result = result.replaceAll("\\b[A-Za-z]\\b", "__LETTER__");
+        
+        // 5. 处理括号和特殊符号
+        // 去除无意义的括号和特殊符号
+        result = result.replaceAll("[\\[\\]\\(\\)\\{\\}\\<>\\《\\》\\【\\】]", "");
+        
+        return result;
+    }
+    
+    /**
+     * 计算增强版相似度，考虑特殊符号和序号处理
+     */
+    public static double calculateEnhancedSimilarity(String str1, String str2) {
+        // 使用更通用的策略处理各种类型的序号和特殊符号
+        String processed1 = processSpecialSymbolsAndNumbers(str1);
+        String processed2 = processSpecialSymbolsAndNumbers(str2);
+        
+        // 计算基本相似度
+        int distance = calculateLevenshteinDistance(processed1, processed2);
+        int maxLen = Math.max(processed1.length(), processed2.length());
+        double baseSimilarity = (maxLen == 0) ? 1.0 : 1.0 - ((double) distance / maxLen);
+        
+        // 检查是否有相同的标题和不同的数字序号
+        if (FileMetadataExtractor.hasSameTitleDifferentNumber(str1, str2)) {
+            // 如果有相同的标题和不同的序号，相似度提高
+            baseSimilarity = Math.min(1.0, baseSimilarity + 0.3);
+        }
+        
+        // 检查是否包含相同的核心关键词
+        List<String> keywords1 = FileMetadataExtractor.extractCoreKeywords(str1);
+        List<String> keywords2 = FileMetadataExtractor.extractCoreKeywords(str2);
+        double keywordSimilarity = FileMetadataExtractor.calculateKeywordSimilarity(keywords1, keywords2);
+        
+        // 综合考虑基本相似度和关键词相似度
+        double finalSimilarity = (baseSimilarity * 0.7) + (keywordSimilarity * 0.3);
+        
+        // 特殊处理：如果两个文件名包含相同的艺术家名称，相似度提高
+        String artist1 = FileMetadataExtractor.extractArtist(str1);
+        String artist2 = FileMetadataExtractor.extractArtist(str2);
+        if (!artist1.isEmpty() && !artist2.isEmpty() && artist1.equals(artist2)) {
+            finalSimilarity = Math.min(1.0, finalSimilarity + 0.2);
+        }
+        
+        return finalSimilarity;
+    }
+    
     public static double calculateFileNameSimilarity(String fileName1, String fileName2) {
         if (fileName1 == null || fileName2 == null) {
             return 0.0;
