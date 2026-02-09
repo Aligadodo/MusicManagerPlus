@@ -398,14 +398,46 @@ public class NcmIntegratedPluginTest {
     }
 
     private String createTestNcmContent() {
-        return "CTCN" + // Magic header
-               "\x00\x00\x00\x01" + // Key length
-               "\x00\x00\x00\x01" + // Meta data length
-               "k" + // Key data
-               "m" + // Meta data
-               "\x00\x00\x00\x00" + // CRC32
-               "\x00\x00\x00\x00" + // Gap
-               "\x00\x00\x00\x00" + // Image header
-               "test audio content";
+        // 使用字节数组来创建测试数据，避免使用非法的转义符
+        byte[] data = new byte[30];
+        // Magic header: CTCN
+        data[0] = 'C';
+        data[1] = 'T';
+        data[2] = 'C';
+        data[3] = 'N';
+        // Key length: 1
+        data[4] = 0;
+        data[5] = 0;
+        data[6] = 0;
+        data[7] = 1;
+        // Meta data length: 1
+        data[8] = 0;
+        data[9] = 0;
+        data[10] = 0;
+        data[11] = 1;
+        // Key data: k
+        data[12] = 'k';
+        // Meta data: m
+        data[13] = 'm';
+        // CRC32: 0
+        data[14] = 0;
+        data[15] = 0;
+        data[16] = 0;
+        data[17] = 0;
+        // Gap: 0
+        data[18] = 0;
+        data[19] = 0;
+        data[20] = 0;
+        data[21] = 0;
+        // Image header: 0
+        data[22] = 0;
+        data[23] = 0;
+        data[24] = 0;
+        data[25] = 0;
+        // Test audio content
+        byte[] content = "test audio content".getBytes();
+        System.arraycopy(content, 0, data, 26, Math.min(content.length, 4));
+        
+        return new String(data);
     }
 }

@@ -77,6 +77,9 @@ class _ComposeConfigPanelState extends State<ComposeConfigPanel> {
       return const Text('无', style: TextStyle(fontSize: 12));
     }
 
+    // 过滤可见的参数
+    List<ConfigField> visibleFields = _filterVisibleFields(widget.strategyInfo!.configFields);
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -100,17 +103,7 @@ class _ComposeConfigPanelState extends State<ComposeConfigPanel> {
           ],
         ),
         const SizedBox(height: 12),
-        ...widget.strategyInfo!.configFields.where((field) {
-          if (field.dependsOn != null && field.dependsValue != null) {
-            try {
-              final dependentValue = widget.strategyConfig?.getValue(field.dependsOn!);
-              return dependentValue?.toString() == field.dependsValue;
-            } catch (e) {
-              return true;
-            }
-          }
-          return true;
-        }).map((field) {
+        ...visibleFields.map((field) {
           try {
             return ParameterField(
               field: field,
@@ -135,5 +128,92 @@ class _ComposeConfigPanelState extends State<ComposeConfigPanel> {
         }).toList(),
       ],
     );
+  }
+  
+  /**
+   * 过滤可见的参数
+   * @param allFields 所有参数
+   * @return 可见的参数列表
+   */
+  List<ConfigField> _filterVisibleFields(List<ConfigField> allFields) {
+    List<ConfigField> visibleFields = [];
+    
+    for (ConfigField field in allFields) {
+      if (_isFieldVisible(field)) {
+        visibleFields.add(field);
+      }
+    }
+    
+    return visibleFields;
+  }
+  
+  /**
+   * 判断参数是否可见
+   * @param field 参数
+   * @return 是否可见
+   */
+  bool _isFieldVisible(ConfigField field) {
+    // 检查阻止条件
+    if (field.blockConditions != null && field.blockConditions!.isNotEmpty) {
+      for (Map<String, dynamic> condition in field.blockConditions!) {
+        if (_isConditionMet(condition)) {
+          return false;
+        }
+      }
+    }
+    
+    // 检查依赖条件
+    if (field.dependsOn != null && field.dependsValue != null) {
+      try {
+        final dependentValue = widget.strategyConfig?.getValue(field.dependsOn!);
+        if (dependentValue == null || dependentValue.toString() != field.dependsValue) {
+          return false;
+        }
+      } catch (e) {
+        return false;
+      }
+    }
+    
+    // 检查父参数是否可见（对于子参数）
+    if (field.dependsOn != null) {
+      ConfigField? parentField = _findFieldByName(field.dependsOn!);
+      if (parentField != null && !_isFieldVisible(parentField)) {
+        return false;
+      }
+    }
+    
+    return true;
+  }
+  
+  /**
+   * 判断条件是否满足
+   * @param condition 条件
+   * @return 是否满足
+   */
+  bool _isConditionMet(Map<String, dynamic> condition) {
+    String? dependentParam = condition['dependentParam'] as String?;
+    dynamic expectedValue = condition['expectedValue'];
+    
+    if (dependentParam == null || expectedValue == null) {
+      return false;
+    }
+    
+    dynamic actualValue = widget.strategyConfig?.getValue(dependentParam);
+    return expectedValue.toString() == actualValue?.toString();
+  }
+  
+  /**
+   * 根据名称查找参数
+   * @param name 参数名
+   * @return 参数
+   */
+  ConfigField? _findFieldByName(String name) {
+    try {
+      return widget.strategyInfo!.configFields.firstWhere(
+        (field) => field.name == name,
+      );
+    } catch (e) {
+      return null;
+    }
   }
 }

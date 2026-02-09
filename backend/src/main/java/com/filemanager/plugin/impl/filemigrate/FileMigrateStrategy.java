@@ -6,6 +6,11 @@ import com.filemanager.plugin.impl.audioconverter.enums.OutputDirMode;
 import com.filemanager.plugin.impl.filemigrate.enums.OperationMode;
 import com.filemanager.plugin.impl.filemigrate.enums.ScopeMode;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 public class FileMigrateStrategy extends AbstractConfigurableStrategy {
 
     public FileMigrateStrategy() {
@@ -55,6 +60,32 @@ public class FileMigrateStrategy extends AbstractConfigurableStrategy {
             "去重时优先保留的文件后缀", false);
         addConfigField("audioSpecial", "音频特殊处理", "boolean", (Object) true, 
             "去重时对音频文件进行特殊处理", false);
+        
+        // 配置参数联动
+        setupParameterRelations();
+    }
+    
+    /**
+     * 配置参数联动关系
+     */
+    private void setupParameterRelations() {
+        // outputPath参数：当outputDirMode为指定目录时显示
+        List<Map<String, Object>> outputPathConditions = new ArrayList<>();
+        Map<String, Object> outputPathCondition = new HashMap<>();
+        outputPathCondition.put("dependentParam", "outputDirMode");
+        outputPathCondition.put("expectedValue", OutputDirMode.SPECIFIED_DIR.getCode());
+        outputPathConditions.add(outputPathCondition);
+        
+        getConfigField("outputPath").setBlockConditions(outputPathConditions);
+        
+        // depth参数：当scope为指定深度时显示
+        List<Map<String, Object>> depthConditions = new ArrayList<>();
+        Map<String, Object> depthCondition = new HashMap<>();
+        depthCondition.put("dependentParam", "scope");
+        depthCondition.put("expectedValue", ScopeMode.SPECIFIED_DEPTH.getCode());
+        depthConditions.add(depthCondition);
+        
+        getConfigField("depth").setBlockConditions(depthConditions);
     }
 
     @Override

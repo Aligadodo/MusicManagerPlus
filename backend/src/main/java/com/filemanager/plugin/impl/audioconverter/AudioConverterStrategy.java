@@ -1,14 +1,18 @@
 package com.filemanager.plugin.impl.audioconverter;
 
 import com.filemanager.domain.dto.StrategyConfigDTO;
+import com.filemanager.domain.dto.AutoFillConfig;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
 import com.filemanager.plugin.impl.audioconverter.enums.AudioFormat;
 import com.filemanager.plugin.impl.audioconverter.enums.Channels;
 import com.filemanager.plugin.impl.audioconverter.enums.OutputDirMode;
 import com.filemanager.plugin.impl.audioconverter.enums.SampleRate;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class AudioConverterStrategy extends AbstractConfigurableStrategy {
 
@@ -74,6 +78,57 @@ public class AudioConverterStrategy extends AbstractConfigurableStrategy {
             "自动将目标文件名转换为简体中文并去除首尾空格", false);
         addConfigField("skipCueTracks", "智能跳过处理", "boolean", (Object) true, 
             "当音频文件大于100MB且同目录下有.cue文件时，跳过处理", false);
+        
+        // 配置参数联动
+        setupParameterRelations();
+    }
+    
+    /**
+     * 配置参数联动关系
+     */
+    private void setupParameterRelations() {
+        // outputPath参数：当outputDirMode为指定目录时显示
+        List<Map<String, Object>> outputPathConditions = new ArrayList<>();
+        Map<String, Object> outputPathCondition = new HashMap<>();
+        outputPathCondition.put("dependentParam", "outputDirMode");
+        outputPathCondition.put("expectedValue", OutputDirMode.SPECIFIED_DIR.getCode());
+        outputPathConditions.add(outputPathCondition);
+        
+        getConfigField("outputPath").setBlockConditions(outputPathConditions);
+        
+        // cacheDir参数：当enableCache为true时显示
+        List<Map<String, Object>> cacheDirConditions = new ArrayList<>();
+        Map<String, Object> cacheDirCondition = new HashMap<>();
+        cacheDirCondition.put("dependentParam", "enableCache");
+        cacheDirCondition.put("expectedValue", true);
+        cacheDirConditions.add(cacheDirCondition);
+        
+        getConfigField("cacheDir").setBlockConditions(cacheDirConditions);
+        
+        // snapDir参数：当enableSnap为true时显示
+        List<Map<String, Object>> snapDirConditions = new ArrayList<>();
+        Map<String, Object> snapDirCondition = new HashMap<>();
+        snapDirCondition.put("dependentParam", "enableSnap");
+        snapDirCondition.put("expectedValue", true);
+        snapDirConditions.add(snapDirCondition);
+        
+        getConfigField("snapDir").setBlockConditions(snapDirConditions);
+        
+        // enableTempSuffix参数：当enableCache为false时显示
+        List<Map<String, Object>> tempSuffixConditions = new ArrayList<>();
+        Map<String, Object> tempSuffixCondition = new HashMap<>();
+        tempSuffixCondition.put("dependentParam", "enableCache");
+        tempSuffixCondition.put("expectedValue", false);
+        tempSuffixConditions.add(tempSuffixCondition);
+        
+        getConfigField("enableTempSuffix").setBlockConditions(tempSuffixConditions);
+        
+        // 为ffmpegPath添加自动填充配置
+        AutoFillConfig ffmpegAutoFillConfig = new AutoFillConfig();
+        ffmpegAutoFillConfig.setTriggerParam("ffmpegThreads");
+        ffmpegAutoFillConfig.setFillType("auto_detect");
+        ffmpegAutoFillConfig.setDetectPattern("ffmpeg_path");
+        getConfigField("ffmpegPath").setAutoFillConfig(ffmpegAutoFillConfig);
     }
 
     @Override

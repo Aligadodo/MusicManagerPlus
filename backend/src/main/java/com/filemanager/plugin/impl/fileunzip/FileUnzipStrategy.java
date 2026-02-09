@@ -1,9 +1,15 @@
 package com.filemanager.plugin.impl.fileunzip;
 
 import com.filemanager.domain.dto.StrategyConfigDTO;
+import com.filemanager.domain.dto.AutoFillConfig;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
 import com.filemanager.plugin.impl.fileunzip.enums.OutputMode;
 import com.filemanager.plugin.impl.fileunzip.enums.UnzipEngine;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class FileUnzipStrategy extends AbstractConfigurableStrategy {
 
@@ -36,13 +42,19 @@ public class FileUnzipStrategy extends AbstractConfigurableStrategy {
         addConfigField("engine", "解压引擎", "select", (Object) UnzipEngine.JAVA_BUILTIN.getCode(), 
             "解压引擎选择", true, 
             getUnzipEngineOptions());
+        
+        // 添加参数联动：当选择7zip或Bandizip时，显示exePath参数并自动检测路径
         addConfigField("exePath", "可执行文件路径", "string", (Object) "", 
             "外部解压工具的可执行文件路径", false);
+        
         addConfigField("outputMode", "输出模式", "select", (Object) OutputMode.AUTO_SUBDIRECTORY.getCode(), 
             "输出目录模式", true, 
             getOutputModeOptions());
+        
+        // 添加参数联动：当选择自定义路径时，显示customPath参数
         addConfigField("customPath", "自定义路径", "directory", (Object) "", 
             "自定义输出路径", false);
+        
         addConfigField("smartFolder", "智能文件夹", "boolean", (Object) true, 
             "智能识别解压后的文件夹结构", false);
         addConfigField("mergeSameName", "合并同名文件夹", "boolean", (Object) false, 
@@ -55,8 +67,45 @@ public class FileUnzipStrategy extends AbstractConfigurableStrategy {
             "解压失败后删除原始压缩文件", false);
         addConfigField("nestedFolderMerge", "嵌套文件夹合并", "boolean", (Object) false, 
             "合并嵌套的文件夹", false);
-        addConfigField("passwords", "密码列表", "list", (Object) new java.util.ArrayList<>(), 
+        addConfigField("passwords", "密码列表", "list", (Object) new ArrayList<>(), 
             "解压密码列表", false);
+        
+        // 配置参数联动
+        setupParameterRelations();
+    }
+    
+    /**
+     * 配置参数联动关系
+     */
+    private void setupParameterRelations() {
+        // exePath参数：当engine为7zip或Bandizip时显示，并自动检测路径
+        List<Map<String, Object>> exePathConditions = new ArrayList<>();
+        Map<String, Object> sevenZipCondition = new HashMap<>();
+        sevenZipCondition.put("dependentParam", "engine");
+        sevenZipCondition.put("expectedValue", UnzipEngine.SEVEN_ZIP.getCode());
+        exePathConditions.add(sevenZipCondition);
+        
+        Map<String, Object> bandizipCondition = new HashMap<>();
+        bandizipCondition.put("dependentParam", "engine");
+        bandizipCondition.put("expectedValue", UnzipEngine.BANDIZIP.getCode());
+        exePathConditions.add(bandizipCondition);
+        
+        getConfigField("exePath").setBlockConditions(exePathConditions);
+        
+        // 为exePath添加自动填充配置
+        AutoFillConfig autoFillConfig = new AutoFillConfig();
+        autoFillConfig.setTriggerParam("engine");
+        autoFillConfig.setFillType("auto_detect");
+        getConfigField("exePath").setAutoFillConfig(autoFillConfig);
+        
+        // customPath参数：当outputMode为指定目录时显示
+        List<Map<String, Object>> customPathConditions = new ArrayList<>();
+        Map<String, Object> customPathCondition = new HashMap<>();
+        customPathCondition.put("dependentParam", "outputMode");
+        customPathCondition.put("expectedValue", OutputMode.SPECIFIED_DIRECTORY.getCode());
+        customPathConditions.add(customPathCondition);
+        
+        getConfigField("customPath").setBlockConditions(customPathConditions);
     }
 
     @Override
@@ -71,7 +120,7 @@ public class FileUnzipStrategy extends AbstractConfigurableStrategy {
         setConfigValue(config, "overwrite", (Object) false);
         setConfigValue(config, "deleteOnFail", (Object) false);
         setConfigValue(config, "nestedFolderMerge", (Object) false);
-        setConfigValue(config, "passwords", (Object) new java.util.ArrayList<>());
+        setConfigValue(config, "passwords", (Object) new ArrayList<>());
     }
     
     private java.util.List<String> getUnzipEngineOptions() {

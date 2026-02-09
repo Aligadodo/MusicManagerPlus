@@ -29,6 +29,7 @@ import com.filemanager.plugin.impl.fileunzip.enums.UnzipEngine;
 import com.filemanager.plugin.impl.metadatascraper.enums.DataSource;
 import com.filemanager.plugin.utils.EnumConverter;
 import com.filemanager.plugin.utils.EnumOptionProvider;
+import com.filemanager.backend.service.ParameterRelationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,6 +49,9 @@ import java.util.stream.Collectors;
 public class StrategyServiceImpl implements StrategyService {
 
     private static final Logger logger = LoggerFactory.getLogger(StrategyServiceImpl.class);
+    
+    @Autowired
+    private ParameterRelationService parameterRelationService;
 
     private final Map<String, StrategyConfigDTO> strategyConfigs = new ConcurrentHashMap<>();
     private final String configFilePath = "strategy_configs.json";
@@ -141,6 +145,22 @@ public class StrategyServiceImpl implements StrategyService {
                         if (enumOptions != null && !enumOptions.isEmpty()) {
                             field.setEnumOptions(enumOptions);
                         }
+                    }
+                    
+                    // 处理可见性条件（参数联动）
+                    if (param.getVisibilityConditions() != null && !param.getVisibilityConditions().isEmpty()) {
+                        // 目前只处理第一个可见性条件
+                        Map<String, Object> condition = param.getVisibilityConditions().get(0);
+                        if (condition.containsKey("dependentParam") && condition.containsKey("expectedValue")) {
+                            field.setDependsOn((String) condition.get("dependentParam"));
+                            field.setDependsValue(condition.get("expectedValue"));
+                        }
+                    }
+                    
+                    // 处理自动检测参数（如解压引擎路径）
+                    if (param.getAutoDetectParams() != null) {
+                        // 这里可以添加自动检测逻辑
+                        // 例如，当选择特定解压引擎时，自动检测本地可执行文件路径
                     }
                     
                     fields.add(field);
@@ -409,9 +429,61 @@ public class StrategyServiceImpl implements StrategyService {
 
     @Override
     public boolean updateStrategyConfig(String strategyId, StrategyConfigDTO config) {
+        // 处理参数关系
+        Map<String, Object> processedValues = processParameterRelations(strategyId, config.getConfigValues());
+        config.setConfigValues(processedValues);
+        
         strategyConfigs.put(strategyId, config);
         saveStrategyConfigs();
         return true;
+    }
+    
+    /**
+     * 处理参数关系
+     * @param strategyId 策略ID
+     * @param configValues 配置值
+     * @return 处理后的配置值
+     */
+    private Map<String, Object> processParameterRelations(String strategyId, Map<String, Object> configValues) {
+        Map<String, Object> processedValues = new HashMap<>(configValues);
+        
+        // 获取策略的所有参数
+        List<ConfigFieldDTO> allFields = getConfigFieldsByStrategyId(strategyId);
+        if (allFields == null || allFields.isEmpty()) {
+            return processedValues;
+        }
+        
+        // 设置缓存
+        parameterRelationService.setAllFieldsCache(allFields);
+        
+        // 处理互斥关系
+        for (Map.Entry<String, Object> entry : configValues.entrySet()) {
+            String paramName = entry.getKey();
+            Object paramValue = entry.getValue();
+            
+            // 处理互斥关系
+            processedValues = parameterRelationService.handleExclusiveRelation(
+                    paramName, paramValue, allFields, processedValues);
+            
+            // 处理自动填充关系
+            processedValues = parameterRelationService.handleAutoFill(
+                    paramName, paramValue, allFields, processedValues);
+        }
+        
+        return processedValues;
+    }
+    
+    /**
+     * 根据策略ID获取配置字段
+     * @param strategyId 策略ID
+     * @return 配置字段列表
+     */
+    private List<ConfigFieldDTO> getConfigFieldsByStrategyId(String strategyId) {
+        StrategyInfoDTO strategyInfo = getStrategyInfo(strategyId);
+        if (strategyInfo != null) {
+            return strategyInfo.getConfigFields();
+        }
+        return null;
     }
 
     @Override

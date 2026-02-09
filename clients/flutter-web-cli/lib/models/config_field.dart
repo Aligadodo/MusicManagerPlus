@@ -1,4 +1,5 @@
 import 'enum_option.dart';
+import 'auto_fill_config.dart';
 
 class ConfigField {
   final String name;
@@ -18,6 +19,12 @@ class ConfigField {
   // 模块化配置支持
   final bool isModule;
   final String? moduleType;
+  
+  // 参数关系定义
+  final String? exclusiveGroup;
+  final List<Map<String, dynamic>>? blockConditions;
+  final AutoFillConfig? autoFillConfig;
+  final List<ConfigField>? childFields;
 
   ConfigField({
     required this.name,
@@ -33,6 +40,10 @@ class ConfigField {
     this.subFields,
     this.isModule = false,
     this.moduleType,
+    this.exclusiveGroup,
+    this.blockConditions,
+    this.autoFillConfig,
+    this.childFields,
   });
 
   factory ConfigField.fromJson(Map<String, dynamic> json) {
@@ -66,6 +77,31 @@ class ConfigField {
       }
     }
 
+    AutoFillConfig? parsedAutoFillConfig;
+    if (json['autoFillConfig'] != null) {
+      try {
+        parsedAutoFillConfig = AutoFillConfig.fromJson(
+            json['autoFillConfig'] as Map<String, dynamic>);
+      } catch (e) {
+        print('Failed to parse autoFillConfig: ${json['autoFillConfig']}, error: $e');
+      }
+    }
+
+    List<ConfigField>? parsedChildFields;
+    if (json['childFields'] != null) {
+      try {
+        final childFieldsList = json['childFields'] as List<dynamic>?;
+        if (childFieldsList != null) {
+          parsedChildFields = childFieldsList
+              .where((field) => field != null && field is Map<String, dynamic>)
+              .map((field) => ConfigField.fromJson(field as Map<String, dynamic>))
+              .toList();
+        }
+      } catch (e) {
+        print('Failed to parse childFields: ${json['childFields']}, error: $e');
+      }
+    }
+
     return ConfigField(
       name: json['name'] as String? ?? 'unknown',
       label: json['label'] as String? ?? 'Unknown Field',
@@ -80,6 +116,10 @@ class ConfigField {
       subFields: json['subFields'] as Map<String, dynamic>?,
       isModule: json['isModule'] as bool? ?? json['module'] as bool? ?? false,
       moduleType: json['moduleType'] as String?,
+      exclusiveGroup: json['exclusiveGroup'] as String?,
+      blockConditions: json['blockConditions'] as List<Map<String, dynamic>>?,
+      autoFillConfig: parsedAutoFillConfig,
+      childFields: parsedChildFields,
     );
   }
 
@@ -98,6 +138,10 @@ class ConfigField {
       'subFields': subFields,
       'isModule': isModule,
       'moduleType': moduleType,
+      'exclusiveGroup': exclusiveGroup,
+      'blockConditions': blockConditions,
+      'autoFillConfig': autoFillConfig?.toJson(),
+      'childFields': childFields?.map((e) => e.toJson()).toList(),
     };
   }
 
@@ -117,6 +161,10 @@ class ConfigField {
       subFields: subFields,
       isModule: isModule,
       moduleType: moduleType,
+      exclusiveGroup: exclusiveGroup,
+      blockConditions: blockConditions,
+      autoFillConfig: autoFillConfig,
+      childFields: childFields,
     );
   }
 }

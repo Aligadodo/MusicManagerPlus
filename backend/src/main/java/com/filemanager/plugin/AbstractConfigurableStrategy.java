@@ -31,6 +31,20 @@ public abstract class AbstractConfigurableStrategy implements StrategyConfigurab
         return configFields;
     }
 
+    /**
+     * 根据名称获取配置字段
+     * @param name 字段名称
+     * @return 配置字段，如果不存在则返回null
+     */
+    protected ConfigFieldDTO getConfigField(String name) {
+        for (ConfigFieldDTO field : configFields) {
+            if (field.getName().equals(name)) {
+                return field;
+            }
+        }
+        return null;
+    }
+
     @Override
     public StrategyConfigDTO initializeDefaultConfig() {
         StrategyConfigDTO config = new StrategyConfigDTO();
