@@ -3,8 +3,9 @@ import 'package:http/http.dart' as http;
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 class ApiClient {
-  static const String baseUrl = 'http://localhost:8080/api';
-  static const String wsBaseUrl = 'ws://localhost:8080/api';
+  static const String baseUrl = 'http://localhost:8080';
+  static const String wsBaseUrl = 'ws://localhost:8080';
+
 
   final http.Client _client;
 

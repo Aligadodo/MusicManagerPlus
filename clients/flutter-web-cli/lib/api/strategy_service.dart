@@ -13,7 +13,7 @@ class StrategyService {
     try {
       print('正在请求策略列表...');
       print('请求URL: http://localhost:8080/api/strategies');
-      final response = await _apiClient.get('/strategies');
+      final response = await _apiClient.get('/api/strategies');
       print('响应状态码: ${response.statusCode}');
       
       if (response.statusCode == 200) {
@@ -33,7 +33,7 @@ class StrategyService {
   }
 
   Future<StrategyInfo> getStrategyInfo(String strategyId) async {
-    final response = await _apiClient.get('/strategies/$strategyId');
+    final response = await _apiClient.get('/api/strategies/$strategyId');
 
     if (response.statusCode == 200) {
       final Map<String, dynamic> data = jsonDecode(response.body);
@@ -44,7 +44,7 @@ class StrategyService {
   }
 
   Future<StrategyConfig> getStrategyConfig(String strategyId) async {
-    final response = await _apiClient.get('/strategies/$strategyId/config');
+    final response = await _apiClient.get('/api/strategies/$strategyId/config');
 
     if (response.statusCode == 200) {
       final Map<String, dynamic> data = jsonDecode(response.body);
@@ -56,7 +56,7 @@ class StrategyService {
 
   Future<Map<String, dynamic>> updateStrategyConfig(String strategyId, StrategyConfig config) async {
     final response = await _apiClient.post(
-      '/strategies/$strategyId/config',
+      '/api/strategies/$strategyId/config',
       body: config.toJson(),
     );
 
@@ -69,7 +69,7 @@ class StrategyService {
 
   Future<List<ChangeRecord>> analyzeFiles(String strategyId, List<String> filePaths, StrategyConfig config) async {
     final response = await _apiClient.post(
-      '/strategies/$strategyId/analyze',
+      '/api/strategies/$strategyId/analyze',
       body: {
         'files': filePaths,
         'config': config.toJson(),
@@ -86,7 +86,7 @@ class StrategyService {
 
   Future<List<ChangeRecord>> executeStrategy(String strategyId, List<String> filePaths, StrategyConfig config) async {
     final response = await _apiClient.post(
-      '/strategies/$strategyId/execute',
+      '/api/strategies/$strategyId/execute',
       body: {
         'files': filePaths,
         'config': config.toJson(),
