@@ -1,6 +1,7 @@
 package com.filemanager.plugin.impl.metadatascraper;
 
 import com.filemanager.domain.dto.StrategyConfigDTO;
+import com.filemanager.domain.dto.EnumOptionDTO;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
 import com.filemanager.plugin.impl.metadatascraper.enums.DataSource;
 
@@ -32,7 +33,7 @@ public class MetadataScraperStrategy extends AbstractConfigurableStrategy {
 
     @Override
     protected void initConfigFields() {
-        addConfigField("source", "数据源", "select", (Object) DataSource.LOCAL_INFERENCE.getCode(), 
+        addEnumConfigField("source", "数据源", "select", (Object) DataSource.LOCAL_INFERENCE.getCode(), 
             "元数据数据源", true, 
             getDataSourceOptions());
         addConfigField("threads", "线程数", "number", (Object) 4, 
@@ -60,15 +61,17 @@ public class MetadataScraperStrategy extends AbstractConfigurableStrategy {
         setConfigValue(config, "periodMs", (Object) 1000);
     }
     
-    private java.util.List<String> getDataSourceOptions() {
-        return java.util.Arrays.asList(
-            DataSource.LOCAL_INFERENCE.getCode(),
-            DataSource.NETEASE_MUSIC.getCode(),
-            DataSource.MIGU_MUSIC.getCode(),
-            DataSource.MUSICBRAINZ.getCode(),
-            DataSource.ITUNES.getCode(),
-            DataSource.LAST_FM.getCode(),
-            DataSource.DISCOGS.getCode()
-        );
+    private java.util.List<EnumOptionDTO> getDataSourceOptions() {
+        java.util.List<EnumOptionDTO> options = new java.util.ArrayList<>();
+        for (DataSource source : DataSource.values()) {
+            EnumOptionDTO option = new EnumOptionDTO();
+            option.setValue(source.getCode());
+            option.setLabel(source.getNameZh());
+            option.setNameEn(source.getNameEn());
+            option.setDescriptionZh(source.getDescriptionZh());
+            option.setDescriptionEn(source.getDescriptionEn());
+            options.add(option);
+        }
+        return options;
     }
 }

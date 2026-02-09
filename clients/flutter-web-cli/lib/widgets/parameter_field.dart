@@ -223,7 +223,10 @@ class _ParameterFieldState extends State<ParameterField> {
   }
 
   Widget _buildSelectInput(dynamic fieldValue) {
-    if (widget.field.options != null && widget.field.options!.isNotEmpty) {
+    if (widget.field.enumOptions != null && widget.field.enumOptions!.isNotEmpty) {
+      String currentValue = fieldValue?.toString() ?? '';
+      bool valueExists = widget.field.enumOptions!.any((option) => option.code == currentValue);
+      
       return Container(
         decoration: BoxDecoration(
           border: Border.all(color: Colors.grey.shade300),
@@ -231,7 +234,35 @@ class _ParameterFieldState extends State<ParameterField> {
         ),
         padding: const EdgeInsets.symmetric(horizontal: 8),
         child: DropdownButton<String>(
-          value: fieldValue?.toString(),
+          value: valueExists ? currentValue : null,
+          items: widget.field.enumOptions!.map((option) {
+            return DropdownMenuItem<String>(
+              value: option.code,
+              child: Text(option.displayName, style: TextStyle(color: Colors.grey.shade700, fontSize: 12)),
+            );
+          }).toList(),
+          onChanged: (value) {
+            _updateConfigValue(widget.field.name, value);
+          },
+          isExpanded: true,
+          underline: const SizedBox(),
+          icon: Icon(Icons.keyboard_arrow_down, color: Colors.grey.shade600, size: 18),
+          hint: Text('请选择...', style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
+          isDense: true,
+        ),
+      );
+    } else if (widget.field.options != null && widget.field.options!.isNotEmpty) {
+      String currentValue = fieldValue?.toString() ?? '';
+      bool valueExists = widget.field.options!.contains(currentValue);
+      
+      return Container(
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: DropdownButton<String>(
+          value: valueExists ? currentValue : null,
           items: widget.field.options!.map((option) {
             return DropdownMenuItem<String>(
               value: option,

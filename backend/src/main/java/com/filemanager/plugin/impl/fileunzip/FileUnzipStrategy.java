@@ -2,6 +2,7 @@ package com.filemanager.plugin.impl.fileunzip;
 
 import com.filemanager.domain.dto.StrategyConfigDTO;
 import com.filemanager.domain.dto.AutoFillConfig;
+import com.filemanager.domain.dto.EnumOptionDTO;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
 import com.filemanager.plugin.impl.fileunzip.enums.OutputMode;
 import com.filemanager.plugin.impl.fileunzip.enums.UnzipEngine;
@@ -39,7 +40,7 @@ public class FileUnzipStrategy extends AbstractConfigurableStrategy {
 
     @Override
     protected void initConfigFields() {
-        addConfigField("engine", "解压引擎", "select", (Object) UnzipEngine.JAVA_BUILTIN.getCode(), 
+        addEnumConfigField("engine", "解压引擎", "select", (Object) UnzipEngine.JAVA_BUILTIN.getCode(), 
             "解压引擎选择", true, 
             getUnzipEngineOptions());
         
@@ -47,7 +48,7 @@ public class FileUnzipStrategy extends AbstractConfigurableStrategy {
         addConfigField("exePath", "可执行文件路径", "string", (Object) "", 
             "外部解压工具的可执行文件路径", false);
         
-        addConfigField("outputMode", "输出模式", "select", (Object) OutputMode.AUTO_SUBDIRECTORY.getCode(), 
+        addEnumConfigField("outputMode", "输出模式", "select", (Object) OutputMode.AUTO_SUBDIRECTORY.getCode(), 
             "输出目录模式", true, 
             getOutputModeOptions());
         
@@ -123,19 +124,31 @@ public class FileUnzipStrategy extends AbstractConfigurableStrategy {
         setConfigValue(config, "passwords", (Object) new ArrayList<>());
     }
     
-    private java.util.List<String> getUnzipEngineOptions() {
-        return java.util.Arrays.asList(
-            UnzipEngine.JAVA_BUILTIN.getCode(),
-            UnzipEngine.SEVEN_ZIP.getCode(),
-            UnzipEngine.BANDIZIP.getCode()
-        );
+    private java.util.List<EnumOptionDTO> getUnzipEngineOptions() {
+        java.util.List<EnumOptionDTO> options = new java.util.ArrayList<>();
+        for (UnzipEngine engine : UnzipEngine.values()) {
+            EnumOptionDTO option = new EnumOptionDTO();
+            option.setValue(engine.getCode());
+            option.setLabel(engine.getNameZh());
+            option.setNameEn(engine.getNameEn());
+            option.setDescriptionZh(engine.getDescriptionZh());
+            option.setDescriptionEn(engine.getDescriptionEn());
+            options.add(option);
+        }
+        return options;
     }
     
-    private java.util.List<String> getOutputModeOptions() {
-        return java.util.Arrays.asList(
-            OutputMode.AUTO_SUBDIRECTORY.getCode(),
-            OutputMode.CURRENT_DIRECTORY.getCode(),
-            OutputMode.SPECIFIED_DIRECTORY.getCode()
-        );
+    private java.util.List<EnumOptionDTO> getOutputModeOptions() {
+        java.util.List<EnumOptionDTO> options = new java.util.ArrayList<>();
+        for (OutputMode mode : OutputMode.values()) {
+            EnumOptionDTO option = new EnumOptionDTO();
+            option.setValue(mode.getCode());
+            option.setLabel(mode.getNameZh());
+            option.setNameEn(mode.getNameEn());
+            option.setDescriptionZh(mode.getDescriptionZh());
+            option.setDescriptionEn(mode.getDescriptionEn());
+            options.add(option);
+        }
+        return options;
     }
 }

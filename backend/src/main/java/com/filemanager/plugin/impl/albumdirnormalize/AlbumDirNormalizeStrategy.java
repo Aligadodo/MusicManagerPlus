@@ -1,6 +1,7 @@
 package com.filemanager.plugin.impl.albumdirnormalize;
 
 import com.filemanager.domain.dto.StrategyConfigDTO;
+import com.filemanager.domain.dto.EnumOptionDTO;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
 import com.filemanager.plugin.impl.albumdirnormalize.enums.DirectoryTemplate;
 
@@ -32,7 +33,7 @@ public class AlbumDirNormalizeStrategy extends AbstractConfigurableStrategy {
 
     @Override
     protected void initConfigFields() {
-        addConfigField("template", "目录命名模板", "select", (Object) DirectoryTemplate.ARTIST_YEAR_ALBUM.getCode(), 
+        addEnumConfigField("template", "目录命名模板", "select", (Object) DirectoryTemplate.ARTIST_YEAR_ALBUM.getCode(), 
             "专辑目录的命名模板", true, 
             getDirectoryTemplateOptions());
         addConfigField("customTemplate", "自定义模板", "string", (Object) "", 
@@ -60,16 +61,17 @@ public class AlbumDirNormalizeStrategy extends AbstractConfigurableStrategy {
         setConfigValue(config, "validateAlbumInfo", (Object) true);
     }
     
-    private java.util.List<String> getDirectoryTemplateOptions() {
-        return java.util.Arrays.asList(
-            DirectoryTemplate.ARTIST_YEAR_ALBUM.getCode(),
-            DirectoryTemplate.YEAR_ARTIST_ALBUM.getCode(),
-            DirectoryTemplate.ARTIST_ALBUM_YEAR.getCode(),
-            DirectoryTemplate.YEAR_ALBUM_ARTIST.getCode(),
-            DirectoryTemplate.ALBUM_ARTIST_YEAR.getCode(),
-            DirectoryTemplate.ARTIST_ALBUM.getCode(),
-            DirectoryTemplate.ALBUM_YEAR.getCode(),
-            DirectoryTemplate.CUSTOM.getCode()
-        );
+    private java.util.List<EnumOptionDTO> getDirectoryTemplateOptions() {
+        java.util.List<EnumOptionDTO> options = new java.util.ArrayList<>();
+        for (DirectoryTemplate template : DirectoryTemplate.values()) {
+            EnumOptionDTO option = new EnumOptionDTO();
+            option.setValue(template.getCode());
+            option.setLabel(template.getNameZh());
+            option.setNameEn(template.getNameEn());
+            option.setDescriptionZh(template.getDescriptionZh());
+            option.setDescriptionEn(template.getDescriptionEn());
+            options.add(option);
+        }
+        return options;
     }
 }

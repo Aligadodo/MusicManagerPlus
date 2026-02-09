@@ -1,6 +1,7 @@
 package com.filemanager.plugin.impl.advancedrename;
 
 import com.filemanager.domain.dto.StrategyConfigDTO;
+import com.filemanager.domain.dto.EnumOptionDTO;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
 import com.filemanager.plugin.impl.advancedrename.enums.CrossDriveMode;
 import com.filemanager.plugin.impl.advancedrename.enums.ProcessScope;
@@ -36,10 +37,10 @@ public class AdvancedRenameStrategy extends AbstractConfigurableStrategy {
 
     @Override
     protected void initConfigFields() {
-        addConfigField("crossDriveMode", "跨盘动作", "select", (Object) CrossDriveMode.MOVE.getCode(), 
+        addEnumConfigField("crossDriveMode", "跨盘动作", "select", (Object) CrossDriveMode.MOVE.getCode(), 
             "跨盘操作时的动作", false, 
             getCrossDriveModeOptions());
-        addConfigField("processScope", "处理范围", "select", (Object) ProcessScope.ALL.getCode(), 
+        addEnumConfigField("processScope", "处理范围", "select", (Object) ProcessScope.ALL.getCode(), 
             "处理的文件类型范围", false, 
             getProcessScopeOptions());
         addConfigField("rules", "重命名规则", "list", (Object) new java.util.ArrayList<>(), 
@@ -53,18 +54,31 @@ public class AdvancedRenameStrategy extends AbstractConfigurableStrategy {
         setConfigValue(config, "rules", (Object) new java.util.ArrayList<>());
     }
     
-    private List<String> getCrossDriveModeOptions() {
-        return Arrays.asList(
-            CrossDriveMode.MOVE.getCode(),
-            CrossDriveMode.COPY.getCode()
-        );
+    private java.util.List<EnumOptionDTO> getCrossDriveModeOptions() {
+        java.util.List<EnumOptionDTO> options = new java.util.ArrayList<>();
+        for (CrossDriveMode mode : CrossDriveMode.values()) {
+            EnumOptionDTO option = new EnumOptionDTO();
+            option.setValue(mode.getCode());
+            option.setLabel(mode.getNameZh());
+            option.setNameEn(mode.getNameEn());
+            option.setDescriptionZh(mode.getDescriptionZh());
+            option.setDescriptionEn(mode.getDescriptionEn());
+            options.add(option);
+        }
+        return options;
     }
     
-    private List<String> getProcessScopeOptions() {
-        return Arrays.asList(
-            ProcessScope.FILES_ONLY.getCode(),
-            ProcessScope.DIRECTORIES_ONLY.getCode(),
-            ProcessScope.ALL.getCode()
-        );
+    private java.util.List<EnumOptionDTO> getProcessScopeOptions() {
+        java.util.List<EnumOptionDTO> options = new java.util.ArrayList<>();
+        for (ProcessScope scope : ProcessScope.values()) {
+            EnumOptionDTO option = new EnumOptionDTO();
+            option.setValue(scope.getCode());
+            option.setLabel(scope.getNameZh());
+            option.setNameEn(scope.getNameEn());
+            option.setDescriptionZh(scope.getDescriptionZh());
+            option.setDescriptionEn(scope.getDescriptionEn());
+            options.add(option);
+        }
+        return options;
     }
 }

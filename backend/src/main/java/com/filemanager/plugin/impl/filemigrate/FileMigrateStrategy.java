@@ -1,6 +1,7 @@
 package com.filemanager.plugin.impl.filemigrate;
 
 import com.filemanager.domain.dto.StrategyConfigDTO;
+import com.filemanager.domain.dto.EnumOptionDTO;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
 import com.filemanager.plugin.impl.audioconverter.enums.OutputDirMode;
 import com.filemanager.plugin.impl.filemigrate.enums.OperationMode;
@@ -39,15 +40,15 @@ public class FileMigrateStrategy extends AbstractConfigurableStrategy {
 
     @Override
     protected void initConfigFields() {
-        addConfigField("operationMode", "操作模式", "select", (Object) OperationMode.MOVE.getCode(), 
+        addEnumConfigField("operationMode", "操作模式", "select", (Object) OperationMode.MOVE.getCode(), 
             "文件的操作方式", true, 
             getOperationModeOptions());
-        addConfigField("outputDirMode", "输出目录模式", "select", (Object) OutputDirMode.SUBDIRECTORY.getCode(), 
+        addEnumConfigField("outputDirMode", "输出目录模式", "select", (Object) OutputDirMode.SUBDIRECTORY.getCode(), 
             "输出目录模式", true, 
             getOutputDirModeOptions());
         addConfigField("outputPath", "输出路径", "directory", (Object) "Archive", 
             "目标路径", true);
-        addConfigField("scope", "生效范围", "select", (Object) ScopeMode.ALL.getCode(), 
+        addEnumConfigField("scope", "生效范围", "select", (Object) ScopeMode.ALL.getCode(), 
             "文件处理的生效范围", false, 
             getScopeModeOptions());
         addConfigField("depth", "深度值", "number", (Object) 0, 
@@ -101,26 +102,45 @@ public class FileMigrateStrategy extends AbstractConfigurableStrategy {
         setConfigValue(config, "audioSpecial", (Object) true);
     }
     
-    private java.util.List<String> getOperationModeOptions() {
-        return java.util.Arrays.asList(
-            OperationMode.MOVE.getCode(),
-            OperationMode.COPY.getCode()
-        );
+    private java.util.List<EnumOptionDTO> getOperationModeOptions() {
+        java.util.List<EnumOptionDTO> options = new java.util.ArrayList<>();
+        for (OperationMode mode : OperationMode.values()) {
+            EnumOptionDTO option = new EnumOptionDTO();
+            option.setValue(mode.getCode());
+            option.setLabel(mode.getNameZh());
+            option.setNameEn(mode.getNameEn());
+            option.setDescriptionZh(mode.getDescriptionZh());
+            option.setDescriptionEn(mode.getDescriptionEn());
+            options.add(option);
+        }
+        return options;
     }
     
-    private java.util.List<String> getOutputDirModeOptions() {
-        return java.util.Arrays.asList(
-            OutputDirMode.SUBDIRECTORY.getCode(),
-            OutputDirMode.SPECIFIED_DIR.getCode(),
-            OutputDirMode.ROOT_DIR.getCode()
-        );
+    private java.util.List<EnumOptionDTO> getOutputDirModeOptions() {
+        java.util.List<EnumOptionDTO> options = new java.util.ArrayList<>();
+        for (OutputDirMode mode : OutputDirMode.values()) {
+            EnumOptionDTO option = new EnumOptionDTO();
+            option.setValue(mode.getCode());
+            option.setLabel(mode.getNameZh());
+            option.setNameEn(mode.getNameEn());
+            option.setDescriptionZh(mode.getDescriptionZh());
+            option.setDescriptionEn(mode.getDescriptionEn());
+            options.add(option);
+        }
+        return options;
     }
     
-    private java.util.List<String> getScopeModeOptions() {
-        return java.util.Arrays.asList(
-            ScopeMode.ALL.getCode(),
-            ScopeMode.CURRENT_DIRECTORY.getCode(),
-            ScopeMode.SPECIFIED_DEPTH.getCode()
-        );
+    private java.util.List<EnumOptionDTO> getScopeModeOptions() {
+        java.util.List<EnumOptionDTO> options = new java.util.ArrayList<>();
+        for (ScopeMode mode : ScopeMode.values()) {
+            EnumOptionDTO option = new EnumOptionDTO();
+            option.setValue(mode.getCode());
+            option.setLabel(mode.getNameZh());
+            option.setNameEn(mode.getNameEn());
+            option.setDescriptionZh(mode.getDescriptionZh());
+            option.setDescriptionEn(mode.getDescriptionEn());
+            options.add(option);
+        }
+        return options;
     }
 }

@@ -1,6 +1,7 @@
 package com.filemanager.plugin.impl.cuesplitter;
 
 import com.filemanager.domain.dto.StrategyConfigDTO;
+import com.filemanager.domain.dto.EnumOptionDTO;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
 import com.filemanager.plugin.impl.audioconverter.enums.AudioFormat;
 import com.filemanager.plugin.impl.audioconverter.enums.Channels;
@@ -36,18 +37,18 @@ public class CueSplitterStrategy extends AbstractConfigurableStrategy {
 
     @Override
     protected void initConfigFields() {
-        addConfigField("targetFormat", "目标格式", "select", (Object) AudioFormat.WAV_CD_STANDARD.getCode(), 
+        addEnumConfigField("targetFormat", "目标格式", "select", (Object) AudioFormat.WAV_CD_STANDARD.getCode(), 
             "转换后的音频文件格式", true, 
             getAudioFormatOptions());
-        addConfigField("outputDirMode", "输出目录模式", "select", (Object) OutputDirMode.SUBDIRECTORY.getCode(), 
+        addEnumConfigField("outputDirMode", "输出目录模式", "select", (Object) OutputDirMode.SUBDIRECTORY.getCode(), 
             "输出目录模式", true, 
             getOutputDirModeOptions());
         addConfigField("outputPath", "输出路径", "directory", (Object) "Split - WAV", 
             "转换后文件的输出路径", true);
-        addConfigField("sampleRate", "采样率", "select", (Object) SampleRate.SR_44100.getCode(), 
+        addEnumConfigField("sampleRate", "采样率", "select", (Object) SampleRate.SR_44100.getCode(), 
             "转换后的音频采样率", false, 
             getSampleRateOptions());
-        addConfigField("channels", "声道数", "select", (Object) Channels.STEREO.getCode(), 
+        addEnumConfigField("channels", "声道数", "select", (Object) Channels.STEREO.getCode(), 
             "转换后的音频声道数", false, 
             getChannelsOptions());
         addConfigField("overwrite", "强制覆盖", "boolean", (Object) false, 
@@ -70,7 +71,7 @@ public class CueSplitterStrategy extends AbstractConfigurableStrategy {
             "忽略原始文件标签，强制用文件名重构元数据", false);
         addConfigField("autoFormatFilename", "自动格式化目标文件名", "boolean", (Object) true, 
             "自动将目标文件名转换为简体中文并去除首尾空格", false);
-        addConfigField("afterSplitAction", "切分后操作", "select", (Object) AfterSplitAction.DO_NOTHING.getCode(), 
+        addEnumConfigField("afterSplitAction", "切分后操作", "select", (Object) AfterSplitAction.DO_NOTHING.getCode(), 
             "切分完成后对原始文件的处理方式", false, 
             getAfterSplitActionOptions());
         addConfigField("enableArchive", "启用归档目录", "boolean", (Object) false, 
@@ -101,51 +102,73 @@ public class CueSplitterStrategy extends AbstractConfigurableStrategy {
         setConfigValue(config, "archiveDir", (Object) "");
     }
     
-    private java.util.List<String> getAudioFormatOptions() {
-        return java.util.Arrays.asList(
-            AudioFormat.WAV_CD_STANDARD.getCode(),
-            AudioFormat.FLAC.getCode(),
-            AudioFormat.WAV.getCode(),
-            AudioFormat.MP3.getCode(),
-            AudioFormat.ALAC.getCode(),
-            AudioFormat.AAC.getCode(),
-            AudioFormat.OGG.getCode()
-        );
+    private java.util.List<EnumOptionDTO> getAudioFormatOptions() {
+        java.util.List<EnumOptionDTO> options = new java.util.ArrayList<>();
+        for (AudioFormat format : AudioFormat.values()) {
+            EnumOptionDTO option = new EnumOptionDTO();
+            option.setValue(format.getCode());
+            option.setLabel(format.getNameZh());
+            option.setNameEn(format.getNameEn());
+            option.setDescriptionZh(format.getDescriptionZh());
+            option.setDescriptionEn(format.getDescriptionEn());
+            options.add(option);
+        }
+        return options;
     }
     
-    private java.util.List<String> getOutputDirModeOptions() {
-        return java.util.Arrays.asList(
-            OutputDirMode.SUBDIRECTORY.getCode(),
-            OutputDirMode.SPECIFIED_DIR.getCode(),
-            OutputDirMode.ROOT_DIR.getCode()
-        );
+    private java.util.List<EnumOptionDTO> getOutputDirModeOptions() {
+        java.util.List<EnumOptionDTO> options = new java.util.ArrayList<>();
+        for (OutputDirMode mode : OutputDirMode.values()) {
+            EnumOptionDTO option = new EnumOptionDTO();
+            option.setValue(mode.getCode());
+            option.setLabel(mode.getNameZh());
+            option.setNameEn(mode.getNameEn());
+            option.setDescriptionZh(mode.getDescriptionZh());
+            option.setDescriptionEn(mode.getDescriptionEn());
+            options.add(option);
+        }
+        return options;
     }
     
-    private java.util.List<String> getSampleRateOptions() {
-        return java.util.Arrays.asList(
-            SampleRate.ORIGINAL.getCode(),
-            SampleRate.SR_44100.getCode(),
-            SampleRate.SR_48000.getCode(),
-            SampleRate.SR_88200.getCode(),
-            SampleRate.SR_96000.getCode(),
-            SampleRate.SR_192000.getCode()
-        );
+    private java.util.List<EnumOptionDTO> getSampleRateOptions() {
+        java.util.List<EnumOptionDTO> options = new java.util.ArrayList<>();
+        for (SampleRate rate : SampleRate.values()) {
+            EnumOptionDTO option = new EnumOptionDTO();
+            option.setValue(rate.getCode());
+            option.setLabel(rate.getNameZh());
+            option.setNameEn(rate.getNameEn());
+            option.setDescriptionZh(rate.getDescriptionZh());
+            option.setDescriptionEn(rate.getDescriptionEn());
+            options.add(option);
+        }
+        return options;
     }
     
-    private java.util.List<String> getChannelsOptions() {
-        return java.util.Arrays.asList(
-            Channels.ORIGINAL.getCode(),
-            Channels.MONO.getCode(),
-            Channels.STEREO.getCode(),
-            Channels.SURROUND_5_1.getCode()
-        );
+    private java.util.List<EnumOptionDTO> getChannelsOptions() {
+        java.util.List<EnumOptionDTO> options = new java.util.ArrayList<>();
+        for (Channels channels : Channels.values()) {
+            EnumOptionDTO option = new EnumOptionDTO();
+            option.setValue(channels.getCode());
+            option.setLabel(channels.getNameZh());
+            option.setNameEn(channels.getNameEn());
+            option.setDescriptionZh(channels.getDescriptionZh());
+            option.setDescriptionEn(channels.getDescriptionEn());
+            options.add(option);
+        }
+        return options;
     }
     
-    private java.util.List<String> getAfterSplitActionOptions() {
-        return java.util.Arrays.asList(
-            AfterSplitAction.DO_NOTHING.getCode(),
-            AfterSplitAction.DELETE_SOURCE.getCode(),
-            AfterSplitAction.ARCHIVE_SOURCE.getCode()
-        );
+    private java.util.List<EnumOptionDTO> getAfterSplitActionOptions() {
+        java.util.List<EnumOptionDTO> options = new java.util.ArrayList<>();
+        for (AfterSplitAction action : AfterSplitAction.values()) {
+            EnumOptionDTO option = new EnumOptionDTO();
+            option.setValue(action.getCode());
+            option.setLabel(action.getNameZh());
+            option.setNameEn(action.getNameEn());
+            option.setDescriptionZh(action.getDescriptionZh());
+            option.setDescriptionEn(action.getDescriptionEn());
+            options.add(option);
+        }
+        return options;
     }
 }

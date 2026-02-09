@@ -17,8 +17,8 @@ class EnumOption {
 
   factory EnumOption.fromJson(Map<String, dynamic> json) {
     return EnumOption(
-      code: json['code'] as String? ?? '',
-      nameZh: json['nameZh'] as String? ?? '',
+      code: json['code'] as String? ?? json['value'] as String? ?? '',
+      nameZh: json['nameZh'] as String? ?? json['label'] as String? ?? '',
       nameEn: json['nameEn'] as String? ?? '',
       descriptionZh: json['descriptionZh'] as String? ?? '',
       descriptionEn: json['descriptionEn'] as String? ?? '',

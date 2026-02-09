@@ -1,8 +1,13 @@
 package com.filemanager.plugin.impl;
 
 import com.filemanager.domain.dto.StrategyConfigDTO;
+import com.filemanager.domain.dto.EnumOptionDTO;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
-import java.util.Arrays;
+import com.filemanager.plugin.impl.audioconverter.enums.AudioFormat;
+import com.filemanager.plugin.impl.audioconverter.enums.Channels;
+import com.filemanager.plugin.impl.audioconverter.enums.OutputDirMode;
+import com.filemanager.plugin.impl.audioconverter.enums.SampleRate;
+import java.util.ArrayList;
 
 public class AudioConverterStrategy extends AbstractConfigurableStrategy {
 
@@ -32,20 +37,20 @@ public class AudioConverterStrategy extends AbstractConfigurableStrategy {
 
     @Override
     protected void initConfigFields() {
-        addConfigField("targetFormat", "目标格式", "select", (Object) "WAV (CD标准)", 
+        addEnumConfigField("targetFormat", "目标格式", "select", (Object) AudioFormat.WAV_CD_STANDARD.getCode(), 
             "转换后的音频文件格式", true, 
-            Arrays.asList("WAV (CD标准)", "FLAC", "WAV", "MP3", "ALAC", "AAC", "OGG"));
-        addConfigField("outputDirMode", "输出目录模式", "select", (Object) "子目录", 
+            getAudioFormatOptions());
+        addEnumConfigField("outputDirMode", "输出目录模式", "select", (Object) OutputDirMode.SUBDIRECTORY.getCode(), 
             "输出目录模式", true, 
-            Arrays.asList("子目录", "指定目录", "根目录"));
+            getOutputDirModeOptions());
         addConfigField("outputPath", "输出路径", "directory", (Object) "Convert - WAV", 
             "转换后文件的输出路径", true);
-        addConfigField("sampleRate", "采样率", "select", (Object) "44100", 
+        addEnumConfigField("sampleRate", "采样率", "select", (Object) SampleRate.SR_44100.getCode(), 
             "转换后的音频采样率", false, 
-            Arrays.asList("保持原样 (Original)", "44100", "48000", "88200", "96000", "192000"));
-        addConfigField("channels", "声道数", "select", (Object) "2 (Stereo)", 
+            getSampleRateOptions());
+        addEnumConfigField("channels", "声道数", "select", (Object) Channels.STEREO.getCode(), 
             "转换后的音频声道数", false, 
-            Arrays.asList("保持原样 (Original)", "1 (Mono)", "2 (Stereo)", "6 (5.1)"));
+            getChannelsOptions());
         addConfigField("overwrite", "强制覆盖", "boolean", (Object) false, 
             "是否覆盖已存在的目标文件", false);
         addConfigField("ffmpegThreads", "FFmpeg线程数", "number", (Object) 4, 
@@ -72,11 +77,11 @@ public class AudioConverterStrategy extends AbstractConfigurableStrategy {
 
     @Override
     protected void initDefaultConfigValues(StrategyConfigDTO config) {
-        setConfigValue(config, "targetFormat", (Object) "WAV (CD标准)");
-        setConfigValue(config, "outputDirMode", (Object) "子目录");
+        setConfigValue(config, "targetFormat", (Object) AudioFormat.WAV_CD_STANDARD.getCode());
+        setConfigValue(config, "outputDirMode", (Object) OutputDirMode.SUBDIRECTORY.getCode());
         setConfigValue(config, "outputPath", (Object) "Convert - WAV");
-        setConfigValue(config, "sampleRate", (Object) "44100");
-        setConfigValue(config, "channels", (Object) "2 (Stereo)");
+        setConfigValue(config, "sampleRate", (Object) SampleRate.SR_44100.getCode());
+        setConfigValue(config, "channels", (Object) Channels.STEREO.getCode());
         setConfigValue(config, "overwrite", (Object) false);
         setConfigValue(config, "ffmpegThreads", (Object) 4);
         setConfigValue(config, "ffmpegPath", (Object) "ffmpeg");
@@ -88,5 +93,61 @@ public class AudioConverterStrategy extends AbstractConfigurableStrategy {
         setConfigValue(config, "forceFilenameMeta", (Object) false);
         setConfigValue(config, "autoFormatFilename", (Object) true);
         setConfigValue(config, "skipCueTracks", (Object) true);
+    }
+    
+    private java.util.List<EnumOptionDTO> getAudioFormatOptions() {
+        java.util.List<EnumOptionDTO> options = new java.util.ArrayList<>();
+        for (AudioFormat format : AudioFormat.values()) {
+            EnumOptionDTO option = new EnumOptionDTO();
+            option.setValue(format.getCode());
+            option.setLabel(format.getNameZh());
+            option.setNameEn(format.getNameEn());
+            option.setDescriptionZh(format.getDescriptionZh());
+            option.setDescriptionEn(format.getDescriptionEn());
+            options.add(option);
+        }
+        return options;
+    }
+    
+    private java.util.List<EnumOptionDTO> getOutputDirModeOptions() {
+        java.util.List<EnumOptionDTO> options = new java.util.ArrayList<>();
+        for (OutputDirMode mode : OutputDirMode.values()) {
+            EnumOptionDTO option = new EnumOptionDTO();
+            option.setValue(mode.getCode());
+            option.setLabel(mode.getNameZh());
+            option.setNameEn(mode.getNameEn());
+            option.setDescriptionZh(mode.getDescriptionZh());
+            option.setDescriptionEn(mode.getDescriptionEn());
+            options.add(option);
+        }
+        return options;
+    }
+    
+    private java.util.List<EnumOptionDTO> getSampleRateOptions() {
+        java.util.List<EnumOptionDTO> options = new java.util.ArrayList<>();
+        for (SampleRate rate : SampleRate.values()) {
+            EnumOptionDTO option = new EnumOptionDTO();
+            option.setValue(rate.getCode());
+            option.setLabel(rate.getNameZh());
+            option.setNameEn(rate.getNameEn());
+            option.setDescriptionZh(rate.getDescriptionZh());
+            option.setDescriptionEn(rate.getDescriptionEn());
+            options.add(option);
+        }
+        return options;
+    }
+    
+    private java.util.List<EnumOptionDTO> getChannelsOptions() {
+        java.util.List<EnumOptionDTO> options = new java.util.ArrayList<>();
+        for (Channels channels : Channels.values()) {
+            EnumOptionDTO option = new EnumOptionDTO();
+            option.setValue(channels.getCode());
+            option.setLabel(channels.getNameZh());
+            option.setNameEn(channels.getNameEn());
+            option.setDescriptionZh(channels.getDescriptionZh());
+            option.setDescriptionEn(channels.getDescriptionEn());
+            options.add(option);
+        }
+        return options;
     }
 }

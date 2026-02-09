@@ -1,6 +1,7 @@
 package com.filemanager.plugin.impl.filecleanup;
 
 import com.filemanager.domain.dto.StrategyConfigDTO;
+import com.filemanager.domain.dto.EnumOptionDTO;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
 import com.filemanager.plugin.impl.filecleanup.enums.CleanupMode;
 import com.filemanager.plugin.impl.filecleanup.enums.DeleteMethod;
@@ -34,10 +35,10 @@ public class FileCleanupStrategy extends AbstractConfigurableStrategy {
 
     @Override
     protected void initConfigFields() {
-        addConfigField("mode", "清理模式", "select", (Object) CleanupMode.FILE_DUPLICATE.getCode(), 
+        addEnumConfigField("mode", "清理模式", "select", (Object) CleanupMode.FILE_DUPLICATE.getCode(), 
             "清理的逻辑规则", true, 
             getCleanupModeOptions());
-        addConfigField("method", "删除方式", "select", (Object) DeleteMethod.PSEUDO_DELETE.getCode(), 
+        addEnumConfigField("method", "删除方式", "select", (Object) DeleteMethod.PSEUDO_DELETE.getCode(), 
             "删除的方式", true, 
             getDeleteMethodOptions());
         addConfigField("trashPath", "回收站路径", "string", (Object) ".EchoTrash", 
@@ -54,7 +55,7 @@ public class FileCleanupStrategy extends AbstractConfigurableStrategy {
             "将文件名转换为大写后进行比较", false);
         addConfigField("preprocessSimplified", "文件名转简体中文", "boolean", (Object) false, 
             "将文件名中的繁体中文转换为简体中文后进行比较", false);
-        addConfigField("sizeRange", "文件大小范围", "select", (Object) FileSizeRange.ALL.getCode(), 
+        addEnumConfigField("sizeRange", "文件大小范围", "select", (Object) FileSizeRange.ALL.getCode(), 
             "要处理的文件大小范围", false, 
             getFileSizeRangeOptions());
         addConfigField("audioSpecial", "音频文件特殊处理", "boolean", (Object) true, 
@@ -76,34 +77,45 @@ public class FileCleanupStrategy extends AbstractConfigurableStrategy {
         setConfigValue(config, "audioSpecial", (Object) true);
     }
     
-    private java.util.List<String> getCleanupModeOptions() {
-        return java.util.Arrays.asList(
-            CleanupMode.FILE_DUPLICATE.getCode(),
-            CleanupMode.DIRECTORY_DUPLICATE.getCode(),
-            CleanupMode.EMPTY_DIRECTORY.getCode(),
-            CleanupMode.DIRECT_CLEANUP.getCode()
-        );
+    private java.util.List<EnumOptionDTO> getCleanupModeOptions() {
+        java.util.List<EnumOptionDTO> options = new java.util.ArrayList<>();
+        for (CleanupMode mode : CleanupMode.values()) {
+            EnumOptionDTO option = new EnumOptionDTO();
+            option.setValue(mode.getCode());
+            option.setLabel(mode.getNameZh());
+            option.setNameEn(mode.getNameEn());
+            option.setDescriptionZh(mode.getDescriptionZh());
+            option.setDescriptionEn(mode.getDescriptionEn());
+            options.add(option);
+        }
+        return options;
     }
     
-    private java.util.List<String> getDeleteMethodOptions() {
-        return java.util.Arrays.asList(
-            DeleteMethod.PSEUDO_DELETE.getCode(),
-            DeleteMethod.DIRECT_DELETE.getCode(),
-            DeleteMethod.ROLLBACK_DELETE.getCode()
-        );
+    private java.util.List<EnumOptionDTO> getDeleteMethodOptions() {
+        java.util.List<EnumOptionDTO> options = new java.util.ArrayList<>();
+        for (DeleteMethod method : DeleteMethod.values()) {
+            EnumOptionDTO option = new EnumOptionDTO();
+            option.setValue(method.getCode());
+            option.setLabel(method.getNameZh());
+            option.setNameEn(method.getNameEn());
+            option.setDescriptionZh(method.getDescriptionZh());
+            option.setDescriptionEn(method.getDescriptionEn());
+            options.add(option);
+        }
+        return options;
     }
     
-    private java.util.List<String> getFileSizeRangeOptions() {
-        return java.util.Arrays.asList(
-            FileSizeRange.ALL.getCode(),
-            FileSizeRange.LESS_THAN_1MB.getCode(),
-            FileSizeRange.LESS_THAN_10MB.getCode(),
-            FileSizeRange.LESS_THAN_100MB.getCode(),
-            FileSizeRange.LESS_THAN_1GB.getCode(),
-            FileSizeRange.GREATER_THAN_1MB.getCode(),
-            FileSizeRange.GREATER_THAN_10MB.getCode(),
-            FileSizeRange.GREATER_THAN_100MB.getCode(),
-            FileSizeRange.GREATER_THAN_1GB.getCode()
-        );
+    private java.util.List<EnumOptionDTO> getFileSizeRangeOptions() {
+        java.util.List<EnumOptionDTO> options = new java.util.ArrayList<>();
+        for (FileSizeRange range : FileSizeRange.values()) {
+            EnumOptionDTO option = new EnumOptionDTO();
+            option.setValue(range.getCode());
+            option.setLabel(range.getNameZh());
+            option.setNameEn(range.getNameEn());
+            option.setDescriptionZh(range.getDescriptionZh());
+            option.setDescriptionEn(range.getDescriptionEn());
+            options.add(option);
+        }
+        return options;
     }
 }

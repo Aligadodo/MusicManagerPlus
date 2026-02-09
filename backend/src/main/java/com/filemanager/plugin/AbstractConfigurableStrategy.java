@@ -139,4 +139,20 @@ public abstract class AbstractConfigurableStrategy implements StrategyConfigurab
         field.setOptions(options);
         configFields.add(field);
     }
+
+    /**
+     * 添加带枚举选项的配置字段
+     * @param name 字段名称
+     * @param label 字段标签
+     * @param type 字段类型
+     * @param defaultValue 默认值
+     * @param description 字段描述
+     * @param required 是否必填
+     * @param enumOptions 枚举选项列表
+     */
+    public void addEnumConfigField(String name, String label, String type, Object defaultValue, String description, boolean required, List<com.filemanager.domain.dto.EnumOptionDTO> enumOptions) {
+        ConfigFieldDTO field = new ConfigFieldDTO(name, label, type, defaultValue, description, required);
+        field.setEnumOptions(enumOptions);
+        configFields.add(field);
+    }
 }

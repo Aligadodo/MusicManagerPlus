@@ -1,8 +1,11 @@
 package com.filemanager.plugin.impl;
 
 import com.filemanager.domain.dto.StrategyConfigDTO;
+import com.filemanager.domain.dto.EnumOptionDTO;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
-import java.util.Arrays;
+import com.filemanager.plugin.impl.enums.NcmOperationMode;
+import com.filemanager.plugin.impl.enums.NcmOutputFormat;
+import java.util.ArrayList;
 
 public class NcmIntegratedStrategy extends AbstractConfigurableStrategy {
 
@@ -32,20 +35,48 @@ public class NcmIntegratedStrategy extends AbstractConfigurableStrategy {
 
     @Override
     protected void initConfigFields() {
-        addConfigField("operationMode", "操作模式", "select", (Object) "转换", 
+        addEnumConfigField("operationMode", "操作模式", "select", (Object) NcmOperationMode.CONVERT.getCode(), 
             "操作模式", true, 
-            Arrays.asList("转换", "缓存转换", "歌词下载", "元数据修复"));
-        addConfigField("outputFormat", "输出格式", "select", (Object) "MP3", 
+            getOperationModeOptions());
+        addEnumConfigField("outputFormat", "输出格式", "select", (Object) NcmOutputFormat.MP3.getCode(), 
             "输出格式", true, 
-            Arrays.asList("MP3", "FLAC", "WAV"));
+            getOutputFormatOptions());
         addConfigField("outputDirectory", "输出目录", "directory", (Object) "", 
             "输出目录", false);
     }
 
     @Override
     protected void initDefaultConfigValues(StrategyConfigDTO config) {
-        setConfigValue(config, "operationMode", (Object) "转换");
-        setConfigValue(config, "outputFormat", (Object) "MP3");
+        setConfigValue(config, "operationMode", (Object) NcmOperationMode.CONVERT.getCode());
+        setConfigValue(config, "outputFormat", (Object) NcmOutputFormat.MP3.getCode());
         setConfigValue(config, "outputDirectory", (Object) "");
+    }
+    
+    private java.util.List<EnumOptionDTO> getOperationModeOptions() {
+        java.util.List<EnumOptionDTO> options = new java.util.ArrayList<>();
+        for (NcmOperationMode mode : NcmOperationMode.values()) {
+            EnumOptionDTO option = new EnumOptionDTO();
+            option.setValue(mode.getCode());
+            option.setLabel(mode.getNameZh());
+            option.setNameEn(mode.getNameEn());
+            option.setDescriptionZh(mode.getDescriptionZh());
+            option.setDescriptionEn(mode.getDescriptionEn());
+            options.add(option);
+        }
+        return options;
+    }
+    
+    private java.util.List<EnumOptionDTO> getOutputFormatOptions() {
+        java.util.List<EnumOptionDTO> options = new java.util.ArrayList<>();
+        for (NcmOutputFormat format : NcmOutputFormat.values()) {
+            EnumOptionDTO option = new EnumOptionDTO();
+            option.setValue(format.getCode());
+            option.setLabel(format.getNameZh());
+            option.setNameEn(format.getNameEn());
+            option.setDescriptionZh(format.getDescriptionZh());
+            option.setDescriptionEn(format.getDescriptionEn());
+            options.add(option);
+        }
+        return options;
     }
 }

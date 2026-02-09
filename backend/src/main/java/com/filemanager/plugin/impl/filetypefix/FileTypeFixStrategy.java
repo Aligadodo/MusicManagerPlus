@@ -1,6 +1,7 @@
 package com.filemanager.plugin.impl.filetypefix;
 
 import com.filemanager.domain.dto.StrategyConfigDTO;
+import com.filemanager.domain.dto.EnumOptionDTO;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
 import com.filemanager.plugin.impl.filetypefix.enums.TargetFormat;
 
@@ -32,7 +33,7 @@ public class FileTypeFixStrategy extends AbstractConfigurableStrategy {
 
     @Override
     protected void initConfigFields() {
-        addConfigField("targetFormat", "目标格式", "select", (Object) TargetFormat.AUTO_DETECT.getCode(), 
+        addEnumConfigField("targetFormat", "目标格式", "select", (Object) TargetFormat.AUTO_DETECT.getCode(), 
             "修复后的文件格式", true, 
             getTargetFormatOptions());
         addConfigField("keepOriginal", "保留原始文件", "boolean", (Object) true, 
@@ -48,14 +49,17 @@ public class FileTypeFixStrategy extends AbstractConfigurableStrategy {
         setConfigValue(config, "backupOriginal", (Object) true);
     }
     
-    private java.util.List<String> getTargetFormatOptions() {
-        return java.util.Arrays.asList(
-            TargetFormat.AUTO_DETECT.getCode(),
-            TargetFormat.WAV.getCode(),
-            TargetFormat.FLAC.getCode(),
-            TargetFormat.MP3.getCode(),
-            TargetFormat.AAC.getCode(),
-            TargetFormat.OGG.getCode()
-        );
+    private java.util.List<EnumOptionDTO> getTargetFormatOptions() {
+        java.util.List<EnumOptionDTO> options = new java.util.ArrayList<>();
+        for (TargetFormat format : TargetFormat.values()) {
+            EnumOptionDTO option = new EnumOptionDTO();
+            option.setValue(format.getCode());
+            option.setLabel(format.getNameZh());
+            option.setNameEn(format.getNameEn());
+            option.setDescriptionZh(format.getDescriptionZh());
+            option.setDescriptionEn(format.getDescriptionEn());
+            options.add(option);
+        }
+        return options;
     }
 }
