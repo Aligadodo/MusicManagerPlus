@@ -7,6 +7,7 @@ import com.filemanager.domain.entity.ChangeRecord;
 import com.filemanager.plugin.ExecutionContext;
 import com.filemanager.plugin.IPlugin;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,10 +38,15 @@ public class FileMigratePlugin implements IPlugin {
         config.setValue("operationMode", "MOVE");
         config.setValue("targetPath", "");
         config.setValue("pathMode", "absolute");
+        config.setValue("directoryTemplate", "Album/Artist");
+        config.setValue("customTemplate", "");
         config.setValue("scope", "all");
         config.setValue("duplicateStrategy", "skip");
         config.setValue("overwrite", false);
         config.setValue("preserveStructure", true);
+        config.setValue("validateMetadata", true);
+        config.setValue("generatePlaylist", false);
+        config.setValue("playlistFormat", "m3u");
         config.setParameters(getParameters());
         config.setPreconditionGroups(getDefaultPreconditionGroups());
         return config;
@@ -78,6 +84,25 @@ public class FileMigratePlugin implements IPlugin {
         pathModeParam.setRequired(true);
         pathModeParam.setOptions(new String[]{"absolute", "relative", "flat"});
         parameters.add(pathModeParam);
+        
+        PluginParameterDTO directoryTemplateParam = new PluginParameterDTO();
+        directoryTemplateParam.setName("directoryTemplate");
+        directoryTemplateParam.setLabel("目录模板");
+        directoryTemplateParam.setDescription("选择目录结构模板");
+        directoryTemplateParam.setType("select");
+        directoryTemplateParam.setDefaultValue("Album/Artist");
+        directoryTemplateParam.setRequired(false);
+        directoryTemplateParam.setOptions(DirectoryTemplate.getTemplateNames());
+        parameters.add(directoryTemplateParam);
+        
+        PluginParameterDTO customTemplateParam = new PluginParameterDTO();
+        customTemplateParam.setName("customTemplate");
+        customTemplateParam.setLabel("自定义模板");
+        customTemplateParam.setDescription("自定义目录模板，支持占位符如{artist}/{album}/{title}");
+        customTemplateParam.setType("text");
+        customTemplateParam.setDefaultValue("");
+        customTemplateParam.setRequired(false);
+        parameters.add(customTemplateParam);
         
         PluginParameterDTO scopeParam = new PluginParameterDTO();
         scopeParam.setName("scope");
@@ -117,6 +142,34 @@ public class FileMigratePlugin implements IPlugin {
         preserveStructureParam.setRequired(false);
         parameters.add(preserveStructureParam);
         
+        PluginParameterDTO validateMetadataParam = new PluginParameterDTO();
+        validateMetadataParam.setName("validateMetadata");
+        validateMetadataParam.setLabel("验证元数据");
+        validateMetadataParam.setDescription("是否验证文件元数据完整性");
+        validateMetadataParam.setType("boolean");
+        validateMetadataParam.setDefaultValue(true);
+        validateMetadataParam.setRequired(false);
+        parameters.add(validateMetadataParam);
+        
+        PluginParameterDTO generatePlaylistParam = new PluginParameterDTO();
+        generatePlaylistParam.setName("generatePlaylist");
+        generatePlaylistParam.setLabel("生成播放列表");
+        generatePlaylistParam.setDescription("是否生成播放列表文件");
+        generatePlaylistParam.setType("boolean");
+        generatePlaylistParam.setDefaultValue(false);
+        generatePlaylistParam.setRequired(false);
+        parameters.add(generatePlaylistParam);
+        
+        PluginParameterDTO playlistFormatParam = new PluginParameterDTO();
+        playlistFormatParam.setName("playlistFormat");
+        playlistFormatParam.setLabel("播放列表格式");
+        playlistFormatParam.setDescription("播放列表文件的格式");
+        playlistFormatParam.setType("select");
+        playlistFormatParam.setDefaultValue("m3u");
+        playlistFormatParam.setRequired(false);
+        playlistFormatParam.setOptions(new String[]{"m3u", "m3u8", "pls"});
+        parameters.add(playlistFormatParam);
+        
         return parameters;
     }
 
@@ -152,6 +205,8 @@ public class FileMigratePlugin implements IPlugin {
     private String getMigratedPath(String filePath, PluginConfigDTO config) {
         String targetPath = (String) config.getValue("targetPath", "");
         String pathMode = (String) config.getValue("pathMode", "absolute");
+        String directoryTemplate = (String) config.getValue("directoryTemplate", "Album/Artist");
+        String customTemplate = (String) config.getValue("customTemplate", "");
         boolean preserveStructure = (Boolean) config.getValue("preserveStructure", true);
         
         String fileName = filePath.substring(filePath.lastIndexOf('/') + 1);
@@ -162,6 +217,15 @@ public class FileMigratePlugin implements IPlugin {
             String dir = filePath.substring(0, filePath.lastIndexOf('/'));
             String relativePath = dir.substring(dir.indexOf('/') + 1);
             return targetPath + "/" + relativePath + "/" + fileName;
+        } else if ("template".equals(pathMode)) {
+            String template = DirectoryTemplate.getTemplateByName(directoryTemplate);
+            if (!customTemplate.isEmpty()) {
+                template = customTemplate;
+            }
+            
+            DirectoryTemplate dirTemplate = new DirectoryTemplate(template);
+            String generatedPath = dirTemplate.generatePath(new File(filePath));
+            return targetPath + "/" + generatedPath;
         } else {
             return targetPath + "/" + fileName;
         }

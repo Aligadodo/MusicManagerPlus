@@ -29,6 +29,12 @@ public class FileCleanupPlugin implements IPlugin {
     private static final String METHOD_DIRECT_DELETE = "direct_delete";
     private static final String METHOD_PSEUDO_DELETE = "pseudo_delete";
     
+    private static final String COMPARISON_METHOD_NAME = "name";
+    private static final String COMPARISON_METHOD_SIZE = "size";
+    private static final String COMPARISON_METHOD_MD5 = "md5";
+    private static final String COMPARISON_METHOD_SHA1 = "sha1";
+    private static final String COMPARISON_METHOD_SHA256 = "sha256";
+    
     private static final Set<String> EXT_AUDIO = new HashSet<>(Arrays.asList("mp3", "flac", "wav", "aac", "m4a", "ogg", "wma", "ape", "alac", "aiff", "dsf", "dff"));
     private static final Set<String> EXT_VIDEO = new HashSet<>(Arrays.asList("mp4", "mkv", "avi", "mov", "wmv", "flv", "m4v", "mpg"));
     private static final Set<String> EXT_IMAGE = new HashSet<>(Arrays.asList("jpg", "jpeg", "png", "bmp", "gif", "webp", "tiff"));
@@ -64,6 +70,7 @@ public class FileCleanupPlugin implements IPlugin {
         config.setValue("keepLargest", true);
         config.setValue("keepEarliest", true);
         config.setValue("keepExt", "wav");
+        config.setValue("comparisonMethod", COMPARISON_METHOD_MD5);
         config.setValue("preprocessLower", true);
         config.setValue("preprocessUpper", false);
         config.setValue("preprocessSimplified", false);
@@ -155,6 +162,24 @@ public class FileCleanupPlugin implements IPlugin {
             .build();
         parameters.add(keepExtParam);
         
+        PluginParameterDTO comparisonMethodParam = new PluginParameterDTO.Builder()
+            .name("comparisonMethod")
+            .label("比较方法")
+            .description("选择文件比较方法")
+            .type("select")
+            .defaultValue(COMPARISON_METHOD_MD5)
+            .required(false)
+            .addVisibilityCondition("cleanupMode", MODE_DEDUP_FILES)
+            .options(new String[]{
+                COMPARISON_METHOD_NAME,
+                COMPARISON_METHOD_SIZE,
+                COMPARISON_METHOD_MD5,
+                COMPARISON_METHOD_SHA1,
+                COMPARISON_METHOD_SHA256
+            })
+            .build();
+        parameters.add(comparisonMethodParam);
+        
         PluginParameterDTO preprocessLowerParam = new PluginParameterDTO.Builder()
             .name("preprocessLower")
             .label("文件名转小写")
@@ -245,6 +270,7 @@ public class FileCleanupPlugin implements IPlugin {
         boolean keepLargest = (Boolean) config.getValue("keepLargest", true);
         boolean keepEarliest = (Boolean) config.getValue("keepEarliest", true);
         String keepExt = (String) config.getValue("keepExt", "wav");
+        String comparisonMethod = (String) config.getValue("comparisonMethod", COMPARISON_METHOD_MD5);
         boolean preprocessLower = (Boolean) config.getValue("preprocessLower", true);
         boolean preprocessUpper = (Boolean) config.getValue("preprocessUpper", false);
         boolean preprocessSimplified = (Boolean) config.getValue("preprocessSimplified", false);
@@ -259,7 +285,7 @@ public class FileCleanupPlugin implements IPlugin {
             }
             
             List<ChangeRecord> fileChanges = analyzeFile(file, cleanupMode, deleteMethod, trashPath, 
-                keepLargest, keepEarliest, keepExt, preprocessLower, preprocessUpper, 
+                keepLargest, keepEarliest, keepExt, comparisonMethod, preprocessLower, preprocessUpper, 
                 preprocessSimplified, audioSpecial, minFileSizeKB, maxFileSizeKB);
             
             changes.addAll(fileChanges);
@@ -275,7 +301,7 @@ public class FileCleanupPlugin implements IPlugin {
 
     private List<ChangeRecord> analyzeFile(File file, String cleanupMode, String deleteMethod, 
             String trashPath, boolean keepLargest, boolean keepEarliest, String keepExt,
-            boolean preprocessLower, boolean preprocessUpper, boolean preprocessSimplified,
+            String comparisonMethod, boolean preprocessLower, boolean preprocessUpper, boolean preprocessSimplified,
             boolean audioSpecial, int minFileSizeKB, int maxFileSizeKB) {
         
         List<ChangeRecord> result = new ArrayList<>();
@@ -299,7 +325,7 @@ public class FileCleanupPlugin implements IPlugin {
             result.addAll(analyzeMergeNestedFolders(file, deleteMethod, trashPath));
         } else {
             result.addAll(analyzeDuplicateFiles(file, deleteMethod, trashPath, keepLargest, 
-                keepEarliest, keepExt, preprocessLower, preprocessUpper, preprocessSimplified, 
+                keepEarliest, keepExt, comparisonMethod, preprocessLower, preprocessUpper, preprocessSimplified, 
                 audioSpecial, minFileSizeKB, maxFileSizeKB));
         }
         
@@ -307,7 +333,7 @@ public class FileCleanupPlugin implements IPlugin {
     }
 
     private List<ChangeRecord> analyzeDuplicateFiles(File file, String deleteMethod, String trashPath,
-            boolean keepLargest, boolean keepEarliest, String keepExt,
+            boolean keepLargest, boolean keepEarliest, String keepExt, String comparisonMethod,
             boolean preprocessLower, boolean preprocessUpper, boolean preprocessSimplified,
             boolean audioSpecial, int minFileSizeKB, int maxFileSizeKB) {
         
@@ -328,13 +354,59 @@ public class FileCleanupPlugin implements IPlugin {
         
         Map<String, List<File>> nameGroups = new HashMap<>();
         
+        if (COMPARISON_METHOD_MD5.equals(comparisonMethod) || 
+            COMPARISON_METHOD_SHA1.equals(comparisonMethod) || 
+            COMPARISON_METHOD_SHA256.equals(comparisonMethod)) {
+            
+            Map<String, List<File>> hashGroups = new HashMap<>();
+            
+            for (File f : filteredFiles) {
+                String hash;
+                try {
+                    if (COMPARISON_METHOD_MD5.equals(comparisonMethod)) {
+                        hash = MD5Calculator.calculateMD5(f);
+                    } else if (COMPARISON_METHOD_SHA1.equals(comparisonMethod)) {
+                        hash = HashCalculator.calculateSHA1(f);
+                    } else {
+                        hash = HashCalculator.calculateSHA256(f);
+                    }
+                } catch (Exception e) {
+                    continue;
+                }
+                
+                hashGroups.computeIfAbsent(hash, k -> new ArrayList<>()).add(f);
+            }
+            
+            for (List<File> group : hashGroups.values()) {
+                if (group.size() < 2) {
+                    continue;
+                }
+                
+                File keeper = selectFileToKeep(group, keepLargest, keepEarliest, keepExt, audioSpecial);
+                
+                for (File f : group) {
+                    if (!f.equals(keeper)) {
+                        result.add(createDeleteRecord(f, "重复文件 (哈希相同): " + f.getName(), deleteMethod, trashPath));
+                    }
+                }
+            }
+            
+            return result;
+        }
+        
         for (File f : filteredFiles) {
             String name = f.getName();
             String coreName = extractCoreName(name);
             coreName = preprocessFilename(coreName, preprocessLower, preprocessUpper, preprocessSimplified);
             String ext = getExt(name);
             String typeTag = getMediaType(ext);
-            String key = coreName + "::" + typeTag;
+            
+            String key;
+            if (COMPARISON_METHOD_SIZE.equals(comparisonMethod)) {
+                key = coreName + "::" + typeTag + "::" + f.length();
+            } else {
+                key = coreName + "::" + typeTag;
+            }
             
             nameGroups.computeIfAbsent(key, k -> new ArrayList<>()).add(f);
         }
