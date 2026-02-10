@@ -7,28 +7,9 @@ import java.util.List;
 /**
  * 策略配置管理接口
  * 每个策略类实现此接口以管理自己的配置
+ * 同时继承IPlugin接口，提供execute和preview功能实现
  */
-public interface StrategyConfigurable {
-
-    /**
-     * 获取策略ID
-     */
-    String getId();
-
-    /**
-     * 获取策略名称
-     */
-    String getName();
-
-    /**
-     * 获取策略描述
-     */
-    String getDescription();
-
-    /**
-     * 获取策略版本
-     */
-    String getVersion();
+public interface StrategyConfigurable extends IPlugin {
 
     /**
      * 获取配置字段列表

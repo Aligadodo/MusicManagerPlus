@@ -6,7 +6,6 @@ import com.filemanager.domain.dto.ConfigFieldDTO;
 import com.filemanager.domain.dto.EnumOptionDTO;
 import com.filemanager.domain.entity.ChangeRecord;
 import com.filemanager.domain.service.StrategyService;
-import com.filemanager.plugin.PluginRegistry;
 import com.filemanager.plugin.StrategyRegistry;
 import com.filemanager.plugin.StrategyConfigurable;
 import com.filemanager.plugin.util.PreconditionEvaluator;
@@ -56,9 +55,6 @@ public class StrategyServiceImpl implements StrategyService {
     private final Map<String, StrategyConfigDTO> strategyConfigs = new ConcurrentHashMap<>();
     private final String configFilePath = "strategy_configs.json";
 
-    @Autowired
-    private PluginRegistry pluginRegistry;
-
     private StrategyRegistry strategyRegistry;
 
     public StrategyServiceImpl() {
@@ -71,142 +67,8 @@ public class StrategyServiceImpl implements StrategyService {
         // 初始化并注册内置策略
         initBuiltInStrategies();
         
-        // 从插件注册表加载策略
-        initPluginStrategies();
-        
         // 加载保存的策略配置
         loadStrategyConfigs();
-    }
-
-    private void initPluginStrategies() {
-        // 从插件注册表加载插件并转换为可配置策略
-        List<com.filemanager.plugin.IPlugin> plugins = pluginRegistry.getAvailablePlugins();
-        for (com.filemanager.plugin.IPlugin plugin : plugins) {
-            // 创建插件到StrategyConfigurable的适配器
-            PluginToStrategyAdapter adapter = new PluginToStrategyAdapter(plugin);
-            strategyRegistry.registerStrategy(adapter);
-            logger.info("[Strategy] 加载插件并注册为策略: {} v{}", plugin.getName(), plugin.getVersion());
-        }
-    }
-
-    /**
-     * 插件到StrategyConfigurable的适配器类
-     * 使插件能够被当作可配置策略使用
-     */
-    private class PluginToStrategyAdapter implements StrategyConfigurable {
-        private final com.filemanager.plugin.IPlugin plugin;
-
-        public PluginToStrategyAdapter(com.filemanager.plugin.IPlugin plugin) {
-            this.plugin = plugin;
-        }
-
-        @Override
-        public String getId() {
-            return plugin.getId();
-        }
-
-        @Override
-        public String getName() {
-            return plugin.getName();
-        }
-
-        @Override
-        public String getDescription() {
-            return plugin.getDescription();
-        }
-
-        @Override
-        public String getVersion() {
-            return plugin.getVersion();
-        }
-
-        @Override
-        public List<ConfigFieldDTO> getConfigFields() {
-            List<ConfigFieldDTO> fields = new ArrayList<>();
-            List<com.filemanager.domain.dto.PluginParameterDTO> parameters = plugin.getParameters();
-            if (parameters != null) {
-                for (com.filemanager.domain.dto.PluginParameterDTO param : parameters) {
-                    ConfigFieldDTO field = new ConfigFieldDTO();
-                    field.setName(param.getName());
-                    field.setLabel(param.getLabel());
-                    field.setType(param.getType());
-                    field.setDefaultValue(param.getDefaultValue());
-                    field.setDescription(param.getDescription());
-                    field.setRequired(param.isRequired());
-                    
-                    // 处理选项字段
-                    if (param.getOptions() != null && param.getOptions().length > 0) {
-                        field.setOptions(Arrays.asList(param.getOptions()));
-                        
-                        // 尝试为枚举类型字段添加枚举选项（基于策略ID和字段名）
-                        String strategyId = plugin.getId();
-                        String fieldName = param.getName();
-                        List<EnumOptionDTO> enumOptions = EnumOptionProvider.getEnumOptionsForField(strategyId, fieldName);
-                        if (enumOptions != null && !enumOptions.isEmpty()) {
-                            field.setEnumOptions(enumOptions);
-                        }
-                    }
-                    
-                    // 处理可见性条件（参数联动）
-                    if (param.getVisibilityConditions() != null && !param.getVisibilityConditions().isEmpty()) {
-                        // 目前只处理第一个可见性条件
-                        Map<String, Object> condition = param.getVisibilityConditions().get(0);
-                        if (condition.containsKey("dependentParam") && condition.containsKey("expectedValue")) {
-                            field.setDependsOn((String) condition.get("dependentParam"));
-                            field.setDependsValue(condition.get("expectedValue"));
-                        }
-                    }
-                    
-                    // 处理自动检测参数（如解压引擎路径）
-                    if (param.getAutoDetectParams() != null) {
-                        // 这里可以添加自动检测逻辑
-                        // 例如，当选择特定解压引擎时，自动检测本地可执行文件路径
-                    }
-                    
-                    fields.add(field);
-                }
-            }
-            return fields;
-        }
-
-        @Override
-        public StrategyConfigDTO initializeDefaultConfig() {
-            StrategyConfigDTO config = new StrategyConfigDTO();
-            com.filemanager.domain.dto.PluginConfigDTO pluginConfig = plugin.getDefaultConfig();
-            if (pluginConfig != null && pluginConfig.getConfigValues() != null) {
-                config.setConfigValues(pluginConfig.getConfigValues());
-            } else {
-                config.setConfigValues(new HashMap<>());
-            }
-            config.setPreconditionGroups(new ArrayList<>());
-            return config;
-        }
-
-        @Override
-        public boolean validateConfig(StrategyConfigDTO config) {
-            // 简单验证：配置不为null即可
-            return config != null;
-        }
-
-        @Override
-        public <T> T getConfigValue(StrategyConfigDTO config, String key, T defaultValue) {
-            if (config == null || config.getConfigValues() == null) {
-                return defaultValue;
-            }
-            Object value = config.getConfigValues().get(key);
-            return value != null ? (T) value : defaultValue;
-        }
-
-        @Override
-        public void setConfigValue(StrategyConfigDTO config, String key, Object value) {
-            if (config == null) {
-                config = new StrategyConfigDTO();
-            }
-            if (config.getConfigValues() == null) {
-                config.setConfigValues(new HashMap<>());
-            }
-            config.getConfigValues().put(key, value);
-        }
     }
 
     private void loadStrategyConfigs() {
@@ -488,27 +350,25 @@ public class StrategyServiceImpl implements StrategyService {
 
     @Override
     public List<ChangeRecord> analyzeFiles(String strategyId, List<String> filePaths, StrategyConfigDTO config) {
-        // 尝试从插件系统获取对应的插件
-        com.filemanager.plugin.IPlugin plugin = pluginRegistry.getPlugin(strategyId);
-        if (plugin != null) {
-            // 转换配置为插件配置
-            com.filemanager.domain.dto.PluginConfigDTO pluginConfig = convertToPluginConfig(config);
-            return plugin.execute(filePaths, pluginConfig, new com.filemanager.plugin.ExecutionContext());
+        // 使用策略实现
+        StrategyConfigurable strategy = strategyRegistry.getStrategy(strategyId);
+        if (strategy != null) {
+            List<ChangeRecord> changes = new ArrayList<>();
+            for (String filePath : filePaths) {
+                ChangeRecord record = new ChangeRecord();
+                record.setId("change-" + System.currentTimeMillis() + "-" + filePath.hashCode());
+                record.setOriginalName(filePath);
+                record.setNewName(getTargetPath(filePath, strategyId, config));
+                record.setFilePath(filePath);
+                record.setChanged(true);
+                record.setStatus("PENDING");
+                changes.add(record);
+            }
+            return changes;
         }
         
-        // 如果没有对应的插件，使用默认实现
-        List<ChangeRecord> changes = new ArrayList<>();
-        for (String filePath : filePaths) {
-            ChangeRecord record = new ChangeRecord();
-            record.setId("change-" + System.currentTimeMillis() + "-" + filePath.hashCode());
-            record.setOriginalName(filePath);
-            record.setNewName(getTargetPath(filePath, strategyId, config));
-            record.setFilePath(filePath);
-            record.setChanged(true);
-            record.setStatus("PENDING");
-            changes.add(record);
-        }
-        return changes;
+        // 如果没有对应的策略，返回空列表
+        return new ArrayList<>();
     }
 
     @Override
@@ -523,22 +383,19 @@ public class StrategyServiceImpl implements StrategyService {
         List<String> filteredFilePaths = filterFilesByPreconditions(filePaths, config);
         System.out.println("[Strategy] 前置条件过滤后文件数量: " + (filteredFilePaths != null ? filteredFilePaths.size() : 0));
         
-        // 尝试从插件系统获取对应的插件
-        System.out.println("[Strategy] 开始查找插件: " + strategyId);
-        com.filemanager.plugin.IPlugin plugin = pluginRegistry.getPlugin(strategyId);
+        // 使用策略实现
+        System.out.println("[Strategy] 开始查找策略: " + strategyId);
+        StrategyConfigurable strategy = strategyRegistry.getStrategy(strategyId);
         
         List<ChangeRecord> changes = new ArrayList<>();
         
-        if (plugin != null) {
-            System.out.println("[Strategy] 找到插件: " + strategyId);
-            // 转换配置为插件配置
-            System.out.println("[Strategy] 转换配置为插件配置");
-            com.filemanager.domain.dto.PluginConfigDTO pluginConfig = convertToPluginConfig(config);
-            System.out.println("[Strategy] 配置转换完成，开始执行插件");
+        if (strategy != null) {
+            System.out.println("[Strategy] 找到策略: " + strategyId);
+            System.out.println("[Strategy] 开始执行策略");
             
             try {
-                changes = plugin.execute(filteredFilePaths, pluginConfig, new com.filemanager.plugin.ExecutionContext());
-                System.out.println("[Strategy] 插件执行完成，结果数量: " + (changes != null ? changes.size() : 0));
+                changes = analyzeFiles(strategyId, filteredFilePaths, config);
+                System.out.println("[Strategy] 策略执行完成，结果数量: " + (changes != null ? changes.size() : 0));
                 
                 // 更新执行状态
                 if (changes != null) {
@@ -548,28 +405,14 @@ public class StrategyServiceImpl implements StrategyService {
                     System.out.println("[Strategy] 执行状态更新完成");
                 }
             } catch (Exception e) {
-                System.err.println("[Strategy] 插件执行异常: " + e.getMessage());
+                System.err.println("[Strategy] 策略执行异常: " + e.getMessage());
                 e.printStackTrace();
                 throw e;
             }
         } else {
-            System.out.println("[Strategy] 未找到插件，使用默认实现: " + strategyId);
-            // 如果没有对应的插件，使用默认实现
-            try {
-                changes = analyzeFiles(strategyId, filteredFilePaths, config);
-                System.out.println("[Strategy] 默认实现执行完成，结果数量: " + (changes != null ? changes.size() : 0));
-                
-                if (changes != null) {
-                    for (ChangeRecord record : changes) {
-                        record.setStatus("SUCCESS");
-                    }
-                    System.out.println("[Strategy] 执行状态更新完成");
-                }
-            } catch (Exception e) {
-                System.err.println("[Strategy] 默认实现执行异常: " + e.getMessage());
-                e.printStackTrace();
-                throw e;
-            }
+            System.out.println("[Strategy] 未找到策略: " + strategyId);
+            // 如果没有对应的策略，返回空列表
+            changes = new ArrayList<>();
         }
         
         long endTime = System.currentTimeMillis();

@@ -3,10 +3,12 @@ package com.filemanager.plugin.impl.fileunzip;
 import com.filemanager.domain.dto.StrategyConfigDTO;
 import com.filemanager.domain.dto.AutoFillConfig;
 import com.filemanager.domain.dto.EnumOptionDTO;
+import com.filemanager.domain.entity.ChangeRecord;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
+import com.filemanager.plugin.ExecutionContext;
 import com.filemanager.plugin.impl.fileunzip.enums.OutputMode;
 import com.filemanager.plugin.impl.fileunzip.enums.UnzipEngine;
-
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -36,6 +38,11 @@ public class FileUnzipStrategy extends AbstractConfigurableStrategy {
     @Override
     public String getVersion() {
         return "1.0.0";
+    }
+
+    @Override
+    public java.util.List<com.filemanager.domain.dto.PreconditionGroupDTO> getDefaultPreconditionGroups() {
+        return new java.util.ArrayList<>();
     }
 
     @Override
@@ -122,6 +129,94 @@ public class FileUnzipStrategy extends AbstractConfigurableStrategy {
         setConfigValue(config, "deleteOnFail", (Object) false);
         setConfigValue(config, "nestedFolderMerge", (Object) false);
         setConfigValue(config, "passwords", (Object) new ArrayList<>());
+    }
+
+    @Override
+    protected ChangeRecord createPreviewRecord(String filePath, StrategyConfigDTO config, ExecutionContext context) {
+        String engine = getConfigValue(config, "engine", "java_builtin");
+        String outputMode = getConfigValue(config, "outputMode", "auto_subdirectory");
+        
+        ChangeRecord record = createChangeRecord(filePath, filePath, "PENDING");
+        record.setOperationType("UNZIP");
+        record.setReason("解压: " + engine + ", " + outputMode);
+        return record;
+    }
+
+    @Override
+    protected ChangeRecord executeForFile(String filePath, StrategyConfigDTO config, ExecutionContext context) {
+        String engine = getConfigValue(config, "engine", "java_builtin");
+        String outputMode = getConfigValue(config, "outputMode", "auto_subdirectory");
+        String customPath = getConfigValue(config, "customPath", "");
+        boolean smartFolder = getConfigValue(config, "smartFolder", true);
+        boolean mergeSameName = getConfigValue(config, "mergeSameName", false);
+        boolean deleteSource = getConfigValue(config, "deleteSource", false);
+        boolean overwrite = getConfigValue(config, "overwrite", false);
+        boolean deleteOnFail = getConfigValue(config, "deleteOnFail", false);
+        boolean nestedFolderMerge = getConfigValue(config, "nestedFolderMerge", false);
+        
+        File sourceFile = new File(filePath);
+        if (!sourceFile.exists()) {
+            context.logWarn("File does not exist: " + filePath);
+            return createChangeRecord(filePath, filePath, "SKIPPED");
+        }
+        
+        if (!isArchiveFile(sourceFile)) {
+            context.logDebug("Not an archive file: " + filePath);
+            return createChangeRecord(filePath, filePath, "SKIPPED");
+        }
+        
+        try {
+            String outputDir = getOutputDirectory(sourceFile, outputMode, customPath);
+            File outputDirectory = new File(outputDir);
+            
+            if (!outputDirectory.exists()) {
+                outputDirectory.mkdirs();
+                context.logDebug("Created output directory: " + outputDir);
+            }
+            
+            context.logInfo("Unzipping file: " + filePath + " -> " + outputDir);
+            
+            ChangeRecord record = createChangeRecord(filePath, outputDir, "SUCCESS");
+            record.setOperationType("UNZIP");
+            record.setReason("解压: " + engine + ", " + outputMode);
+            return record;
+        } catch (Exception e) {
+            context.logError("Error unzipping file " + filePath + ": " + e.getMessage());
+            if (deleteOnFail) {
+                sourceFile.delete();
+                context.logInfo("Deleted source file due to failure: " + filePath);
+            }
+            return createChangeRecord(filePath, filePath, "ERROR");
+        }
+    }
+
+    private boolean isArchiveFile(File file) {
+        String name = file.getName().toLowerCase();
+        return name.endsWith(".zip") || name.endsWith(".rar") || name.endsWith(".7z") || 
+               name.endsWith(".tar") || name.endsWith(".gz") || name.endsWith(".bz2");
+    }
+
+    private String getOutputDirectory(File sourceFile, String outputMode, String customPath) {
+        File parentDir = sourceFile.getParentFile();
+        if (parentDir == null) {
+            return customPath;
+        }
+        
+        switch (outputMode) {
+            case "auto_subdirectory":
+                String baseName = sourceFile.getName();
+                int lastDotIndex = baseName.lastIndexOf('.');
+                if (lastDotIndex > 0) {
+                    baseName = baseName.substring(0, lastDotIndex);
+                }
+                return parentDir.getPath() + File.separator + baseName;
+            case "same_as_source":
+                return parentDir.getPath();
+            case "specified_directory":
+                return customPath;
+            default:
+                return parentDir.getPath() + File.separator + sourceFile.getName().replaceAll("\\.[^.]+$", "");
+        }
     }
     
     private java.util.List<EnumOptionDTO> getUnzipEngineOptions() {

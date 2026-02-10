@@ -2,12 +2,15 @@ package com.filemanager.plugin.impl.cuesplitter;
 
 import com.filemanager.domain.dto.StrategyConfigDTO;
 import com.filemanager.domain.dto.EnumOptionDTO;
+import com.filemanager.domain.entity.ChangeRecord;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
+import com.filemanager.plugin.ExecutionContext;
 import com.filemanager.plugin.impl.audioconverter.enums.AudioFormat;
 import com.filemanager.plugin.impl.audioconverter.enums.Channels;
 import com.filemanager.plugin.impl.audioconverter.enums.OutputDirMode;
 import com.filemanager.plugin.impl.audioconverter.enums.SampleRate;
 import com.filemanager.plugin.impl.cuesplitter.enums.AfterSplitAction;
+import java.io.File;
 
 public class CueSplitterStrategy extends AbstractConfigurableStrategy {
 
@@ -33,6 +36,11 @@ public class CueSplitterStrategy extends AbstractConfigurableStrategy {
     @Override
     public String getVersion() {
         return "1.0.0";
+    }
+
+    @Override
+    public java.util.List<com.filemanager.domain.dto.PreconditionGroupDTO> getDefaultPreconditionGroups() {
+        return new java.util.ArrayList<>();
     }
 
     @Override
@@ -100,6 +108,82 @@ public class CueSplitterStrategy extends AbstractConfigurableStrategy {
         setConfigValue(config, "afterSplitAction", (Object) AfterSplitAction.DO_NOTHING.getCode());
         setConfigValue(config, "enableArchive", (Object) false);
         setConfigValue(config, "archiveDir", (Object) "");
+    }
+
+    @Override
+    protected ChangeRecord createPreviewRecord(String filePath, StrategyConfigDTO config, ExecutionContext context) {
+        String targetFormat = getConfigValue(config, "targetFormat", "wav_cd_standard");
+        String outputDirMode = getConfigValue(config, "outputDirMode", "subdirectory");
+        
+        ChangeRecord record = createChangeRecord(filePath, filePath, "PENDING");
+        record.setOperationType("CUE_SPLIT");
+        record.setReason("CUE分轨: " + targetFormat);
+        return record;
+    }
+
+    @Override
+    protected ChangeRecord executeForFile(String filePath, StrategyConfigDTO config, ExecutionContext context) {
+        String targetFormat = getConfigValue(config, "targetFormat", "wav_cd_standard");
+        String outputDirMode = getConfigValue(config, "outputDirMode", "subdirectory");
+        String outputPath = getConfigValue(config, "outputPath", "Split - WAV");
+        boolean overwrite = getConfigValue(config, "overwrite", false);
+        String ffmpegPath = getConfigValue(config, "ffmpegPath", "ffmpeg");
+        boolean enableCache = getConfigValue(config, "enableCache", false);
+        boolean enableSnap = getConfigValue(config, "enableSnap", false);
+        boolean enableTempSuffix = getConfigValue(config, "enableTempSuffix", true);
+        boolean autoFormatFilename = getConfigValue(config, "autoFormatFilename", true);
+        String afterSplitAction = getConfigValue(config, "afterSplitAction", "do_nothing");
+        boolean enableArchive = getConfigValue(config, "enableArchive", false);
+        String archiveDir = getConfigValue(config, "archiveDir", "");
+        
+        File sourceFile = new File(filePath);
+        if (!sourceFile.exists()) {
+            context.logWarn("File does not exist: " + filePath);
+            return createChangeRecord(filePath, filePath, "SKIPPED");
+        }
+        
+        if (!filePath.toLowerCase().endsWith(".cue")) {
+            context.logDebug("Not a CUE file: " + filePath);
+            return createChangeRecord(filePath, filePath, "SKIPPED");
+        }
+        
+        try {
+            String outputDirectory = getOutputDirectory(sourceFile, outputDirMode, outputPath);
+            File outputDir = new File(outputDirectory);
+            
+            if (!outputDir.exists()) {
+                outputDir.mkdirs();
+                context.logDebug("Created output directory: " + outputDir.getPath());
+            }
+            
+            context.logInfo("Processing CUE file: " + filePath);
+            
+            ChangeRecord record = createChangeRecord(filePath, outputDir.getPath(), "SUCCESS");
+            record.setOperationType("CUE_SPLIT");
+            record.setReason("CUE分轨: " + targetFormat);
+            return record;
+        } catch (Exception e) {
+            context.logError("Error processing CUE file " + filePath + ": " + e.getMessage());
+            return createChangeRecord(filePath, filePath, "ERROR");
+        }
+    }
+
+    private String getOutputDirectory(File cueFile, String outputDirMode, String outputPath) {
+        File parentDir = cueFile.getParentFile();
+        if (parentDir == null) {
+            return outputPath;
+        }
+        
+        switch (outputDirMode) {
+            case "subdirectory":
+                return parentDir.getPath() + File.separator + outputPath;
+            case "custom":
+                return outputPath;
+            case "same_as_source":
+                return parentDir.getPath();
+            default:
+                return parentDir.getPath() + File.separator + outputPath;
+        }
     }
     
     private java.util.List<EnumOptionDTO> getAudioFormatOptions() {

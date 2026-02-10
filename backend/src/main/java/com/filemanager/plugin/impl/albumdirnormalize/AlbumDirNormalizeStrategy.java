@@ -2,8 +2,11 @@ package com.filemanager.plugin.impl.albumdirnormalize;
 
 import com.filemanager.domain.dto.StrategyConfigDTO;
 import com.filemanager.domain.dto.EnumOptionDTO;
+import com.filemanager.domain.entity.ChangeRecord;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
+import com.filemanager.plugin.ExecutionContext;
 import com.filemanager.plugin.impl.albumdirnormalize.enums.DirectoryTemplate;
+import java.io.File;
 
 public class AlbumDirNormalizeStrategy extends AbstractConfigurableStrategy {
 
@@ -29,6 +32,11 @@ public class AlbumDirNormalizeStrategy extends AbstractConfigurableStrategy {
     @Override
     public String getVersion() {
         return "1.0.0";
+    }
+
+    @Override
+    public java.util.List<com.filemanager.domain.dto.PreconditionGroupDTO> getDefaultPreconditionGroups() {
+        return new java.util.ArrayList<>();
     }
 
     @Override
@@ -59,6 +67,88 @@ public class AlbumDirNormalizeStrategy extends AbstractConfigurableStrategy {
         setConfigValue(config, "useConsensusMetadata", (Object) true);
         setConfigValue(config, "preserveOriginalName", (Object) true);
         setConfigValue(config, "validateAlbumInfo", (Object) true);
+    }
+
+    @Override
+    protected ChangeRecord createPreviewRecord(String filePath, StrategyConfigDTO config, ExecutionContext context) {
+        String template = getConfigValue(config, "template", "artist_year_album");
+        
+        ChangeRecord record = createChangeRecord(filePath, filePath, "PENDING");
+        record.setOperationType("RENAME");
+        record.setReason("专辑目录标准化: " + template);
+        return record;
+    }
+
+    @Override
+    protected ChangeRecord executeForFile(String filePath, StrategyConfigDTO config, ExecutionContext context) {
+        String template = getConfigValue(config, "template", "artist_year_album");
+        String customTemplate = getConfigValue(config, "customTemplate", "");
+        boolean cleanSpecialChars = getConfigValue(config, "cleanSpecialChars", true);
+        boolean removeYearPrefix = getConfigValue(config, "removeYearPrefix", false);
+        
+        File sourceFile = new File(filePath);
+        if (!sourceFile.exists()) {
+            context.logWarn("File does not exist: " + filePath);
+            return createChangeRecord(filePath, filePath, "SKIPPED");
+        }
+        
+        if (!sourceFile.isDirectory()) {
+            context.logDebug("Not a directory: " + filePath);
+            return createChangeRecord(filePath, filePath, "SKIPPED");
+        }
+        
+        try {
+            String newName = generateDirectoryName(sourceFile, template, customTemplate, cleanSpecialChars, removeYearPrefix, context);
+            if (newName == null || newName.equals(sourceFile.getName())) {
+                context.logDebug("No rename needed for: " + filePath);
+                return createChangeRecord(filePath, filePath, "SKIPPED");
+            }
+            
+            File targetDir = new File(sourceFile.getParent(), newName);
+            
+            if (targetDir.exists()) {
+                context.logWarn("Target directory already exists: " + targetDir.getPath());
+                return createChangeRecord(filePath, filePath, "SKIPPED");
+            }
+            
+            sourceFile.renameTo(targetDir);
+            
+            context.logInfo("Renamed album directory: " + filePath + " -> " + targetDir.getPath());
+            ChangeRecord record = createChangeRecord(filePath, targetDir.getPath(), "SUCCESS");
+            record.setOperationType("RENAME");
+            record.setReason("专辑目录标准化: " + template);
+            return record;
+        } catch (Exception e) {
+            context.logError("Error renaming album directory " + filePath + ": " + e.getMessage());
+            return createChangeRecord(filePath, filePath, "ERROR");
+        }
+    }
+
+    private String generateDirectoryName(File directory, String template, String customTemplate, boolean cleanSpecialChars, boolean removeYearPrefix, ExecutionContext context) {
+        String originalName = directory.getName();
+        String newName = originalName;
+        
+        if (removeYearPrefix) {
+            newName = removeYearPrefix(newName);
+        }
+        
+        if (cleanSpecialChars) {
+            newName = cleanSpecialCharacters(newName);
+        }
+        
+        if (template.equals("custom") && customTemplate != null && !customTemplate.isEmpty()) {
+            newName = customTemplate;
+        }
+        
+        return newName;
+    }
+
+    private String removeYearPrefix(String name) {
+        return name.replaceAll("^[0-9]{4}\\s*[-.]?\\s*", "");
+    }
+
+    private String cleanSpecialCharacters(String name) {
+        return name.replaceAll("[\\\\/:*?\"<>|]", "_");
     }
     
     private java.util.List<EnumOptionDTO> getDirectoryTemplateOptions() {

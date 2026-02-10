@@ -2,12 +2,20 @@ package com.filemanager.plugin.impl;
 
 import com.filemanager.domain.dto.StrategyConfigDTO;
 import com.filemanager.domain.dto.EnumOptionDTO;
+import com.filemanager.domain.entity.ChangeRecord;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
+import com.filemanager.plugin.ExecutionContext;
 import com.filemanager.plugin.impl.audioconverter.enums.AudioFormat;
 import com.filemanager.plugin.impl.audioconverter.enums.Channels;
 import com.filemanager.plugin.impl.audioconverter.enums.OutputDirMode;
 import com.filemanager.plugin.impl.audioconverter.enums.SampleRate;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.List;
 
 public class AudioConverterStrategy extends AbstractConfigurableStrategy {
 
@@ -33,6 +41,11 @@ public class AudioConverterStrategy extends AbstractConfigurableStrategy {
     @Override
     public String getVersion() {
         return "1.0.0";
+    }
+
+    @Override
+    public List<com.filemanager.domain.dto.PreconditionGroupDTO> getDefaultPreconditionGroups() {
+        return new ArrayList<>();
     }
 
     @Override
@@ -93,6 +106,299 @@ public class AudioConverterStrategy extends AbstractConfigurableStrategy {
         setConfigValue(config, "forceFilenameMeta", (Object) false);
         setConfigValue(config, "autoFormatFilename", (Object) true);
         setConfigValue(config, "skipCueTracks", (Object) true);
+    }
+
+    @Override
+    protected ChangeRecord createPreviewRecord(String filePath, StrategyConfigDTO config, ExecutionContext context) {
+        String targetPath = getTargetPath(filePath, config, context);
+        ChangeRecord record = createChangeRecord(filePath, targetPath, "PENDING");
+        record.setOperationType("CONVERT");
+        record.setReason("音频格式转换");
+        return record;
+    }
+
+    @Override
+    protected ChangeRecord executeForFile(String filePath, StrategyConfigDTO config, ExecutionContext context) {
+        boolean skipCueTracks = getConfigValue(config, "skipCueTracks", true);
+        boolean autoFormatFilename = getConfigValue(config, "autoFormatFilename", true);
+        boolean overwrite = getConfigValue(config, "overwrite", false);
+        boolean enableCache = getConfigValue(config, "enableCache", false);
+        boolean enableSnap = getConfigValue(config, "enableSnap", false);
+        boolean enableTempSuffix = getConfigValue(config, "enableTempSuffix", true);
+        String ffmpegPath = getConfigValue(config, "ffmpegPath", "ffmpeg");
+        
+        File sourceFile = new File(filePath);
+        if (!sourceFile.exists()) {
+            context.logWarn("File does not exist: " + filePath);
+            return createChangeRecord(filePath, filePath, "SKIPPED");
+        }
+        
+        if (!isAudioFile(sourceFile)) {
+            context.logDebug("Not an audio file: " + filePath);
+            return createChangeRecord(filePath, filePath, "SKIPPED");
+        }
+        
+        if (skipCueTracks && shouldSkipCueTrack(sourceFile, context)) {
+            context.logInfo("Skipping CD mirror file: " + filePath);
+            return createChangeRecord(filePath, filePath, "SKIPPED");
+        }
+        
+        try {
+            String targetPath = getTargetPath(filePath, config, context);
+            File targetFile = new File(targetPath);
+            
+            if (autoFormatFilename) {
+                String formattedName = formatFilename(targetFile.getName());
+                targetFile = new File(targetFile.getParent(), formattedName);
+                targetPath = targetFile.getPath();
+            }
+            
+            if (targetFile.exists() && !overwrite) {
+                context.logWarn("Target file already exists: " + targetPath);
+                return createChangeRecord(filePath, filePath, "SKIPPED");
+            }
+            
+            if (!targetFile.getParentFile().exists()) {
+                targetFile.getParentFile().mkdirs();
+                context.logDebug("Created directory: " + targetFile.getParentFile().getPath());
+            }
+            
+            String actualOutputPath = targetPath;
+            if (enableCache) {
+                String cacheDir = getConfigValue(config, "cacheDir", "");
+                actualOutputPath = cacheDir + File.separator + targetFile.getName();
+            } else if (enableSnap) {
+                String snapDir = getConfigValue(config, "snapDir", "");
+                actualOutputPath = snapDir + File.separator + targetFile.getName();
+            } else if (enableTempSuffix) {
+                actualOutputPath = targetPath + ".temp";
+            }
+            
+            File actualTargetFile = new File(actualOutputPath);
+            
+            boolean success = convertAudio(sourceFile, actualTargetFile, config, context);
+            
+            if (success) {
+                if (enableTempSuffix && actualTargetFile.getName().endsWith(".temp")) {
+                    File finalFile = new File(actualOutputPath.replace(".temp", ""));
+                    Files.move(actualTargetFile.toPath(), finalFile.toPath());
+                    actualOutputPath = finalFile.getPath();
+                }
+                
+                context.logInfo("Audio conversion successful: " + filePath + " -> " + actualOutputPath);
+                ChangeRecord record = createChangeRecord(filePath, actualOutputPath, "SUCCESS");
+                record.setOperationType("CONVERT");
+                record.setReason("音频格式转换");
+                return record;
+            } else {
+                context.logError("Audio conversion failed: " + filePath);
+                return createChangeRecord(filePath, filePath, "ERROR");
+            }
+        } catch (Exception e) {
+            context.logError("Error converting audio " + filePath + ": " + e.getMessage());
+            return createChangeRecord(filePath, filePath, "ERROR");
+        }
+    }
+
+    private boolean shouldSkipCueTrack(File file, ExecutionContext context) {
+        if (file.length() <= 100 * 1024 * 1024) {
+            return false;
+        }
+        
+        File parentDir = file.getParentFile();
+        if (parentDir != null) {
+            File[] cueFiles = parentDir.listFiles((dir, name) -> 
+                name.toLowerCase().endsWith(".cue"));
+            if (cueFiles != null && cueFiles.length > 0) {
+                context.logDebug("Found CUE file in directory: " + parentDir.getPath());
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    private boolean isAudioFile(File file) {
+        if (!file.isFile()) {
+            return false;
+        }
+        
+        String fileName = file.getName().toLowerCase();
+        return fileName.endsWith(".mp3") || fileName.endsWith(".flac") || 
+               fileName.endsWith(".wav") || fileName.endsWith(".aac") ||
+               fileName.endsWith(".ogg") || fileName.endsWith(".wma") ||
+               fileName.endsWith(".m4a") || fileName.endsWith(".ape") ||
+               fileName.endsWith(".m4p") || fileName.endsWith(".mp4");
+    }
+
+    private String getTargetPath(String filePath, StrategyConfigDTO config, ExecutionContext context) {
+        String outputDirMode = getConfigValue(config, "outputDirMode", "子目录");
+        String outputPath = getConfigValue(config, "outputPath", "Convert - WAV");
+        String targetFormat = getConfigValue(config, "targetFormat", "WAV (CD标准)");
+        
+        File sourceFile = new File(filePath);
+        String fileName = sourceFile.getName();
+        String extension = getFileExtension(targetFormat);
+        String targetFileName = changeExtension(fileName, extension);
+        
+        switch (outputDirMode) {
+            case "subdirectory":
+                File sourceDir = sourceFile.getParentFile();
+                if (sourceDir != null) {
+                    return sourceDir.getPath() + File.separator + outputPath + File.separator + targetFileName;
+                }
+                return outputPath + File.separator + targetFileName;
+            case "specified_dir":
+                return outputPath + File.separator + targetFileName;
+            case "root_dir":
+                File rootPath = sourceFile;
+                while (rootPath.getParent() != null) {
+                    rootPath = rootPath.getParentFile();
+                }
+                return rootPath.getPath() + File.separator + outputPath + File.separator + targetFileName;
+            default:
+                return outputPath + File.separator + targetFileName;
+        }
+    }
+
+    private String getFileExtension(String format) {
+        switch (format) {
+            case "wav_cd_standard":
+            case "wav":
+                return "wav";
+            case "flac":
+                return "flac";
+            case "mp3":
+                return "mp3";
+            case "alac":
+                return "m4a";
+            case "aac":
+                return "aac";
+            case "ogg":
+                return "ogg";
+            default:
+                return "wav";
+        }
+    }
+
+    private String changeExtension(String fileName, String newExtension) {
+        int lastDotIndex = fileName.lastIndexOf('.');
+        if (lastDotIndex > 0) {
+            return fileName.substring(0, lastDotIndex + 1) + newExtension;
+        }
+        return fileName + "." + newExtension;
+    }
+
+    private String formatFilename(String filename) {
+        String formatted = filename.trim();
+        return formatted;
+    }
+
+    private boolean convertAudio(File sourceFile, File targetFile, StrategyConfigDTO config, ExecutionContext context) {
+        String ffmpegPath = getConfigValue(config, "ffmpegPath", "ffmpeg");
+        String targetFormat = getConfigValue(config, "targetFormat", "wav_cd_standard");
+        String sampleRate = getConfigValue(config, "sampleRate", "sr_44100");
+        String channels = getConfigValue(config, "channels", "stereo");
+        int ffmpegThreads = getConfigValue(config, "ffmpegThreads", 4);
+        
+        try {
+            List<String> command = new ArrayList<>();
+            command.add(ffmpegPath);
+            command.add("-i");
+            command.add(sourceFile.getPath());
+            
+            if (!"original".equals(sampleRate)) {
+                command.add("-ar");
+                command.add(getSampleRateValue(sampleRate));
+            }
+            
+            if (!"original".equals(channels)) {
+                command.add("-ac");
+                command.add(String.valueOf(getChannelCount(channels)));
+            }
+            
+            command.add("-threads");
+            command.add(String.valueOf(ffmpegThreads));
+            
+            command.add("-f");
+            command.add(getFFmpegFormat(targetFormat));
+            
+            command.add(targetFile.getPath());
+            
+            ProcessBuilder processBuilder = new ProcessBuilder(command);
+            processBuilder.redirectErrorStream(true);
+            Process process = processBuilder.start();
+            
+            java.io.BufferedReader reader = new java.io.BufferedReader(
+                new java.io.InputStreamReader(process.getInputStream()));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                context.logDebug(line);
+            }
+            
+            int exitCode = process.waitFor();
+            
+            if (exitCode == 0) {
+                context.logInfo("FFmpeg conversion completed successfully");
+                return true;
+            } else {
+                context.logError("FFmpeg conversion failed with exit code: " + exitCode);
+                return false;
+            }
+        } catch (Exception e) {
+            context.logError("Error executing FFmpeg: " + e.getMessage());
+            return false;
+        }
+    }
+
+    private String getSampleRateValue(String sampleRateCode) {
+        switch (sampleRateCode) {
+            case "sr_44100":
+                return "44100";
+            case "sr_48000":
+                return "48000";
+            case "sr_88200":
+                return "88200";
+            case "sr_96000":
+                return "96000";
+            case "sr_192000":
+                return "192000";
+            default:
+                return "44100";
+        }
+    }
+
+    private int getChannelCount(String channels) {
+        switch (channels) {
+            case "mono":
+                return 1;
+            case "stereo":
+                return 2;
+            case "5.1":
+                return 6;
+            default:
+                return 2;
+        }
+    }
+
+    private String getFFmpegFormat(String format) {
+        switch (format) {
+            case "wav_cd_standard":
+            case "wav":
+                return "wav";
+            case "flac":
+                return "flac";
+            case "mp3":
+                return "mp3";
+            case "alac":
+                return "ipod";
+            case "aac":
+                return "aac";
+            case "ogg":
+                return "ogg";
+            default:
+                return "wav";
+        }
     }
     
     private java.util.List<EnumOptionDTO> getAudioFormatOptions() {

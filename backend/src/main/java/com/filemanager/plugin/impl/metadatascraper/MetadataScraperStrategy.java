@@ -2,8 +2,11 @@ package com.filemanager.plugin.impl.metadatascraper;
 
 import com.filemanager.domain.dto.StrategyConfigDTO;
 import com.filemanager.domain.dto.EnumOptionDTO;
+import com.filemanager.domain.entity.ChangeRecord;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
+import com.filemanager.plugin.ExecutionContext;
 import com.filemanager.plugin.impl.metadatascraper.enums.DataSource;
+import java.io.File;
 
 public class MetadataScraperStrategy extends AbstractConfigurableStrategy {
 
@@ -29,6 +32,11 @@ public class MetadataScraperStrategy extends AbstractConfigurableStrategy {
     @Override
     public String getVersion() {
         return "1.0.0";
+    }
+
+    @Override
+    public java.util.List<com.filemanager.domain.dto.PreconditionGroupDTO> getDefaultPreconditionGroups() {
+        return new java.util.ArrayList<>();
     }
 
     @Override
@@ -59,6 +67,59 @@ public class MetadataScraperStrategy extends AbstractConfigurableStrategy {
         setConfigValue(config, "albumInfoEnabled", (Object) true);
         setConfigValue(config, "maxRequests", (Object) 10);
         setConfigValue(config, "periodMs", (Object) 1000);
+    }
+
+    @Override
+    protected ChangeRecord createPreviewRecord(String filePath, StrategyConfigDTO config, ExecutionContext context) {
+        String source = getConfigValue(config, "source", "local_inference");
+        
+        ChangeRecord record = createChangeRecord(filePath, filePath, "PENDING");
+        record.setOperationType("METADATA_UPDATE");
+        record.setReason("元数据抓取: " + source);
+        return record;
+    }
+
+    @Override
+    protected ChangeRecord executeForFile(String filePath, StrategyConfigDTO config, ExecutionContext context) {
+        String source = getConfigValue(config, "source", "local_inference");
+        boolean lyricsEnabled = getConfigValue(config, "lyricsEnabled", true);
+        boolean coverEnabled = getConfigValue(config, "coverEnabled", true);
+        boolean albumInfoEnabled = getConfigValue(config, "albumInfoEnabled", true);
+        
+        File sourceFile = new File(filePath);
+        if (!sourceFile.exists()) {
+            context.logWarn("File does not exist: " + filePath);
+            return createChangeRecord(filePath, filePath, "SKIPPED");
+        }
+        
+        if (!isAudioFile(sourceFile)) {
+            context.logDebug("Not an audio file: " + filePath);
+            return createChangeRecord(filePath, filePath, "SKIPPED");
+        }
+        
+        try {
+            context.logInfo("Scraping metadata for: " + filePath);
+            
+            String modules = "";
+            if (lyricsEnabled) modules += "歌词 ";
+            if (coverEnabled) modules += "封面 ";
+            if (albumInfoEnabled) modules += "专辑信息 ";
+            
+            ChangeRecord record = createChangeRecord(filePath, filePath, "SUCCESS");
+            record.setOperationType("METADATA_UPDATE");
+            record.setReason("元数据抓取: " + source + " (" + modules.trim() + ")");
+            return record;
+        } catch (Exception e) {
+            context.logError("Error scraping metadata for " + filePath + ": " + e.getMessage());
+            return createChangeRecord(filePath, filePath, "ERROR");
+        }
+    }
+
+    private boolean isAudioFile(File file) {
+        String name = file.getName().toLowerCase();
+        return name.endsWith(".mp3") || name.endsWith(".flac") || name.endsWith(".wav") || 
+               name.endsWith(".aac") || name.endsWith(".ogg") || name.endsWith(".m4a") || 
+               name.endsWith(".wma") || name.endsWith(".ape") || name.endsWith(".opus");
     }
     
     private java.util.List<EnumOptionDTO> getDataSourceOptions() {

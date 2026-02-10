@@ -2,10 +2,23 @@ package com.filemanager.plugin.impl.filecleanup;
 
 import com.filemanager.domain.dto.StrategyConfigDTO;
 import com.filemanager.domain.dto.EnumOptionDTO;
+import com.filemanager.domain.entity.ChangeRecord;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
+import com.filemanager.plugin.ExecutionContext;
 import com.filemanager.plugin.impl.filecleanup.enums.CleanupMode;
 import com.filemanager.plugin.impl.filecleanup.enums.DeleteMethod;
 import com.filemanager.plugin.impl.filecleanup.enums.FileSizeRange;
+import com.filemanager.plugin.util.MD5Calculator;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class FileCleanupStrategy extends AbstractConfigurableStrategy {
 
@@ -31,6 +44,11 @@ public class FileCleanupStrategy extends AbstractConfigurableStrategy {
     @Override
     public String getVersion() {
         return "1.0.0";
+    }
+
+    @Override
+    public List<com.filemanager.domain.dto.PreconditionGroupDTO> getDefaultPreconditionGroups() {
+        return new ArrayList<>();
     }
 
     @Override
@@ -75,6 +93,499 @@ public class FileCleanupStrategy extends AbstractConfigurableStrategy {
         setConfigValue(config, "preprocessSimplified", (Object) false);
         setConfigValue(config, "sizeRange", (Object) FileSizeRange.ALL.getCode());
         setConfigValue(config, "audioSpecial", (Object) true);
+    }
+
+    @Override
+    protected ChangeRecord createPreviewRecord(String filePath, StrategyConfigDTO config, ExecutionContext context) {
+        String mode = getConfigValue(config, "mode", "file_duplicate");
+        String method = getConfigValue(config, "method", "pseudo_delete");
+        
+        ChangeRecord record = createChangeRecord(filePath, filePath, "PENDING");
+        record.setOperationType(mode);
+        record.setReason("删除方式: " + method);
+        return record;
+    }
+
+    @Override
+    protected ChangeRecord executeForFile(String filePath, StrategyConfigDTO config, ExecutionContext context) {
+        String mode = getConfigValue(config, "mode", "file_duplicate");
+        String method = getConfigValue(config, "method", "pseudo_delete");
+        String trashPath = getConfigValue(config, "trashPath", ".EchoTrash");
+        
+        File file = new File(filePath);
+        if (!file.exists()) {
+            context.logWarn("File does not exist: " + filePath);
+            return createChangeRecord(filePath, filePath, "SKIPPED");
+        }
+        
+        if (!checkFileSizeRange(file, config, context)) {
+            context.logDebug("File size not in range: " + filePath);
+            return createChangeRecord(filePath, filePath, "SKIPPED");
+        }
+        
+        try {
+            switch (mode) {
+                case "file_duplicate":
+                    return handleFileDuplication(file, config, context);
+                case "folder_duplicate":
+                    return handleFolderDuplication(file, config, context);
+                case "empty_directory":
+                    return handleEmptyDirectory(file, config, context);
+                case "direct_cleanup":
+                    return handleDirectCleanup(file, method, trashPath, context);
+                default:
+                    context.logWarn("Unknown cleanup mode: " + mode);
+                    return createChangeRecord(filePath, filePath, "SKIPPED");
+            }
+        } catch (Exception e) {
+            context.logError("Error processing file " + filePath + ": " + e.getMessage());
+            return createChangeRecord(filePath, filePath, "ERROR");
+        }
+    }
+
+    private boolean checkFileSizeRange(File file, StrategyConfigDTO config, ExecutionContext context) {
+        String sizeRange = getConfigValue(config, "sizeRange", "all");
+        if ("all".equals(sizeRange)) {
+            return true;
+        }
+        
+        long fileSize = file.length();
+        long sizeInMB = fileSize / (1024 * 1024);
+        
+        switch (sizeRange) {
+            case "less_than_1mb":
+                return sizeInMB < 1;
+            case "less_than_10mb":
+                return sizeInMB < 10;
+            case "less_than_100mb":
+                return sizeInMB < 100;
+            case "less_than_1gb":
+                return sizeInMB < 1024;
+            case "greater_than_1mb":
+                return sizeInMB > 1;
+            case "greater_than_10mb":
+                return sizeInMB > 10;
+            case "greater_than_100mb":
+                return sizeInMB > 100;
+            case "greater_than_1gb":
+                return sizeInMB > 1024;
+            default:
+                return true;
+        }
+    }
+
+    private ChangeRecord handleFileDuplication(File file, StrategyConfigDTO config, ExecutionContext context) {
+        String method = getConfigValue(config, "method", "pseudo_delete");
+        String trashPath = getConfigValue(config, "trashPath", ".EchoTrash");
+        boolean keepLargest = getConfigValue(config, "keepLargest", true);
+        boolean keepEarliest = getConfigValue(config, "keepEarliest", true);
+        String keepExt = getConfigValue(config, "keepExt", "wav");
+        
+        context.logInfo("Processing file duplication for: " + file.getName());
+        
+        try {
+            List<File> duplicateFiles = findDuplicateFiles(file, config, context);
+            
+            if (duplicateFiles.isEmpty()) {
+                context.logDebug("No duplicate files found for: " + file.getName());
+                return createChangeRecord(file.getPath(), file.getPath(), "SKIPPED");
+            }
+            
+            File fileToKeep = selectFileToKeep(file, duplicateFiles, keepLargest, keepEarliest, keepExt, config, context);
+            
+            if (!fileToKeep.equals(file)) {
+                if ("pseudo_delete".equals(method)) {
+                    moveToTrash(file, trashPath, context);
+                } else {
+                    deleteFile(file, context);
+                }
+                
+                ChangeRecord record = createChangeRecord(file.getPath(), "", "SUCCESS");
+                record.setOperationType("文件去重");
+                record.setReason("删除方式: " + method + "，保留文件: " + fileToKeep.getName());
+                return record;
+            }
+            
+            context.logDebug("File is one to keep: " + file.getName());
+            return createChangeRecord(file.getPath(), file.getPath(), "SKIPPED");
+            
+        } catch (Exception e) {
+            context.logError("Error processing file duplication: " + e.getMessage());
+            return createChangeRecord(file.getPath(), file.getPath(), "ERROR");
+        }
+    }
+
+    private List<File> findDuplicateFiles(File file, StrategyConfigDTO config, ExecutionContext context) throws IOException {
+        List<File> duplicates = new ArrayList<>();
+        
+        String currentMD5 = MD5Calculator.calculateMD5(file);
+        
+        File parentDir = file.getParentFile();
+        if (parentDir == null) {
+            return duplicates;
+        }
+        
+        File[] filesInDir = parentDir.listFiles();
+        if (filesInDir == null) {
+            return duplicates;
+        }
+        
+        for (File otherFile : filesInDir) {
+            if (otherFile.equals(file) || !otherFile.isFile()) {
+                continue;
+            }
+            
+            if (otherFile.length() != file.length()) {
+                continue;
+            }
+            
+            if (!checkFileSizeRange(otherFile, config, context)) {
+                continue;
+            }
+            
+            try {
+                String otherMD5 = MD5Calculator.calculateMD5(otherFile);
+                if (currentMD5.equals(otherMD5)) {
+                    duplicates.add(otherFile);
+                }
+            } catch (IOException e) {
+                context.logDebug("Error calculating MD5 for file: " + otherFile.getName());
+            }
+        }
+        
+        return duplicates;
+    }
+
+    private File selectFileToKeep(File file, List<File> duplicates, 
+            boolean keepLargest, boolean keepEarliest, String keepExt,
+            StrategyConfigDTO config, ExecutionContext context) {
+        
+        List<File> allFiles = new ArrayList<>(duplicates);
+        allFiles.add(file);
+        
+        File selectedFile = file;
+        
+        if (keepExt != null && !keepExt.isEmpty()) {
+            for (File f : allFiles) {
+                if (f.getName().toLowerCase().endsWith("." + keepExt.toLowerCase())) {
+                    selectedFile = f;
+                    break;
+                }
+            }
+        }
+        
+        if (keepLargest) {
+            for (File f : allFiles) {
+                if (f.length() > selectedFile.length()) {
+                    selectedFile = f;
+                }
+            }
+        }
+        
+        if (keepEarliest) {
+            long earliestTime = selectedFile.lastModified();
+            for (File f : allFiles) {
+                if (f.lastModified() < earliestTime) {
+                    earliestTime = f.lastModified();
+                    selectedFile = f;
+                }
+            }
+        }
+        
+        return selectedFile;
+    }
+
+    private ChangeRecord handleFolderDuplication(File folder, StrategyConfigDTO config, ExecutionContext context) {
+        String method = getConfigValue(config, "method", "pseudo_delete");
+        String trashPath = getConfigValue(config, "trashPath", ".EchoTrash");
+        boolean keepLargest = getConfigValue(config, "keepLargest", true);
+        boolean keepEarliest = getConfigValue(config, "keepEarliest", true);
+        
+        if (!folder.isDirectory()) {
+            return createChangeRecord(folder.getPath(), folder.getPath(), "SKIPPED");
+        }
+        
+        context.logInfo("Processing folder duplication for: " + folder.getName());
+        
+        try {
+            List<File> duplicateFolders = findDuplicateFolders(folder, config, context);
+            
+            if (duplicateFolders.isEmpty()) {
+                context.logDebug("No duplicate folders found for: " + folder.getName());
+                return createChangeRecord(folder.getPath(), folder.getPath(), "SKIPPED");
+            }
+            
+            File folderToKeep = selectFolderToKeep(folder, duplicateFolders, keepLargest, keepEarliest, config, context);
+            
+            if (!folderToKeep.equals(folder)) {
+                if ("pseudo_delete".equals(method)) {
+                    moveToTrash(folder, trashPath, context);
+                } else {
+                    deleteDirectory(folder, context);
+                }
+                
+                ChangeRecord record = createChangeRecord(folder.getPath(), "", "SUCCESS");
+                record.setOperationType("文件夹去重");
+                record.setReason("删除方式: " + method + "，保留文件夹: " + folderToKeep.getName());
+                return record;
+            }
+            
+            context.logDebug("Folder is one to keep: " + folder.getName());
+            return createChangeRecord(folder.getPath(), folder.getPath(), "SKIPPED");
+            
+        } catch (Exception e) {
+            context.logError("Error processing folder duplication: " + e.getMessage());
+            return createChangeRecord(folder.getPath(), folder.getPath(), "ERROR");
+        }
+    }
+
+    private List<File> findDuplicateFolders(File folder, StrategyConfigDTO config, ExecutionContext context) throws IOException {
+        List<File> duplicates = new ArrayList<>();
+        
+        File parentDir = folder.getParentFile();
+        if (parentDir == null) {
+            return duplicates;
+        }
+        
+        File[] foldersInDir = parentDir.listFiles(File::isDirectory);
+        if (foldersInDir == null) {
+            return duplicates;
+        }
+        
+        for (File otherFolder : foldersInDir) {
+            if (otherFolder.equals(folder)) {
+                continue;
+            }
+            
+            if (!folder.getName().equalsIgnoreCase(otherFolder.getName())) {
+                continue;
+            }
+            
+            if (areFoldersEqual(folder, otherFolder, context)) {
+                duplicates.add(otherFolder);
+            }
+        }
+        
+        return duplicates;
+    }
+
+    private boolean areFoldersEqual(File folder1, File folder2, ExecutionContext context) {
+        File[] files1 = folder1.listFiles();
+        File[] files2 = folder2.listFiles();
+        
+        if (files1 == null || files2 == null) {
+            return false;
+        }
+        
+        if (files1.length != files2.length) {
+            return false;
+        }
+        
+        Map<String, File> fileMap1 = new HashMap<>();
+        for (File file : files1) {
+            fileMap1.put(file.getName(), file);
+        }
+        
+        for (File file : files2) {
+            File matchingFile = fileMap1.get(file.getName());
+            if (matchingFile == null) {
+                return false;
+            }
+            
+            if (file.isFile() && matchingFile.isFile()) {
+                if (file.length() != matchingFile.length()) {
+                    return false;
+                }
+            }
+        }
+        
+        return true;
+    }
+
+    private File selectFolderToKeep(File folder, List<File> duplicates, 
+            boolean keepLargest, boolean keepEarliest,
+            StrategyConfigDTO config, ExecutionContext context) {
+        
+        List<File> allFolders = new ArrayList<>(duplicates);
+        allFolders.add(folder);
+        
+        File selectedFolder = folder;
+        
+        if (keepLargest) {
+            long maxSize = calculateFolderSize(selectedFolder);
+            for (File f : allFolders) {
+                long size = calculateFolderSize(f);
+                if (size > maxSize) {
+                    maxSize = size;
+                    selectedFolder = f;
+                }
+            }
+        }
+        
+        if (keepEarliest) {
+            long earliestTime = selectedFolder.lastModified();
+            for (File f : allFolders) {
+                if (f.lastModified() < earliestTime) {
+                    earliestTime = f.lastModified();
+                    selectedFolder = f;
+                }
+            }
+        }
+        
+        return selectedFolder;
+    }
+
+    private long calculateFolderSize(File folder) {
+        long size = 0;
+        File[] files = folder.listFiles();
+        if (files != null) {
+            for (File file : files) {
+                if (file.isFile()) {
+                    size += file.length();
+                } else if (file.isDirectory()) {
+                    size += calculateFolderSize(file);
+                }
+            }
+        }
+        return size;
+    }
+
+    private ChangeRecord handleEmptyDirectory(File directory, StrategyConfigDTO config, ExecutionContext context) {
+        String method = getConfigValue(config, "method", "pseudo_delete");
+        String trashPath = getConfigValue(config, "trashPath", ".EchoTrash");
+        
+        if (!directory.isDirectory()) {
+            return createChangeRecord(directory.getPath(), directory.getPath(), "SKIPPED");
+        }
+        
+        if (!isEmptyOrOnlyEmptySubdirectories(directory)) {
+            context.logDebug("Directory is not empty or contains non-empty subdirectories: " + directory.getPath());
+            return createChangeRecord(directory.getPath(), directory.getPath(), "SKIPPED");
+        }
+        
+        context.logInfo("Cleaning empty directory: " + directory.getPath());
+        
+        try {
+            if ("pseudo_delete".equals(method)) {
+                moveToTrash(directory, trashPath, context);
+            } else if ("direct_delete".equals(method)) {
+                deleteDirectory(directory, context);
+            }
+            
+            ChangeRecord record = createChangeRecord(directory.getPath(), "", "SUCCESS");
+            record.setOperationType("清理空目录");
+            record.setReason("删除方式: " + method);
+            return record;
+        } catch (Exception e) {
+            context.logError("Error cleaning empty directory: " + e.getMessage());
+            return createChangeRecord(directory.getPath(), directory.getPath(), "ERROR");
+        }
+    }
+
+    private ChangeRecord handleDirectCleanup(File file, String method, String trashPath, ExecutionContext context) {
+        try {
+            if ("pseudo_delete".equals(method)) {
+                moveToTrash(file, trashPath, context);
+            } else if ("direct_delete".equals(method)) {
+                if (file.isDirectory()) {
+                    deleteDirectory(file, context);
+                } else {
+                    deleteFile(file, context);
+                }
+            }
+            
+            ChangeRecord record = createChangeRecord(file.getPath(), "", "SUCCESS");
+            record.setOperationType("直接清理");
+            record.setReason("删除方式: " + method);
+            return record;
+        } catch (Exception e) {
+            context.logError("Error in direct cleanup: " + e.getMessage());
+            return createChangeRecord(file.getPath(), file.getPath(), "ERROR");
+        }
+    }
+
+    private boolean isEmptyOrOnlyEmptySubdirectories(File directory) {
+        if (!directory.isDirectory()) {
+            return false;
+        }
+        
+        String[] files = directory.list();
+        if (files == null || files.length == 0) {
+            return true;
+        }
+        
+        for (String fileName : files) {
+            File file = new File(directory, fileName);
+            if (file.isFile()) {
+                return false;
+            } else if (file.isDirectory() && !isEmptyOrOnlyEmptySubdirectories(file)) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+
+    private void moveToTrash(File file, String trashPath, ExecutionContext context) throws IOException {
+        File trashDir = new File(trashPath);
+        if (!trashDir.exists()) {
+            trashDir.mkdirs();
+        }
+        
+        File targetFile = new File(trashDir, file.getName());
+        if (targetFile.exists()) {
+            String timestamp = String.valueOf(System.currentTimeMillis());
+            targetFile = new File(trashDir, file.getName() + "_" + timestamp);
+        }
+        
+        if (file.isDirectory()) {
+            moveDirectory(file, targetFile, context);
+        } else {
+            Files.move(file.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        }
+        
+        context.logInfo("Moved to trash: " + file.getPath() + " -> " + targetFile.getPath());
+    }
+
+    private void moveDirectory(File source, File target, ExecutionContext context) throws IOException {
+        if (!target.exists()) {
+            target.mkdirs();
+        }
+        
+        File[] files = source.listFiles();
+        if (files != null) {
+            for (File file : files) {
+                File targetFile = new File(target, file.getName());
+                if (file.isDirectory()) {
+                    moveDirectory(file, targetFile, context);
+                } else {
+                    Files.move(file.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                }
+            }
+        }
+        
+        Files.delete(source.toPath());
+        context.logInfo("Moved directory: " + source.getPath() + " -> " + target.getPath());
+    }
+
+    private void deleteFile(File file, ExecutionContext context) throws IOException {
+        Files.delete(file.toPath());
+        context.logInfo("Deleted file: " + file.getPath());
+    }
+
+    private void deleteDirectory(File directory, ExecutionContext context) throws IOException {
+        File[] files = directory.listFiles();
+        if (files != null) {
+            for (File file : files) {
+                if (file.isDirectory()) {
+                    deleteDirectory(file, context);
+                } else {
+                    deleteFile(file, context);
+                }
+            }
+        }
+        Files.delete(directory.toPath());
+        context.logInfo("Deleted directory: " + directory.getPath());
     }
     
     private java.util.List<EnumOptionDTO> getCleanupModeOptions() {
