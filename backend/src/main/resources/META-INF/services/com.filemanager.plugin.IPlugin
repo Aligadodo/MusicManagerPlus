@@ -12,5 +12,3 @@ com.filemanager.plugin.impl.audioconverter.AudioConverterStrategy
 com.filemanager.plugin.impl.albumdirnormalize.AlbumDirNormalizeStrategy
 com.filemanager.plugin.impl.metadatascraper.MetadataScraperStrategy
 com.filemanager.plugin.impl.advancedrename.AdvancedRenameStrategy
-com.filemanager.plugin.impl.collectionnaming.CollectionNamingStrategy
-com.filemanager.plugin.impl.duplicate.DuplicateStrategy

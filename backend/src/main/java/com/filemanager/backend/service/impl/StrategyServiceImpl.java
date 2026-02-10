@@ -11,9 +11,9 @@ import com.filemanager.plugin.StrategyConfigurable;
 import com.filemanager.plugin.util.PreconditionEvaluator;
 import com.filemanager.plugin.impl.audioconverter.enums.AudioFormat;
 import com.filemanager.plugin.impl.audioconverter.enums.Channels;
-import com.filemanager.plugin.impl.audioconverter.enums.OutputDirMode;
+import com.filemanager.plugin.enums.common.OutputDirMode;
 import com.filemanager.plugin.impl.audioconverter.enums.SampleRate;
-import com.filemanager.plugin.impl.advancedrename.enums.CrossDriveMode;
+import com.filemanager.plugin.enums.common.CrossDriveMode;
 import com.filemanager.plugin.impl.advancedrename.enums.ProcessScope;
 import com.filemanager.plugin.impl.albumdirnormalize.enums.DirectoryTemplate;
 import com.filemanager.plugin.impl.cuesplitter.enums.AfterSplitAction;
@@ -217,7 +217,7 @@ public class StrategyServiceImpl implements StrategyService {
         strategyRegistry.registerStrategy(fileUnzipStrategy);
 
         // 9. FileCollectionStrategy - 文件收集策略
-        com.filemanager.plugin.impl.FileCollectionStrategy fileCollectionStrategy = new com.filemanager.plugin.impl.FileCollectionStrategy();
+        com.filemanager.plugin.impl.filecollection.FileCollectionStrategy fileCollectionStrategy = new com.filemanager.plugin.impl.filecollection.FileCollectionStrategy();
         strategyRegistry.registerStrategy(fileCollectionStrategy);
 
         // 10. FileTypeFixStrategy - 文件类型修复策略
@@ -225,11 +225,11 @@ public class StrategyServiceImpl implements StrategyService {
         strategyRegistry.registerStrategy(fileTypeFixStrategy);
 
         // 11. CueFileRenameStrategy - CUE文件重命名策略
-        com.filemanager.plugin.impl.CueFileRenameStrategy cueFileRenameStrategy = new com.filemanager.plugin.impl.CueFileRenameStrategy();
+        com.filemanager.plugin.impl.cuefilerename.CueFileRenameStrategy cueFileRenameStrategy = new com.filemanager.plugin.impl.cuefilerename.CueFileRenameStrategy();
         strategyRegistry.registerStrategy(cueFileRenameStrategy);
 
         // 12. NcmIntegratedStrategy - 网易云音乐集成策略
-        com.filemanager.plugin.impl.NcmIntegratedStrategy ncmIntegratedStrategy = new com.filemanager.plugin.impl.NcmIntegratedStrategy();
+        com.filemanager.plugin.impl.ncmintegrated.NcmIntegratedStrategy ncmIntegratedStrategy = new com.filemanager.plugin.impl.ncmintegrated.NcmIntegratedStrategy();
         strategyRegistry.registerStrategy(ncmIntegratedStrategy);
     }
 

@@ -1,11 +1,11 @@
-package com.filemanager.plugin.impl;
+package com.filemanager.plugin.impl.cuefilerename;
 
 import com.filemanager.domain.dto.StrategyConfigDTO;
 import com.filemanager.domain.dto.EnumOptionDTO;
 import com.filemanager.domain.entity.ChangeRecord;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
 import com.filemanager.plugin.ExecutionContext;
-import com.filemanager.plugin.impl.enums.RenameMode;
+import com.filemanager.plugin.impl.filerename.enums.RenameMode;
 import java.io.File;
 
 public class CueFileRenameStrategy extends AbstractConfigurableStrategy {

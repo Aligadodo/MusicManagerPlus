@@ -7,7 +7,7 @@ import com.filemanager.plugin.AbstractConfigurableStrategy;
 import com.filemanager.plugin.ExecutionContext;
 import com.filemanager.plugin.impl.audioconverter.enums.AudioFormat;
 import com.filemanager.plugin.impl.audioconverter.enums.Channels;
-import com.filemanager.plugin.impl.audioconverter.enums.OutputDirMode;
+import com.filemanager.plugin.enums.common.OutputDirMode;
 import com.filemanager.plugin.impl.audioconverter.enums.SampleRate;
 import com.filemanager.plugin.impl.cuesplitter.enums.AfterSplitAction;
 import java.io.File;

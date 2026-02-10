@@ -5,7 +5,7 @@ import com.filemanager.domain.dto.EnumOptionDTO;
 import com.filemanager.domain.entity.ChangeRecord;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
 import com.filemanager.plugin.ExecutionContext;
-import com.filemanager.plugin.impl.advancedrename.enums.CrossDriveMode;
+import com.filemanager.plugin.enums.common.CrossDriveMode;
 import com.filemanager.plugin.impl.advancedrename.enums.ProcessScope;
 import java.io.File;
 import java.util.ArrayList;

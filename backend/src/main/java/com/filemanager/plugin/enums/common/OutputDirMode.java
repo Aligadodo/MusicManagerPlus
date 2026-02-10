@@ -1,4 +1,4 @@
-package com.filemanager.plugin.impl.audioconverter.enums;
+package com.filemanager.plugin.enums.common;
 
 import com.filemanager.plugin.enums.PluginEnum;
 

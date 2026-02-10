@@ -1,12 +1,12 @@
-package com.filemanager.plugin.impl;
+package com.filemanager.plugin.impl.ncmintegrated;
 
 import com.filemanager.domain.dto.StrategyConfigDTO;
 import com.filemanager.domain.dto.EnumOptionDTO;
 import com.filemanager.domain.entity.ChangeRecord;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
 import com.filemanager.plugin.ExecutionContext;
-import com.filemanager.plugin.impl.enums.NcmOperationMode;
-import com.filemanager.plugin.impl.enums.NcmOutputFormat;
+import com.filemanager.plugin.impl.ncmintegrated.enums.NcmOperationMode;
+import com.filemanager.plugin.impl.ncmintegrated.enums.NcmOutputFormat;
 import java.io.File;
 import java.util.ArrayList;
 

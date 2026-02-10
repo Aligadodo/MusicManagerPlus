@@ -4,8 +4,8 @@ import com.filemanager.plugin.enums.PluginEnum;
 
 public enum ProcessScope implements PluginEnum {
     
-    FILES_ONLY("files_only", "仅处理文件", "Files Only", "只处理文件，不处理文件夹", "Process files only, skip directories"),
-    DIRECTORIES_ONLY("directories_only", "仅处理文件夹", "Directories Only", "只处理文件夹，不处理文件", "Process directories only, skip files"),
+    FILES_ONLY("files_only", "仅处理文件", "Files Only", "仅处理文件，不处理文件夹", "Process files only, not directories"),
+    DIRECTORIES_ONLY("directories_only", "仅处理文件夹", "Directories Only", "仅处理文件夹，不处理文件", "Process directories only, not files"),
     ALL("all", "全部处理", "All", "处理所有文件和文件夹", "Process all files and directories");
     
     private final String code;
@@ -47,12 +47,16 @@ public enum ProcessScope implements PluginEnum {
         return descriptionEn;
     }
     
-    public boolean shouldProcessFiles() {
-        return this == FILES_ONLY || this == ALL;
+    public boolean isFilesOnly() {
+        return this == FILES_ONLY;
     }
     
-    public boolean shouldProcessDirectories() {
-        return this == DIRECTORIES_ONLY || this == ALL;
+    public boolean isDirectoriesOnly() {
+        return this == DIRECTORIES_ONLY;
+    }
+    
+    public boolean isAll() {
+        return this == ALL;
     }
     
     public static ProcessScope fromCode(String code) {

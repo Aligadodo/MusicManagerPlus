@@ -22,12 +22,12 @@ public class EnumOptionProvider {
         
         // AudioConverterStrategy 和 CueSplitterStrategy
         STRATEGY_FIELD_ENUM_MAP.put("audio-converter:targetFormat", "com.filemanager.plugin.impl.audioconverter.enums.AudioFormat");
-        STRATEGY_FIELD_ENUM_MAP.put("audio-converter:outputDirMode", "com.filemanager.plugin.impl.audioconverter.enums.OutputDirMode");
+        STRATEGY_FIELD_ENUM_MAP.put("audio-converter:outputDirMode", "com.filemanager.plugin.enums.common.OutputDirMode");
         STRATEGY_FIELD_ENUM_MAP.put("audio-converter:sampleRate", "com.filemanager.plugin.impl.audioconverter.enums.SampleRate");
         STRATEGY_FIELD_ENUM_MAP.put("audio-converter:channels", "com.filemanager.plugin.impl.audioconverter.enums.Channels");
         
         STRATEGY_FIELD_ENUM_MAP.put("cue-splitter:targetFormat", "com.filemanager.plugin.impl.audioconverter.enums.AudioFormat");
-        STRATEGY_FIELD_ENUM_MAP.put("cue-splitter:outputDirMode", "com.filemanager.plugin.impl.audioconverter.enums.OutputDirMode");
+        STRATEGY_FIELD_ENUM_MAP.put("cue-splitter:outputDirMode", "com.filemanager.plugin.enums.common.OutputDirMode");
         STRATEGY_FIELD_ENUM_MAP.put("cue-splitter:sampleRate", "com.filemanager.plugin.impl.audioconverter.enums.SampleRate");
         STRATEGY_FIELD_ENUM_MAP.put("cue-splitter:channels", "com.filemanager.plugin.impl.audioconverter.enums.Channels");
         STRATEGY_FIELD_ENUM_MAP.put("cue-splitter:afterSplitAction", "com.filemanager.plugin.impl.cuesplitter.enums.AfterSplitAction");
@@ -36,7 +36,7 @@ public class EnumOptionProvider {
         STRATEGY_FIELD_ENUM_MAP.put("file-type-fix:targetFormat", "com.filemanager.plugin.impl.filetypefix.enums.TargetFormat");
         
         // AdvancedRenameStrategy
-        STRATEGY_FIELD_ENUM_MAP.put("advanced-rename:crossDriveMode", "com.filemanager.plugin.impl.advancedrename.enums.CrossDriveMode");
+        STRATEGY_FIELD_ENUM_MAP.put("advanced-rename:crossDriveMode", "com.filemanager.plugin.enums.common.CrossDriveMode");
         STRATEGY_FIELD_ENUM_MAP.put("advanced-rename:processScope", "com.filemanager.plugin.impl.advancedrename.enums.ProcessScope");
         
         // AlbumDirNormalizeStrategy
@@ -50,7 +50,7 @@ public class EnumOptionProvider {
         // FileMigrateStrategy
         STRATEGY_FIELD_ENUM_MAP.put("file-migrate:operationMode", "com.filemanager.plugin.impl.filemigrate.enums.OperationMode");
         STRATEGY_FIELD_ENUM_MAP.put("file-migrate:scope", "com.filemanager.plugin.impl.filemigrate.enums.ScopeMode");
-        STRATEGY_FIELD_ENUM_MAP.put("file-migrate:outputDirMode", "com.filemanager.plugin.impl.audioconverter.enums.OutputDirMode");
+        STRATEGY_FIELD_ENUM_MAP.put("file-migrate:outputDirMode", "com.filemanager.plugin.enums.common.OutputDirMode");
         
         // FileUnzipStrategy
         STRATEGY_FIELD_ENUM_MAP.put("file-unzip:engine", "com.filemanager.plugin.impl.fileunzip.enums.UnzipEngine");
@@ -60,11 +60,11 @@ public class EnumOptionProvider {
         STRATEGY_FIELD_ENUM_MAP.put("metadata-scraper:source", "com.filemanager.plugin.impl.metadatascraper.enums.DataSource");
         
         // CueFileRenameStrategy
-        STRATEGY_FIELD_ENUM_MAP.put("cue-file-rename:renameMode", "com.filemanager.plugin.impl.enums.RenameMode");
+        STRATEGY_FIELD_ENUM_MAP.put("cue-file-rename:renameMode", "com.filemanager.plugin.impl.filerename.enums.RenameMode");
         
         // NcmIntegratedStrategy
-        STRATEGY_FIELD_ENUM_MAP.put("ncm-integrated:operationMode", "com.filemanager.plugin.impl.enums.NcmOperationMode");
-        STRATEGY_FIELD_ENUM_MAP.put("ncm-integrated:outputFormat", "com.filemanager.plugin.impl.enums.NcmOutputFormat");
+        STRATEGY_FIELD_ENUM_MAP.put("ncm-integrated:operationMode", "com.filemanager.plugin.impl.ncmintegrated.enums.NcmOperationMode");
+        STRATEGY_FIELD_ENUM_MAP.put("ncm-integrated:outputFormat", "com.filemanager.plugin.impl.ncmintegrated.enums.NcmOutputFormat");
     }
 
     /**

@@ -1,4 +1,4 @@
-package com.filemanager.plugin.impl.enums;
+package com.filemanager.plugin.impl.ncmintegrated.enums;
 
 import com.filemanager.plugin.enums.PluginEnum;
 

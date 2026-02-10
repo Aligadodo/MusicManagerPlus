@@ -120,9 +120,10 @@ public class StrategyControllerTest {
         files.add("/test/file2.txt");
         request.put("files", files);
 
-        StrategyConfigDTO config = new StrategyConfigDTO();
-        config.setConfigValues(new HashMap<>());
-        request.put("config", config);
+        Map<String, Object> configMap = new HashMap<>();
+        Map<String, Object> configValues = new HashMap<>();
+        configMap.put("configValues", configValues);
+        request.put("config", configMap);
 
         List<ChangeRecord> mockChanges = new ArrayList<>();
         ChangeRecord change = new ChangeRecord();
@@ -150,9 +151,10 @@ public class StrategyControllerTest {
         files.add("/test/file1.txt");
         request.put("files", files);
 
-        StrategyConfigDTO config = new StrategyConfigDTO();
-        config.setConfigValues(new HashMap<>());
-        request.put("config", config);
+        Map<String, Object> configMap = new HashMap<>();
+        Map<String, Object> configValues = new HashMap<>();
+        configMap.put("configValues", configValues);
+        request.put("config", configMap);
 
         List<ChangeRecord> mockChanges = new ArrayList<>();
         ChangeRecord change = new ChangeRecord();

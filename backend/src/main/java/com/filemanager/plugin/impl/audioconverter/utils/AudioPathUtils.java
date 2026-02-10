@@ -2,7 +2,7 @@ package com.filemanager.plugin.impl.audioconverter.utils;
 
 import com.filemanager.domain.dto.PluginConfigDTO;
 import com.filemanager.plugin.impl.audioconverter.enums.AudioFormat;
-import com.filemanager.plugin.impl.audioconverter.enums.OutputDirMode;
+import com.filemanager.plugin.enums.common.OutputDirMode;
 
 import java.io.File;
 
