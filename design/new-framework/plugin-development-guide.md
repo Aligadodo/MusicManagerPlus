@@ -1,14 +1,14 @@
-# FileManager Plus 插件开发指南
+# FileManager Plus 策略开发指南
 
 ## 概述
 
-本文档详细说明如何为FileManager Plus开发插件。插件系统是FileManager Plus的核心功能之一，允许开发者扩展系统的功能，添加自定义的文件处理策略。
+本文档详细说明如何为FileManager Plus开发策略。策略系统是FileManager Plus的核心功能之一，允许开发者扩展系统的功能，添加自定义的文件处理策略。
 
-## 一、插件系统架构
+## 一、策略系统架构
 
-### 1.1 插件接口定义
+### 1.1 策略接口定义
 
-插件必须实现`IPlugin`接口：
+策略必须实现`IPlugin`接口，并继承`AbstractConfigurableStrategy`类：
 
 ```java
 public interface IPlugin {
@@ -16,116 +16,75 @@ public interface IPlugin {
     String getName();
     String getDescription();
     String getVersion();
-    PluginConfigDTO getDefaultConfig();
     List<PluginParameterDTO> getParameters();
+    PluginConfigDTO getDefaultConfig();
     List<PreconditionGroupDTO> getDefaultPreconditionGroups();
     List<ChangeRecord> execute(List<String> filePaths, PluginConfigDTO config, ExecutionContext context);
     List<ChangeRecord> preview(List<String> filePaths, PluginConfigDTO config, ExecutionContext context);
 }
+
+public interface StrategyConfigurable extends IPlugin {
+    List<ConfigFieldDTO> getConfigFields();
+    StrategyConfigDTO initializeDefaultConfig();
+    boolean validateConfig(StrategyConfigDTO config);
+    <T> T getConfigValue(StrategyConfigDTO config, String key, T defaultValue);
+    void setConfigValue(StrategyConfigDTO config, String key, Object value);
+}
 ```
 
-### 1.2 插件生命周期
-
+### 1.2 策略生命周期
 ```
 加载 → 初始化 → 配置 → 执行 → 清理 → 卸载
 ```
 
-### 1.3 插件类型
+### 1.3 策略类型
+- **内部策略**: 位于backend/src/main/java/com/filemanager/plugin/impl/目录下，随应用一起打包
+- **外部策略**: 独立打包为JAR文件，可动态加载的策略
 
-- **内部插件**: 随应用一起打包的插件
-- **外部插件**: 独立打包为JAR文件，可动态加载的插件
+## 二、策略开发步骤
 
-## 二、插件开发步骤
+### 2.1 创建策略项目
 
-### 2.1 创建插件项目
-
-#### 2.1.1 Maven项目结构
+#### 2.1.1 项目结构
 ```
-my-plugin/
-├── pom.xml
-└── src/
-    └── main/
-        ├── java/
-        │   └── com/
-        │       └── example/
-        │           └── plugin/
-        │               └── MyPlugin.java
-        └── resources/
-            └── META-INF/
-                └── services/
-                    └── com.filemanager.plugin.api.IPlugin
+backend/src/main/java/com/filemanager/plugin/impl/mystrategy/
+├── MyStrategy.java
+└── enums/
+    └── MyEnum.java
 ```
+### 2.2 实现策略接口
 
-#### 2.1.2 pom.xml配置
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-         http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
-
-    <groupId>com.example</groupId>
-    <artifactId>my-plugin</artifactId>
-    <version>1.0.0</version>
-    <packaging>jar</packaging>
-
-    <properties>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
-
-    <dependencies>
-        <dependency>
-            <groupId>com.filemanager</groupId>
-            <artifactId>plugin-api</artifactId>
-            <version>1.0.0</version>
-            <scope>provided</scope>
-        </dependency>
-    </dependencies>
-
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.11.0</version>
-                <configuration>
-                    <source>21</source>
-                    <target>21</target>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
-</project>
-```
-
-### 2.2 实现插件接口
-
-#### 2.2.1 基本插件实现
+#### 2.2.1 基本策略实现
 ```java
-package com.example.plugin;
+package com.filemanager.plugin.impl.mystrategy;
 
-import com.filemanager.plugin.api.*;
-import com.filemanager.domain.dto.*;
-import java.util.*;
+import com.filemanager.domain.dto.StrategyConfigDTO;
+import com.filemanager.domain.entity.ChangeRecord;
+import com.filemanager.plugin.AbstractConfigurableStrategy;
+import com.filemanager.plugin.ExecutionContext;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
-public class MyPlugin implements IPlugin {
+public class MyStrategy extends AbstractConfigurableStrategy {
+
+    public MyStrategy() {
+        super();
+    }
 
     @Override
     public String getId() {
-        return "my-plugin";
+        return "my-strategy";
     }
 
     @Override
     public String getName() {
-        return "我的插件";
+        return "我的策略";
     }
 
     @Override
     public String getDescription() {
-        return "这是一个示例插件";
+        return "这是一个示例策略";
     }
 
     @Override
@@ -134,182 +93,90 @@ public class MyPlugin implements IPlugin {
     }
 
     @Override
-    public PluginConfigDTO getDefaultConfig() {
-        PluginConfigDTO config = new PluginConfigDTO();
-        Map<String, Object> configValues = new HashMap<>();
-        configValues.put("targetDirectory", "/tmp/output");
-        configValues.put("recursive", true);
-        config.setConfigValues(configValues);
-        return config;
+    public List<com.filemanager.domain.dto.PreconditionGroupDTO> getDefaultPreconditionGroups() {
+        return new ArrayList<>();
     }
 
     @Override
-    public List<PluginParameterDTO> getParameters() {
-        List<PluginParameterDTO> parameters = new ArrayList<>();
-        
-        PluginParameterDTO targetDirParam = new PluginParameterDTO();
-        targetDirParam.setName("targetDirectory");
-        targetDirParam.setLabel("目标目录");
-        targetDirParam.setType("directory");
-        targetDirParam.setDefaultValue("/tmp/output");
-        targetDirParam.setDescription("文件处理的目标目录");
-        targetDirParam.setRequired(true);
-        parameters.add(targetDirParam);
-        
-        PluginParameterDTO recursiveParam = new PluginParameterDTO();
-        recursiveParam.setName("recursive");
-        recursiveParam.setLabel("递归处理");
-        recursiveParam.setType("boolean");
-        recursiveParam.setDefaultValue(true);
-        recursiveParam.setDescription("是否递归处理子目录");
-        recursiveParam.setRequired(false);
-        parameters.add(recursiveParam);
-        
-        return parameters;
+    protected void initConfigFields() {
+        addConfigField("prefix", "前缀", "string", "new_", 
+            "添加到文件名前的前缀", false);
+        addConfigField("suffix", "后缀", "string", "_processed", 
+            "添加到文件名后缀的后缀", false);
+        addConfigField("overwrite", "覆盖已存在文件", "boolean", false, 
+            "是否覆盖已存在的文件", false);
     }
 
     @Override
-    public List<PreconditionGroupDTO> getDefaultPreconditionGroups() {
-        List<PreconditionGroupDTO> groups = new ArrayList<>();
-        
-        PreconditionGroupDTO group = new PreconditionGroupDTO();
-        group.setId("default");
-        group.setName("默认条件组");
-        group.setLogicType("AND");
-        
-        List<PreconditionDTO> preconditions = new ArrayList<>();
-        PreconditionDTO precondition = new PreconditionDTO();
-        precondition.setId("exist-condition");
-        precondition.setField("fileExists");
-        precondition.setOperator(PreconditionDTO.OperatorType.EQUALS);
-        precondition.setValue(true);
-        precondition.setDescription("文件存在");
-        preconditions.add(precondition);
-        
-        group.setPreconditions(preconditions);
-        groups.add(group);
-        
-        return groups;
+    protected void initDefaultConfigValues(StrategyConfigDTO config) {
+        setConfigValue(config, "prefix", "new_");
+        setConfigValue(config, "suffix", "_processed");
+        setConfigValue(config, "overwrite", false);
     }
 
     @Override
-    public List<ChangeRecord> execute(List<String> filePaths, PluginConfigDTO config, ExecutionContext context) {
-        List<ChangeRecord> changes = new ArrayList<>();
+    protected ChangeRecord createPreviewRecord(String filePath, StrategyConfigDTO config, ExecutionContext context) {
+        String prefix = getConfigValue(config, "prefix", "new_");
+        String suffix = getConfigValue(config, "suffix", "_processed");
         
-        Map<String, Object> configValues = config.getConfigValues();
-        String targetDirectory = (String) configValues.get("targetDirectory");
-        boolean recursive = (Boolean) configValues.getOrDefault("recursive", false);
+        File sourceFile = new File(filePath);
+        String fileName = sourceFile.getName();
+        String newFileName = prefix + fileName + suffix;
+        String newFilePath = sourceFile.getParent() + File.separator + newFileName;
         
-        int total = filePaths.size();
-        for (int i = 0; i < total; i++) {
-            String filePath = filePaths.get(i);
-            
-            try {
-                context.reportProgress((i * 100) / total, "处理文件: " + filePath);
-                context.log("INFO", "开始处理文件: " + filePath);
-                
-                ChangeRecord change = processFile(filePath, targetDirectory, recursive);
-                changes.add(change);
-                
-                context.log("INFO", "文件处理完成: " + filePath);
-            } catch (Exception e) {
-                context.log("ERROR", "处理文件失败: " + filePath + ", 错误: " + e.getMessage());
-                
-                ChangeRecord change = new ChangeRecord();
-                change.setId(UUID.randomUUID().toString());
-                change.setOriginalName(filePath);
-                change.setNewName(filePath);
-                change.setFilePath(filePath);
-                change.setChanged(false);
-                change.setOperationType("PROCESS");
-                change.setStatus("FAILED");
-                change.setMessage(e.getMessage());
-                changes.add(change);
-            }
+        ChangeRecord record = createChangeRecord(filePath, newFilePath, "PENDING");
+        record.setOperationType("RENAME");
+        record.setReason("应用重命名规则");
+        return record;
+    }
+
+    @Override
+    protected ChangeRecord executeForFile(String filePath, StrategyConfigDTO config, ExecutionContext context) {
+        String prefix = getConfigValue(config, "prefix", "new_");
+        String suffix = getConfigValue(config, "suffix", "_processed");
+        boolean overwrite = getConfigValue(config, "overwrite", false);
+        
+        File sourceFile = new File(filePath);
+        if (!sourceFile.exists()) {
+            context.logWarn("File does not exist: " + filePath);
+            return createChangeRecord(filePath, filePath, "SKIPPED");
         }
-        
-        return changes;
-    }
-
-    @Override
-    public List<ChangeRecord> preview(List<String> filePaths, PluginConfigDTO config, ExecutionContext context) {
-        List<ChangeRecord> changes = new ArrayList<>();
-        
-        Map<String, Object> configValues = config.getConfigValues();
-        String targetDirectory = (String) configValues.get("targetDirectory");
-        boolean recursive = (Boolean) configValues.getOrDefault("recursive", false);
-        
-        for (String filePath : filePaths) {
-            ChangeRecord change = previewFile(filePath, targetDirectory, recursive);
-            changes.add(change);
-        }
-        
-        return changes;
-    }
-    
-    private ChangeRecord processFile(String filePath, String targetDirectory, boolean recursive) {
-        ChangeRecord change = new ChangeRecord();
-        change.setId(UUID.randomUUID().toString());
-        change.setOriginalName(filePath);
-        
-        File file = new File(filePath);
-        String newFilePath = targetDirectory + File.separator + file.getName();
         
         try {
-            Files.move(Paths.get(filePath), Paths.get(newFilePath));
-            change.setNewName(newFilePath);
-            change.setChanged(true);
-            change.setOperationType("MOVE");
-            change.setStatus("SUCCESS");
-            change.setMessage("文件移动成功");
-        } catch (IOException e) {
-            change.setNewName(filePath);
-            change.setChanged(false);
-            change.setOperationType("MOVE");
-            change.setStatus("FAILED");
-            change.setMessage(e.getMessage());
+            String fileName = sourceFile.getName();
+            String newFileName = prefix + fileName + suffix;
+            File targetFile = new File(sourceFile.getParent(), newFileName);
+            
+            if (targetFile.exists() && !overwrite) {
+                context.logWarn("Target file already exists: " + newFileName);
+                return createChangeRecord(filePath, filePath, "SKIPPED");
+            }
+            
+            sourceFile.renameTo(targetFile);
+            
+            context.logInfo("Renamed file: " + filePath + " -> " + targetFile.getPath());
+            ChangeRecord record = createChangeRecord(filePath, targetFile.getPath(), "SUCCESS");
+            record.setOperationType("RENAME");
+            record.setReason("应用重命名规则");
+            return record;
+        } catch (Exception e) {
+            context.logError("Error renaming file " + filePath + ": " + e.getMessage());
+            return createChangeRecord(filePath, filePath, "ERROR");
         }
-        
-        return change;
-    }
-    
-    private ChangeRecord previewFile(String filePath, String targetDirectory, boolean recursive) {
-        ChangeRecord change = new ChangeRecord();
-        change.setId(UUID.randomUUID().toString());
-        change.setOriginalName(filePath);
-        
-        File file = new File(filePath);
-        String newFilePath = targetDirectory + File.separator + file.getName();
-        
-        change.setNewName(newFilePath);
-        change.setChanged(true);
-        change.setOperationType("MOVE");
-        change.setStatus("PENDING");
-        change.setMessage("预览模式，文件未被修改");
-        
-        return change;
     }
 }
 ```
 
-### 2.3 注册插件
+### 2.3 注册策略
 
 #### 2.3.1 创建ServiceLoader配置文件
-在`src/main/resources/META-INF/services/`目录下创建文件`com.filemanager.plugin.api.IPlugin`，内容为插件实现类的全限定名：
+在`backend/src/main/resources/META-INF/services/`目录下创建文件`com.filemanager.plugin.IPlugin`，内容为策略实现类的全限定名：
 
 ```
-com.example.plugin.MyPlugin
+com.filemanager.plugin.impl.mystrategy.MyStrategy
 ```
 
-### 2.4 构建插件
-
-```bash
-mvn clean package
-```
-
-构建完成后，会在`target/`目录下生成JAR文件：`my-plugin-1.0.0.jar`
-
-## 三、插件配置
+## 三、策略配置
 
 ### 3.1 配置参数类型
 
@@ -614,32 +481,216 @@ class MyPluginIntegrationTest {
 }
 ```
 
-## 六、插件部署
+## 六、策略部署
 
-### 6.1 内部插件部署
+### 6.1 内部策略部署
 
-将插件的JAR文件放置在应用的`plugins/`目录下，重启应用即可自动加载。
+将策略类放置在backend/src/main/java/com/filemanager/plugin/impl/目录下，并在backend/src/main/resources/META-INF/services/com.filemanager.plugin.IPlugin文件中注册策略类的全限定名，重启应用即可自动加载。
 
-### 6.2 外部插件部署
+### 6.2 外部策略部署
 
-#### 6.2.1 通过API加载插件
+#### 6.2.1 通过API加载策略
 
 ```bash
 curl -X POST http://localhost:8080/api/plugins/load-external \
   -H "Content-Type: application/json" \
   -d '{
-    "pluginPath": "/path/to/my-plugin-1.0.0.jar"
+    "pluginPath": "/path/to/my-strategy-1.0.0.jar"
   }'
 ```
 
-#### 6.2.2 扫描插件目录
+#### 6.2.2 扫描策略目录
 
 ```bash
 curl -X POST http://localhost:8080/api/plugins/scan \
   -H "Content-Type: application/json" \
   -d '{
-    "directory": "/path/to/plugins"
+    "directory": "/path/to/strategies"
   }'
+```
+
+### 6.3 外部策略开发
+
+开发外部策略需要创建独立的Maven项目，包含以下步骤：
+
+1. 创建Maven项目
+2. 添加对FileManager Plus的依赖
+3. 实现策略类（继承AbstractConfigurableStrategy）
+4. 创建META-INF/services/com.filemanager.plugin.IPlugin文件
+5. 打包为JAR文件
+
+#### 6.3.1 Maven项目配置
+
+```xml
+<project>
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.example</groupId>
+    <artifactId>my-strategy</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+    
+    <dependencies>
+        <dependency>
+            <groupId>com.filemanager</groupId>
+            <artifactId>shared-domain</artifactId>
+            <version>1.0.0</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+    
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.2.0</version>
+                <configuration>
+                    <archive>
+                        <manifestEntries>
+                            <Implementation-Title>${project.name}</Implementation-Title>
+                            <Implementation-Version>${project.version}</Implementation-Version>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+```
+
+#### 6.3.2 策略实现
+
+```java
+package com.example.strategy;
+
+import com.filemanager.domain.dto.StrategyConfigDTO;
+import com.filemanager.domain.entity.ChangeRecord;
+import com.filemanager.plugin.AbstractConfigurableStrategy;
+import com.filemanager.plugin.ExecutionContext;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+
+public class MyExternalStrategy extends AbstractConfigurableStrategy {
+
+    public MyExternalStrategy() {
+        super();
+    }
+
+    @Override
+    public String getId() {
+        return "my-external-strategy";
+    }
+
+    @Override
+    public String getName() {
+        return "我的外部策略";
+    }
+
+    @Override
+    public String getDescription() {
+        return "这是一个外部策略示例";
+    }
+
+    @Override
+    public String getVersion() {
+        return "1.0.0";
+    }
+
+    @Override
+    public List<com.filemanager.domain.dto.PreconditionGroupDTO> getDefaultPreconditionGroups() {
+        return new ArrayList<>();
+    }
+
+    @Override
+    protected void initConfigFields() {
+        addConfigField("targetDirectory", "目标目录", "directory", "/tmp/output", 
+            "文件处理的目标目录", true);
+    }
+
+    @Override
+    protected void initDefaultConfigValues(StrategyConfigDTO config) {
+        setConfigValue(config, "targetDirectory", "/tmp/output");
+    }
+
+    @Override
+    protected ChangeRecord createPreviewRecord(String filePath, StrategyConfigDTO config, ExecutionContext context) {
+        String targetDir = getConfigValue(config, "targetDirectory", "/tmp/output");
+        String fileName = filePath.substring(filePath.lastIndexOf('/') + 1);
+        String targetPath = targetDir + "/" + fileName;
+
+        ChangeRecord record = createChangeRecord(filePath, targetPath, "PENDING");
+        record.setOperationType("COPY");
+        record.setReason("复制文件到目标目录");
+        return record;
+    }
+
+    @Override
+    protected ChangeRecord executeForFile(String filePath, StrategyConfigDTO config, ExecutionContext context) {
+        String targetDir = getConfigValue(config, "targetDirectory", "/tmp/output");
+        
+        File sourceFile = new File(filePath);
+        if (!sourceFile.exists()) {
+            context.logWarn("File does not exist: " + filePath);
+            return createChangeRecord(filePath, filePath, "SKIPPED");
+        }
+
+        try {
+            String fileName = sourceFile.getName();
+            File targetDirFile = new File(targetDir);
+            
+            if (!targetDirFile.exists()) {
+                targetDirFile.mkdirs();
+            }
+            
+            String targetPath = targetDir + "/" + fileName;
+            File targetFile = new File(targetPath);
+            
+            if (targetFile.exists()) {
+                context.logWarn("Target file already exists: " + targetPath);
+                return createChangeRecord(filePath, filePath, "SKIPPED");
+            }
+            
+            java.nio.file.Files.copy(
+                java.nio.file.Paths.get(filePath), 
+                java.nio.file.Paths.get(targetPath),
+                java.nio.file.StandardCopyOption.COPY_ATTRIBUTES
+            );
+            
+            context.logInfo("Copied file: " + filePath + " -> " + targetPath);
+            ChangeRecord record = createChangeRecord(filePath, targetPath, "SUCCESS");
+            record.setOperationType("COPY");
+            record.setReason("复制文件到目标目录");
+            return record;
+        } catch (Exception e) {
+            context.logError("Error copying file " + filePath + ": " + e.getMessage());
+            return createChangeRecord(filePath, filePath, "ERROR");
+        }
+    }
+}
+```
+
+#### 6.3.3 注册策略
+
+在`src/main/resources/META-INF/services/com.filemanager.plugin.IPlugin`文件中添加策略类的全限定名：
+
+```
+com.example.strategy.MyExternalStrategy
+```
+
+#### 6.3.4 打包和部署
+
+```bash
+# 打包策略
+mvn clean package
+
+# 将JAR文件复制到策略目录
+cp target/my-strategy-1.0.0.jar /path/to/strategies/
+
+# 通过API加载策略
+curl -X POST http://localhost:8080/api/plugins/load-external \
+  -H "Content-Type: application/json" \
+  -d '{"pluginPath": "/path/to/strategies/my-strategy-1.0.0.jar"}'
 ```
 
 ## 七、最佳实践
@@ -767,42 +818,50 @@ public List<ChangeRecord> execute(List<String> filePaths, PluginConfigDTO config
 
 ## 八、常见问题
 
-### 8.1 插件无法加载
+### 8.1 策略无法加载
 
-**问题**: 插件JAR文件已放置在`plugins/`目录下，但应用无法加载插件。
+**问题**: 策略JAR文件已放置在策略目录下，但应用无法加载策略。
 
 **解决方案**:
-1. 检查`META-INF/services/com.filemanager.plugin.api.IPlugin`文件是否存在
-2. 检查文件内容是否正确（插件实现类的全限定名）
-3. 检查插件是否实现了`IPlugin`接口
-4. 检查插件依赖是否正确配置
+1. 检查`META-INF/services/com.filemanager.plugin.IPlugin`文件是否存在
+2. 检查文件内容是否正确（策略实现类的全限定名）
+3. 检查策略是否实现了`IPlugin`接口
+4. 检查策略依赖是否正确配置
 
 ### 8.2 配置参数无法读取
 
-**问题**: 插件无法读取配置参数。
+**问题**: 策略无法读取配置参数。
 
 **解决方案**:
-1. 检查`getDefaultConfig()`方法是否正确返回配置
-2. 检查`getParameters()`方法是否正确返回参数定义
+1. 检查`initConfigFields()`方法是否正确定义了配置字段
+2. 检查`initDefaultConfigValues()`方法是否正确设置了默认值
 3. 检查参数名称是否一致
 4. 检查参数类型是否正确
 
 ### 8.3 执行结果不正确
 
-**问题**: 插件执行结果不符合预期。
+**问题**: 策略执行结果不符合预期。
 
 **解决方案**:
-1. 检查`execute()`方法的实现逻辑
+1. 检查`executeForFile()`方法的实现逻辑
 2. 检查`ChangeRecord`的设置是否正确
 3. 检查文件路径是否正确
 4. 检查文件权限是否足够
 
 ## 九、总结
 
-本文档详细说明了如何为FileManager Plus开发插件，包括插件系统架构、开发步骤、配置、执行、测试、部署和最佳实践。通过遵循本文档的指导，开发者可以快速开发出高质量的插件，扩展FileManager Plus的功能。
+本文档详细说明了如何为FileManager Plus开发策略，包括策略系统架构、开发步骤、配置、执行、测试、部署和最佳实践。通过遵循本文档的指导，开发者可以快速开发出高质量的策略，扩展FileManager Plus的功能。
+
+**关键要点**:
+- 系统采用统一的插件-策略架构，所有策略类都实现了IPlugin接口
+- 策略通过继承AbstractConfigurableStrategy类实现，简化了开发流程
+- 支持内部策略和外部策略两种部署方式
+- 外部策略可以通过ServiceLoader机制动态加载
+- PluginRegistry统一管理所有策略的加载和注册
 
 ---
 
-**文档版本**: 1.0  
+**文档版本**: 2.0  
 **创建日期**: 2026-02-08  
+**更新日期**: 2026-02-10  
 **维护者**: FileManager Plus Team

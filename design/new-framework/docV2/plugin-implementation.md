@@ -1,16 +1,16 @@
-# 插件实现文档
+# 策略实现文档
 
 ## 概述
 
-本文档详细描述了FileManager Plus系统中的插件实现，包括插件架构、已实现的插件列表、插件配置和使用方法。
+本文档详细描述了FileManager Plus系统中的策略实现，包括策略架构、已实现的策略列表、策略配置和使用方法。系统采用统一的插件-策略架构，策略类实现了IPlugin接口，同时具备参数配置和功能执行能力。
 
-## 插件架构
+## 策略架构
 
 ### 核心接口
 
 #### IPlugin接口
 
-所有插件必须实现`IPlugin`接口，该接口定义了插件的基本行为：
+所有策略必须实现`IPlugin`接口，该接口定义了策略的基本行为：
 
 ```java
 public interface IPlugin {
@@ -18,17 +18,50 @@ public interface IPlugin {
     String getName();
     String getDescription();
     String getVersion();
-    PluginConfigDTO getDefaultConfig();
     List<PluginParameterDTO> getParameters();
+    PluginConfigDTO getDefaultConfig();
     List<PreconditionGroupDTO> getDefaultPreconditionGroups();
     List<ChangeRecord> execute(List<String> filePaths, PluginConfigDTO config, ExecutionContext context);
     List<ChangeRecord> preview(List<String> filePaths, PluginConfigDTO config, ExecutionContext context);
 }
 ```
 
+#### StrategyConfigurable接口
+
+策略配置接口继承自IPlugin，定义了策略配置方法：
+
+```java
+public interface StrategyConfigurable extends IPlugin {
+    List<ConfigFieldDTO> getConfigFields();
+    StrategyConfigDTO initializeDefaultConfig();
+    boolean validateConfig(StrategyConfigDTO config);
+    <T> T getConfigValue(StrategyConfigDTO config, String key, T defaultValue);
+    void setConfigValue(StrategyConfigDTO config, String key, Object value);
+}
+```
+
+#### AbstractConfigurableStrategy
+
+策略抽象基类实现了IPlugin接口，提供了策略实现的模板：
+
+```java
+public abstract class AbstractConfigurableStrategy implements IPlugin {
+    protected List<ConfigFieldDTO> configFields;
+    
+    public AbstractConfigurableStrategy();
+    protected abstract void initConfigFields();
+    protected abstract void initDefaultConfigValues(StrategyConfigDTO config);
+    protected abstract ChangeRecord createPreviewRecord(String filePath, StrategyConfigDTO config, ExecutionContext context);
+    protected abstract ChangeRecord executeForFile(String filePath, StrategyConfigDTO config, ExecutionContext context);
+    
+    protected void addConfigField(String name, String label, String type, Object defaultValue, String description, boolean required);
+    protected ChangeRecord createChangeRecord(String originalPath, String newPath, String status);
+}
+```
+
 #### PluginRegistry
 
-插件注册表负责管理所有已加载的插件：
+插件注册表负责管理所有已加载的策略：
 
 ```java
 public class PluginRegistry {
@@ -53,7 +86,7 @@ public class PluginRegistry {
 
 #### PluginLoader
 
-插件加载器支持从外部JAR文件加载插件：
+插件加载器支持从外部JAR文件加载策略：
 
 ```java
 public class PluginLoader {
@@ -69,7 +102,7 @@ public class PluginLoader {
 
 #### ExecutionContext
 
-执行上下文提供插件执行时的环境信息：
+执行上下文提供策略执行时的环境信息：
 
 ```java
 public class ExecutionContext {
@@ -82,14 +115,14 @@ public class ExecutionContext {
 }
 ```
 
-### 插件配置
+### 策略配置
 
-插件配置使用`PluginConfigDTO`类来管理：
+策略配置使用`StrategyConfigDTO`类来管理：
 
 ```java
-public class PluginConfigDTO {
+public class StrategyConfigDTO {
     private Map<String, Object> configValues;
-    private List<PluginParameterDTO> parameters;
+    private List<ConfigFieldDTO> configFields;
     private List<PreconditionGroupDTO> preconditionGroups;
 
     public void setValue(String key, Object value);
@@ -637,38 +670,41 @@ Content-Type: application/json
 2. 调用`/api/plugins/load-external` API
 3. 插件自动加载并可用
 
-## 插件开发指南
+## 策略开发指南
 
-### 创建新插件
+### 创建新策略
 
-1. 创建新的插件类并实现IPlugin接口：
+1. 创建新的策略类并继承AbstractConfigurableStrategy类：
 ```java
 package com.filemanager.plugin.operations;
 
-import com.filemanager.domain.dto.PluginConfigDTO;
-import com.filemanager.domain.dto.PluginParameterDTO;
-import com.filemanager.domain.dto.PreconditionGroupDTO;
+import com.filemanager.domain.dto.StrategyConfigDTO;
 import com.filemanager.domain.entity.ChangeRecord;
+import com.filemanager.plugin.AbstractConfigurableStrategy;
 import com.filemanager.plugin.ExecutionContext;
-import com.filemanager.plugin.IPlugin;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class YourPlugin implements IPlugin {
+public class YourStrategy extends AbstractConfigurableStrategy {
+    
+    public YourStrategy() {
+        super();
+    }
+
     @Override
     public String getId() {
-        return "your-plugin-id";
+        return "your-strategy-id";
     }
 
     @Override
     public String getName() {
-        return "你的插件名称";
+        return "你的策略名称";
     }
 
     @Override
     public String getDescription() {
-        return "插件描述";
+        return "策略描述";
     }
 
     @Override
@@ -677,108 +713,88 @@ public class YourPlugin implements IPlugin {
     }
 
     @Override
-    public PluginConfigDTO getDefaultConfig() {
-        PluginConfigDTO config = new PluginConfigDTO();
-        config.setValue("key1", "default-value1");
-        config.setValue("key2", "default-value2");
-        config.setParameters(getParameters());
-        config.setPreconditionGroups(getDefaultPreconditionGroups());
-        return config;
-    }
-
-    @Override
-    public List<PluginParameterDTO> getParameters() {
-        List<PluginParameterDTO> parameters = new ArrayList<>();
-        
-        PluginParameterDTO param = new PluginParameterDTO(
-            "key1",
-            "参数1",
-            "参数描述",
-            "text",
-            "default-value1",
-            true
-        );
-        parameters.add(param);
-        
-        return parameters;
-    }
-
-    @Override
-    public List<PreconditionGroupDTO> getDefaultPreconditionGroups() {
+    public List<com.filemanager.domain.dto.PreconditionGroupDTO> getDefaultPreconditionGroups() {
         return new ArrayList<>();
     }
 
     @Override
-    public List<ChangeRecord> execute(List<String> filePaths, PluginConfigDTO config, ExecutionContext context) {
-        List<ChangeRecord> changes = new ArrayList<>();
-        
-        for (String filePath : filePaths) {
-            ChangeRecord record = new ChangeRecord();
-            record.setId("change-" + System.currentTimeMillis() + "-" + filePath.hashCode());
-            record.setOriginalName(filePath);
-            record.setNewName(getNewName(filePath, config));
-            record.setFilePath(filePath);
-            record.setChanged(true);
-            record.setOperationType(ChangeRecord.OperationType.CUSTOM);
-            record.setStatus(ChangeRecord.ExecStatus.PENDING);
-            changes.add(record);
-        }
-        
-        return changes;
+    protected void initConfigFields() {
+        addConfigField("key1", "配置项1", "string", "default-value1", 
+            "配置项1的描述", false);
+        addConfigField("key2", "配置项2", "boolean", true, 
+            "配置项2的描述", false);
     }
 
     @Override
-    public List<ChangeRecord> preview(List<String> filePaths, PluginConfigDTO config, ExecutionContext context) {
-        return execute(filePaths, config, context);
+    protected void initDefaultConfigValues(StrategyConfigDTO config) {
+        setConfigValue(config, "key1", "default-value1");
+        setConfigValue(config, "key2", true);
     }
 
-    private String getNewName(String filePath, PluginConfigDTO config) {
-        return filePath;
+    @Override
+    protected ChangeRecord createPreviewRecord(String filePath, StrategyConfigDTO config, ExecutionContext context) {
+        String value1 = getConfigValue(config, "key1", "default-value1");
+        boolean value2 = getConfigValue(config, "key2", false);
+        
+        return createChangeRecord(filePath, filePath, "PENDING");
+    }
+
+    @Override
+    protected ChangeRecord executeForFile(String filePath, StrategyConfigDTO config, ExecutionContext context) {
+        String value1 = getConfigValue(config, "key1", "default-value1");
+        boolean value2 = getConfigValue(config, "key2", false);
+        
+        try {
+            context.logInfo("Processing file: " + filePath);
+            return createChangeRecord(filePath, filePath, "SUCCESS");
+        } catch (Exception e) {
+            context.logError("Error processing file: " + e.getMessage());
+            return createChangeRecord(filePath, filePath, "ERROR");
+        }
     }
 }
 ```
 
-2. 在`META-INF/services/com.filemanager.plugin.IPlugin`文件中注册插件：
+2. 在`backend/src/main/resources/META-INF/services/com.filemanager.plugin.IPlugin`文件中注册策略：
 ```
-com.filemanager.plugin.operations.YourPlugin
+com.filemanager.plugin.operations.YourStrategy
 ```
 
-## 插件管理API
+## 策略管理API
 
-### 获取所有插件
+### 获取所有策略
 
 ```http
 GET /api/plugins
 ```
 
-### 获取内置插件
+### 获取内置策略
 
 ```http
 GET /api/plugins/internal
 ```
 
-### 获取外部插件
+### 获取外部策略
 
 ```http
 GET /api/plugins/external
 ```
 
-### 获取插件信息
+### 获取策略信息
 
 ```http
-GET /api/plugins/{pluginId}
+GET /api/plugins/{strategyId}
 ```
 
-### 获取插件配置
+### 获取策略配置
 
 ```http
-GET /api/plugins/{pluginId}/config
+GET /api/plugins/{strategyId}/config
 ```
 
-### 更新插件配置
-
+### 更新策略配置
 ```http
-POST /api/plugins/{pluginId}/config
+POST /api/plugins/{strategyId}/config
 Content-Type: application/json
 
 {
@@ -789,10 +805,10 @@ Content-Type: application/json
 }
 ```
 
-### 执行插件
+### 执行策略
 
 ```http
-POST /api/plugins/{pluginId}/execute
+POST /api/plugins/{strategyId}/execute
 Content-Type: application/json
 
 {
@@ -805,7 +821,7 @@ Content-Type: application/json
 }
 ```
 
-### 扫描外部插件目录
+### 扫描外部策略目录
 
 ```http
 POST /api/plugins/scan
@@ -816,7 +832,7 @@ Content-Type: application/json
 }
 ```
 
-### 加载外部插件
+### 加载外部策略
 
 ```http
 POST /api/plugins/load-external

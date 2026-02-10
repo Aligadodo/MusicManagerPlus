@@ -1,0 +1,16 @@
+com.filemanager.plugin.impl.filerename.FileRenameStrategy
+com.filemanager.plugin.impl.filecollection.FileCollectionStrategy
+com.filemanager.plugin.impl.tracknumber.TrackNumberStrategy
+com.filemanager.plugin.impl.filecleanup.FileCleanupStrategy
+com.filemanager.plugin.impl.filemigrate.FileMigrateStrategy
+com.filemanager.plugin.impl.cuefilerename.CueFileRenameStrategy
+com.filemanager.plugin.impl.ncmintegrated.NcmIntegratedStrategy
+com.filemanager.plugin.impl.fileunzip.FileUnzipStrategy
+com.filemanager.plugin.impl.cuesplitter.CueSplitterStrategy
+com.filemanager.plugin.impl.filetypefix.FileTypeFixStrategy
+com.filemanager.plugin.impl.audioconverter.AudioConverterStrategy
+com.filemanager.plugin.impl.albumdirnormalize.AlbumDirNormalizeStrategy
+com.filemanager.plugin.impl.metadatascraper.MetadataScraperStrategy
+com.filemanager.plugin.impl.advancedrename.AdvancedRenameStrategy
+com.filemanager.plugin.impl.collectionnaming.CollectionNamingStrategy
+com.filemanager.plugin.impl.duplicate.DuplicateStrategy

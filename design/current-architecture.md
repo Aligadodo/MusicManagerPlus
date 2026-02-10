@@ -78,15 +78,17 @@ FileManagerPlus/
 
 ## 核心系统架构
 
-### 1. 插件系统
+### 1. 统一插件-策略系统
 
 #### 架构设计
-插件系统采用Java的ServiceLoader机制，支持动态加载和管理插件。插件系统包括以下核心组件：
+系统采用统一的插件-策略架构，Strategy类实现了IPlugin接口，同时具备参数配置和功能执行能力。系统包括以下核心组件：
 
 - **IPlugin接口**: 定义插件的基本功能
-- **PluginRegistry**: 插件注册表，管理所有插件的加载和卸载
-- **PluginLoader**: 插件加载器，负责从JAR文件中加载插件
-- **PluginService**: 插件服务接口，提供插件的管理和执行功能
+- **StrategyConfigurable接口**: 策略配置接口，继承自IPlugin
+- **AbstractConfigurableStrategy**: 策略抽象基类，实现了IPlugin接口
+- **PluginRegistry**: 插件注册表，管理所有策略的加载
+- **StrategyService**: 策略服务接口，提供策略的管理和配置功能
+- **StrategyServiceImpl**: 策略服务实现，管理所有策略的配置
 
 #### 插件接口定义
 ```java
@@ -95,56 +97,62 @@ public interface IPlugin {
     String getName();
     String getDescription();
     String getVersion();
-    PluginConfigDTO getDefaultConfig();
     List<PluginParameterDTO> getParameters();
+    PluginConfigDTO getDefaultConfig();
     List<PreconditionGroupDTO> getDefaultPreconditionGroups();
     List<ChangeRecord> execute(List<String> filePaths, PluginConfigDTO config, ExecutionContext context);
     List<ChangeRecord> preview(List<String> filePaths, PluginConfigDTO config, ExecutionContext context);
 }
+
+public interface StrategyConfigurable extends IPlugin {
+    List<ConfigFieldDTO> getConfigFields();
+    StrategyConfigDTO initializeDefaultConfig();
+    boolean validateConfig(StrategyConfigDTO config);
+    <T> T getConfigValue(StrategyConfigDTO config, String key, T defaultValue);
+    void setConfigValue(StrategyConfigDTO config, String key, Object value);
+}
 ```
 
-#### 插件加载机制
-1. **内部插件**: 通过ServiceLoader从classpath中加载
-2. **外部插件**: 通过PluginLoader从指定目录的JAR文件中加载
-3. **插件注册**: 所有插件注册到PluginRegistry中统一管理
+#### 策略加载机制
+1. **内部策略**: 通过ServiceLoader从classpath中加载IPlugin实现
+2. **策略注册**: 所有策略注册到PluginRegistry中统一管理
+3. **配置转换**: StrategyConfigDTO与PluginConfigDTO自动转换
 
-#### 现有插件
-- FileCleanupPlugin: 文件清理插件
-- FileCollectionPlugin: 文件收集插件
-- AudioConverterPlugin: 音频转换插件
-- FileRenamePlugin: 文件重命名插件
-- MetadataScraperPlugin: 元数据抓取插件
+#### 现有策略
+所有策略都位于backend/src/main/java/com/filemanager/plugin/impl/目录下，每个策略都实现了IPlugin接口：
 
-### 2. 策略系统
-
-#### 架构设计
-策略系统提供了一种更简单的方式来定义文件处理策略，支持条件参数和模块化配置。策略系统包括以下核心组件：
-
-- **StrategyService**: 策略服务接口，提供策略的管理和配置功能
-- **StrategyServiceImpl**: 策略服务实现，管理所有策略的配置
-- **StrategyInfoDTO**: 策略信息数据传输对象
-- **StrategyConfigDTO**: 策略配置数据传输对象
-- **ConfigFieldDTO**: 配置字段数据传输对象，支持条件参数
+1. **AdvancedRenameStrategy**: 高级重命名策略（plugin/impl/advancedrename/）
+2. **AudioConverterStrategy**: 音频格式转换策略（plugin/impl/audioconverter/）
+3. **AlbumDirNormalizeStrategy**: 专辑目录标准化策略（plugin/impl/albumdirnormalize/）
+4. **MetadataScraperStrategy**: 元数据抓取策略（plugin/impl/metadatascraper/）
+5. **CueSplitterStrategy**: CUE分轨策略（plugin/impl/cuesplitter/）
+6. **FileTypeFixStrategy**: 文件类型修复策略（plugin/impl/filetypefix/）
+7. **FileUnzipStrategy**: 文件解压策略（plugin/impl/fileunzip/）
+8. **FileMigrateStrategy**: 文件迁移策略（plugin/impl/filemigrate/）
+9. **CueFileRenameStrategy**: CUE文件重命名策略（plugin/impl/cuefilerename/）
+10. **NcmIntegratedStrategy**: 网易云音乐工具集策略（plugin/impl/ncmintegrated/）
+11. **FileCollectionStrategy**: 文件收集策略（plugin/impl/filecollection/）
+12. **FileCleanupStrategy**: 文件清理策略（plugin/impl/filecleanup/）
+13. **FileRenameStrategy**: 文件重命名策略（plugin/impl/filerename/）
+14. **TrackNumberStrategy**: 音轨编号策略（plugin/impl/tracknumber/）
+15. **CollectionNamingStrategy**: 合集命名策略（plugin/impl/collectionnaming/）
+16. **DuplicateStrategy**: 文件去重策略（plugin/impl/duplicate/）
 
 #### 策略配置字段
 策略配置字段支持以下特性：
 - **条件参数**: 通过dependsOn和dependsValue实现参数的动态显示
 - **模块化配置**: 通过isModule和moduleType实现模块化配置
 - **多种数据类型**: 支持string、number、boolean、select、list等类型
+- **枚举选项**: 支持EnumOptionDTO，提供中英文双语支持
+- **参数联动**: 支持blockConditions、autoFillConfig等参数联动配置
 
-#### 现有策略
-1. **FileMigrateStrategy**: 文件迁移策略
-2. **AlbumDirNormalizeStrategy**: 专辑目录标准化策略
-3. **FileUnzipStrategy**: 文件解压策略
-4. **AudioFormatConvertStrategy**: 音频格式转换策略
-5. **AudioTagNormalizeStrategy**: 音频标签标准化策略
-6. **AudioQualityCheckStrategy**: 音频质量检查策略
-7. **FileDuplicateCheckStrategy**: 文件重复检查策略
-8. **FileOrganizeStrategy**: 文件整理策略
-9. **FileCleanupStrategy**: 文件清理策略
-10. **AudioMetadataExtractStrategy**: 音频元数据提取策略
-11. **FileBackupStrategy**: 文件备份策略
-12. **FileArchiveStrategy**: 文件归档策略
+#### 策略实现方式
+每个策略通过继承AbstractConfigurableStrategy类实现：
+1. **参数配置**: 通过initConfigFields()方法定义配置字段
+2. **默认配置**: 通过initDefaultConfigValues()方法设置默认值
+3. **预览功能**: 通过createPreviewRecord()方法生成预览记录
+4. **执行功能**: 通过executeForFile()方法执行文件处理
+5. **枚举选项**: 通过getEnumOptions()方法提供枚举选项
 
 ### 3. 前端架构
 

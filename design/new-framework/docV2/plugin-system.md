@@ -2,7 +2,7 @@
 
 ## 概述
 
-FileManager Plus插件系统提供了一个灵活可扩展的框架，用于向应用程序添加新功能。插件可用于实现自定义文件处理策略、与外部服务集成或向系统添加新功能。
+FileManager Plus插件系统提供了一个灵活可扩展的框架，用于向应用程序添加新功能。系统采用统一的插件-策略架构，策略类实现了IPlugin接口，同时具备参数配置和功能执行能力。插件可用于实现自定义文件处理策略、与外部服务集成或向系统添加新功能。
 
 ## 架构
 
@@ -11,41 +11,48 @@ FileManager Plus插件系统提供了一个灵活可扩展的框架，用于向�
 ### 关键组件
 
 1. **IPlugin接口**：定义所有插件必须实现的标准方法
-2. **PluginRegistry**：管理插件发现、注册和生命周期
-3. **ExecutionContext**：为插件执行提供运行时上下文
-4. **PluginConfigDTO**：表示插件配置数据
+2. **StrategyConfigurable接口**：继承自IPlugin，定义策略配置方法
+3. **AbstractConfigurableStrategy**：策略抽象基类，实现了IPlugin接口
+4. **PluginRegistry**：管理插件发现、注册和生命周期
+5. **ExecutionContext**：为插件执行提供运行时上下文
+6. **PluginConfigDTO**：表示插件配置数据
+7. **StrategyConfigDTO**：表示策略配置数据
 
-## 创建插件
+## 创建策略
 
-要创建新插件，请按照以下步骤操作：
+要创建新策略，请按照以下步骤操作：
 
-### 1. 实现IPlugin接口
+### 1. 继承AbstractConfigurableStrategy类
 
 ```java
 package com.filemanager.plugin.example;
 
-import com.filemanager.domain.dto.PluginConfigDTO;
+import com.filemanager.domain.dto.StrategyConfigDTO;
 import com.filemanager.domain.entity.ChangeRecord;
-import com.filemanager.plugin.IPlugin;
+import com.filemanager.plugin.AbstractConfigurableStrategy;
 import com.filemanager.plugin.ExecutionContext;
 
 import java.util.List;
 
-public class ExamplePlugin implements IPlugin {
+public class ExampleStrategy extends AbstractConfigurableStrategy {
+
+    public ExampleStrategy() {
+        super();
+    }
 
     @Override
     public String getId() {
-        return "example-plugin";
+        return "example-strategy";
     }
 
     @Override
     public String getName() {
-        return "Example Plugin";
+        return "Example Strategy";
     }
 
     @Override
     public String getDescription() {
-        return "演示插件系统的示例插件";
+        return "演示策略系统的示例策略";
     }
 
     @Override
@@ -54,50 +61,59 @@ public class ExamplePlugin implements IPlugin {
     }
 
     @Override
-    public PluginConfigDTO getDefaultConfig() {
-        PluginConfigDTO config = new PluginConfigDTO();
-        config.setValue("exampleSetting", "defaultValue");
-        config.setValue("enabled", true);
-        return config;
+    protected void initConfigFields() {
+        addConfigField("exampleSetting", "示例设置", "string", "defaultValue", 
+            "这是一个示例设置", false);
+        addConfigField("enabled", "启用", "boolean", true, 
+            "是否启用此功能", false);
     }
 
     @Override
-    public List<ChangeRecord> execute(List<String> filePaths, PluginConfigDTO config, ExecutionContext context) {
-        // 插件执行逻辑
-        // 返回表示所做更改的ChangeRecord对象列表
-        return List.of();
+    protected void initDefaultConfigValues(StrategyConfigDTO config) {
+        setConfigValue(config, "exampleSetting", "defaultValue");
+        setConfigValue(config, "enabled", true);
+    }
+
+    @Override
+    protected ChangeRecord createPreviewRecord(String filePath, StrategyConfigDTO config, ExecutionContext context) {
+        return createChangeRecord(filePath, filePath, "PENDING");
+    }
+
+    @Override
+    protected ChangeRecord executeForFile(String filePath, StrategyConfigDTO config, ExecutionContext context) {
+        return createChangeRecord(filePath, filePath, "SUCCESS");
     }
 }
 ```
 
-### 2. 注册插件
+### 2. 注册策略
 
-在`src/main/resources/META-INF/services/`中创建一个名为`com.filemanager.plugin.IPlugin`的服务提供者配置文件，并添加插件的完全限定类名：
+在`backend/src/main/resources/META-INF/services/`中创建一个名为`com.filemanager.plugin.IPlugin`的服务提供者配置文件，并添加策略的完全限定类名：
 
 ```
-com.filemanager.plugin.example.ExamplePlugin
+com.filemanager.plugin.example.ExampleStrategy
 ```
 
 ### 3. 构建和部署
 
-将插件构建为JAR文件，并将其放置在插件发现的适当目录中。确切位置取决于部署环境，但通常插件放在与主应用程序并排的`plugins`目录中。
+将策略构建到后端应用中，策略会自动被ServiceLoader发现和加载。
 
-## 插件生命周期
+## 策略生命周期
 
-1. **发现**：在应用程序启动期间使用ServiceLoader发现插件
-2. **注册**：发现的插件向PluginRegistry注册
-3. **初始化**：使用默认配置初始化插件
-4. **执行**：当通过API请求时执行插件
-5. **重新加载**：可以使用`/plugins/reload`端点在运行时重新加载插件
+1. **发现**：在应用程序启动期间使用ServiceLoader发现策略
+2. **注册**：发现的策略向PluginRegistry注册
+3. **初始化**：使用默认配置初始化策略
+4. **执行**：当通过API请求时执行策略
+5. **重新加载**：可以使用`/plugins/reload`端点在运行时重新加载策略
 
-## 插件配置
+## 策略配置
 
-插件可以使用`PluginConfigDTO`类定义自己的配置选项。配置值存储在内存中，可以通过API更新。
+策略可以使用`StrategyConfigDTO`类定义自己的配置选项。配置值存储在内存中，可以通过API更新。
 
 ### 示例配置
 
 ```java
-PluginConfigDTO config = new PluginConfigDTO();
+StrategyConfigDTO config = new StrategyConfigDTO();
 config.setValue("targetDirectory", "/path/to/target");
 config.setValue("recursive", true);
 config.setValue("filePattern", "*.mp3");
