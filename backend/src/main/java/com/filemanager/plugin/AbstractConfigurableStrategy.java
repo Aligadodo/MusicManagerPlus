@@ -203,6 +203,10 @@ public abstract class AbstractConfigurableStrategy implements StrategyConfigurab
                 param.setOptions(field.getOptions().toArray(new String[0]));
             }
             
+            if (field.getEnumOptions() != null) {
+                param.setEnumOptions(field.getEnumOptions());
+            }
+            
             parameters.add(param);
         }
         return parameters;

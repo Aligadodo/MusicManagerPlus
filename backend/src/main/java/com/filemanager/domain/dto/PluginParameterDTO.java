@@ -18,6 +18,7 @@ public class PluginParameterDTO {
     private Object defaultValue;
     private boolean required;
     private String[] options;
+    private List<EnumOptionDTO> enumOptions;
     private List<Map<String, Object>> visibilityConditions;
     private Map<String, Object> autoDetectParams;
 
@@ -105,5 +106,13 @@ public class PluginParameterDTO {
 
     public void setAutoDetectParams(Map<String, Object> autoDetectParams) {
         this.autoDetectParams = autoDetectParams;
+    }
+
+    public List<EnumOptionDTO> getEnumOptions() {
+        return enumOptions;
+    }
+
+    public void setEnumOptions(List<EnumOptionDTO> enumOptions) {
+        this.enumOptions = enumOptions;
     }
 }
