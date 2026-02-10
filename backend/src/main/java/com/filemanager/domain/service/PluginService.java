@@ -5,6 +5,7 @@ import com.filemanager.domain.dto.PluginInfoDTO;
 import com.filemanager.domain.dto.PreconditionGroupDTO;
 import com.filemanager.domain.entity.ChangeRecord;
 
+import java.io.File;
 import java.util.List;
 
 /**
@@ -29,6 +30,20 @@ public interface PluginService {
      * @return 变更记录列表
      */
     List<ChangeRecord> previewPlugin(String pluginId, List<String> sourceDirectories, PluginConfigDTO config, List<PreconditionGroupDTO> preconditionGroups);
+
+    /**
+     * 分析单个文件（新接口，推荐使用）
+     * @param pluginId 插件ID
+     * @param currentRecord 当前文件的变更记录
+     * @param inputRecords 输入记录列表
+     * @param rootDirs 根目录列表
+     * @param config 插件配置
+     * @param preconditionGroups 前置条件组
+     * @return 变更记录列表
+     */
+    List<ChangeRecord> analyzePlugin(String pluginId, ChangeRecord currentRecord, 
+        List<ChangeRecord> inputRecords, List<File> rootDirs, 
+        PluginConfigDTO config, List<PreconditionGroupDTO> preconditionGroups);
 
     /**
      * 执行插件

@@ -103,6 +103,28 @@ public class PluginServiceImpl implements PluginService {
     }
 
     @Override
+    public List<ChangeRecord> analyzePlugin(String pluginId, ChangeRecord currentRecord, 
+        List<ChangeRecord> inputRecords, List<File> rootDirs, 
+        PluginConfigDTO config, List<PreconditionGroupDTO> preconditionGroups) {
+        
+        IPlugin plugin = pluginRegistry.getPlugin(pluginId);
+        if (plugin == null) {
+            return new ArrayList<>();
+        }
+
+        com.filemanager.plugin.ExecutionContext context = new com.filemanager.plugin.ExecutionContext(pluginId);
+        
+        if (preconditionGroups != null && !preconditionGroups.isEmpty()) {
+            File currentFile = currentRecord.getFileHandle();
+            if (!PreconditionEvaluator.evaluate(currentFile, preconditionGroups)) {
+                return new ArrayList<>();
+            }
+        }
+        
+        return plugin.analyze(currentRecord, inputRecords, rootDirs, config, context);
+    }
+
+    @Override
     public List<ChangeRecord> executePlugin(String pluginId, List<String> filePaths, PluginConfigDTO config) {
         IPlugin plugin = pluginRegistry.getPlugin(pluginId);
         if (plugin == null) {

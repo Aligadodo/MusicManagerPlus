@@ -5,7 +5,9 @@ import com.filemanager.domain.dto.ConfigFieldDTO;
 import com.filemanager.domain.dto.PluginConfigDTO;
 import com.filemanager.domain.dto.PluginParameterDTO;
 import com.filemanager.domain.entity.ChangeRecord;
+import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -323,5 +325,41 @@ public abstract class AbstractConfigurableStrategy implements StrategyConfigurab
         record.setChanged(!originalPath.equals(newPath));
         record.setStatus(status);
         return record;
+    }
+
+    @Override
+    public List<ChangeRecord> analyze(ChangeRecord currentRecord, 
+        List<ChangeRecord> inputRecords, 
+        List<File> rootDirs, 
+        PluginConfigDTO config, 
+        ExecutionContext context) {
+        
+        String filePath = currentRecord.getFilePath();
+        StrategyConfigDTO strategyConfig = convertToStrategyConfig(config);
+        ChangeRecord previewRecord = createPreviewRecord(filePath, strategyConfig, context);
+        
+        if (previewRecord != null) {
+            return Collections.singletonList(previewRecord);
+        }
+        
+        return Collections.emptyList();
+    }
+
+    @Override
+    public void execute(ChangeRecord record, 
+        PluginConfigDTO config, 
+        ExecutionContext context) throws Exception {
+        
+        String filePath = record.getFilePath();
+        StrategyConfigDTO strategyConfig = convertToStrategyConfig(config);
+        ChangeRecord executedRecord = executeForFile(filePath, strategyConfig, context);
+        
+        if (executedRecord != null) {
+            record.setStatus(executedRecord.getStatus());
+            record.setNewPath(executedRecord.getNewPath());
+            record.setNewName(executedRecord.getNewName());
+            record.setChanged(executedRecord.isChanged());
+            record.setFailReason(executedRecord.getFailReason());
+        }
     }
 }

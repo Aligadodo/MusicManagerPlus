@@ -12,6 +12,9 @@ import com.filemanager.domain.dto.TaskRequestDTO;
 import com.filemanager.domain.dto.ChangeRecordQueryDTO;
 import com.filemanager.domain.dto.ChangeRecordResponseDTO;
 import com.filemanager.backend.logging.UnifiedLogger;
+import com.filemanager.backend.service.FileFilterService;
+import com.filemanager.backend.service.PreviewLimitService;
+import com.filemanager.backend.util.FileScanner;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +25,8 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @RestController
 @RequestMapping("/api/pipeline")
@@ -38,6 +43,12 @@ public class PipelineController {
 
     @Autowired
     private TaskService taskService;
+
+    @Autowired
+    private FileFilterService fileFilterService;
+
+    @Autowired
+    private PreviewLimitService previewLimitService;
 
     @javax.annotation.PostConstruct
     public void init() {
@@ -198,61 +209,111 @@ public class PipelineController {
                     taskManager.updateTaskStep(taskId, "扫描文件");
                     taskManager.updateTaskMessage(taskId, "正在扫描文件...");
                     
-                    List<ChangeRecord> allChanges = new ArrayList<>();
-                    int totalFiles = 0;
-                    int scannedFiles = 0;
+                    List<String> allFilePaths = new ArrayList<>();
+                    int previewThreads = 10;
+                    int minDepth = 0;
+                    int maxDepth = 20;
+                    
+                    int globalLimitValue = previewLimitService.isGlobalPreviewUnlimited() ? 
+                        Integer.MAX_VALUE : previewLimitService.getGlobalPreviewLimit();
+                    AtomicInteger globalLimit = new AtomicInteger(globalLimitValue);
+                    AtomicInteger dirLimit = new AtomicInteger(Integer.MAX_VALUE);
+                    AtomicBoolean isTaskRunning = new AtomicBoolean(true);
+                    
+                    FileScanner fileScanner = new FileScanner(fileFilterService, isTaskRunning, previewThreads);
                     
                     for (String directory : sourceDirectories) {
                         File dir = new File(directory);
                         if (dir.exists() && dir.isDirectory()) {
-                            int fileCount = countFiles(dir);
-                            totalFiles += fileCount;
-                            UnifiedLogger.backendOperation("Pipeline", "目录 " + directory + " 包含 " + fileCount + " 个文件");
+                            int dirLimitValue = previewLimitService.isRootPathPreviewUnlimited(directory) ?
+                                Integer.MAX_VALUE : previewLimitService.getRootPathPreviewLimit(directory);
+                            AtomicInteger currentDirLimit = new AtomicInteger(dirLimitValue);
+                            
+                            List<File> files = fileScanner.scanFilesRobust(dir, minDepth, maxDepth, globalLimit, currentDirLimit, msg -> {
+                                UnifiedLogger.backendOperation("Pipeline", msg);
+                                taskManager.updateTaskMessage(taskId, msg);
+                            });
+                            for (File file : files) {
+                                allFilePaths.add(file.getAbsolutePath());
+                            }
+                            UnifiedLogger.backendOperation("Pipeline", "目录 " + directory + " 包含 " + files.size() + " 个文件");
                         }
                     }
                     
+                    int totalFiles = allFilePaths.size();
                     taskManager.updateTaskScanningInfo(taskId, sourceDirectories.get(0), 0, totalFiles);
-
-                    int completed = 0;
-                    for (Map<String, Object> pluginConfig : pipeline) {
+                    
+                    List<File> rootDirs = new ArrayList<>();
+                    for (String directory : sourceDirectories) {
+                        rootDirs.add(new File(directory));
+                    }
+                    
+                    List<ChangeRecord> allRecords = new ArrayList<>();
+                    for (String filePath : allFilePaths) {
+                        File file = new File(filePath);
+                        ChangeRecord record = new ChangeRecord(
+                            file.getName(),
+                            file.getName(),
+                            file,
+                            false,
+                            file.getAbsolutePath(),
+                            "NONE"
+                        );
+                        record.setId(String.valueOf(allRecords.size() + 1));
+                        allRecords.add(record);
+                    }
+                    
+                    List<ChangeRecord> allChanges = new ArrayList<>();
+                    int processed = 0;
+                    
+                    for (ChangeRecord currentRecord : allRecords) {
                         if (!taskManager.isTaskRunning()) {
                             taskManager.updateTaskStatus(taskId, TaskStatus.CANCELLED);
                             taskManager.updateTaskMessage(taskId, "任务已中止");
                             break;
                         }
+                        
+                        processed++;
+                        taskManager.updateTaskProgress(taskId, processed, totalFiles);
+                        taskManager.updateTaskScanningInfo(taskId, sourceDirectories.get(0), processed, totalFiles);
+                        
+                        for (Map<String, Object> pluginConfig : pipeline) {
+                            if (!taskManager.isTaskRunning()) {
+                                taskManager.updateTaskStatus(taskId, TaskStatus.CANCELLED);
+                                taskManager.updateTaskMessage(taskId, "任务已中止");
+                                break;
+                            }
 
-                        String pluginId = (String) pluginConfig.get("pluginId");
-                        Map<String, Object> configMap = (Map<String, Object>) pluginConfig.get("config");
-                        List<Map<String, Object>> preconditionGroupsData = (List<Map<String, Object>>) pluginConfig.get("preconditionGroups");
+                            String pluginId = (String) pluginConfig.get("pluginId");
+                            Map<String, Object> configMap = (Map<String, Object>) pluginConfig.get("config");
+                            List<Map<String, Object>> preconditionGroupsData = (List<Map<String, Object>>) pluginConfig.get("preconditionGroups");
 
-                        taskManager.updateTaskStep(taskId, "执行节点: " + pluginId);
-                        taskManager.updateTaskMessage(taskId, "正在执行节点: " + pluginId);
-                        UnifiedLogger.backendOperation("Pipeline", "执行节点: " + pluginId);
+                            PluginConfigDTO config = new PluginConfigDTO();
+                            if (configMap != null) {
+                                for (Map.Entry<String, Object> entry : configMap.entrySet()) {
+                                    config.setValue(entry.getKey(), entry.getValue());
+                                }
+                            }
 
-                        PluginConfigDTO config = new PluginConfigDTO();
-                        if (configMap != null) {
-                            for (Map.Entry<String, Object> entry : configMap.entrySet()) {
-                                config.setValue(entry.getKey(), entry.getValue());
+                            List<PreconditionGroupDTO> preconditionGroups = convertPreconditionGroups(preconditionGroupsData);
+                            List<ChangeRecord> changes = pluginService.analyzePlugin(pluginId, currentRecord, allRecords, rootDirs, config, preconditionGroups);
+                            
+                            if (!changes.isEmpty()) {
+                                ChangeRecord change = changes.get(0);
+                                if (change.isChanged()) {
+                                    currentRecord = change;
+                                } else {
+                                    allChanges.add(change);
+                                }
                             }
                         }
-
-                        List<PreconditionGroupDTO> preconditionGroups = convertPreconditionGroups(preconditionGroupsData);
-                        List<ChangeRecord> changes;
-                        if (preconditionGroups != null && !preconditionGroups.isEmpty()) {
-                            changes = pluginService.previewPlugin(pluginId, sourceDirectories, config, preconditionGroups);
-                        } else {
-                            changes = pluginService.previewPlugin(pluginId, sourceDirectories, config);
-                        }
-                        allChanges.addAll(changes);
-                        completed++;
-
-                        scannedFiles = (int) ((double) completed / pipeline.size() * totalFiles);
-                        taskManager.updateTaskProgress(taskId, completed, pipeline.size());
-                        taskManager.updateTaskScanningInfo(taskId, sourceDirectories.get(0), scannedFiles, totalFiles);
                         
-                        String progressMessage = String.format("节点 %d/%d 完成，发现 %d 个变更", completed, pipeline.size(), changes.size());
-                        taskManager.updateTaskMessage(taskId, progressMessage);
-                        UnifiedLogger.backendOperation("Pipeline", progressMessage);
+                        allChanges.add(currentRecord);
+                        
+                        if (processed % 100 == 0) {
+                            String progressMessage = String.format("已处理 %d/%d 个文件，发现 %d 个变更", processed, totalFiles, allChanges.size());
+                            taskManager.updateTaskMessage(taskId, progressMessage);
+                        }
                     }
 
                     currentChanges.addAll(allChanges);
@@ -369,61 +430,97 @@ public class PipelineController {
                     taskManager.updateTaskStep(taskId, "扫描文件");
                     taskManager.updateTaskMessage(taskId, "正在扫描文件...");
                     
-                    List<ChangeRecord> allChanges = new ArrayList<>();
-                    int totalFiles = 0;
-                    int scannedFiles = 0;
+                    List<String> allFilePaths = new ArrayList<>();
+                    int executionThreads = 4;
+                    int minDepth = 0;
+                    int maxDepth = 20;
+                    
+                    int globalLimitValue = previewLimitService.isGlobalExecutionUnlimited() ?
+                        Integer.MAX_VALUE : previewLimitService.getGlobalExecutionLimit();
+                    AtomicInteger globalLimit = new AtomicInteger(globalLimitValue);
+                    AtomicInteger dirLimit = new AtomicInteger(Integer.MAX_VALUE);
+                    AtomicBoolean isTaskRunning = new AtomicBoolean(true);
+                    
+                    FileScanner fileScanner = new FileScanner(fileFilterService, isTaskRunning, executionThreads);
                     
                     for (String directory : sourceDirectories) {
                         File dir = new File(directory);
                         if (dir.exists() && dir.isDirectory()) {
-                            int fileCount = countFiles(dir);
-                            totalFiles += fileCount;
-                            UnifiedLogger.backendOperation("Pipeline", "目录 " + directory + " 包含 " + fileCount + " 个文件");
+                            int dirLimitValue = previewLimitService.isRootPathExecutionUnlimited(directory) ?
+                                Integer.MAX_VALUE : previewLimitService.getRootPathExecutionLimit(directory);
+                            AtomicInteger currentDirLimit = new AtomicInteger(dirLimitValue);
+                            
+                            List<File> files = fileScanner.scanFilesRobust(dir, minDepth, maxDepth, globalLimit, currentDirLimit, msg -> {
+                                UnifiedLogger.backendOperation("Pipeline", msg);
+                                taskManager.updateTaskMessage(taskId, msg);
+                            });
+                            for (File file : files) {
+                                allFilePaths.add(file.getAbsolutePath());
+                            }
+                            UnifiedLogger.backendOperation("Pipeline", "目录 " + directory + " 包含 " + files.size() + " 个文件");
                         }
                     }
                     
+                    int totalFiles = allFilePaths.size();
                     taskManager.updateTaskScanningInfo(taskId, sourceDirectories.get(0), 0, totalFiles);
-
-                    int completed = 0;
-                    for (Map<String, Object> pluginConfig : pipeline) {
+                    
+                    List<ChangeRecord> allChanges = new ArrayList<>();
+                    int processed = 0;
+                    
+                    for (String filePath : allFilePaths) {
                         if (!taskManager.isTaskRunning()) {
                             taskManager.updateTaskStatus(taskId, TaskStatus.CANCELLED);
                             taskManager.updateTaskMessage(taskId, "任务已中止");
                             break;
                         }
-
-                        String pluginId = (String) pluginConfig.get("pluginId");
-                        Map<String, Object> configMap = (Map<String, Object>) pluginConfig.get("config");
-                        List<Map<String, Object>> preconditionGroupsData = (List<Map<String, Object>>) pluginConfig.get("preconditionGroups");
-
-                        taskManager.updateTaskStep(taskId, "执行节点: " + pluginId);
-                        taskManager.updateTaskMessage(taskId, "正在执行节点: " + pluginId);
-                        UnifiedLogger.backendOperation("Pipeline", "执行节点: " + pluginId);
-
-                        PluginConfigDTO config = new PluginConfigDTO();
-                        if (configMap != null) {
-                            for (Map.Entry<String, Object> entry : configMap.entrySet()) {
-                                config.setValue(entry.getKey(), entry.getValue());
-                            }
-                        }
-
-                        List<PreconditionGroupDTO> preconditionGroups = convertPreconditionGroups(preconditionGroupsData);
-                        List<ChangeRecord> changes;
-                        if (preconditionGroups != null && !preconditionGroups.isEmpty()) {
-                            changes = pluginService.executePlugin(pluginId, sourceDirectories, config, preconditionGroups);
-                        } else {
-                            changes = pluginService.executePlugin(pluginId, sourceDirectories, config);
-                        }
-                        allChanges.addAll(changes);
-                        completed++;
-
-                        scannedFiles = (int) ((double) completed / pipeline.size() * totalFiles);
-                        taskManager.updateTaskProgress(taskId, completed, pipeline.size());
-                        taskManager.updateTaskScanningInfo(taskId, sourceDirectories.get(0), scannedFiles, totalFiles);
                         
-                        String progressMessage = String.format("节点 %d/%d 完成，处理 %d 个文件", completed, pipeline.size(), changes.size());
-                        taskManager.updateTaskMessage(taskId, progressMessage);
-                        UnifiedLogger.backendOperation("Pipeline", progressMessage);
+                        processed++;
+                        taskManager.updateTaskProgress(taskId, processed, totalFiles);
+                        taskManager.updateTaskScanningInfo(taskId, sourceDirectories.get(0), processed, totalFiles);
+                        
+                        String fileName = new File(filePath).getName();
+                        ChangeRecord record = new ChangeRecord();
+                        record.setId(String.valueOf(processed));
+                        record.setOriginalName(fileName);
+                        record.setNewName(fileName);
+                        record.setFilePath(filePath);
+                        record.setStatus("PENDING");
+                        record.setOperationType("NONE");
+                        record.setChanged(false);
+                        allChanges.add(record);
+                        
+                        for (Map<String, Object> pluginConfig : pipeline) {
+                            if (!taskManager.isTaskRunning()) {
+                                taskManager.updateTaskStatus(taskId, TaskStatus.CANCELLED);
+                                taskManager.updateTaskMessage(taskId, "任务已中止");
+                                break;
+                            }
+
+                            String pluginId = (String) pluginConfig.get("pluginId");
+                            Map<String, Object> configMap = (Map<String, Object>) pluginConfig.get("config");
+                            List<Map<String, Object>> preconditionGroupsData = (List<Map<String, Object>>) pluginConfig.get("preconditionGroups");
+
+                            PluginConfigDTO config = new PluginConfigDTO();
+                            if (configMap != null) {
+                                for (Map.Entry<String, Object> entry : configMap.entrySet()) {
+                                    config.setValue(entry.getKey(), entry.getValue());
+                                }
+                            }
+
+                            List<PreconditionGroupDTO> preconditionGroups = convertPreconditionGroups(preconditionGroupsData);
+                            List<ChangeRecord> changes;
+                            if (preconditionGroups != null && !preconditionGroups.isEmpty()) {
+                                changes = pluginService.executePlugin(pluginId, java.util.Collections.singletonList(filePath), config, preconditionGroups);
+                            } else {
+                                changes = pluginService.executePlugin(pluginId, java.util.Collections.singletonList(filePath), config);
+                            }
+                            allChanges.addAll(changes);
+                        }
+                        
+                        if (processed % 100 == 0) {
+                            String progressMessage = String.format("已处理 %d/%d 个文件，处理 %d 个变更", processed, totalFiles, allChanges.size());
+                            taskManager.updateTaskMessage(taskId, progressMessage);
+                        }
                     }
 
                     currentChanges.addAll(allChanges);
@@ -652,5 +749,22 @@ public class PipelineController {
             }
         }
         return count;
+    }
+
+    private List<String> collectFiles(File directory) {
+        List<String> filePaths = new ArrayList<>();
+        if (directory.exists() && directory.isDirectory()) {
+            File[] files = directory.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    if (file.isFile()) {
+                        filePaths.add(file.getAbsolutePath());
+                    } else if (file.isDirectory()) {
+                        filePaths.addAll(collectFiles(file));
+                    }
+                }
+            }
+        }
+        return filePaths;
     }
 }

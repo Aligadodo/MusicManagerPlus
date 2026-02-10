@@ -3,6 +3,9 @@ package com.filemanager.plugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * 插件执行上下文
  * 提供插件执行过程中的环境支持，如日志记录、进度跟踪等
@@ -17,6 +20,7 @@ public class ExecutionContext {
     private long totalFiles;
     private long processedFiles;
     private boolean cancelled;
+    private Map<String, Object> attributes = new HashMap<>();
     
     public ExecutionContext() {
         this.executionId = "exec-" + System.currentTimeMillis() + "-" + Math.random();
@@ -104,6 +108,52 @@ public class ExecutionContext {
      * @return 执行时间（毫秒）
      */
     public long getExecutionTime() {
+        return System.currentTimeMillis() - startTime;
+    }
+    
+    /**
+     * 设置属性
+     * @param key 属性键
+     * @param value 属性值
+     */
+    public void setAttribute(String key, Object value) {
+        attributes.put(key, value);
+    }
+    
+    /**
+     * 获取属性
+     * @param key 属性键
+     * @return 属性值
+     */
+    public Object getAttribute(String key) {
+        return attributes.get(key);
+    }
+    
+    /**
+     * 获取属性
+     * @param key 属性键
+     * @param defaultValue 默认值
+     * @return 属性值
+     */
+    @SuppressWarnings("unchecked")
+    public <T> T getAttribute(String key, T defaultValue) {
+        Object value = attributes.get(key);
+        return value != null ? (T) value : defaultValue;
+    }
+    
+    /**
+     * 开始计时
+     */
+    public void startTimer() {
+        setAttribute("timerStart", System.currentTimeMillis());
+    }
+    
+    /**
+     * 停止计时并返回耗时
+     * @return 耗时（毫秒）
+     */
+    public long stopTimer() {
+        Long startTime = getAttribute("timerStart", 0L);
         return System.currentTimeMillis() - startTime;
     }
     
