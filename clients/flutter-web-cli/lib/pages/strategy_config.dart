@@ -415,6 +415,12 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
       // 安全获取字段值，即使_strategyConfig为null
       final value = _strategyConfig?.getValue(field.name);
 
+      // 特殊处理重命名规则字段，无论type是什么，只要字段名是'rules'就渲染为规则编辑器
+      if (field.name == 'rules') {
+        print('Building rename rules field for ${field.name}');
+        return _buildRenameRulesField(field, value);
+      }
+
       switch (field.type) {
         case 'text':
           return _buildTextField(field, value);
@@ -427,10 +433,6 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
         case 'directory':
           return _buildDirectoryField(field, value);
         case 'list':
-          if (field.name == 'rules') {
-            print('Building rename rules field');
-            return _buildRenameRulesField(field, value);
-          }
           return _buildListField(field, value);
         default:
           print('Unknown field type: ${field.type}, using text field');
