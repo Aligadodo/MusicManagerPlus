@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:filemanager_flutter/pages/strategy_config.dart';
+import 'package:filemanager_flutter/pages/strategy/strategy_config_page.dart';
 import 'package:filemanager_flutter/models/strategy_info.dart';
 import 'package:filemanager_flutter/models/strategy_config.dart';
 import 'package:filemanager_flutter/models/config_field.dart';
