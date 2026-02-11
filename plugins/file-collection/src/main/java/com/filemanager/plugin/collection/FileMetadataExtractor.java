@@ -171,7 +171,7 @@ public class FileMetadataExtractor {
                         String seriesName2 = album2.substring(0, numPos2).trim();
                         
                         // 7. 检查系列名称是否相似
-                        double seriesSimilarity = SimilarityCalculator.calculateSimilarity(seriesName1, seriesName2);
+                        double seriesSimilarity = SimilarityCalculator.calculateSimilarityStatic(seriesName1, seriesName2);
                         return seriesSimilarity > 0.8;
                     }
                 }

@@ -1,5 +1,6 @@
 package com.filemanager.plugin.collection;
 
+import java.io.File;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -85,7 +86,7 @@ public class FileCluster {
         
         for (int i = 0; i < filePaths.size(); i++) {
             for (int j = i + 1; j < filePaths.size(); j++) {
-                double similarity = SimilarityCalculator.calculateFilePathSimilarity(
+                double similarity = SimilarityCalculator.calculateFilePathSimilarityStatic(
                     filePaths.get(i),
                     filePaths.get(j)
                 );
@@ -107,7 +108,7 @@ public class FileCluster {
             .map(this::extractFileName)
             .collect(Collectors.toList());
         
-        this.commonPrefix = SimilarityCalculator.findLongestCommonPrefix(fileNames);
+        this.commonPrefix = SimilarityCalculator.findLongestCommonPrefixStatic(fileNames);
     }
     
     private String extractFileName(String filePath) {
@@ -131,6 +132,55 @@ public class FileCluster {
                 ", averageSimilarity=" + String.format("%.2f", averageSimilarity) +
                 ", commonPrefix='" + commonPrefix + '\'' +
                 '}';
+    }
+
+    // 用于FileCollectionPlugin的聚类方法
+    private SimilarityCalculator similarityCalculator;
+
+    public FileCluster(SimilarityCalculator similarityCalculator) {
+        this();
+        this.similarityCalculator = similarityCalculator;
+    }
+
+    public List<List<File>> cluster(List<File> files) {
+        if (files == null || files.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<List<File>> clusters = new ArrayList<>();
+        boolean[] assigned = new boolean[files.size()];
+
+        for (int i = 0; i < files.size(); i++) {
+            if (assigned[i]) {
+                continue;
+            }
+
+            List<File> cluster = new ArrayList<>();
+            cluster.add(files.get(i));
+            assigned[i] = true;
+
+            for (int j = i + 1; j < files.size(); j++) {
+                if (assigned[j]) {
+                    continue;
+                }
+
+                double similarity = similarityCalculator.calculateEnhancedSimilarity(
+                        files.get(i).getName(),
+                        files.get(j).getName()
+                );
+
+                if (similarity >= similarityCalculator.getThreshold()) {
+                    cluster.add(files.get(j));
+                    assigned[j] = true;
+                }
+            }
+
+            if (cluster.size() >= 2) {
+                clusters.add(cluster);
+            }
+        }
+
+        return clusters;
     }
 }
 
@@ -171,7 +221,7 @@ class FileClusterer {
                     continue;
                 }
                 
-                double similarity = SimilarityCalculator.calculateFilePathSimilarity(
+                double similarity = SimilarityCalculator.calculateFilePathSimilarityStatic(
                     filePaths.get(i),
                     filePaths.get(j)
                 );
@@ -253,7 +303,7 @@ class FileClusterer {
         
         for (String path1 : cluster1.getFilePaths()) {
             for (String path2 : cluster2.getFilePaths()) {
-                double similarity = SimilarityCalculator.calculateFilePathSimilarity(path1, path2);
+                double similarity = SimilarityCalculator.calculateFilePathSimilarityStatic(path1, path2);
                 if (similarity >= threshold) {
                     similarCount++;
                 }
@@ -387,7 +437,7 @@ class FileClusterer {
                     continue;
                 }
                 
-                double similarity = SimilarityCalculator.calculateEnhancedSimilarity(
+                double similarity = SimilarityCalculator.calculateEnhancedSimilarityStatic(
                     filePaths.get(i),
                     filePaths.get(j)
                 );

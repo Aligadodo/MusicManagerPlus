@@ -10,6 +10,24 @@ public class SimilarityCalculator {
     private static final Pattern SPECIAL_CHARS_PATTERN = Pattern.compile("[^a-zA-Z0-9\\u4e00-\\u9fa5]");
     private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s+");
     
+    private double threshold;
+    
+    public SimilarityCalculator() {
+        this.threshold = 0.9;
+    }
+    
+    public SimilarityCalculator(double threshold) {
+        this.threshold = threshold;
+    }
+    
+    public double getThreshold() {
+        return threshold;
+    }
+    
+    public void setThreshold(double threshold) {
+        this.threshold = threshold;
+    }
+    
     public enum SimilarityType {
         LEVENSHTEIN,
         JARO_WINKLER,
@@ -17,7 +35,7 @@ public class SimilarityCalculator {
         JACCARD
     }
     
-    public static double calculateSimilarity(String str1, String str2, SimilarityType type) {
+    public double calculateSimilarity(String str1, String str2, SimilarityType type) {
         if (str1 == null || str2 == null) {
             return 0.0;
         }
@@ -40,14 +58,44 @@ public class SimilarityCalculator {
         }
     }
     
-    public static double calculateSimilarity(String str1, String str2) {
+    public double calculateSimilarity(String str1, String str2) {
         return calculateSimilarity(str1, str2, SimilarityType.LEVENSHTEIN);
+    }
+    
+    // 静态方法保持不变，确保兼容性
+    public static double calculateSimilarityStatic(String str1, String str2, SimilarityType type) {
+        if (str1 == null || str2 == null) {
+            return 0.0;
+        }
+        
+        if (str1.equals(str2)) {
+            return 1.0;
+        }
+        
+        SimilarityCalculator calculator = new SimilarityCalculator();
+        
+        switch (type) {
+            case LEVENSHTEIN:
+                return calculator.calculateLevenshteinSimilarity(str1, str2);
+            case JARO_WINKLER:
+                return calculator.calculateJaroWinklerSimilarity(str1, str2);
+            case COSINE:
+                return calculator.calculateCosineSimilarity(str1, str2);
+            case JACCARD:
+                return calculator.calculateJaccardSimilarity(str1, str2);
+            default:
+                return calculator.calculateLevenshteinSimilarity(str1, str2);
+        }
+    }
+    
+    public static double calculateSimilarityStatic(String str1, String str2) {
+        return calculateSimilarityStatic(str1, str2, SimilarityType.LEVENSHTEIN);
     }
     
     /**
      * 处理特殊符号和序号，使用更通用的策略
      */
-    public static String processSpecialSymbolsAndNumbers(String input) {
+    public String processSpecialSymbolsAndNumbers(String input) {
         String result = input;
         
         // 1. 处理各种类型的序号
@@ -73,10 +121,16 @@ public class SimilarityCalculator {
         return result;
     }
     
+    // 静态版本，确保兼容性
+    public static String processSpecialSymbolsAndNumbersStatic(String input) {
+        SimilarityCalculator calculator = new SimilarityCalculator();
+        return calculator.processSpecialSymbolsAndNumbers(input);
+    }
+    
     /**
      * 计算增强版相似度，考虑特殊符号和序号处理
      */
-    public static double calculateEnhancedSimilarity(String str1, String str2) {
+    public double calculateEnhancedSimilarity(String str1, String str2) {
         // 使用更通用的策略处理各种类型的序号和特殊符号
         String processed1 = processSpecialSymbolsAndNumbers(str1);
         String processed2 = processSpecialSymbolsAndNumbers(str2);
@@ -110,7 +164,13 @@ public class SimilarityCalculator {
         return finalSimilarity;
     }
     
-    public static double calculateFileNameSimilarity(String fileName1, String fileName2) {
+    // 静态版本，确保兼容性
+    public static double calculateEnhancedSimilarityStatic(String str1, String str2) {
+        SimilarityCalculator calculator = new SimilarityCalculator();
+        return calculator.calculateEnhancedSimilarity(str1, str2);
+    }
+    
+    public double calculateFileNameSimilarity(String fileName1, String fileName2) {
         if (fileName1 == null || fileName2 == null) {
             return 0.0;
         }
@@ -124,7 +184,13 @@ public class SimilarityCalculator {
         return calculateSimilarity(name1, name2, SimilarityType.JARO_WINKLER);
     }
     
-    public static double calculateFilePathSimilarity(String filePath1, String filePath2) {
+    // 静态版本，确保兼容性
+    public static double calculateFileNameSimilarityStatic(String fileName1, String fileName2) {
+        SimilarityCalculator calculator = new SimilarityCalculator();
+        return calculator.calculateFileNameSimilarity(fileName1, fileName2);
+    }
+    
+    public double calculateFilePathSimilarity(String filePath1, String filePath2) {
         if (filePath1 == null || filePath2 == null) {
             return 0.0;
         }
@@ -144,7 +210,13 @@ public class SimilarityCalculator {
         return nameSimilarity * 0.7 + pathSimilarity * 0.3;
     }
     
-    private static double calculateLevenshteinSimilarity(String str1, String str2) {
+    // 静态版本，确保兼容性
+    public static double calculateFilePathSimilarityStatic(String filePath1, String filePath2) {
+        SimilarityCalculator calculator = new SimilarityCalculator();
+        return calculator.calculateFilePathSimilarity(filePath1, filePath2);
+    }
+    
+    private double calculateLevenshteinSimilarity(String str1, String str2) {
         int distance = calculateLevenshteinDistance(str1, str2);
         int maxLength = Math.max(str1.length(), str2.length());
         
@@ -155,7 +227,7 @@ public class SimilarityCalculator {
         return 1.0 - (double) distance / maxLength;
     }
     
-    private static int calculateLevenshteinDistance(String str1, String str2) {
+    private int calculateLevenshteinDistance(String str1, String str2) {
         int len1 = str1.length();
         int len2 = str2.length();
         
@@ -182,7 +254,7 @@ public class SimilarityCalculator {
         return dp[len1][len2];
     }
     
-    private static double calculateJaroWinklerSimilarity(String str1, String str2) {
+    private double calculateJaroWinklerSimilarity(String str1, String str2) {
         if (str1.equals(str2)) {
             return 1.0;
         }
@@ -258,7 +330,7 @@ public class SimilarityCalculator {
         return jaroWinkler;
     }
     
-    private static double calculateCosineSimilarity(String str1, String str2) {
+    private double calculateCosineSimilarity(String str1, String str2) {
         List<String> words1 = Arrays.asList(str1.toLowerCase().split("\\s+"));
         List<String> words2 = Arrays.asList(str2.toLowerCase().split("\\s+"));
         
@@ -290,7 +362,7 @@ public class SimilarityCalculator {
         return dotProduct / (Math.sqrt(norm1) * Math.sqrt(norm2));
     }
     
-    private static double calculateJaccardSimilarity(String str1, String str2) {
+    private double calculateJaccardSimilarity(String str1, String str2) {
         List<String> words1 = Arrays.asList(str1.toLowerCase().split("\\s+"));
         List<String> words2 = Arrays.asList(str2.toLowerCase().split("\\s+"));
         
@@ -309,7 +381,7 @@ public class SimilarityCalculator {
         return (double) intersection / union;
     }
     
-    private static String normalizeString(String str) {
+    private String normalizeString(String str) {
         if (str == null) {
             return "";
         }
@@ -321,7 +393,7 @@ public class SimilarityCalculator {
         return str;
     }
     
-    private static String removeExtension(String fileName) {
+    private String removeExtension(String fileName) {
         if (fileName == null) {
             return "";
         }
@@ -334,7 +406,7 @@ public class SimilarityCalculator {
         return fileName;
     }
     
-    public static String findLongestCommonPrefix(List<String> strings) {
+    public String findLongestCommonPrefix(List<String> strings) {
         if (strings == null || strings.isEmpty()) {
             return "";
         }
@@ -358,7 +430,13 @@ public class SimilarityCalculator {
         return prefix;
     }
     
-    public static String findLongestCommonSubstring(String str1, String str2) {
+    // 静态版本，确保兼容性
+    public static String findLongestCommonPrefixStatic(List<String> strings) {
+        SimilarityCalculator calculator = new SimilarityCalculator();
+        return calculator.findLongestCommonPrefix(strings);
+    }
+    
+    public String findLongestCommonSubstring(String str1, String str2) {
         if (str1 == null || str2 == null) {
             return "";
         }
@@ -394,5 +472,11 @@ public class SimilarityCalculator {
         }
         
         return str1.substring(endIndex - maxLength, endIndex);
+    }
+    
+    // 静态版本，确保兼容性
+    public static String findLongestCommonSubstringStatic(String str1, String str2) {
+        SimilarityCalculator calculator = new SimilarityCalculator();
+        return calculator.findLongestCommonSubstring(str1, str2);
     }
 }
