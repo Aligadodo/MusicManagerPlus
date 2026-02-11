@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/strategy_info.dart';
 import '../../models/strategy_config.dart';
 import '../../models/config_field.dart';
@@ -7,8 +8,9 @@ import '../../widgets/precondition_config_panel.dart';
 import '../../models/precondition_group.dart';
 import '../../models/rename_rule.dart';
 import '../../widgets/rename_rule_editor.dart';
+import '../../providers/config_provider.dart';
 
-class StrategyConfigPanel extends StatelessWidget {
+class StrategyConfigPanel extends ConsumerWidget {
   final StrategyInfo? selectedStrategy;
   final StrategyConfig? strategyConfig;
   final bool isLoading;
@@ -25,7 +27,10 @@ class StrategyConfigPanel extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final config = ref.watch(configProvider);
+    final showTooltips = config.globalSettings['showTooltips'] as bool? ?? true;
+
     try {
       return Expanded(
         child: Container(
@@ -82,7 +87,7 @@ class StrategyConfigPanel extends StatelessWidget {
                               itemBuilder: (context, index) {
                                 try {
                                   final ConfigField field = selectedStrategy!.configFields[index];
-                                  return _buildConfigField(field);
+                                  return _buildConfigField(field, showTooltips);
                                 } catch (e) {
                                   return Card(
                                     color: Colors.red.shade50,
@@ -153,14 +158,14 @@ class StrategyConfigPanel extends StatelessWidget {
     }
   }
 
-  Widget _buildConfigField(ConfigField field) {
+  Widget _buildConfigField(ConfigField field, bool showTooltips) {
     try {
       print('Building config field: ${field.name}, Type: ${field.type}');
       final value = strategyConfig?.getValue(field.name);
 
       if (field.name == 'rules') {
         print('Building rename rules field for ${field.name}');
-        return _buildRenameRulesField(field, value);
+        return _buildRenameRulesField(field, value, showTooltips);
       }
 
       final builder = ConfigFieldBuilderFactory.createBuilder(field.type);
@@ -169,7 +174,7 @@ class StrategyConfigPanel extends StatelessWidget {
           strategyConfig?.setValue(field.name, newValue);
           onConfigChanged(strategyConfig!);
         }
-      });
+      }, showTooltips);
     } catch (e) {
       print('字段 ${field.name} 加载失败: $e');
       return Card(
@@ -203,7 +208,7 @@ class StrategyConfigPanel extends StatelessWidget {
     }
   }
 
-  Widget _buildRenameRulesField(ConfigField field, dynamic value) {
+  Widget _buildRenameRulesField(ConfigField field, dynamic value, bool showTooltips) {
     try {
       List<RenameRule> rules = <RenameRule>[];
       if (value != null && value is List) {
@@ -227,13 +232,19 @@ class StrategyConfigPanel extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Tooltip(
-              message: field.description ?? '',
-              child: Text(
+            if (showTooltips && (field.description?.isNotEmpty ?? false))
+              Tooltip(
+                message: field.description ?? '',
+                child: Text(
+                  field.label,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              )
+            else
+              Text(
                 field.label,
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
-            ),
             const SizedBox(height: 5),
             SizedBox(
               height: 500,

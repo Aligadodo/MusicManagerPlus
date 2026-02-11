@@ -1,4 +1,4 @@
-package com.filemanager.plugin.collection;
+package com.filemanager.plugin.impl.filecollection.collection;
 
 import java.io.File;
 import java.util.Arrays;

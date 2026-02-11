@@ -269,6 +269,143 @@ public StrategyConfigDTO getStrategyConfig(String strategyId) {
 - **配置模板**：支持配置模板的创建和使用
 - **配置历史**：支持配置修改历史的记录和回滚
 
-## 9. 结论
+## 9. 前端配置交互增强
+
+### 9.1 自动提示功能
+
+前端实现了基于"开启使用说明"勾选开关的自动提示功能，包括：
+
+- **配置管理**：在ConfigProvider中添加showTooltips配置项
+- **UI控制**：MainLayout组件中的"开启使用说明"复选框控制全局提示显示
+- **组件适配**：TooltipUtils类支持条件显示工具提示
+- **字段适配**：所有ConfigFieldBuilder实现添加showTooltip参数
+- **策略配置面板适配**：StrategyConfigPanel类使用ConfigProvider中的配置
+
+### 9.2 规则管理增强
+
+前端的RenameRuleEditor组件添加了规则的上移和下移功能，与老架构保持一致：
+
+- **功能实现**：添加_moveRuleUp和_moveRuleDown方法
+- **UI交互**：在规则卡片中添加上移和下移按钮
+- **优先级管理**：支持通过拖拽或按钮调整规则执行顺序
+
+## 9. 代码组织规范
+
+### 9.1 目录划分原则
+
+#### 9.1.1 策略目录结构
+
+每个策略都应该有自己的独立目录，包含该策略的所有相关代码：
+
+```
+backend/src/main/java/com/filemanager/plugin/impl/
+├── advancedrename/          # 高级重命名策略
+│   ├── AdvancedRenameStrategy.java
+│   ├── enums/               # 策略特定的枚举
+│   └── utils/               # 策略特定的工具类
+├── audioconverter/          # 音频转换策略
+│   ├── AudioConverterStrategy.java
+│   ├── enums/
+│   └── utils/
+├── filecollection/          # 文件归类策略
+│   ├── FileCollectionStrategy.java
+│   ├── collection/          # 核心算法组件
+│   │   ├── SimilarityCalculator.java
+│   │   ├── FileCluster.java
+│   │   ├── CollectionNameGenerator.java
+│   │   ├── FileMetadataExtractor.java
+│   │   ├── KeywordFilter.java
+│   │   ├── FileClusteringAlgorithm.java
+│   │   ├── TextSimilarityCalculator.java
+│   │   └── FilenameNormalizer.java
+│   └── enums/
+└── ...
+```
+
+#### 9.1.2 工具类放置规则
+
+1. **策略特定工具类**：只属于某个策略的工具类应该放在该策略的目录下
+   - 例如：`filecollection/collection/` 目录下的所有类都是文件归类策略专用的
+
+2. **通用工具类**：被多个策略使用的工具类应该放在公共的util包中
+   - 例如：`com.filemanager.plugin.utils.EnumOptionProvider`、`EnumConverter`
+
+3. **判断标准**：
+   - 如果一个工具类只被一个策略使用，应该放在该策略的目录下
+   - 如果一个工具类被多个策略使用，应该放在公共的util包中
+   - 如果不确定，优先放在策略目录下，需要时再提取到公共包
+
+### 9.2 代码文件大小规范
+
+#### 9.2.1 文件行数限制
+
+- **策略实现类**：不超过400行
+- **工具类**：不超过300行
+- **DTO类**：不超过200行
+- **枚举类**：不超过150行
+
+#### 9.2.2 拆分原则
+
+当文件超过行数限制时，应该按照以下原则进行拆分：
+
+1. **按功能拆分**：将不同的功能模块拆分到不同的文件
+2. **按职责拆分**：将不同的职责拆分到不同的类
+3. **按层次拆分**：将不同层次的逻辑拆分到不同的类
+
+### 9.3 命名规范
+
+#### 9.3.1 包命名
+
+- 策略包：`com.filemanager.plugin.impl.{strategyname}`
+- 策略枚举包：`com.filemanager.plugin.impl.{strategyname}.enums`
+- 策略工具包：`com.filemanager.plugin.impl.{strategyname}.utils` 或 `com.filemanager.plugin.impl.{strategyname}.{feature}`
+
+#### 9.3.2 类命名
+
+- 策略类：`{StrategyName}Strategy`
+- 枚举类：`{EnumName}`
+- 工具类：`{Functionality}Utils` 或 `{Functionality}Calculator`、`{Functionality}Processor` 等
+- DTO类：`{Entity}DTO`
+
+### 9.4 依赖管理
+
+#### 9.4.1 依赖方向
+
+- 策略类可以依赖自己的工具类
+- 策略类可以依赖公共工具类
+- 策略类不应该依赖其他策略的工具类
+- 公共工具类不应该依赖任何策略类
+
+#### 9.4.2 循环依赖
+
+- 禁止任何形式的循环依赖
+- 如果出现循环依赖，应该重新设计代码结构
+
+### 9.5 测试代码组织
+
+#### 9.5.1 测试目录结构
+
+测试代码应该与源代码保持相同的包结构：
+
+```
+backend/src/test/java/com/filemanager/plugin/impl/
+├── advancedrename/
+│   └── AdvancedRenameStrategyTest.java
+├── audioconverter/
+│   └── AudioConverterStrategyTest.java
+├── filecollection/
+│   └── FileCollectionStrategyTest.java
+└── ...
+```
+
+#### 9.5.2 测试类命名
+
+测试类应该与被测试类保持相同的名称，并添加`Test`后缀。
+
+## 10. 结论
 
 本设计通过将配置管理功能下沉到各个策略类中，使用合适的参数DTO来维护参数的不同属性和参数之间的关系，实现了配置管理的内聚性和类型安全性。同时，通过统一的接口设计和抽象类实现，确保了配置管理的一致性和可扩展性。
+
+前端的交互增强，包括自动提示功能和规则管理功能，提升了用户体验，使配置过程更加直观和高效。
+
+代码组织规范确保了项目的可维护性和可扩展性，通过合理的目录划分、文件大小控制和依赖管理，使代码更加清晰和易于理解。

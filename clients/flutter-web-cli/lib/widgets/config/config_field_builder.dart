@@ -6,6 +6,7 @@ abstract class ConfigFieldBuilder {
     ConfigField field,
     dynamic value,
     Function(dynamic) onChanged,
+    bool showTooltip = true,
   );
 }
 
@@ -36,32 +37,36 @@ class TextConfigFieldBuilder extends ConfigFieldBuilder {
     ConfigField field,
     dynamic value,
     Function(dynamic) onChanged,
+    bool showTooltip = true,
   ) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Tooltip(
-            message: field.description ?? '',
-            child: Text(
+          if (showTooltip && (field.description?.isNotEmpty ?? false))
+            Tooltip(
+              message: field.description ?? '',
+              child: Text(
+                field.label,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            )
+          else
+            Text(
               field.label,
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-          ),
           const SizedBox(height: 5),
-          Tooltip(
-            message: field.description ?? '',
-            child: TextField(
-              decoration: InputDecoration(
-                border: const OutlineInputBorder(),
-                hintText: field.description,
-              ),
-              controller: TextEditingController(
-                text: value?.toString() ?? field.defaultValue?.toString() ?? '',
-              ),
-              onChanged: onChanged,
+          TextField(
+            decoration: InputDecoration(
+              border: const OutlineInputBorder(),
+              hintText: field.description,
             ),
+            controller: TextEditingController(
+              text: value?.toString() ?? field.defaultValue?.toString() ?? '',
+            ),
+            onChanged: onChanged,
           ),
         ],
       ),
@@ -75,38 +80,42 @@ class NumberConfigFieldBuilder extends ConfigFieldBuilder {
     ConfigField field,
     dynamic value,
     Function(dynamic) onChanged,
+    bool showTooltip = true,
   ) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Tooltip(
-            message: field.description ?? '',
-            child: Text(
+          if (showTooltip && (field.description?.isNotEmpty ?? false))
+            Tooltip(
+              message: field.description ?? '',
+              child: Text(
+                field.label,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            )
+          else
+            Text(
               field.label,
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-          ),
           const SizedBox(height: 5),
-          Tooltip(
-            message: field.description ?? '',
-            child: TextField(
-              decoration: InputDecoration(
-                border: const OutlineInputBorder(),
-                hintText: field.description,
-              ),
-              controller: TextEditingController(
-                text: value?.toString() ?? field.defaultValue?.toString() ?? '',
-              ),
-              keyboardType: TextInputType.number,
-              onChanged: (v) {
-                final numValue = num.tryParse(v);
-                if (numValue != null) {
-                  onChanged(numValue);
-                }
-              },
+          TextField(
+            decoration: InputDecoration(
+              border: const OutlineInputBorder(),
+              hintText: field.description,
             ),
+            controller: TextEditingController(
+              text: value?.toString() ?? field.defaultValue?.toString() ?? '',
+            ),
+            keyboardType: TextInputType.number,
+            onChanged: (v) {
+              final numValue = num.tryParse(v);
+              if (numValue != null) {
+                onChanged(numValue);
+              }
+            },
           ),
         ],
       ),
@@ -120,6 +129,7 @@ class BooleanConfigFieldBuilder extends ConfigFieldBuilder {
     ConfigField field,
     dynamic value,
     Function(dynamic) onChanged,
+    bool showTooltip = true,
   ) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 10),
@@ -130,13 +140,19 @@ class BooleanConfigFieldBuilder extends ConfigFieldBuilder {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Tooltip(
-                  message: field.description ?? '',
-                  child: Text(
+                if (showTooltip && (field.description?.isNotEmpty ?? false))
+                  Tooltip(
+                    message: field.description ?? '',
+                    child: Text(
+                      field.label,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  )
+                else
+                  Text(
                     field.label,
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                ),
                 Text(
                   field.description ?? '',
                   style: const TextStyle(fontSize: 12, color: Colors.grey),
@@ -144,12 +160,9 @@ class BooleanConfigFieldBuilder extends ConfigFieldBuilder {
               ],
             ),
           ),
-          Tooltip(
-            message: field.description ?? '',
-            child: Checkbox(
-              value: value ?? field.defaultValue ?? false,
-              onChanged: onChanged,
-            ),
+          Checkbox(
+            value: value ?? field.defaultValue ?? false,
+            onChanged: onChanged,
           ),
         ],
       ),
@@ -163,6 +176,7 @@ class SelectConfigFieldBuilder extends ConfigFieldBuilder {
     ConfigField field,
     dynamic value,
     Function(dynamic) onChanged,
+    bool showTooltip = true,
   ) {
     final dropdownItems = _buildDropdownItems(field);
     final itemValues = dropdownItems.map((item) => item.value).toList();
@@ -174,24 +188,27 @@ class SelectConfigFieldBuilder extends ConfigFieldBuilder {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Tooltip(
-            message: field.description ?? '',
-            child: Text(
+          if (showTooltip && (field.description?.isNotEmpty ?? false))
+            Tooltip(
+              message: field.description ?? '',
+              child: Text(
+                field.label,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            )
+          else
+            Text(
               field.label,
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-          ),
           const SizedBox(height: 5),
-          Tooltip(
-            message: field.description ?? '',
-            child: DropdownButtonFormField<String>(
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-              ),
-              initialValue: initialValue,
-              items: dropdownItems,
-              onChanged: onChanged,
+          DropdownButtonFormField<String>(
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
             ),
+            initialValue: initialValue,
+            items: dropdownItems,
+            onChanged: onChanged,
           ),
         ],
       ),
@@ -217,36 +234,40 @@ class DirectoryConfigFieldBuilder extends ConfigFieldBuilder {
     ConfigField field,
     dynamic value,
     Function(dynamic) onChanged,
+    bool showTooltip = true,
   ) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Tooltip(
-            message: field.description ?? '',
-            child: Text(
+          if (showTooltip && (field.description?.isNotEmpty ?? false))
+            Tooltip(
+              message: field.description ?? '',
+              child: Text(
+                field.label,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            )
+          else
+            Text(
               field.label,
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-          ),
           const SizedBox(height: 5),
-          Tooltip(
-            message: field.description ?? '',
-            child: TextField(
-              decoration: InputDecoration(
-                border: const OutlineInputBorder(),
-                hintText: field.description,
-                suffixIcon: const Icon(Icons.folder),
-              ),
-              controller: TextEditingController(
-                text: value?.toString() ?? field.defaultValue?.toString() ?? '',
-              ),
-              readOnly: true,
-              onTap: () async {
-                // TODO: 实现目录选择器
-              },
+          TextField(
+            decoration: InputDecoration(
+              border: const OutlineInputBorder(),
+              hintText: field.description,
+              suffixIcon: const Icon(Icons.folder),
             ),
+            controller: TextEditingController(
+              text: value?.toString() ?? field.defaultValue?.toString() ?? '',
+            ),
+            readOnly: true,
+            onTap: () async {
+              // TODO: 实现目录选择器
+            },
           ),
         ],
       ),
@@ -260,6 +281,7 @@ class ListConfigFieldBuilder extends ConfigFieldBuilder {
     ConfigField field,
     dynamic value,
     Function(dynamic) onChanged,
+    bool showTooltip = true,
   ) {
     List<String> listValue = <String>[];
     if (value != null) {
@@ -279,59 +301,59 @@ class ListConfigFieldBuilder extends ConfigFieldBuilder {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Tooltip(
-            message: field.description ?? '',
-            child: Text(
+          if (showTooltip && (field.description?.isNotEmpty ?? false))
+            Tooltip(
+              message: field.description ?? '',
+              child: Text(
+                field.label,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            )
+          else
+            Text(
               field.label,
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-          ),
           const SizedBox(height: 5),
-          Tooltip(
-            message: field.description ?? '',
-            child: Container(
-              height: 100,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: ListView.builder(
-                itemCount: listValue.length,
-                itemBuilder: (context, index) {
-                  return ListTile(
-                    title: Text(listValue[index]),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () {
-                        final newValue = List<String>.from(listValue);
-                        newValue.removeAt(index);
-                        onChanged(newValue);
-                      },
-                    ),
-                  );
-                },
-              ),
+          Container(
+            height: 100,
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: ListView.builder(
+              itemCount: listValue.length,
+              itemBuilder: (context, index) {
+                return ListTile(
+                  title: Text(listValue[index]),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: () {
+                      final newValue = List<String>.from(listValue);
+                      newValue.removeAt(index);
+                      onChanged(newValue);
+                    },
+                  ),
+                );
+              },
             ),
           ),
           const SizedBox(height: 5),
           Row(
             children: [
               Expanded(
-                child: Tooltip(
-                  message: field.description ?? '',
-                  child: TextField(
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
-                      hintText: '输入新项...',
-                    ),
-                    onSubmitted: (v) {
-                      if (v.isNotEmpty) {
-                        final newValue = List<String>.from(listValue);
-                        newValue.add(v);
-                        onChanged(newValue);
-                      }
-                    },
+                child: TextField(
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    hintText: '输入新项...',
                   ),
+                  onSubmitted: (v) {
+                    if (v.isNotEmpty) {
+                      final newValue = List<String>.from(listValue);
+                      newValue.add(v);
+                      onChanged(newValue);
+                    }
+                  },
                 ),
               ),
               const SizedBox(width: 10),

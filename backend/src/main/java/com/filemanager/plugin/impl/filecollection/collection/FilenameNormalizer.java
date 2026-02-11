@@ -1,4 +1,4 @@
-package com.filemanager.plugin.util;
+package com.filemanager.plugin.impl.filecollection.collection;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -8,7 +8,7 @@ public class FilenameNormalizer {
     private static final String[] COMMON_PREFIXES = {"CD", "Disc", "Volume", "Vol", "Track", "Trk"};
     private static final String[] COMMON_SUFFIXES = {"mp3", "flac", "wav", "aac", "m4a", "ogg", "wma", "ape", "mp4", "320kbps", "192kbps", "128kbps", "lossless", "hd", "hq"};
     private static final String[] SPECIAL_CHARS = {"[", "]", "(", ")", "{", "}", "<", ">", "-", "_", ".", ",", ";", ":", "'", "\"", "!", "@", "#", "$", "%", "^", "&", "*", "+", "=", "|", "\\", "/", "~", "`"};
-
+    
     public static String normalize(String filename) {
         if (filename == null || filename.isEmpty()) {
             return "";

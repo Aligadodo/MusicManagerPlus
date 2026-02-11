@@ -1,4 +1,4 @@
-package com.filemanager.plugin.util;
+package com.filemanager.plugin.impl.filecollection.collection;
 
 public class TextSimilarityCalculator {
 

@@ -68,6 +68,7 @@ class AppConfig {
       'autoRefresh': true,
       'previewLimit': 200,
       'fileTypeTree': {},
+      'showTooltips': true,
     };
   }
 

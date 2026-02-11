@@ -57,6 +57,24 @@ class _RenameRuleEditorState extends State<RenameRuleEditor> {
     _updateRules(newRules);
   }
 
+  void _moveRuleUp(int index) {
+    if (index > 0) {
+      final newRules = List<RenameRule>.from(_rules);
+      final rule = newRules.removeAt(index);
+      newRules.insert(index - 1, rule);
+      _updateRules(newRules);
+    }
+  }
+
+  void _moveRuleDown(int index) {
+    if (index < _rules.length - 1) {
+      final newRules = List<RenameRule>.from(_rules);
+      final rule = newRules.removeAt(index);
+      newRules.insert(index + 1, rule);
+      _updateRules(newRules);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -128,8 +146,19 @@ class _RenameRuleEditorState extends State<RenameRuleEditor> {
               ),
               const SizedBox(width: 8),
               IconButton(
+                icon: const Icon(Icons.arrow_up, color: Colors.blue),
+                onPressed: () => _moveRuleUp(index),
+                tooltip: '上移规则',
+              ),
+              IconButton(
+                icon: const Icon(Icons.arrow_down, color: Colors.blue),
+                onPressed: () => _moveRuleDown(index),
+                tooltip: '下移规则',
+              ),
+              IconButton(
                 icon: const Icon(Icons.close, color: Colors.red),
                 onPressed: () => _removeRule(index),
+                tooltip: '删除规则',
               ),
             ],
           ),

@@ -194,7 +194,6 @@ class MainLayout extends ConsumerStatefulWidget {
 
 class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  bool _showTooltips = true;
   bool _autoRun = false;
 
   @override
@@ -519,6 +518,10 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
   }
 
   Widget _buildCheckboxes() {
+    final config = ref.watch(configProvider);
+    final showTooltips = config.globalSettings['showTooltips'] as bool? ?? true;
+    final configNotifier = ref.read(configProvider.notifier);
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -526,11 +529,12 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
           mainAxisSize: MainAxisSize.min,
           children: [
             Checkbox(
-              value: _showTooltips,
+              value: showTooltips,
               onChanged: (value) {
-                setState(() {
-                  _showTooltips = value ?? true;
-                });
+                final newShowTooltips = value ?? true;
+                final updatedGlobalSettings = Map<String, dynamic>.from(config.globalSettings);
+                updatedGlobalSettings['showTooltips'] = newShowTooltips;
+                configNotifier.updateGlobalSettings(updatedGlobalSettings);
               },
             ),
             const Text('开启使用说明'),

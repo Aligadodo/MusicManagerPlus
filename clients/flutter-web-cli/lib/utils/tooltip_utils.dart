@@ -7,7 +7,11 @@ class TooltipUtils {
     required String text,
     required String tooltip,
     TextStyle? style,
+    bool showTooltip = true,
   }) {
+    if (!showTooltip || tooltip.isEmpty) {
+      return Text(text, style: style);
+    }
     return Tooltip(
       message: tooltip,
       child: Text(text, style: style),
@@ -20,7 +24,11 @@ class TooltipUtils {
     required String tooltip,
     Color? color,
     double? size,
+    bool showTooltip = true,
   }) {
+    if (!showTooltip || tooltip.isEmpty) {
+      return Icon(icon, color: color, size: size);
+    }
     return Tooltip(
       message: tooltip,
       child: Icon(icon, color: color, size: size),
@@ -33,7 +41,15 @@ class TooltipUtils {
     required String tooltip,
     required VoidCallback onPressed,
     ButtonStyle? style,
+    bool showTooltip = true,
   }) {
+    if (!showTooltip || tooltip.isEmpty) {
+      return ElevatedButton(
+        onPressed: onPressed,
+        style: style,
+        child: child,
+      );
+    }
     return Tooltip(
       message: tooltip,
       child: ElevatedButton(
@@ -50,7 +66,19 @@ class TooltipUtils {
     required ValueChanged<bool?> onChanged,
     required String label,
     required String tooltip,
+    bool showTooltip = true,
   }) {
+    if (!showTooltip || tooltip.isEmpty) {
+      return Row(
+        children: [
+          Checkbox(
+            value: value,
+            onChanged: onChanged,
+          ),
+          Text(label),
+        ],
+      );
+    }
     return Tooltip(
       message: tooltip,
       child: Row(
@@ -72,7 +100,16 @@ class TooltipUtils {
     required ValueChanged<T?> onChanged,
     required String tooltip,
     String? hint,
+    bool showTooltip = true,
   }) {
+    if (!showTooltip || tooltip.isEmpty) {
+      return DropdownButton<T>(
+        value: value,
+        items: items,
+        onChanged: onChanged,
+        hint: hint != null ? Text(hint) : null,
+      );
+    }
     return Tooltip(
       message: tooltip,
       child: DropdownButton<T>(
@@ -92,7 +129,20 @@ class TooltipUtils {
     String? hintText,
     TextInputType? keyboardType,
     bool obscureText = false,
+    bool showTooltip = true,
   }) {
+    if (!showTooltip || tooltip.isEmpty) {
+      return TextField(
+        controller: controller,
+        decoration: InputDecoration(
+          labelText: labelText,
+          hintText: hintText,
+          border: const OutlineInputBorder(),
+        ),
+        keyboardType: keyboardType,
+        obscureText: obscureText,
+      );
+    }
     return Tooltip(
       message: tooltip,
       child: TextField(
@@ -115,7 +165,16 @@ class TooltipUtils {
     Decoration? decoration,
     EdgeInsetsGeometry? padding,
     EdgeInsetsGeometry? margin,
+    bool showTooltip = true,
   }) {
+    if (!showTooltip || tooltip.isEmpty) {
+      return Container(
+        decoration: decoration,
+        padding: padding,
+        margin: margin,
+        child: child,
+      );
+    }
     return Tooltip(
       message: tooltip,
       child: Container(
