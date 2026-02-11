@@ -6,6 +6,7 @@ class StrategyInfo {
   final String id;
   final String name;
   final String description;
+  final String? version;
   final List<ConfigField> configFields;
   final List<PreconditionGroup> preconditionGroups;
   final bool enabled;
@@ -15,6 +16,7 @@ class StrategyInfo {
     required this.id,
     required this.name,
     required this.description,
+    this.version,
     required this.configFields,
     this.preconditionGroups = const [],
     required this.enabled,
@@ -52,6 +54,7 @@ class StrategyInfo {
       id: json['id'] as String? ?? 'unknown',
       name: json['name'] as String? ?? 'Unknown Strategy',
       description: json['description'] as String? ?? '',
+      version: json['version'] as String?,
       configFields: configFields,
       preconditionGroups: preconditionGroups,
       enabled: json['enabled'] as bool? ?? true,
@@ -64,6 +67,7 @@ class StrategyInfo {
       'id': id,
       'name': name,
       'description': description,
+      if (version != null) 'version': version,
       'configFields': configFields.map((field) => field.toJson()).toList(),
       'preconditionGroups': preconditionGroups.map((group) => group.toJson()).toList(),
       'enabled': enabled,
@@ -77,6 +81,7 @@ class StrategyInfo {
       id: id,
       name: name,
       description: description,
+      version: version,
       configFields: configFields.map((field) => field.copyWith()).toList(),
       preconditionGroups: preconditionGroups.map((group) => group.copyWith()).cast<PreconditionGroup>().toList(),
       enabled: enabled,
@@ -95,6 +100,7 @@ class StrategyInfo {
       id: id,
       name: name,
       description: description,
+      version: version,
       configFields: configFields.map((field) => field.copyWith()).toList(),
       preconditionGroups: copiedGroups,
       enabled: enabled,

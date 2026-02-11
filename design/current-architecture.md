@@ -97,11 +97,24 @@ public interface IPlugin {
     String getName();
     String getDescription();
     String getVersion();
-    List<PluginParameterDTO> getParameters();
     PluginConfigDTO getDefaultConfig();
+    List<PluginParameterDTO> getParameters();
     List<PreconditionGroupDTO> getDefaultPreconditionGroups();
+    
+    // 批量处理方法（兼容旧接口）
     List<ChangeRecord> execute(List<String> filePaths, PluginConfigDTO config, ExecutionContext context);
     List<ChangeRecord> preview(List<String> filePaths, PluginConfigDTO config, ExecutionContext context);
+    
+    // 逐个文件处理方法（新接口，推荐使用）
+    List<ChangeRecord> analyze(ChangeRecord currentRecord, 
+        List<ChangeRecord> inputRecords, 
+        List<File> rootDirs, 
+        PluginConfigDTO config, 
+        ExecutionContext context);
+    
+    void execute(ChangeRecord record, 
+        PluginConfigDTO config, 
+        ExecutionContext context) throws Exception;
 }
 
 public interface StrategyConfigurable extends IPlugin {
@@ -153,6 +166,78 @@ public interface StrategyConfigurable extends IPlugin {
 3. **预览功能**: 通过createPreviewRecord()方法生成预览记录
 4. **执行功能**: 通过executeForFile()方法执行文件处理
 5. **枚举选项**: 通过getEnumOptions()方法提供枚举选项
+
+#### ChangeRecord模型
+ChangeRecord是记录文件变更的核心数据模型，支持以下特性：
+
+**基本字段**：
+- `id`: 记录唯一标识符
+- `originalName`: 原始文件名
+- `newName`: 新文件名
+- `fileHandle`: 原始文件句柄
+- `changed`: 是否被修改
+- `newPath`: 新文件路径
+- `operationType`: 操作类型（支持枚举类型）
+- `status`: 执行状态（支持枚举类型）
+- `extraParams`: 额外参数
+- `failReason`: 失败原因
+
+**扩展字段**：
+- `isCreate`: 是否创建新文件
+- `isDeleteOrMove`: 是否删除或移动
+- `selected`: 是否被选中
+- `intermediateFile`: 中间状态文件
+- `processInfo`: 处理过程信息列表
+- `analyzeTime`: 分析阶段耗时（毫秒）
+- `executeTime`: 执行阶段耗时（毫秒）
+- `filePath`: 文件路径
+- `reason`: 变更原因
+
+**枚举类型支持**：
+- `OperationType`: 操作类型枚举，包括NONE、RENAME、MOVE、DELETE、COPY、CONVERT、SPLIT、SCRAPER、MERGE、CLEANUP、NCM_CONVERT、NCM_CACHE_SCAN、NCM_LYRIC_DOWNLOAD
+- `ExecStatus`: 执行状态枚举，包括PENDING、PREVIEWING、SUCCESS、FAILED、SKIPPED、EXECUTING
+
+**类型安全方法**：
+- `getOperationTypeEnum()` / `setOperationType(OperationType)`: 获取/设置枚举类型的操作类型
+- `getStatusEnum()` / `setStatus(ExecStatus)`: 获取/设置枚举类型的执行状态
+- `addProcessInfo(String, String)`: 添加键值对格式的过程信息
+
+**便捷构造函数**：
+- 6参数构造函数：`ChangeRecord(String, String, File, boolean, String, OperationType)`
+- 8参数完整构造函数：`ChangeRecord(String, String, File, boolean, String, OperationType, Map<String, String>, ExecStatus)`
+
+**链式处理支持**：
+- `getCurrentSource()`: 获取当前应该处理的源文件（优先使用intermediateFile）
+- `setIntermediateFile(File)`: 设置中间状态文件
+
+#### ExecutionContext执行上下文
+ExecutionContext提供插件执行过程中的环境支持：
+
+**基本功能**：
+- 日志记录：`logInfo()`, `logError()`, `logWarn()`, `logDebug()`
+- 进度跟踪：`updateProgress()`, `getProgress()`
+- 任务取消：`cancel()`, `isCancelled()`
+- 执行时间：`getExecutionTime()`
+
+**扩展功能**：
+- 属性存储：`setAttribute(String, Object)`, `getAttribute(String)`, `getAttribute(String, T)`
+- 计时功能：`startTimer()`, `stopTimer()`
+
+**使用示例**：
+```java
+context.startTimer();
+context.logInfo("开始处理文件: " + record.getOriginalName());
+record.addProcessInfo("开始时间: " + new Date());
+
+executeOperation(record);
+
+long elapsed = context.stopTimer();
+record.setExecuteTime(elapsed);
+record.addProcessInfo("完成时间: " + new Date());
+record.addProcessInfo("耗时: " + elapsed + "ms");
+
+context.logInfo("文件处理完成，耗时: " + elapsed + "ms");
+```
 
 ### 3. 前端架构
 
@@ -288,12 +373,28 @@ public interface StrategyConfigurable extends IPlugin {
   ↓
 用户执行流水线
   ↓
-后端按顺序执行流水线中的插件/策略
+后端扫描文件并创建初始ChangeRecord列表
   ↓
-后端返回执行结果
+后端逐个文件通过所有策略处理
+  ↓
+每个策略调用analyze方法处理当前文件
+  ↓
+如果策略返回的ChangeRecord的changed=true，更新当前记录
+  ↓
+如果策略返回的ChangeRecord的changed=false，添加到变更列表
+  ↓
+后端返回所有变更记录
   ↓
 前端显示执行结果
 ```
+
+### 流水线处理特性
+- **逐个文件处理**: 每个文件独立通过所有策略，避免并发冲突
+- **链式处理**: 后续策略可以基于前面策略的结果继续处理
+- **变更记录合并**: 自动合并所有策略产生的变更记录
+- **文件修改唯一性**: 一个文件只能被一个策略标记为修改
+- **新文件创建支持**: 策略可以创建新文件并返回独立的ChangeRecord
+- **中间文件支持**: 通过intermediateFile字段支持链式处理的中间状态
 
 ## 配置管理
 

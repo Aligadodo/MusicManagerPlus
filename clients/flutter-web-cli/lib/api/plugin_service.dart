@@ -25,6 +25,22 @@ class PluginService {
     }
   }
 
+  Future<PluginInfo> getPluginInfo(String pluginId) async {
+    try {
+      final response = await _apiClient.get('/api/plugins/$pluginId');
+      print('Get plugin info response: ${response.statusCode}, ${response.body}');
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        return PluginInfo.fromJson(data);
+      } else {
+        throw Exception('Failed to get plugin info: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error getting plugin info: $e');
+      throw Exception('Error getting plugin info: $e');
+    }
+  }
+
   Future<PluginConfig> getPluginConfig(String pluginId) async {
     try {
       final response = await _apiClient.get('/api/plugins/$pluginId/config');
@@ -101,6 +117,112 @@ class PluginService {
     } catch (e) {
       print('Error executing plugin: $e');
       throw Exception('Error executing plugin: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> reloadPlugins() async {
+    try {
+      final response = await _apiClient.post('/api/plugins/reload');
+      print('Reload plugins response: ${response.statusCode}, ${response.body}');
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        return data;
+      } else {
+        throw Exception('Failed to reload plugins: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error reloading plugins: $e');
+      throw Exception('Error reloading plugins: $e');
+    }
+  }
+
+  Future<List<PluginInfo>> getInternalPlugins() async {
+    try {
+      final response = await _apiClient.get('/api/plugins/internal');
+      print('Get internal plugins response: ${response.statusCode}, ${response.body}');
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data.map((item) => PluginInfo.fromJson(item)).toList();
+      } else {
+        throw Exception('Failed to get internal plugins: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error getting internal plugins: $e');
+      throw Exception('Error getting internal plugins: $e');
+    }
+  }
+
+  Future<List<PluginInfo>> getExternalPlugins() async {
+    try {
+      final response = await _apiClient.get('/api/plugins/external');
+      print('Get external plugins response: ${response.statusCode}, ${response.body}');
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data.map((item) => PluginInfo.fromJson(item)).toList();
+      } else {
+        throw Exception('Failed to get external plugins: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error getting external plugins: $e');
+      throw Exception('Error getting external plugins: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> scanExternalPlugins(String pluginDir) async {
+    try {
+      final response = await _apiClient.post(
+        '/api/plugins/scan',
+        body: json.encode({
+          'pluginDir': pluginDir,
+        }),
+      );
+      print('Scan external plugins response: ${response.statusCode}, ${response.body}');
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        return data;
+      } else {
+        throw Exception('Failed to scan external plugins: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error scanning external plugins: $e');
+      throw Exception('Error scanning external plugins: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> loadExternalPlugins(String pluginDir) async {
+    try {
+      final response = await _apiClient.post(
+        '/api/plugins/load-external',
+        body: json.encode({
+          'pluginDir': pluginDir,
+        }),
+      );
+      print('Load external plugins response: ${response.statusCode}, ${response.body}');
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        return data;
+      } else {
+        throw Exception('Failed to load external plugins: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error loading external plugins: $e');
+      throw Exception('Error loading external plugins: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> reloadExternalPlugins() async {
+    try {
+      final response = await _apiClient.post('/api/plugins/reload-external');
+      print('Reload external plugins response: ${response.statusCode}, ${response.body}');
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        return data;
+      } else {
+        throw Exception('Failed to reload external plugins: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error reloading external plugins: $e');
+      throw Exception('Error reloading external plugins: $e');
     }
   }
 }

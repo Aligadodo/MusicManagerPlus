@@ -650,7 +650,7 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
                   setState(() {
                     group.conditions.add(RuleCondition(
                       type: selectedType,
-                      value: selectedType.needsValue() ? valueText : null,
+                      value: selectedType.needsValue() ? valueText : '',
                     ));
                   });
                 }

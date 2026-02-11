@@ -293,9 +293,9 @@ public class PreconditionEvaluator {
                 return compareNumbers(fieldValue, conditionValue) > 0;
             } else if (operator == PreconditionDTO.OperatorType.LESS_THAN) {
                 return compareNumbers(fieldValue, conditionValue) < 0;
-            } else if (operator == PreconditionDTO.OperatorType.GREATER_THAN_EQUALS) {
+            } else if (operator == PreconditionDTO.OperatorType.GREATER_THAN_OR_EQUAL) {
                 return compareNumbers(fieldValue, conditionValue) >= 0;
-            } else if (operator == PreconditionDTO.OperatorType.LESS_THAN_EQUALS) {
+            } else if (operator == PreconditionDTO.OperatorType.LESS_THAN_OR_EQUAL) {
                 return compareNumbers(fieldValue, conditionValue) <= 0;
             } else if (operator == PreconditionDTO.OperatorType.CONTAINS) {
                 return fieldValue.toString().contains(conditionValue.toString());

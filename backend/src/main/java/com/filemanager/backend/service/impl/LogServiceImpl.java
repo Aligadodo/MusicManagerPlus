@@ -271,25 +271,29 @@ public class LogServiceImpl implements LogService {
         Map<String, Object> entry = new HashMap<>();
 
         try {
-            String[] parts = line.split("\\s+", 5);
-            if (parts.length >= 5) {
-                String timestamp = parts[0] + " " + parts[1];
-                String level = parts[2];
-                String thread = parts[3];
-                String message = parts[4];
+            String timestamp = "";
+            String level = "INFO";
+            String message = line;
 
-                entry.put("timestamp", timestamp);
-                entry.put("level", level);
-                entry.put("thread", thread);
-                entry.put("message", message);
-
-                if (message.contains("Exception") || message.contains("Error")) {
-                    entry.put("stackTrace", extractStackTrace(line));
+            int timestampEnd = line.indexOf(']');
+            if (timestampEnd > 0) {
+                timestamp = line.substring(0, timestampEnd + 1);
+                
+                String remaining = line.substring(timestampEnd + 1).trim();
+                
+                int levelEnd = remaining.indexOf(' ');
+                if (levelEnd > 0) {
+                    level = remaining.substring(0, levelEnd);
+                    message = remaining.substring(levelEnd + 1);
                 }
-            } else {
-                entry.put("timestamp", "");
-                entry.put("level", "INFO");
-                entry.put("message", line);
+            }
+
+            entry.put("timestamp", timestamp);
+            entry.put("level", level);
+            entry.put("message", message);
+
+            if (message.contains("Exception") || message.contains("Error")) {
+                entry.put("stackTrace", extractStackTrace(line));
             }
         } catch (Exception e) {
             entry.put("timestamp", "");
