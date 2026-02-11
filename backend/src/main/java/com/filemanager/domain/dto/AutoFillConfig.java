@@ -1,5 +1,7 @@
 package com.filemanager.domain.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 /**
  * 自动填充配置
  * 用于定义参数的自动填充逻辑
@@ -22,42 +24,52 @@ public class AutoFillConfig {
         this.fillType = fillType;
     }
     
+    @JsonProperty("triggerParam")
     public String getTriggerParam() {
         return triggerParam;
     }
     
+    @JsonProperty("triggerParam")
     public void setTriggerParam(String triggerParam) {
         this.triggerParam = triggerParam;
     }
     
+    @JsonProperty("triggerValue")
     public String getTriggerValue() {
         return triggerValue;
     }
     
+    @JsonProperty("triggerValue")
     public void setTriggerValue(String triggerValue) {
         this.triggerValue = triggerValue;
     }
     
+    @JsonProperty("fillType")
     public String getFillType() {
         return fillType;
     }
     
+    @JsonProperty("fillType")
     public void setFillType(String fillType) {
         this.fillType = fillType;
     }
     
+    @JsonProperty("fillValue")
     public String getFillValue() {
         return fillValue;
     }
     
+    @JsonProperty("fillValue")
     public void setFillValue(String fillValue) {
         this.fillValue = fillValue;
     }
     
+    @JsonProperty("detectPattern")
     public String getDetectPattern() {
         return detectPattern;
     }
     
+    @JsonProperty("detectPattern")
     public void setDetectPattern(String detectPattern) {
         this.detectPattern = detectPattern;
     }
