@@ -8,7 +8,7 @@ class ThreadPoolService {
 
   Future<Map<String, dynamic>> getThreadPoolConfig() async {
     try {
-      final response = await _apiClient.get('/thread-pool');
+      final response = await _apiClient.get('/api/thread-pool');
       if (response.statusCode == 200) {
         return Map<String, dynamic>.from(json.decode(response.body));
       } else {
@@ -21,7 +21,7 @@ class ThreadPoolService {
 
   Future<Map<String, dynamic>> setPreviewThreads(int threads) async {
     try {
-      final response = await _apiClient.put('/thread-pool/preview', body: {
+      final response = await _apiClient.put('/api/thread-pool/preview', body: {
         'threads': threads,
       });
       if (response.statusCode == 200) {
@@ -36,7 +36,7 @@ class ThreadPoolService {
 
   Future<Map<String, dynamic>> setExecutionThreads(int threads) async {
     try {
-      final response = await _apiClient.put('/thread-pool/execution', body: {
+      final response = await _apiClient.put('/api/thread-pool/execution', body: {
         'threads': threads,
       });
       if (response.statusCode == 200) {

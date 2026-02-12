@@ -1,6 +1,7 @@
 package com.filemanager.backend.util;
 
 import com.filemanager.backend.service.FileFilterService;
+import com.filemanager.backend.service.FileTypeFilterService;
 import com.filemanager.backend.logging.UnifiedLogger;
 
 import java.io.File;
@@ -17,11 +18,13 @@ import java.util.stream.Stream;
 public class FileScanner {
     
     private final FileFilterService fileFilterService;
+    private final FileTypeFilterService fileTypeFilterService;
     private final AtomicBoolean isTaskRunning;
     private final int threads;
 
-    public FileScanner(FileFilterService fileFilterService, AtomicBoolean isTaskRunning, int threads) {
+    public FileScanner(FileFilterService fileFilterService, FileTypeFilterService fileTypeFilterService, AtomicBoolean isTaskRunning, int threads) {
         this.fileFilterService = fileFilterService;
+        this.fileTypeFilterService = fileTypeFilterService;
         this.isTaskRunning = isTaskRunning;
         this.threads = threads;
     }
@@ -38,7 +41,8 @@ public class FileScanner {
         try (Stream<Path> s = ParallelStreamWalker.walk(root.toPath(), minDepth, maxDepth, globalLimit, dirLimit, threads, isTaskRunning)) {
             list = s.filter(p -> {
                 try {
-                    if (fileFilterService.isFileIncluded(p.toFile())) {
+                    File file = p.toFile();
+                    if (fileFilterService.isFileIncluded(file) && (fileTypeFilterService == null || fileTypeFilterService.isFileIncludedByType(file.getName()))) {
                         return true;
                     }
                     countIgnore.incrementAndGet();
@@ -76,5 +80,48 @@ public class FileScanner {
         
         Collections.reverse(list);
         return list;
+    }
+    
+    /**
+     * 根据扫描模式执行文件扫描
+     * @param root 根目录
+     * @param scanMode 扫描模式：ALL（全部文件）、CURRENT（当前目录）、SPECIFIC（指定目录层级）、RANGE（目录层级范围）
+     * @param specificDepth 指定的目录层级（仅当scanMode为SPECIFIC时使用）
+     * @param minDepth 最小目录层级（仅当scanMode为RANGE时使用）
+     * @param maxDepth 最大目录层级（仅当scanMode为ALL或RANGE时使用）
+     * @param globalLimit 全局限制
+     * @param dirLimit 目录限制
+     * @param msg 消息回调
+     * @return 扫描到的文件列表
+     */
+    public List<File> scanFilesByMode(File root, String scanMode, Integer specificDepth, int minDepth, int maxDepth, AtomicInteger globalLimit, AtomicInteger dirLimit, Consumer<String> msg) {
+        int actualMinDepth = minDepth;
+        int actualMaxDepth = maxDepth;
+        
+        switch (scanMode) {
+            case "CURRENT":
+                // 当前目录
+                actualMinDepth = 0;
+                actualMaxDepth = 0;
+                break;
+            case "SPECIFIC":
+                // 指定目录层级
+                if (specificDepth != null) {
+                    actualMinDepth = specificDepth;
+                    actualMaxDepth = specificDepth;
+                }
+                break;
+            case "RANGE":
+                // 目录层级范围
+                // 使用传入的minDepth和maxDepth
+                break;
+            case "ALL":
+            default:
+                // 全部文件
+                // 使用传入的minDepth和maxDepth
+                break;
+        }
+        
+        return scanFilesRobust(root, actualMinDepth, actualMaxDepth, globalLimit, dirLimit, msg);
     }
 }

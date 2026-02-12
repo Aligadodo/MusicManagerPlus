@@ -402,7 +402,282 @@ backend/src/test/java/com/filemanager/plugin/impl/
 
 测试类应该与被测试类保持相同的名称，并添加`Test`后缀。
 
-## 10. 结论
+## 10. 构建和部署规范
+
+### 10.1 环境要求
+
+#### 10.1.1 JDK版本
+
+- **推荐版本**：JDK 21
+- **兼容版本**：JDK 8
+- **选择策略**：优先使用JDK 21进行新架构下的迭代开发，同时保持与JDK 8的语法兼容性
+
+#### 10.1.2 其他依赖
+
+- **Maven**：用于后端项目构建
+- **Flutter SDK**：用于前端项目构建
+- **Python 3**：用于某些辅助脚本
+
+### 10.2 构建脚本
+
+#### 10.2.1 构建脚本位置
+
+所有构建和运行脚本位于项目根目录的`bin`目录下：
+
+```
+MusicManagerPlus/
+├── bin/
+│   ├── macos/              # macOS脚本
+│   │   ├── build_dist_macos.sh
+│   │   ├── start-backend.sh
+│   │   ├── start-frontend.sh
+│   │   ├── start-all.sh
+│   │   ├── stop-all.sh
+│   │   ├── restart-backend.sh
+│   │   ├── restart-frontend.sh
+│   │   └── restart-all.sh
+│   └── windows/            # Windows脚本
+│       ├── start-backend.bat
+│       ├── start-frontend.bat
+│       ├── start-all.bat
+│       ├── stop-all.bat
+│       ├── restart-backend.bat
+│       ├── restart-frontend.bat
+│       └── restart-all.bat
+```
+
+#### 10.2.2 完整构建脚本
+
+使用`bin/build_dist_macos.sh`进行完整构建：
+
+```bash
+./bin/build_dist_macos.sh
+```
+
+该脚本会执行以下操作：
+1. 检查构建环境（JDK、Flutter、Maven、Python）
+2. 清理旧文件
+3. 构建后端服务（Maven）
+4. 构建前端应用（Flutter）
+5. 复制后端文件到dist目录
+6. 复制前端文件到dist目录
+7. 复制JDK运行时到dist目录
+8. 复制启动和管理脚本
+
+#### 10.2.3 单独构建命令
+
+**后端构建**：
+```bash
+cd backend
+mvn clean package -DskipTests
+```
+
+**前端构建**：
+```bash
+cd clients/flutter-web-cli
+flutter build web --release --no-web-resources-cdn
+```
+
+### 10.3 运行脚本
+
+#### 10.3.1 macOS脚本
+
+**启动后端服务**：
+```bash
+./bin/macos/start-backend.sh
+```
+
+**启动前端服务**：
+```bash
+./bin/macos/start-frontend.sh
+```
+
+**一键启动所有服务**：
+```bash
+./bin/macos/start-all.sh
+```
+
+**停止所有服务**：
+```bash
+./bin/macos/stop-all.sh
+```
+
+**重启后端服务**：
+```bash
+./bin/macos/restart-backend.sh
+```
+
+**重启前端服务**：
+```bash
+./bin/macos/restart-frontend.sh
+```
+
+**重启所有服务**：
+```bash
+./bin/macos/restart-all.sh
+```
+
+#### 10.3.2 Windows脚本
+
+**启动后端服务**：
+```cmd
+bin\windows\start-backend.bat
+```
+
+**启动前端服务**：
+```cmd
+bin\windows\start-frontend.bat
+```
+
+**一键启动所有服务**：
+```cmd
+bin\windows\start-all.bat
+```
+
+**停止所有服务**：
+```cmd
+bin\windows\stop-all.bat
+```
+
+**重启后端服务**：
+```cmd
+bin\windows\restart-backend.bat
+```
+
+**重启前端服务**：
+```cmd
+bin\windows\restart-frontend.bat
+```
+
+**重启所有服务**：
+```cmd
+bin\windows\restart-all.bat
+```
+
+### 10.4 服务端口
+
+- **后端服务**：http://localhost:8080
+- **前端服务**：http://localhost:8081
+
+### 10.5 构建输出目录
+
+完整构建后，所有文件会被复制到`dist`目录：
+
+```
+dist/
+├── backend/
+│   └── backend.jar
+├── frontend/
+│   ├── index.html
+│   ├── main.dart.js
+│   ├── flutter_bootstrap.js
+│   └── ...
+├── jdk/
+│   ├── bin/
+│   ├── lib/
+│   └── ...
+└── bin/
+    ├── macos/
+    └── windows/
+```
+
+### 10.6 迭代规范
+
+在进行迭代开发时，请遵循以下规范：
+
+1. **使用现有脚本**：不要自行编写打包或运行脚本，直接使用项目提供的脚本
+2. **优先使用JDK 21**：新架构下的迭代开发优先使用JDK 21，同时保持与JDK 8的兼容性
+3. **完整构建**：在进行重大更新后，使用`bin/build_dist_macos.sh`进行完整构建
+4. **增量构建**：在进行小幅度修改时，可以单独构建后端或前端
+5. **服务重启**：修改代码后，使用重启脚本而不是手动停止和启动服务
+
+## 12. 相关文档
+
+### 12.1 API设计规范
+
+详细的API接口设计规范请参考：[API设计规范文档](api_design_specification.md)
+
+该文档包含：
+- API路径规范
+- RESTful路径设计
+- 前后端路径一致性检查
+- API版本控制
+- 错误处理规范
+- 代码注释规范
+- 迭代规范
+- 测试规范
+
+### 12.2 迭代检查清单
+
+在进行迭代开发时，请遵循以下检查清单：
+
+#### API接口检查
+- [ ] 后端Controller路径是否包含`/api`前缀
+- [ ] 前端Service路径是否包含`/api`前缀
+- [ ] 前后端路径是否完全一致
+- [ ] 是否添加了必要的代码注释
+- [ ] 是否更新了API路径清单
+
+#### 构建和部署检查
+- [ ] 是否使用项目提供的构建脚本
+- [ ] 是否优先使用JDK 21
+- [ ] 是否使用重启脚本而非手动停止和启动
+- [ ] 是否更新了相关文档
+
+#### 代码质量检查
+- [ ] 是否遵循代码组织规范
+- [ ] 单个文件代码行数是否在限制范围内
+- [ ] 是否添加了必要的注释
+- [ ] 是否进行了充分的测试
+
+## 13. 常见问题
+
+### 13.1 API 404错误
+
+**问题**：前端调用API时出现404错误
+
+**原因**：最常见的原因是前端API路径缺少`/api`前缀，或者前后端路径不一致
+
+**解决方法**：
+1. 检查浏览器控制台的网络请求，确认请求的完整URL
+2. 检查后端Controller的`@RequestMapping`注解
+3. 检查前端Service的API调用路径
+4. 确保前后端路径完全一致，包括`/api`前缀
+
+**示例**：
+```dart
+// 错误
+final response = await _apiClient.get('/logs/files');
+
+// 正确
+final response = await _apiClient.get('/api/logs/files');
+```
+
+### 13.2 构建失败
+
+**问题**：使用Maven或Flutter构建时失败
+
+**原因**：可能是依赖问题、环境问题或代码错误
+
+**解决方法**：
+1. 使用项目提供的构建脚本：`./bin/build_dist_macos.sh`
+2. 检查JDK版本是否正确（推荐JDK 21）
+3. 检查Flutter SDK是否正确安装
+4. 查看构建日志，定位具体错误
+
+### 13.3 服务启动失败
+
+**问题**：后端或前端服务启动失败
+
+**原因**：可能是端口被占用、JDK路径错误或配置问题
+
+**解决方法**：
+1. 使用项目提供的启动脚本：`./bin/macos/start-all.sh`
+2. 检查端口8080和8081是否被占用
+3. 检查JDK路径是否正确
+4. 查看服务日志，定位具体错误
+
+## 14. 结论
 
 本设计通过将配置管理功能下沉到各个策略类中，使用合适的参数DTO来维护参数的不同属性和参数之间的关系，实现了配置管理的内聚性和类型安全性。同时，通过统一的接口设计和抽象类实现，确保了配置管理的一致性和可扩展性。
 

@@ -15,7 +15,6 @@
     <modules>
         <module>base</module>
         <module>demo-plugin</module>
-        <module>file-collection</module>
     </modules>
 
     <properties>

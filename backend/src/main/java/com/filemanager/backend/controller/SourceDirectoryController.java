@@ -1,17 +1,15 @@
 package com.filemanager.backend.controller;
 
+import com.filemanager.backend.config.ConfigManager;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @RestController
 @RequestMapping("/api/source-directories")
@@ -40,7 +38,9 @@ public class SourceDirectoryController {
     }
 
     private final List<SourceDirectory> sourceDirectories = new ArrayList<>();
-    private final String configFilePath = "source_directories_config.json";
+    
+    @Autowired
+    private ConfigManager configManager;
 
     @javax.annotation.PostConstruct
     public void init() {
@@ -50,22 +50,18 @@ public class SourceDirectoryController {
 
     private void loadSourceDirectoriesConfig() {
         try {
-            File configFile = new File(configFilePath);
-            if (configFile.exists()) {
-                System.out.println("[SourceDirectory] 找到配置文件，开始加载: " + configFilePath);
-                FileReader reader = new FileReader(configFile);
-                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                List<Map<String, Object>> configList = mapper.readValue(reader, new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, Object>>>() {});
+            List<Map<String, Object>> configList = configManager.getConfig("sourceDirectories", List.class);
+            if (configList != null) {
+                System.out.println("[SourceDirectory] 找到配置，开始加载源目录");
                 sourceDirectories.clear();
                 for (Map<String, Object> config : configList) {
                     String path = (String) config.get("path");
                     int threadCount = (Integer) config.getOrDefault("threadCount", 4);
                     sourceDirectories.add(new SourceDirectory(path, threadCount));
                 }
-                reader.close();
                 System.out.println("[SourceDirectory] 配置加载成功，源目录数量: " + sourceDirectories.size());
             } else {
-                System.out.println("[SourceDirectory] 配置文件不存在，使用默认空配置: " + configFilePath);
+                System.out.println("[SourceDirectory] 配置不存在，使用默认空配置");
                 sourceDirectories.clear();
             }
         } catch (Exception e) {
@@ -84,11 +80,7 @@ public class SourceDirectoryController {
                 config.put("threadCount", dir.getThreadCount());
                 configList.add(config);
             }
-            File configFile = new File(configFilePath);
-            FileWriter writer = new FileWriter(configFile);
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            mapper.writeValue(writer, configList);
-            writer.close();
+            configManager.setConfig("sourceDirectories", configList);
             System.out.println("[SourceDirectory] 配置保存成功，源目录数量: " + sourceDirectories.size());
         } catch (Exception e) {
             System.err.println("[SourceDirectory] 配置保存失败: " + e.getMessage());
@@ -181,6 +173,14 @@ public class SourceDirectoryController {
                 Map<String, Object> errorResult = new HashMap<>();
                 errorResult.put("success", false);
                 errorResult.put("message", "线程数不能为空");
+                return ResponseEntity.badRequest().body(errorResult);
+            }
+
+            // 验证线程数
+            if (threadCount <= 0 || threadCount > 16) {
+                Map<String, Object> errorResult = new HashMap<>();
+                errorResult.put("success", false);
+                errorResult.put("message", "线程数必须在1-16之间");
                 return ResponseEntity.badRequest().body(errorResult);
             }
 

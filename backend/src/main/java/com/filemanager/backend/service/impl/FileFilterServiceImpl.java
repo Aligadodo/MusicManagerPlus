@@ -1,26 +1,31 @@
 package com.filemanager.backend.service.impl;
 
+import com.filemanager.backend.config.ConfigManager;
 import com.filemanager.backend.service.FileFilterService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Properties;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 @Service
 public class FileFilterServiceImpl implements FileFilterService {
     
     private final List<String> scanFilterList = new CopyOnWriteArrayList<>();
+    private final ConfigManager configManager;
     
-    public FileFilterServiceImpl() {
+    @Autowired
+    public FileFilterServiceImpl(ConfigManager configManager) {
+        this.configManager = configManager;
         initDefaultFilters();
+        loadFiltersFromConfig();
     }
     
     private void initDefaultFilters() {
-        scanFilterList.addAll(Arrays.asList(
+        List<String> defaultFilters = Arrays.asList(
             "*Convert*",
             "*Split*",
             "*System*",
@@ -42,7 +47,31 @@ public class FileFilterServiceImpl implements FileFilterService {
             "*\\Thumbs.db",
             "*\\Temp\\*",
             "*\\TMP\\*"
-        ));
+        );
+        
+        // 只有当配置中没有过滤规则时才使用默认规则
+        Object filtersFromConfig = configManager.getConfig(ConfigManager.KEY_SCAN_FILTER_LIST, Object.class);
+        if (filtersFromConfig == null) {
+            scanFilterList.addAll(defaultFilters);
+            saveFiltersToConfig();
+        }
+    }
+
+    private void loadFiltersFromConfig() {
+        Object filtersObj = configManager.getConfig(ConfigManager.KEY_SCAN_FILTER_LIST, Object.class);
+        if (filtersObj instanceof List) {
+            List<?> filtersList = (List<?>) filtersObj;
+            scanFilterList.clear();
+            for (Object filter : filtersList) {
+                if (filter instanceof String) {
+                    scanFilterList.add((String) filter);
+                }
+            }
+        }
+    }
+
+    private void saveFiltersToConfig() {
+        configManager.setConfig(ConfigManager.KEY_SCAN_FILTER_LIST, new ArrayList<>(scanFilterList));
     }
 
     @Override
@@ -81,35 +110,19 @@ public class FileFilterServiceImpl implements FileFilterService {
     public void addScanFilter(String filter) {
         if (filter != null && !filter.trim().isEmpty() && !scanFilterList.contains(filter)) {
             scanFilterList.add(filter);
+            saveFiltersToConfig();
         }
     }
 
     @Override
     public void removeScanFilter(String filter) {
         scanFilterList.remove(filter);
+        saveFiltersToConfig();
     }
 
     @Override
     public void clearScanFilters() {
         scanFilterList.clear();
-    }
-    
-    public void saveConfig(Properties props) {
-        if (props == null) return;
-        String filters = String.join("||", scanFilterList);
-        props.setProperty("filter.scan.rules", filters);
-    }
-    
-    public void loadConfig(Properties props) {
-        if (props == null) return;
-        String filters = props.getProperty("filter.scan.rules");
-        if (filters != null && !filters.isEmpty()) {
-            scanFilterList.clear();
-            for (String filter : filters.split("\\|\\|")) {
-                if (!filter.trim().isEmpty()) {
-                    scanFilterList.add(filter);
-                }
-            }
-        }
+        saveFiltersToConfig();
     }
 }

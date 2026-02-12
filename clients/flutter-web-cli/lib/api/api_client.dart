@@ -40,7 +40,7 @@ class ApiClient {
     String? userAgent,
   }) async {
     try {
-      await post('/logs/frontend-error', body: {
+      await post('/api/logs/frontend-error', body: {
         'action': action,
         'message': message,
         if (stackTrace != null && stackTrace.isNotEmpty) 'stackTrace': stackTrace,

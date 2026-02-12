@@ -11,7 +11,7 @@ class TaskService {
 
   Future<String> createTask(TaskRequest request) async {
     final response = await _apiClient.post(
-      '/tasks',
+      '/api/tasks',
       body: request.toJson(),
     );
 
@@ -24,7 +24,7 @@ class TaskService {
   }
 
   Future<TaskStatus> getTaskStatus(String taskId) async {
-    final response = await _apiClient.get('/tasks/$taskId');
+    final response = await _apiClient.get('/api/tasks/$taskId');
 
     if (response.statusCode == 200) {
       final Map<String, dynamic> data = jsonDecode(response.body);
@@ -36,7 +36,7 @@ class TaskService {
 
   Future<List<TaskStatus>> getTasks({String? status, int page = 1, int size = 20}) async {
     final response = await _apiClient.get(
-      '/tasks?${status != null ? 'status=$status&' : ''}page=$page&size=$size',
+      '/api/tasks?${status != null ? 'status=$status&' : ''}page=$page&size=$size',
     );
 
     if (response.statusCode == 200) {
@@ -48,7 +48,7 @@ class TaskService {
   }
 
   Future<Map<String, dynamic>> executeTask(String taskId) async {
-    final response = await _apiClient.post('/tasks/$taskId/execute');
+    final response = await _apiClient.post('/api/tasks/$taskId/execute');
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -58,7 +58,7 @@ class TaskService {
   }
 
   Future<Map<String, dynamic>> cancelTask(String taskId) async {
-    final response = await _apiClient.post('/tasks/$taskId/cancel');
+    final response = await _apiClient.post('/api/tasks/$taskId/cancel');
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
@@ -68,7 +68,7 @@ class TaskService {
   }
 
   Future<Map<String, dynamic>> deleteTask(String taskId) async {
-    final response = await _apiClient.delete('/tasks/$taskId');
+    final response = await _apiClient.delete('/api/tasks/$taskId');
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);

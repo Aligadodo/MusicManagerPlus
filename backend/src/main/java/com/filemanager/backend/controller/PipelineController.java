@@ -13,6 +13,7 @@ import com.filemanager.domain.dto.ChangeRecordQueryDTO;
 import com.filemanager.domain.dto.ChangeRecordResponseDTO;
 import com.filemanager.backend.logging.UnifiedLogger;
 import com.filemanager.backend.service.FileFilterService;
+import com.filemanager.backend.service.FileTypeFilterService;
 import com.filemanager.backend.service.PreviewLimitService;
 import com.filemanager.backend.util.FileScanner;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,6 +47,9 @@ public class PipelineController {
 
     @Autowired
     private FileFilterService fileFilterService;
+
+    @Autowired
+    private FileTypeFilterService fileTypeFilterService;
 
     @Autowired
     private PreviewLimitService previewLimitService;
@@ -220,7 +224,7 @@ public class PipelineController {
                     AtomicInteger dirLimit = new AtomicInteger(Integer.MAX_VALUE);
                     AtomicBoolean isTaskRunning = new AtomicBoolean(true);
                     
-                    FileScanner fileScanner = new FileScanner(fileFilterService, isTaskRunning, previewThreads);
+                    FileScanner fileScanner = new FileScanner(fileFilterService, fileTypeFilterService, isTaskRunning, previewThreads);
                     
                     for (String directory : sourceDirectories) {
                         File dir = new File(directory);
@@ -441,7 +445,7 @@ public class PipelineController {
                     AtomicInteger dirLimit = new AtomicInteger(Integer.MAX_VALUE);
                     AtomicBoolean isTaskRunning = new AtomicBoolean(true);
                     
-                    FileScanner fileScanner = new FileScanner(fileFilterService, isTaskRunning, executionThreads);
+                    FileScanner fileScanner = new FileScanner(fileFilterService, fileTypeFilterService, isTaskRunning, executionThreads);
                     
                     for (String directory : sourceDirectories) {
                         File dir = new File(directory);

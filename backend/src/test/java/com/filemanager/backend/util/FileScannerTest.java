@@ -1,6 +1,7 @@
 package com.filemanager.backend.util;
 
 import com.filemanager.backend.service.FileFilterService;
+import com.filemanager.backend.service.FileTypeFilterService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -16,12 +17,16 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 class FileScannerTest {
 
     @Mock
     private FileFilterService fileFilterService;
+    
+    @Mock
+    private FileTypeFilterService fileTypeFilterService;
 
     private FileScanner fileScanner;
 
@@ -34,7 +39,9 @@ class FileScannerTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         isTaskRunning = new AtomicBoolean(true);
-        fileScanner = new FileScanner(fileFilterService, isTaskRunning, 2);
+        // 模拟文件类型筛选服务返回true
+        when(fileTypeFilterService.isFileIncludedByType(anyString())).thenReturn(true);
+        fileScanner = new FileScanner(fileFilterService, fileTypeFilterService, isTaskRunning, 2);
     }
 
     @Test

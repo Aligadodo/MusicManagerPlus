@@ -1,24 +1,30 @@
 package com.filemanager.backend.service.impl;
 
+import com.filemanager.backend.config.ConfigManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.when;
 
 class FileFilterServiceImplTest {
 
     private FileFilterServiceImpl fileFilterService;
+    
+    @Mock
+    private ConfigManager configManager;
 
     @BeforeEach
     void setUp() {
-        fileFilterService = new FileFilterServiceImpl();
+        MockitoAnnotations.openMocks(this);
+        // 模拟配置管理器返回null，这样就会使用默认过滤规则
+        when(configManager.getConfig(ConfigManager.KEY_SCAN_FILTER_LIST, Object.class)).thenReturn(null);
+        fileFilterService = new FileFilterServiceImpl(configManager);
     }
 
     @Test
