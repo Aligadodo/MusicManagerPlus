@@ -34,8 +34,122 @@ class ConfigService {
     }
   }
 
+  // 主题管理接口
+  Future<List<Map<String, dynamic>>> getThemes() async {
+    try {
+      final response = await _apiClient.get('/api/themes');
+      print('Get themes response: ${response.statusCode}, ${response.body}');
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is List) {
+          return List<Map<String, dynamic>>.from(data);
+        }
+      }
+      return [];
+    } catch (e) {
+      print('获取主题列表失败: $e');
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>> getTheme(String id) async {
+    try {
+      final response = await _apiClient.get('/api/themes/$id');
+      print('Get theme response: ${response.statusCode}, ${response.body}');
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return {};
+    } catch (e) {
+      print('获取主题详情失败: $e');
+      return {};
+    }
+  }
+
+  Future<Map<String, dynamic>> createTheme(Map<String, dynamic> theme) async {
+    try {
+      final response = await _apiClient.post('/api/themes', body: theme);
+      print('Create theme response: ${response.statusCode}, ${response.body}');
+      if (response.statusCode == 201) {
+        return jsonDecode(response.body);
+      }
+      throw Exception('创建主题失败');
+    } catch (e) {
+      print('创建主题失败: $e');
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> updateTheme(String id, Map<String, dynamic> theme) async {
+    try {
+      final response = await _apiClient.put('/api/themes/$id', body: theme);
+      print('Update theme response: ${response.statusCode}, ${response.body}');
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      throw Exception('更新主题失败');
+    } catch (e) {
+      print('更新主题失败: $e');
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> deleteTheme(String id) async {
+    try {
+      final response = await _apiClient.delete('/api/themes/$id');
+      print('Delete theme response: ${response.statusCode}, ${response.body}');
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      throw Exception('删除主题失败');
+    } catch (e) {
+      print('删除主题失败: $e');
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> getDefaultTheme() async {
+    try {
+      final response = await _apiClient.get('/api/themes/default');
+      print('Get default theme response: ${response.statusCode}, ${response.body}');
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return {};
+    } catch (e) {
+      print('获取默认主题失败: $e');
+      return {};
+    }
+  }
+
+  Future<Map<String, dynamic>> setDefaultTheme(String themeId) async {
+    try {
+      final response = await _apiClient.put('/api/themes/default', body: {'themeId': themeId});
+      print('Set default theme response: ${response.statusCode}, ${response.body}');
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      throw Exception('设置默认主题失败');
+    } catch (e) {
+      print('设置默认主题失败: $e');
+      rethrow;
+    }
+  }
+
+  // 兼容旧接口
   Future<List<Map<String, dynamic>>> getThemePresets() async {
     try {
+      // 优先使用新的主题接口
+      final themes = await getThemes();
+      if (themes.isNotEmpty) {
+        return themes.map((theme) => {
+          'name': theme['name'],
+          'description': theme['description'],
+          'config': theme['config']
+        }).toList();
+      }
+      
+      //  fallback 到旧接口
       final response = await _apiClient.get('/api/config/themePresets');
       print('Get theme presets response: ${response.statusCode}, ${response.body}');
       if (response.statusCode == 200) {
@@ -50,20 +164,6 @@ class ConfigService {
       print('获取主题预设失败: $e');
       // 返回默认的主题预设作为 fallback
       return _getDefaultThemePresets();
-    }
-  }
-
-  Future<dynamic> saveThemePreset(Map<String, dynamic> preset) async {
-    try {
-      final response = await _apiClient.post('/api/config/themePresets', body: preset);
-      print('Save theme preset response: ${response.statusCode}, ${response.body}');
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      }
-      throw Exception('保存主题预设失败');
-    } catch (e) {
-      print('保存主题预设失败: $e');
-      rethrow;
     }
   }
 

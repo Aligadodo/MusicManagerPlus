@@ -506,6 +506,16 @@ public class ConfigManager {
                 Map<String, Object> config = objectMapper.readValue(reader, Map.class);
                 configCache.putAll(config);
                 reader.close();
+                
+                // 检查主题预设是否需要更新
+                List<Map<String, Object>> existingPresets = (List<Map<String, Object>>) configCache.get(KEY_THEME_PRESETS);
+                List<Map<String, Object>> defaultPresets = (List<Map<String, Object>>) DEFAULT_CONFIG.get(KEY_THEME_PRESETS);
+                
+                // 如果主题预设不存在或者数量少于默认配置中的主题预设数量，则使用默认配置中的主题预设
+                if (existingPresets == null || existingPresets.size() < defaultPresets.size()) {
+                    configCache.put(KEY_THEME_PRESETS, defaultPresets);
+                    saveConfig();
+                }
             } else {
                 // 使用默认配置
                 configCache.putAll(DEFAULT_CONFIG);

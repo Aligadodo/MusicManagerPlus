@@ -11,6 +11,7 @@ import 'package:filemanager_flutter/pages/log_page.dart';
 import 'package:filemanager_flutter/pages/appearance_page.dart';
 import 'package:filemanager_flutter/pages/global_settings_page.dart';
 import 'package:filemanager_flutter/providers/config_provider.dart';
+import 'package:filemanager_flutter/providers/theme_provider.dart';
 import 'package:filemanager_flutter/utils/ui_utils.dart';
 
 
@@ -138,41 +139,14 @@ class FileManagerApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final config = ref.watch(configProvider);
-    final appearanceConfig = config.appearanceConfig;
-
-    final isDark = appearanceConfig['darkBackground'] as bool? ?? false;
-    final primaryColor = UiUtils.parseColor(appearanceConfig['accentColor'] as String? ?? '#2196F3');
-    final backgroundColor = UiUtils.parseColor(appearanceConfig['bgColor'] as String? ?? '#FFFFFF');
-
     return MaterialApp(
       title: 'MUSIC MANAGER PLUS - By chrse1997@163.com',
       theme: ThemeData(
         useMaterial3: true,
-        brightness: isDark ? Brightness.dark : Brightness.light,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: primaryColor,
-          brightness: isDark ? Brightness.dark : Brightness.light,
-        ),
-        scaffoldBackgroundColor: backgroundColor,
-        cardColor: UiUtils.parseColor(appearanceConfig['panelBgColor'] as String? ?? '#FFFFFF'),
-        textTheme: TextTheme(
-          bodyLarge: TextStyle(
-            color: UiUtils.parseColor(appearanceConfig['textPrimaryColor'] as String? ?? '#000000'),
-            fontSize: (appearanceConfig['fontSize'] as int? ?? 14).toDouble(),
-          ),
-          bodyMedium: TextStyle(
-            color: UiUtils.parseColor(appearanceConfig['textPrimaryColor'] as String? ?? '#000000'),
-            fontSize: (appearanceConfig['fontSize'] as int? ?? 14).toDouble(),
-          ),
-          bodySmall: TextStyle(
-            color: UiUtils.parseColor(appearanceConfig['textSecondaryColor'] as String? ?? '#666666'),
-            fontSize: ((appearanceConfig['fontSize'] as int? ?? 14) - 2).toDouble(),
-          ),
-        ),
-        fontFamily: appearanceConfig['fontFamily'] as String? ?? 'Roboto',
       ),
-      home: const MainLayout(),
+      home: ThemeProvider(
+        child: const MainLayout(),
+      ),
       debugShowCheckedModeBanner: false,
     );
   }
@@ -358,11 +332,9 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
   }
 
   Widget _buildHeader() {
-    final config = ref.watch(configProvider);
-    final appearanceConfig = config.appearanceConfig;
-    final backgroundColor = UiUtils.parseColor(appearanceConfig['panelBgColor'] as String? ?? '#FFFFFF');
-    final borderColor = UiUtils.parseColor(appearanceConfig['borderColor'] as String? ?? '#E0E0E0');
-    final textColor = UiUtils.parseColor(appearanceConfig['textPrimaryColor'] as String? ?? '#000000');
+    final backgroundColor = Theme.of(context).cardColor;
+    final borderColor = Theme.of(context).dividerColor;
+    final textColor = Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black;
     
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -397,9 +369,7 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
   }
 
   Widget _buildLogo() {
-    final config = ref.watch(configProvider);
-    final appearanceConfig = config.appearanceConfig;
-    final textColor = UiUtils.parseColor(appearanceConfig['textPrimaryColor'] as String? ?? '#000000');
+    final textColor = Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black;
     
     return Text(
       'MUSIC MANAGER PLUS',
@@ -419,11 +389,8 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
   }
 
   Widget _buildMenu() {
-    final config = ref.watch(configProvider);
-    final appearanceConfig = config.appearanceConfig;
-    final secondaryTextColor = UiUtils.parseColor(appearanceConfig['textSecondaryColor'] as String? ?? '#666666');
-    final textColor = UiUtils.parseColor(appearanceConfig['textPrimaryColor'] as String? ?? '#000000');
-    final accentColor = UiUtils.parseColor(appearanceConfig['accentColor'] as String? ?? '#2196F3');
+    final secondaryTextColor = Theme.of(context).textTheme.bodySmall?.color ?? Colors.grey;
+    final accentColor = Theme.of(context).primaryColor;
     
     return PopupMenuButton<String>(
       icon: Icon(Icons.menu, color: secondaryTextColor),
@@ -614,12 +581,10 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
   }
 
   Widget _buildTabBar() {
-    final config = ref.watch(configProvider);
-    final appearanceConfig = config.appearanceConfig;
-    final backgroundColor = UiUtils.parseColor(appearanceConfig['panelBgColor'] as String? ?? '#FFFFFF');
-    final borderColor = UiUtils.parseColor(appearanceConfig['borderColor'] as String? ?? '#E0E0E0');
-    final accentColor = UiUtils.parseColor(appearanceConfig['accentColor'] as String? ?? '#2196F3');
-    final secondaryTextColor = UiUtils.parseColor(appearanceConfig['textSecondaryColor'] as String? ?? '#666666');
+    final backgroundColor = Theme.of(context).cardColor;
+    final borderColor = Theme.of(context).dividerColor;
+    final accentColor = Theme.of(context).primaryColor;
+    final secondaryTextColor = Theme.of(context).textTheme.bodySmall?.color ?? Colors.grey;
     
     return Container(
       decoration: BoxDecoration(
@@ -669,11 +634,9 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
     return Consumer(
       builder: (context, ref, child) {
         final taskState = ref.watch(taskStateProvider);
-        final config = ref.watch(configProvider);
-        final appearanceConfig = config.appearanceConfig;
-        final backgroundColor = UiUtils.parseColor(appearanceConfig['panelBgColor'] as String? ?? '#FFFFFF');
-        final borderColor = UiUtils.parseColor(appearanceConfig['borderColor'] as String? ?? '#E0E0E0');
-        final textColor = UiUtils.parseColor(appearanceConfig['textPrimaryColor'] as String? ?? '#000000');
+        final backgroundColor = Theme.of(context).cardColor;
+        final borderColor = Theme.of(context).dividerColor;
+        final textColor = Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black;
         final isRunning = taskState.status == TaskStatus.running || taskState.status == TaskStatus.analyzing;
         
         return Container(

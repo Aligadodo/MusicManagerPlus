@@ -224,6 +224,13 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final primaryColor = theme.primaryColor;
+    final backgroundColor = theme.scaffoldBackgroundColor;
+    final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black;
+    final borderColor = theme.dividerColor;
+    final cardColor = theme.cardColor;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('全局设置'),
@@ -232,14 +239,14 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
         children: [
           Container(
             width: 200,
-            color: Colors.grey.shade100,
+            color: theme.colorScheme.surfaceContainer,
             child: ListView(
               children: [
-                _buildNavItem('线程池配置', 0),
-                _buildNavItem('运行配置', 1),
-                _buildNavItem('扫描配置', 2),
-                _buildNavItem('过滤规则', 3),
-                _buildNavItem('文件类型筛选', 4),
+                _buildNavItem('线程池配置', 0, primaryColor, theme),
+                _buildNavItem('运行配置', 1, primaryColor, theme),
+                _buildNavItem('扫描配置', 2, primaryColor, theme),
+                _buildNavItem('过滤规则', 3, primaryColor, theme),
+                _buildNavItem('文件类型筛选', 4, primaryColor, theme),
               ],
             ),
           ),
@@ -249,23 +256,23 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
               child: ListView(
                 children: [
                   if (_selectedSection == 0) ...[
-                    _buildThreadPoolSection(),
+                    _buildThreadPoolSection(theme),
                     const SizedBox(height: 30),
                   ],
                   if (_selectedSection ==1) ...[
-                    _buildRunSettingsSection(),
+                    _buildRunSettingsSection(theme),
                     const SizedBox(height: 30),
                   ],
                   if (_selectedSection == 2) ...[
-                    _buildScanSettingsSection(),
+                    _buildScanSettingsSection(theme),
                     const SizedBox(height: 30),
                   ],
                   if (_selectedSection == 3) ...[
-                    _buildFilterRulesSection(),
+                    _buildFilterRulesSection(theme),
                     const SizedBox(height: 30),
                   ],
                   if (_selectedSection == 4) ...[
-                    _buildFileTypeTreeSection(),
+                    _buildFileTypeTreeSection(theme),
                     const SizedBox(height: 30),
                   ],
                 ],
@@ -277,7 +284,7 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
     );
   }
 
-  Widget _buildNavItem(String title, int index) {
+  Widget _buildNavItem(String title, int index, Color primaryColor, ThemeData theme) {
     return InkWell(
       onTap: () {
         setState(() {
@@ -287,10 +294,10 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: _selectedSection == index ? Colors.blue.shade100 : Colors.transparent,
+          color: _selectedSection == index ? primaryColor.withOpacity(0.1) : Colors.transparent,
           border: Border(
             left: BorderSide(
-              color: _selectedSection == index ? Colors.blue : Colors.transparent,
+              color: _selectedSection == index ? primaryColor : Colors.transparent,
               width: 4,
             ),
           ),
@@ -298,7 +305,7 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
         child: Text(
           title,
           style: TextStyle(
-            color: _selectedSection == index ? Colors.blue.shade700 : Colors.black87,
+            color: _selectedSection == index ? primaryColor : theme.textTheme.bodyLarge?.color,
             fontWeight: _selectedSection == index ? FontWeight.bold : FontWeight.normal,
           ),
         ),
@@ -308,7 +315,7 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
 
   int _selectedSection = 0;
 
-  Widget _buildThreadPoolSection() {
+  Widget _buildThreadPoolSection(ThemeData theme) {
     return Card(
       elevation: 4,
       child: Padding(
@@ -316,18 +323,11 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '线程池配置',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
             const SizedBox(height: 16),
             Row(
               key: const ValueKey('preview_threads_row'),
               children: [
-                const Text('预览线程数:'),
+                Text('预览线程数:', style: theme.textTheme.bodyMedium),
                 const SizedBox(width: 20),
                 Expanded(
                   child: Slider(
@@ -342,16 +342,17 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
                     },
                     divisions: 15,
                     label: '$_previewThreads',
+                    activeColor: theme.primaryColor,
                   ),
                 ),
-                Text('$_previewThreads'),
+                Text('$_previewThreads', style: theme.textTheme.bodyMedium),
               ],
             ),
             const SizedBox(height: 16),
             Row(
               key: const ValueKey('execution_threads_row'),
               children: [
-                const Text('执行线程数:'),
+                Text('执行线程数:', style: theme.textTheme.bodyMedium),
                 const SizedBox(width: 20),
                 Expanded(
                   child: Slider(
@@ -366,16 +367,17 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
                     },
                     divisions: 11,
                     label: '$_executionThreads',
+                    activeColor: theme.primaryColor,
                   ),
                 ),
-                Text('$_executionThreads'),
+                Text('$_executionThreads', style: theme.textTheme.bodyMedium),
               ],
             ),
             const SizedBox(height: 16),
             Row(
               key: const ValueKey('thread_pool_mode_row'),
               children: [
-                const Text('线程池模式:'),
+                Text('线程池模式:', style: theme.textTheme.bodyMedium),
                 const SizedBox(width: 20),
                 DropdownButton<String>(
                   value: _threadPoolMode,
@@ -389,6 +391,8 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
                     });
                     _autoSaveConfig();
                   },
+                  dropdownColor: theme.colorScheme.surface,
+                  style: theme.textTheme.bodyMedium,
                 ),
               ],
             ),
@@ -398,7 +402,7 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
     );
   }
 
-  Widget _buildScanSettingsSection() {
+  Widget _buildScanSettingsSection(ThemeData theme) {
     return Card(
       elevation: 4,
       child: Padding(
@@ -406,18 +410,11 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '扫描配置',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
             const SizedBox(height: 16),
             Row(
               key: const ValueKey('scan_mode_row'),
               children: [
-                const Text('扫描模式:'),
+                Text('扫描模式:', style: theme.textTheme.bodyMedium),
                 const SizedBox(width: 20),
                 DropdownButton<String>(
                   value: _recursionMode,
@@ -433,6 +430,8 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
                     });
                     _autoSaveConfig();
                   },
+                  dropdownColor: theme.colorScheme.surface,
+                  style: theme.textTheme.bodyMedium,
                 ),
               ],
             ),
@@ -441,7 +440,7 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
                 padding: const EdgeInsets.only(left: 120, top: 16),
                 child: Row(
                   children: [
-                    const Text('扫描层级:'),
+                    Text('扫描层级:', style: theme.textTheme.bodyMedium),
                     const SizedBox(width: 20),
                     Expanded(
                       child: Slider(
@@ -456,9 +455,10 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
                         },
                         divisions: 9,
                         label: '$_recursionDepth',
+                        activeColor: theme.primaryColor,
                       ),
                     ),
-                    Text('$_recursionDepth'),
+                    Text('$_recursionDepth', style: theme.textTheme.bodyMedium),
                   ],
                 ),
               ),
@@ -470,7 +470,7 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
                     child: Row(
                       key: const ValueKey('recursion_depth_row'),
                       children: [
-                        const Text('最小层级:'),
+                        Text('最小层级:', style: theme.textTheme.bodyMedium),
                         const SizedBox(width: 20),
                         Expanded(
                           child: Slider(
@@ -485,9 +485,10 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
                             },
                             divisions: 9,
                             label: '$_minRecursionDepth',
+                            activeColor: theme.primaryColor,
                           ),
                         ),
-                        Text('$_minRecursionDepth'),
+                        Text('$_minRecursionDepth', style: theme.textTheme.bodyMedium),
                       ],
                     ),
                   ),
@@ -496,7 +497,7 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
                     child: Row(
                       key: const ValueKey('max_recursion_depth_row'),
                       children: [
-                        const Text('最大层级:'),
+                        Text('最大层级:', style: theme.textTheme.bodyMedium),
                         const SizedBox(width: 20),
                         Expanded(
                           child: Slider(
@@ -511,9 +512,10 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
                             },
                             divisions: 10 - _minRecursionDepth,
                             label: '$_maxRecursionDepth',
+                            activeColor: theme.primaryColor,
                           ),
                         ),
-                        Text('$_maxRecursionDepth'),
+                        Text('$_maxRecursionDepth', style: theme.textTheme.bodyMedium),
                       ],
                     ),
                   ),
@@ -525,7 +527,7 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
     );
   }
 
-  Widget _buildFilterRulesSection() {
+  Widget _buildFilterRulesSection(ThemeData theme) {
     return Card(
       elevation: 4,
       child: Padding(
@@ -533,13 +535,6 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '过滤规则',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
             const SizedBox(height: 16),
             Row(
               key: const ValueKey('add_filter_rule_row'),
@@ -550,10 +545,12 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
                     onChanged: (value) {
                       _newFilterRule = value;
                     },
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: '添加过滤规则',
                       hintText: '例如：*Convert*',
                       border: OutlineInputBorder(),
+                      labelStyle: theme.textTheme.bodyMedium,
+                      hintStyle: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
                     ),
                   ),
                 ),
@@ -576,12 +573,13 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
             if (_scanFilterList.isNotEmpty)
               Column(
                 children: [
-                  const Text('当前过滤规则:'),
+                  Text('当前过滤规则:', style: theme.textTheme.bodyMedium),
                   const SizedBox(height: 8),
                   Container(
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey),
+                      border: Border.all(color: theme.dividerColor),
                       borderRadius: BorderRadius.circular(8),
+                      color: theme.colorScheme.surfaceContainer,
                     ),
                     child: ListView.builder(
                       shrinkWrap: true,
@@ -595,11 +593,11 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
                             Expanded(
                               child: Padding(
                                 padding: const EdgeInsets.all(8.0),
-                                child: Text(rule),
+                                child: Text(rule, style: theme.textTheme.bodyMedium),
                               ),
                             ),
                             IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
+                              icon: Icon(Icons.delete, color: theme.colorScheme.error),
                               onPressed: () {
                                 setState(() {
                                   _scanFilterList.removeAt(index);
@@ -621,7 +619,7 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
   }
 
   // 构建文件类型树形组件
-  Widget _buildFileTypeTreeSection() {
+  Widget _buildFileTypeTreeSection(ThemeData theme) {
     return Card(
       elevation: 4,
       child: Padding(
@@ -629,16 +627,11 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  '文件类型筛选',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                const SizedBox(),
                 Row(
                   children: [
                     TextButton(
@@ -665,33 +658,33 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
             Container(
               height: 400,
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey),
+                border: Border.all(color: theme.dividerColor),
                 borderRadius: BorderRadius.circular(8),
+                color: theme.colorScheme.surfaceContainer,
               ),
               child: ListView(
                 children: _fileTypeTree.children.map((category) {
-                  return _buildCategoryNode(category);
+                  return _buildCategoryNode(category, theme);
                 }).toList(),
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               '手动添加文件类型后缀',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
+              style: theme.textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
                   child: TextField(
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: '输入文件类型后缀',
                       hintText: '例如：mp3,flac,wav',
                       border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      labelStyle: theme.textTheme.bodyMedium,
+                      hintStyle: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
                     ),
                     onChanged: (value) {
                       _newFileType = value;
@@ -722,9 +715,9 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     '自定义文件类型:',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                    style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
                   ),
                   const SizedBox(height: 8),
                   Wrap(
@@ -732,7 +725,7 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
                     runSpacing: 8,
                     children: _customFileTypes.map((type) {
                       return Chip(
-                        label: Text(type),
+                        label: Text(type, style: theme.textTheme.bodySmall),
                         onDeleted: () {
                           setState(() {
                             _customFileTypes.remove(type);
@@ -740,7 +733,8 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
                           _autoSaveConfig();
                         },
                         deleteIcon: const Icon(Icons.close, size: 16),
-                        deleteIconColor: Colors.red,
+                        deleteIconColor: theme.colorScheme.error,
+                        backgroundColor: theme.colorScheme.surfaceContainer,
                       );
                     }).toList(),
                   ),
@@ -753,11 +747,11 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
   }
 
   // 构建类别节点
-  Widget _buildCategoryNode(FileTypeNode category) {
+  Widget _buildCategoryNode(FileTypeNode category, ThemeData theme) {
     if (category.isLeaf) {
       return CheckboxListTile(
         key: ValueKey(category.id),
-        title: Text(category.name),
+        title: Text(category.name, style: theme.textTheme.bodyMedium),
         value: category.selected,
         onChanged: (value) {
           setState(() {
@@ -787,7 +781,7 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
           Expanded(
             child: Text(
               category.name,
-              style: const TextStyle(fontWeight: FontWeight.w500),
+              style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
             ),
           ),
         ],
@@ -796,7 +790,7 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
         if (child.isLeaf) {
           return CheckboxListTile(
             key: ValueKey(child.id),
-            title: Text(child.name),
+            title: Text(child.name, style: theme.textTheme.bodyMedium),
             value: child.selected,
             onChanged: (value) {
               setState(() {
@@ -825,7 +819,7 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
                 Expanded(
                   child: Text(
                     child.name,
-                    style: const TextStyle(fontWeight: FontWeight.w500),
+                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
                   ),
                 ),
               ],
@@ -833,7 +827,7 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
             children: child.children.map((leaf) {
               return CheckboxListTile(
                 key: ValueKey(leaf.id),
-                title: Text(leaf.name),
+                title: Text(leaf.name, style: theme.textTheme.bodyMedium),
                 value: leaf.selected,
                 onChanged: (value) {
                   setState(() {
@@ -954,7 +948,7 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
     return selectedTypes;
   }
 
-  Widget _buildRunSettingsSection() {
+  Widget _buildRunSettingsSection(ThemeData theme) {
     return Card(
       elevation: 4,
       child: Padding(
@@ -962,13 +956,6 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '运行配置',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
             const SizedBox(height: 16),
             Row(
               key: const ValueKey('auto_refresh_row'),
@@ -981,15 +968,21 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
                     });
                     _autoSaveConfig();
                   },
+                  fillColor: MaterialStateProperty.resolveWith((states) {
+                    if (states.contains(MaterialState.selected)) {
+                      return theme.primaryColor;
+                    }
+                    return null;
+                  }),
                 ),
-                const Text('自动刷新'),
+                Text('自动刷新', style: theme.textTheme.bodyMedium),
               ],
             ),
             const SizedBox(height: 16),
             Row(
               key: const ValueKey('preview_limit_row'),
               children: [
-                const Text('预览数量限制:'),
+                Text('预览数量限制:', style: theme.textTheme.bodyMedium),
                 const SizedBox(width: 20),
                 Expanded(
                   child: Slider(
@@ -1004,16 +997,18 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
                     },
                     divisions: 19,
                     label: '$_previewLimit',
+                    activeColor: theme.primaryColor,
+                    inactiveColor: theme.dividerColor,
                   ),
                 ),
-                Text('$_previewLimit'),
+                Text('$_previewLimit', style: theme.textTheme.bodyMedium),
               ],
             ),
             const SizedBox(height: 16),
             Row(
               key: const ValueKey('execution_limit_row'),
               children: [
-                const Text('执行数量限制:'),
+                Text('执行数量限制:', style: theme.textTheme.bodyMedium),
                 const SizedBox(width: 20),
                 Expanded(
                   child: Slider(
@@ -1028,9 +1023,11 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
                     },
                     divisions: 49,
                     label: '$_executionLimit',
+                    activeColor: theme.primaryColor,
+                    inactiveColor: theme.dividerColor,
                   ),
                 ),
-                Text('$_executionLimit'),
+                Text('$_executionLimit', style: theme.textTheme.bodyMedium),
               ],
             ),
           ],
