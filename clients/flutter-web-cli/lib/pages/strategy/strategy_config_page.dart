@@ -8,6 +8,7 @@ import '../../models/strategy_config.dart';
 import '../../models/enum_option.dart';
 import 'strategy_list_panel.dart';
 import 'strategy_config_panel.dart';
+import '../../utils/theme_utils.dart';
 
 class StrategyConfigPage extends ConsumerStatefulWidget {
   const StrategyConfigPage({super.key});
@@ -191,11 +192,11 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+              Icon(Icons.error_outline, size: 48, color: ThemeUtils.getErrorColor(context)),
               const SizedBox(height: 16),
               Text(
                 '页面加载失败: $e',
-                style: const TextStyle(color: Colors.red),
+                style: TextStyle(color: ThemeUtils.getErrorColor(context)),
               ),
               const SizedBox(height: 16),
               ElevatedButton(

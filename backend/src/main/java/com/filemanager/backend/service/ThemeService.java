@@ -28,58 +28,97 @@ public class ThemeService {
     public ThemeService(ObjectMapper objectMapper, ConfigManager configManager) {
         this.objectMapper = objectMapper;
         this.configManager = configManager;
+        System.out.println("[ThemeService] ThemeService 构造函数开始");
         initThemesDirectories();
         initDefaultThemes();
+        System.out.println("[ThemeService] ThemeService 构造函数完成");
     }
 
     private void initThemesDirectories() {
         try {
+            System.out.println("[ThemeService] 初始化主题目录: " + DEFAULT_THEMES_DIR + ", " + CUSTOM_THEMES_DIR);
             Files.createDirectories(Paths.get(DEFAULT_THEMES_DIR));
             Files.createDirectories(Paths.get(CUSTOM_THEMES_DIR));
+            System.out.println("[ThemeService] 主题目录初始化完成");
         } catch (IOException e) {
+            System.out.println("[ThemeService] 初始化主题目录失败: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
     private void initDefaultThemes() {
         try {
-            // 检查默认主题是否存在
+            System.out.println("[ThemeService] 初始化默认主题");
+            // 检查默认主题是否存在且有效
             File defaultThemeFile = new File(DEFAULT_THEMES_DIR + File.separator + DEFAULT_THEME_ID + ".json");
-            if (!defaultThemeFile.exists()) {
+            System.out.println("[ThemeService] 默认主题文件: " + defaultThemeFile.getAbsolutePath() + ", 存在: " + defaultThemeFile.exists());
+            if (!defaultThemeFile.exists() || !isThemeFileValid(defaultThemeFile)) {
+                System.out.println("[ThemeService] 创建默认主题");
                 // 创建默认主题
                 ThemeDTO defaultTheme = createDefaultTheme();
                 saveTheme(defaultTheme, DEFAULT_THEMES_DIR);
             }
 
-            // 从ConfigManager中迁移现有主题预设
-            migrateExistingThemes();
-            
             // 检查是否需要重新初始化主题预设
             checkAndReinitializeThemes();
+            System.out.println("[ThemeService] 默认主题初始化完成");
         } catch (Exception e) {
+            System.out.println("[ThemeService] 初始化默认主题失败: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+    
+    private boolean isThemeFileValid(File themeFile) {
+        try {
+            ThemeDTO theme = objectMapper.readValue(themeFile, ThemeDTO.class);
+            return theme.getId() != null && theme.getName() != null && theme.getConfig() != null;
+        } catch (Exception e) {
+            return false;
         }
     }
     
     private void checkAndReinitializeThemes() {
         try {
+            System.out.println("[ThemeService] 检查是否需要重新初始化主题预设");
             // 检查默认主题目录中的主题数量
             File defaultDir = new File(DEFAULT_THEMES_DIR);
             File[] files = defaultDir.listFiles((d, name) -> name.endsWith(".json"));
             
-            // 如果只有默认主题，说明需要重新初始化主题预设
-            if (files != null && files.length == 1) {
+            System.out.println("[ThemeService] 发现 " + (files != null ? files.length : 0) + " 个主题文件");
+            if (files != null) {
+                for (File file : files) {
+                    System.out.println("[ThemeService] 主题文件: " + file.getName() + ", 有效: " + isThemeFileValid(file));
+                }
+            }
+            
+            // 如果只有默认主题，或者主题文件无效，说明需要重新初始化主题预设
+            if (files == null || files.length == 1 || !areThemeFilesValid(files)) {
+                System.out.println("[ThemeService] 需要重新初始化主题预设");
                 // 强制迁移主题预设
                 forceMigrateExistingThemes();
+            } else {
+                System.out.println("[ThemeService] 主题文件已存在且有效，跳过初始化");
             }
         } catch (Exception e) {
+            System.out.println("[ThemeService] 检查主题预设失败: " + e.getMessage());
             e.printStackTrace();
         }
     }
     
+    private boolean areThemeFilesValid(File[] files) {
+        for (File file : files) {
+            if (!isThemeFileValid(file)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    
     private void forceMigrateExistingThemes() {
         try {
+            System.out.println("[ThemeService] 开始强制迁移主题预设");
             List<Map<String, Object>> existingPresets = (List<Map<String, Object>>) configManager.getConfig(ConfigManager.KEY_THEME_PRESETS, Object.class);
+            System.out.println("[ThemeService] 从 ConfigManager 读取到 " + (existingPresets != null ? existingPresets.size() : 0) + " 个主题预设");
             if (existingPresets != null && !existingPresets.isEmpty()) {
                 for (Map<String, Object> preset : existingPresets) {
                     String name = (String) preset.get("name");
@@ -98,13 +137,16 @@ public class ThemeService {
                         theme.setConfig((Map<String, Object>) configObj);
                     }
                     
-                    File themeFile = new File(DEFAULT_THEMES_DIR + File.separator + id + ".json");
-                    if (!themeFile.exists()) {
-                        saveTheme(theme, DEFAULT_THEMES_DIR);
-                    }
+                    // 强制保存主题，覆盖现有文件
+                    System.out.println("[ThemeService] 保存主题: " + name + " (" + id + ")");
+                    saveTheme(theme, DEFAULT_THEMES_DIR);
                 }
+                System.out.println("[ThemeService] 主题迁移完成");
+            } else {
+                System.out.println("[ThemeService] 没有找到主题预设，跳过迁移");
             }
         } catch (Exception e) {
+            System.out.println("[ThemeService] 主题迁移失败: " + e.getMessage());
             e.printStackTrace();
         }
     }

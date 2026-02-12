@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:filemanager_flutter/models/config_field.dart';
 import 'package:filemanager_flutter/models/strategy_config.dart';
+import '../utils/theme_utils.dart';
 
 class ParameterField extends StatefulWidget {
   final ConfigField field;
@@ -27,11 +28,7 @@ class _ParameterFieldState extends State<ParameterField> {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
+      decoration: ThemeUtils.getCardDecoration(context, withBorder: true),
       padding: const EdgeInsets.all(10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -52,7 +49,7 @@ class _ParameterFieldState extends State<ParameterField> {
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 13,
-            color: Colors.grey.shade800,
+            color: ThemeUtils.getTextPrimaryColor(context),
           ),
         ),
         if (widget.field.description.isNotEmpty) ...[
@@ -61,7 +58,7 @@ class _ParameterFieldState extends State<ParameterField> {
             message: widget.field.description,
             child: Icon(
               Icons.help_outline,
-              color: Colors.grey.shade500,
+              color: ThemeUtils.getTextSecondaryColor(context),
               size: 14,
             ),
           ),
@@ -96,26 +93,14 @@ class _ParameterFieldState extends State<ParameterField> {
 
   Widget _buildStringInput(dynamic fieldValue) {
     return TextField(
-      decoration: InputDecoration(
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(4),
-          borderSide: BorderSide(color: Colors.grey.shade300),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(4),
-          borderSide: BorderSide(color: Colors.grey.shade300),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(4),
-          borderSide: const BorderSide(color: Colors.blue, width: 1.5),
-        ),
+      decoration: ThemeUtils.getInputDecoration(context,
         hintText: widget.field.defaultValue?.toString(),
-        hintStyle: TextStyle(color: Colors.grey.shade400),
+      ).copyWith(
         contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         isDense: true,
       ),
       controller: TextEditingController(text: fieldValue?.toString() ?? ''),
-      style: const TextStyle(fontSize: 12),
+      style: TextStyle(fontSize: 12, color: ThemeUtils.getTextPrimaryColor(context)),
       onChanged: (value) {
         _updateConfigValue(widget.field.name, value);
       },
@@ -125,26 +110,14 @@ class _ParameterFieldState extends State<ParameterField> {
   Widget _buildNumberInput(dynamic fieldValue) {
     return TextField(
       keyboardType: TextInputType.number,
-      decoration: InputDecoration(
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(4),
-          borderSide: BorderSide(color: Colors.grey.shade300),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(4),
-          borderSide: BorderSide(color: Colors.grey.shade300),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(4),
-          borderSide: const BorderSide(color: Colors.blue, width: 1.5),
-        ),
+      decoration: ThemeUtils.getInputDecoration(context,
         hintText: widget.field.defaultValue?.toString(),
-        hintStyle: TextStyle(color: Colors.grey.shade400),
+      ).copyWith(
         contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         isDense: true,
       ),
       controller: TextEditingController(text: fieldValue?.toString() ?? ''),
-      style: const TextStyle(fontSize: 12),
+      style: TextStyle(fontSize: 12, color: ThemeUtils.getTextPrimaryColor(context)),
       onChanged: (value) {
         _updateConfigValue(widget.field.name, int.tryParse(value) ?? 0);
       },
@@ -161,14 +134,14 @@ class _ParameterFieldState extends State<ParameterField> {
             onChanged: (value) {
               _updateConfigValue(widget.field.name, value ?? false);
             },
-            activeColor: Colors.blue,
+            activeColor: ThemeUtils.getPrimaryColor(context),
             checkColor: Colors.white,
             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),
           const SizedBox(width: 6),
           Text(
             '启用',
-            style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
+            style: TextStyle(color: ThemeUtils.getTextSecondaryColor(context), fontSize: 12),
           ),
         ],
       ),
@@ -180,26 +153,14 @@ class _ParameterFieldState extends State<ParameterField> {
       children: [
         Expanded(
           child: TextField(
-            decoration: InputDecoration(
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(4),
-                borderSide: BorderSide(color: Colors.grey.shade300),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(4),
-                borderSide: BorderSide(color: Colors.grey.shade300),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(4),
-                borderSide: const BorderSide(color: Colors.blue, width: 1.5),
-              ),
+            decoration: ThemeUtils.getInputDecoration(context,
               hintText: widget.field.defaultValue?.toString(),
-              hintStyle: TextStyle(color: Colors.grey.shade400),
+            ).copyWith(
               contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               isDense: true,
             ),
             controller: TextEditingController(text: fieldValue?.toString() ?? ''),
-            style: const TextStyle(fontSize: 12),
+            style: TextStyle(fontSize: 12, color: ThemeUtils.getTextPrimaryColor(context)),
             onChanged: (value) {
               _updateConfigValue(widget.field.name, value);
             },
@@ -209,10 +170,10 @@ class _ParameterFieldState extends State<ParameterField> {
         Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: Colors.grey.shade300),
+            border: Border.all(color: ThemeUtils.getBorderColor(context)),
           ),
           child: IconButton(
-            icon: const Icon(Icons.folder_open, color: Colors.blue, size: 18),
+            icon: Icon(Icons.folder_open, color: ThemeUtils.getPrimaryColor(context), size: 18),
             onPressed: () {},
             padding: const EdgeInsets.all(6),
             constraints: const BoxConstraints(),
@@ -238,7 +199,7 @@ class _ParameterFieldState extends State<ParameterField> {
           items: widget.field.enumOptions!.map((option) {
             return DropdownMenuItem<String>(
               value: option.code,
-              child: Text(option.displayName, style: TextStyle(color: Colors.grey.shade700, fontSize: 12)),
+              child: Text(option.displayName, style: TextStyle(color: ThemeUtils.getTextPrimaryColor(context), fontSize: 12)),
             );
           }).toList(),
           onChanged: (value) {
@@ -246,8 +207,8 @@ class _ParameterFieldState extends State<ParameterField> {
           },
           isExpanded: true,
           underline: const SizedBox(),
-          icon: Icon(Icons.keyboard_arrow_down, color: Colors.grey.shade600, size: 18),
-          hint: Text('请选择...', style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
+          icon: Icon(Icons.keyboard_arrow_down, color: ThemeUtils.getTextSecondaryColor(context), size: 18),
+          hint: Text('请选择...', style: TextStyle(color: ThemeUtils.getTextSecondaryColor(context), fontSize: 12)),
           isDense: true,
         ),
       );

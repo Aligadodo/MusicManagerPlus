@@ -9,6 +9,7 @@ import '../../models/precondition_group.dart';
 import '../../models/rename_rule.dart';
 import '../../widgets/rename_rule_editor.dart';
 import '../../providers/config_provider.dart';
+import '../../utils/theme_utils.dart';
 
 class StrategyConfigPanel extends ConsumerWidget {
   final StrategyInfo? selectedStrategy;
@@ -35,9 +36,9 @@ class StrategyConfigPanel extends ConsumerWidget {
       return Expanded(
         child: Container(
           padding: const EdgeInsets.only(left: 20),
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             border: Border(
-              left: BorderSide(color: Colors.grey, width: 1),
+              left: BorderSide(color: ThemeUtils.getBorderColor(context), width: 1),
             ),
           ),
           child: selectedStrategy == null
@@ -56,8 +57,8 @@ class StrategyConfigPanel extends ConsumerWidget {
                     ),
                     Text(
                       selectedStrategy!.description,
-                      style: const TextStyle(
-                        color: Colors.grey,
+                      style: TextStyle(
+                        color: ThemeUtils.getTextSecondaryColor(context),
                       ),
                     ),
                     const SizedBox(height: 30),
@@ -65,10 +66,10 @@ class StrategyConfigPanel extends ConsumerWidget {
                     if (errorMessage.isNotEmpty)
                       Container(
                         padding: const EdgeInsets.all(10),
-                        color: Colors.red[100],
+                        decoration: ThemeUtils.getErrorCardDecoration(context),
                         child: Text(
                           errorMessage,
-                          style: const TextStyle(color: Colors.red),
+                          style: TextStyle(color: ThemeUtils.getErrorColor(context)),
                         ),
                       ),
 
@@ -90,12 +91,12 @@ class StrategyConfigPanel extends ConsumerWidget {
                                   return _buildConfigField(field, showTooltips);
                                 } catch (e) {
                                   return Card(
-                                    color: Colors.red.shade50,
+                                    color: ThemeUtils.getErrorColor(context).withOpacity(0.1),
                                     child: Padding(
                                       padding: const EdgeInsets.all(8.0),
                                       child: Text(
                                         '字段加载失败: $e',
-                                        style: const TextStyle(color: Colors.red),
+                                        style: TextStyle(color: ThemeUtils.getErrorColor(context)),
                                       ),
                                     ),
                                   );
@@ -129,24 +130,24 @@ class StrategyConfigPanel extends ConsumerWidget {
       return Expanded(
         child: Container(
           padding: const EdgeInsets.only(left: 20),
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             border: Border(
-              left: BorderSide(color: Colors.grey, width: 1),
+              left: BorderSide(color: ThemeUtils.getBorderColor(context), width: 1),
             ),
           ),
           child: Center(
             child: Card(
-              color: Colors.red.shade50,
+              color: ThemeUtils.getErrorColor(context).withOpacity(0.1),
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.error_outline, color: Colors.red),
+                    Icon(Icons.error_outline, color: ThemeUtils.getErrorColor(context)),
                     const SizedBox(height: 8),
                     Text(
                       '配置区域加载失败: $e',
-                      style: const TextStyle(color: Colors.red),
+                      style: TextStyle(color: ThemeUtils.getErrorColor(context)),
                     ),
                   ],
                 ),
@@ -178,12 +179,12 @@ class StrategyConfigPanel extends ConsumerWidget {
     } catch (e) {
       print('字段 ${field.name} 加载失败: $e');
       return Card(
-        color: Colors.yellow.shade50,
+        color: ThemeUtils.getWarningColor(context).withOpacity(0.1),
         child: Padding(
           padding: const EdgeInsets.all(12.0),
           child: Row(
             children: [
-              const Icon(Icons.warning, color: Colors.orange),
+              Icon(Icons.warning, color: ThemeUtils.getWarningColor(context)),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -191,12 +192,12 @@ class StrategyConfigPanel extends ConsumerWidget {
                   children: [
                     Text(
                       '字段 ${field.label} 加载异常',
-                      style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange),
+                      style: TextStyle(fontWeight: FontWeight.bold, color: ThemeUtils.getWarningColor(context)),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
+                    Text(
                       '该字段将使用默认值或保持为空',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                      style: TextStyle(fontSize: 12, color: ThemeUtils.getTextSecondaryColor(context)),
                     ),
                   ],
                 ),

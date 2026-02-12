@@ -124,6 +124,7 @@
 | 2026-02-12 | 修复全局设置页面样式 | 统一样式风格 | global_settings_page.dart |
 | 2026-02-12 | 修复界面设置页面样式 | 统一样式风格 | appearance_page.dart |
 | 2026-02-12 | 移除冗余标题 | 简化界面 | 全局设置和界面设置页面 |
+| 2026-02-12 | 修复主题预设丢失问题 | 修复Jackson ObjectMapper不支持java.time.Instant类型 | AppConfig.java, ThemeService.java |
 
 ## 服务部署与重启
 
@@ -176,11 +177,45 @@ cd /Users/hrcao/Documents/MusicManagerPlus
 - 全局设置页面: [global_settings_page.dart](../../clients/flutter-web-cli/lib/pages/global_settings_page.dart)
 - 界面设置页面: [appearance_page.dart](../../clients/flutter-web-cli/lib/pages/appearance_page.dart)
 - 主题提供器: [theme_provider.dart](../../clients/flutter-web-cli/lib/providers/theme_provider.dart)
+- 主题服务: [ThemeService.java](../../backend/src/main/java/com/filemanager/backend/service/ThemeService.java)
+- 应用配置: [AppConfig.java](../../backend/src/main/java/com/filemanager/backend/config/AppConfig.java)
 
 ### 测试报告
 - Flutter Web应用成功运行
 - 深色和浅色主题测试通过
 - 所有页面样式统一验证通过
+
+### 主题预设问题修复记录
+
+**问题描述**: 主题预设全部消失，前端无法获取任何主题数据
+
+**问题原因**: 
+1. Jackson ObjectMapper 不支持 `java.time.Instant` 类型，导致主题文件序列化失败
+2. ThemeService 在初始化时尝试创建主题文件，但序列化失败导致主题文件损坏
+3. 主题迁移逻辑未正确执行，导致主题预设无法从 ConfigManager 迁移到文件系统
+
+**修复方案**:
+1. 在 [AppConfig.java](../../backend/src/main/java/com/filemanager/backend/config/AppConfig.java) 中为 ObjectMapper 添加 JSR310 模块支持
+2. 在 [ThemeService.java](../../backend/src/main/java/com/filemanager/backend/service/ThemeService.java) 中添加详细的调试日志
+3. 改进主题迁移逻辑，确保主题预设正确从 ConfigManager 迁移到文件系统
+
+**修复代码**:
+```java
+// AppConfig.java
+@Bean
+public com.fasterxml.jackson.databind.ObjectMapper objectMapper() {
+    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+    mapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+    return mapper;
+}
+```
+
+**验证结果**:
+- 16 个主题预设成功创建到文件系统
+- API 返回所有主题预设数据
+- 本地部署和打包部署两种方式下均正常工作
+
+**修复时间**: 2026-02-12 23:31
 
 ---
 

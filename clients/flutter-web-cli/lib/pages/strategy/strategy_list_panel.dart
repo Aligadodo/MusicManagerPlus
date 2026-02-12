@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/strategy_info.dart';
+import '../../utils/theme_utils.dart';
 
 class StrategyListPanel extends StatelessWidget {
   final List<StrategyInfo> strategies;
@@ -57,12 +58,12 @@ class StrategyListPanel extends StatelessWidget {
                       );
                     } catch (e) {
                       return Card(
-                        color: Colors.red.shade50,
+                        color: ThemeUtils.getErrorColor(context).withOpacity(0.1),
                         child: Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: Text(
                             '策略加载失败: $e',
-                            style: const TextStyle(color: Colors.red),
+                            style: TextStyle(color: ThemeUtils.getErrorColor(context)),
                           ),
                         ),
                       );
@@ -78,16 +79,16 @@ class StrategyListPanel extends StatelessWidget {
         width: 300,
         padding: const EdgeInsets.only(right: 20),
         child: Card(
-          color: Colors.red.shade50,
+          color: ThemeUtils.getErrorColor(context).withOpacity(0.1),
           child: Padding(
             padding: const EdgeInsets.all(8.0),
             child: Column(
               children: [
-                const Icon(Icons.error_outline, color: Colors.red),
+                Icon(Icons.error_outline, color: ThemeUtils.getErrorColor(context)),
                 const SizedBox(height: 8),
                 Text(
                   '策略列表加载失败: $e',
-                  style: const TextStyle(color: Colors.red),
+                  style: TextStyle(color: ThemeUtils.getErrorColor(context)),
                 ),
               ],
             ),
