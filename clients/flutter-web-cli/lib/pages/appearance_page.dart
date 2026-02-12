@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import '../api/api_client.dart';
 import '../api/config_service.dart';
 import '../providers/config_provider.dart';
@@ -180,13 +181,7 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
     });
   }
 
-  Color _parseColor(String colorString) {
-    try {
-      return Color(int.parse(colorString.replaceAll('#', '0xFF')));
-    } catch (e) {
-      return Colors.blue;
-    }
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -329,41 +324,53 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
     final config = preset['config'] as Map<String, dynamic>;
     final isApplied = _isPresetApplied(preset);
     return Card(
-      elevation: isApplied ? 4 : 2,
+      elevation: isApplied ? 6 : 2,
       borderOnForeground: true,
       shape: RoundedRectangleBorder(
         side: BorderSide(
-          color: isApplied ? Colors.blue : Colors.grey.shade300,
+          color: isApplied ? UiUtils.parseColor(config['accentColor']) : Colors.grey.shade300,
           width: isApplied ? 2 : 1,
         ),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: InkWell(
-        onTap: () => _applyPreset(config),
+        onTap: () => _applyPreset(preset),
+        hoverColor: UiUtils.parseColor(config['listRowHoverBgColor']),
+        splashColor: UiUtils.parseColor(config['accentColor']).withOpacity(0.3),
         child: Container(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(15),
           decoration: BoxDecoration(
-            color: _parseColor(config['bgColor']),
-            borderRadius: BorderRadius.circular(8),
+            color: UiUtils.parseColor(config['bgColor']),
+            borderRadius: BorderRadius.circular(10),
           ),
           child: Stack(
             children: [
+              if (isApplied) Positioned(
+                top: 8,
+                right: 8,
+                child: Icon(
+                  Icons.check_circle,
+                  color: UiUtils.parseColor(config['accentColor']),
+                  size: 20,
+                ),
+              ),
               Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
                     preset['name'] ?? '未命名主题',
                     style: TextStyle(
-                      color: _parseColor(config['textPrimaryColor']),
+                      color: UiUtils.parseColor(config['textPrimaryColor']),
                       fontWeight: FontWeight.bold,
+                      fontSize: 16,
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 5),
+                  const SizedBox(height: 8),
                   Text(
                     preset['description'] ?? '',
                     style: TextStyle(
-                      color: _parseColor(config['textSecondaryColor']),
+                      color: UiUtils.parseColor(config['textSecondaryColor']),
                       fontSize: 12,
                     ),
                     textAlign: TextAlign.center,
@@ -435,12 +442,20 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
           ),
           Expanded(
             flex: 1,
-            child: Container(
-              height: 40,
-              decoration: BoxDecoration(
-                color: _parseColor(_appearanceConfig[key]),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey),
+            child: InkWell(
+              onTap: () {
+                _showColorPicker(key);
+              },
+              child: Container(
+                height: 40,
+                decoration: BoxDecoration(
+                  color: UiUtils.parseColor(_appearanceConfig[key]),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey),
+                ),
+                child: const Center(
+                  child: Icon(Icons.color_lens, size: 20),
+                ),
               ),
             ),
           ),
@@ -463,6 +478,48 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showColorPicker(String key) {
+    Color currentColor = UiUtils.parseColor(_appearanceConfig[key]);
+    
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('选择颜色'),
+          content: SingleChildScrollView(
+            child: ColorPicker(
+              pickerColor: currentColor,
+              onColorChanged: (color) {
+                currentColor = color;
+              },
+              showLabel: true,
+              pickerAreaHeightPercent: 0.8,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('取消'),
+            ),
+            TextButton(
+              onPressed: () {
+                String hexColor = '#${currentColor.value.toRadixString(16).substring(2).toUpperCase()}';
+                setState(() {
+                  _appearanceConfig[key] = hexColor;
+                });
+                _autoSaveConfig();
+                Navigator.of(context).pop();
+              },
+              child: const Text('确定'),
+            ),
+          ],
+        );
+      },
     );
   }
 

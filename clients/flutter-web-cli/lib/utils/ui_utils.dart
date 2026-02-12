@@ -6,37 +6,37 @@ class UiUtils {
   // 获取主题颜色
   static Color getPrimaryColor(BuildContext context, WidgetRef ref) {
     final config = ref.watch(configProvider);
-    return _parseColor(config.appearanceConfig['accentColor'] ?? '#2196F3');
+    return parseColor(config.appearanceConfig['accentColor'] ?? '#2196F3');
   }
 
   // 获取背景颜色
   static Color getBackgroundColor(BuildContext context, WidgetRef ref) {
     final config = ref.watch(configProvider);
-    return _parseColor(config.appearanceConfig['bgColor'] ?? '#FFFFFF');
+    return parseColor(config.appearanceConfig['bgColor'] ?? '#FFFFFF');
   }
 
   // 获取面板背景颜色
   static Color getPanelBackgroundColor(BuildContext context, WidgetRef ref) {
     final config = ref.watch(configProvider);
-    return _parseColor(config.appearanceConfig['panelBgColor'] ?? '#FFFFFF');
+    return parseColor(config.appearanceConfig['panelBgColor'] ?? '#FFFFFF');
   }
 
   // 获取主文本颜色
   static Color getTextPrimaryColor(BuildContext context, WidgetRef ref) {
     final config = ref.watch(configProvider);
-    return _parseColor(config.appearanceConfig['textPrimaryColor'] ?? '#000000');
+    return parseColor(config.appearanceConfig['textPrimaryColor'] ?? '#000000');
   }
 
   // 获取次要文本颜色
   static Color getTextSecondaryColor(BuildContext context, WidgetRef ref) {
     final config = ref.watch(configProvider);
-    return _parseColor(config.appearanceConfig['textSecondaryColor'] ?? '#666666');
+    return parseColor(config.appearanceConfig['textSecondaryColor'] ?? '#666666');
   }
 
   // 获取边框颜色
   static Color getBorderColor(BuildContext context, WidgetRef ref) {
     final config = ref.watch(configProvider);
-    return _parseColor(config.appearanceConfig['borderColor'] ?? '#E0E0E0');
+    return parseColor(config.appearanceConfig['borderColor'] ?? '#E0E0E0');
   }
 
   // 获取圆角半径
@@ -70,7 +70,7 @@ class UiUtils {
   }
 
   // 解析颜色字符串
-  static Color _parseColor(String colorString) {
+  static Color parseColor(String colorString) {
     try {
       return Color(int.parse(colorString.replaceAll('#', '0xFF')));
     } catch (e) {

@@ -11,6 +11,7 @@ import 'package:filemanager_flutter/pages/log_page.dart';
 import 'package:filemanager_flutter/pages/appearance_page.dart';
 import 'package:filemanager_flutter/pages/global_settings_page.dart';
 import 'package:filemanager_flutter/providers/config_provider.dart';
+import 'package:filemanager_flutter/utils/ui_utils.dart';
 
 
 final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());
@@ -141,8 +142,8 @@ class FileManagerApp extends ConsumerWidget {
     final appearanceConfig = config.appearanceConfig;
 
     final isDark = appearanceConfig['darkBackground'] as bool? ?? false;
-    final primaryColor = _parseColor(appearanceConfig['accentColor'] as String? ?? '#2196F3');
-    final backgroundColor = _parseColor(appearanceConfig['bgColor'] as String? ?? '#FFFFFF');
+    final primaryColor = UiUtils.parseColor(appearanceConfig['accentColor'] as String? ?? '#2196F3');
+    final backgroundColor = UiUtils.parseColor(appearanceConfig['bgColor'] as String? ?? '#FFFFFF');
 
     return MaterialApp(
       title: 'MUSIC MANAGER PLUS - By chrse1997@163.com',
@@ -154,18 +155,18 @@ class FileManagerApp extends ConsumerWidget {
           brightness: isDark ? Brightness.dark : Brightness.light,
         ),
         scaffoldBackgroundColor: backgroundColor,
-        cardColor: _parseColor(appearanceConfig['panelBgColor'] as String? ?? '#FFFFFF'),
+        cardColor: UiUtils.parseColor(appearanceConfig['panelBgColor'] as String? ?? '#FFFFFF'),
         textTheme: TextTheme(
           bodyLarge: TextStyle(
-            color: _parseColor(appearanceConfig['textPrimaryColor'] as String? ?? '#000000'),
+            color: UiUtils.parseColor(appearanceConfig['textPrimaryColor'] as String? ?? '#000000'),
             fontSize: (appearanceConfig['fontSize'] as int? ?? 14).toDouble(),
           ),
           bodyMedium: TextStyle(
-            color: _parseColor(appearanceConfig['textPrimaryColor'] as String? ?? '#000000'),
+            color: UiUtils.parseColor(appearanceConfig['textPrimaryColor'] as String? ?? '#000000'),
             fontSize: (appearanceConfig['fontSize'] as int? ?? 14).toDouble(),
           ),
           bodySmall: TextStyle(
-            color: _parseColor(appearanceConfig['textSecondaryColor'] as String? ?? '#666666'),
+            color: UiUtils.parseColor(appearanceConfig['textSecondaryColor'] as String? ?? '#666666'),
             fontSize: ((appearanceConfig['fontSize'] as int? ?? 14) - 2).toDouble(),
           ),
         ),
@@ -176,13 +177,7 @@ class FileManagerApp extends ConsumerWidget {
     );
   }
 
-  Color _parseColor(String colorString) {
-    try {
-      return Color(int.parse(colorString.replaceAll('#', '0xFF')));
-    } catch (e) {
-      return Colors.blue;
-    }
-  }
+
 }
 
 class MainLayout extends ConsumerStatefulWidget {
@@ -363,19 +358,25 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
   }
 
   Widget _buildHeader() {
+    final config = ref.watch(configProvider);
+    final appearanceConfig = config.appearanceConfig;
+    final backgroundColor = UiUtils.parseColor(appearanceConfig['panelBgColor'] as String? ?? '#FFFFFF');
+    final borderColor = UiUtils.parseColor(appearanceConfig['borderColor'] as String? ?? '#E0E0E0');
+    final textColor = UiUtils.parseColor(appearanceConfig['textPrimaryColor'] as String? ?? '#000000');
+    
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
+        color: backgroundColor.withOpacity(0.9),
         border: Border(
           bottom: BorderSide(
-            color: Colors.grey.shade300,
+            color: borderColor,
             width: 1,
           ),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: textColor.withOpacity(0.05),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -396,15 +397,19 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
   }
 
   Widget _buildLogo() {
+    final config = ref.watch(configProvider);
+    final appearanceConfig = config.appearanceConfig;
+    final textColor = UiUtils.parseColor(appearanceConfig['textPrimaryColor'] as String? ?? '#000000');
+    
     return Text(
       'MUSIC MANAGER PLUS',
       style: TextStyle(
         fontSize: 20,
         fontWeight: FontWeight.bold,
-        color: Colors.grey.shade800,
+        color: textColor,
         shadows: [
           Shadow(
-            color: Colors.black.withOpacity(0.1),
+            color: textColor.withOpacity(0.1),
             blurRadius: 3,
             offset: const Offset(0, 1),
           ),
@@ -414,8 +419,14 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
   }
 
   Widget _buildMenu() {
+    final config = ref.watch(configProvider);
+    final appearanceConfig = config.appearanceConfig;
+    final secondaryTextColor = UiUtils.parseColor(appearanceConfig['textSecondaryColor'] as String? ?? '#666666');
+    final textColor = UiUtils.parseColor(appearanceConfig['textPrimaryColor'] as String? ?? '#000000');
+    final accentColor = UiUtils.parseColor(appearanceConfig['accentColor'] as String? ?? '#2196F3');
+    
     return PopupMenuButton<String>(
-      icon: const Icon(Icons.menu, color: Colors.grey),
+      icon: Icon(Icons.menu, color: secondaryTextColor),
       onSelected: (value) async {
         final configNotifier = ref.read(configProvider.notifier);
         switch (value) {
@@ -603,12 +614,19 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
   }
 
   Widget _buildTabBar() {
+    final config = ref.watch(configProvider);
+    final appearanceConfig = config.appearanceConfig;
+    final backgroundColor = UiUtils.parseColor(appearanceConfig['panelBgColor'] as String? ?? '#FFFFFF');
+    final borderColor = UiUtils.parseColor(appearanceConfig['borderColor'] as String? ?? '#E0E0E0');
+    final accentColor = UiUtils.parseColor(appearanceConfig['accentColor'] as String? ?? '#2196F3');
+    final secondaryTextColor = UiUtils.parseColor(appearanceConfig['textSecondaryColor'] as String? ?? '#666666');
+    
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
+        color: backgroundColor.withOpacity(0.9),
         border: Border(
           bottom: BorderSide(
-            color: Colors.grey.shade300,
+            color: borderColor,
             width: 1,
           ),
         ),
@@ -622,9 +640,9 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
           Tab(text: '全局设置'),
           Tab(text: '界面设置'),
         ],
-        labelColor: Colors.blue,
-        unselectedLabelColor: Colors.grey,
-        indicatorColor: Colors.blue,
+        labelColor: accentColor,
+        unselectedLabelColor: secondaryTextColor,
+        indicatorColor: accentColor,
       ),
     );
   }
@@ -651,15 +669,20 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
     return Consumer(
       builder: (context, ref, child) {
         final taskState = ref.watch(taskStateProvider);
+        final config = ref.watch(configProvider);
+        final appearanceConfig = config.appearanceConfig;
+        final backgroundColor = UiUtils.parseColor(appearanceConfig['panelBgColor'] as String? ?? '#FFFFFF');
+        final borderColor = UiUtils.parseColor(appearanceConfig['borderColor'] as String? ?? '#E0E0E0');
+        final textColor = UiUtils.parseColor(appearanceConfig['textPrimaryColor'] as String? ?? '#000000');
         final isRunning = taskState.status == TaskStatus.running || taskState.status == TaskStatus.analyzing;
         
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
           decoration: BoxDecoration(
-            color: Colors.grey.shade200.withOpacity(0.8),
+            color: backgroundColor.withOpacity(0.8),
             border: Border(
               top: BorderSide(
-                color: Colors.grey.shade300,
+                color: borderColor,
                 width: 1,
               ),
             ),
@@ -674,9 +697,10 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
               const SizedBox(width: 10),
               Text(
                 taskState.message ?? '就绪',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
+                  color: textColor,
                 ),
               ),
             ],

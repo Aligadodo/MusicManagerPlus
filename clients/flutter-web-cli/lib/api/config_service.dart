@@ -35,8 +35,39 @@ class ConfigService {
   }
 
   Future<List<Map<String, dynamic>>> getThemePresets() async {
-    // 这里可以实现获取主题预设的逻辑
-    // 暂时返回默认的主题预设
+    try {
+      final response = await _apiClient.get('/api/config/themePresets');
+      print('Get theme presets response: ${response.statusCode}, ${response.body}');
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is List) {
+          return List<Map<String, dynamic>>.from(data);
+        }
+      }
+      // 返回默认的主题预设作为 fallback
+      return _getDefaultThemePresets();
+    } catch (e) {
+      print('获取主题预设失败: $e');
+      // 返回默认的主题预设作为 fallback
+      return _getDefaultThemePresets();
+    }
+  }
+
+  Future<dynamic> saveThemePreset(Map<String, dynamic> preset) async {
+    try {
+      final response = await _apiClient.post('/api/config/themePresets', body: preset);
+      print('Save theme preset response: ${response.statusCode}, ${response.body}');
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      throw Exception('保存主题预设失败');
+    } catch (e) {
+      print('保存主题预设失败: $e');
+      rethrow;
+    }
+  }
+
+  List<Map<String, dynamic>> _getDefaultThemePresets() {
     return [
       {
         'name': '默认主题',
@@ -103,11 +134,5 @@ class ConfigService {
         }
       }
     ];
-  }
-
-  Future<dynamic> saveThemePreset(Map<String, dynamic> preset) async {
-    // 这里可以实现保存主题预设的逻辑
-    // 暂时返回成功
-    return {"success": true};
   }
 }
