@@ -138,7 +138,14 @@
    - 构建后端服务
    - 验证构建产物
 
-3. **部署测试**:
+3. **测试验证**:
+   - **运行统一测试脚本**: `./run_all_tests.sh`
+   - 验证所有单元测试通过
+   - 验证所有集成测试通过
+   - 验证前端接口兼容性
+   - 查看测试报告，确保无失败用例
+
+4. **部署测试**:
    - 部署到测试环境
    - 验证所有功能
    - 检查日志中的错误
@@ -160,6 +167,32 @@
   cd backend
   mvn compile
   mvn test
+  ```
+
+- **统一测试脚本**:
+  ```bash
+  # 运行所有测试（推荐）
+  cd /Users/hrcao/Documents/MusicManagerPlus
+  ./run_all_tests.sh
+  
+  # 仅运行后端测试
+  ./run_all_tests.sh --backend-only
+  
+  # 仅运行前端测试
+  ./run_all_tests.sh --frontend-only
+  
+  # 快速测试（跳过集成测试）
+  ./run_all_tests.sh --quick
+  
+  # 完整测试（包含集成测试）
+  ./run_all_tests.sh --full --report
+  ```
+
+- **前端接口兼容性测试**:
+  ```bash
+  # 测试前端接口兼容性
+  cd /Users/hrcao/Documents/MusicManagerPlus
+  ./test_frontend_api.sh
   ```
 
 ### 4.2 部署脚本
@@ -288,7 +321,17 @@
 - [ ] 所有功能正常
 - [ ] 所有错误已修复
 - [ ] 文档已更新
+- [ ] **运行统一测试脚本**: `./run_all_tests.sh`
+- [ ] **所有测试通过**
+- [ ] **测试报告已生成**
 - [ ] **验证不包含 JavaFX 和 JFoenix**
+
+### 7.3 测试覆盖率检查
+- [ ] 代码覆盖率 ≥80%
+- [ ] 分支覆盖率 ≥75%
+- [ ] 功能覆盖率 100%
+- [ ] 场景覆盖率 ≥90%
+- [ ] 新增代码有对应的测试用例
 
 ## 8. 附录
 
@@ -420,6 +463,216 @@ import org.springframework.web.bind.annotation.GetMapping;
 |------|------|----------|
 | 1.0 | 2026-02-13 | 初始版本 |
 | 2.0 | 2026-02-13 | 明确区分新旧框架，禁止使用 JavaFX 和 JFoenix |
+| 3.0 | 2026-02-14 | 添加统一测试脚本和测试覆盖率要求 |
+
+## 10. 统一测试脚本使用指南
+
+### 10.1 脚本概述
+
+**统一测试脚本** (`run_all_tests.sh`) 是一个自动化测试工具，用于运行前后端所有测试用例，并生成详细的测试报告。
+
+**脚本位置**: `/Users/hrcao/Documents/MusicManagerPlus/run_all_tests.sh`
+
+**主要功能**:
+- 运行后端单元测试
+- 运行后端集成测试
+- 运行前端单元测试
+- 运行前端接口兼容性测试
+- 运行代码质量检查
+- 生成文本格式的测试报告
+- 生成HTML格式的测试报告
+
+### 10.2 使用方法
+
+#### 基本使用
+```bash
+# 运行所有测试（推荐）
+cd /Users/hrcao/Documents/MusicManagerPlus
+./run_all_tests.sh
+```
+
+#### 命令行选项
+```bash
+# 仅运行后端测试
+./run_all_tests.sh --backend-only
+
+# 仅运行前端测试
+./run_all_tests.sh --frontend-only
+
+# 快速测试（跳过集成测试）
+./run_all_tests.sh --quick
+
+# 完整测试（包含集成测试）
+./run_all_tests.sh --full
+
+# 生成详细测试报告
+./run_all_tests.sh --report
+
+# 完整测试并生成报告
+./run_all_tests.sh --full --report
+
+# 显示帮助信息
+./run_all_tests.sh --help
+```
+
+### 10.3 测试报告
+
+#### 报告位置
+- **文本报告**: `test_reports/test_report_YYYYMMDD_HHMMSS.txt`
+- **HTML报告**: `test_reports/test_report_YYYYMMDD_HHMMSS.html`
+
+#### 报告内容
+- 测试环境信息（操作系统、Java版本、Maven版本、Flutter版本）
+- 测试执行时间
+- 每个测试的详细结果
+- 测试统计摘要（总数、通过、失败、跳过）
+- 成功率计算
+
+#### HTML报告特性
+- 可视化的测试结果展示
+- 颜色编码（绿色=通过，红色=失败，橙色=跳过）
+- 进度条显示测试通过率
+- 响应式设计，支持移动端查看
+
+### 10.4 测试覆盖范围
+
+#### 后端测试
+- **单元测试**: 使用JUnit和Mockito
+- **集成测试**: 使用Spring Boot Test
+- **策略测试**: 14个策略的测试用例（112个测试用例）
+- **代码覆盖率**: 目标≥80%
+
+#### 前端测试
+- **单元测试**: 使用Flutter Test
+- **接口兼容性测试**: 验证前后端API兼容性
+- **代码覆盖率**: 目标≥80%
+
+#### 代码质量检查
+- **Checkstyle**: 代码风格检查
+- **类型检查**: 前端flutter analyze，后端mvn compile
+
+### 10.5 测试失败处理
+
+#### 查看失败详情
+```bash
+# 查看文本报告
+cat test_reports/test_report_YYYYMMDD_HHMMSS.txt
+
+# 在浏览器中查看HTML报告
+open test_reports/test_report_YYYYMMDD_HHMMSS.html
+```
+
+#### 常见失败原因
+1. **单元测试失败**: 代码逻辑错误或测试用例问题
+2. **集成测试失败**: 前后端接口不兼容或环境配置问题
+3. **接口兼容性测试失败**: API变更导致前端无法正常调用
+4. **代码质量检查失败**: 代码风格不符合规范或存在潜在问题
+
+#### 失败处理流程
+1. 查看测试报告，定位失败的测试
+2. 分析失败原因
+3. 修复代码或测试用例
+4. 重新运行测试验证修复
+5. 确保所有测试通过后再提交代码
+
+### 10.6 CI/CD集成
+
+#### 持续集成配置
+```yaml
+# .github/workflows/test.yml 示例
+name: Run Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up JDK
+        uses: actions/setup-java@v2
+        with:
+          java-version: '11'
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.16.0'
+      - name: Run all tests
+        run: ./run_all_tests.sh --full --report
+      - name: Upload test reports
+        uses: actions/upload-artifact@v2
+        with:
+          name: test-reports
+          path: test_reports/
+```
+
+#### 测试质量门禁
+- 测试通过率必须为100%
+- 代码覆盖率必须≥80%
+- 分支覆盖率必须≥75%
+- 新增代码覆盖率必须≥85%
+
+### 10.7 测试用例设计原则
+
+#### 可读性
+- 每个测试方法都有清晰的JavaDoc注释
+- 注释包含：测试场景、目的、测试数据、断言
+- 测试方法名称清晰表达测试意图
+- 使用描述性的断言消息
+
+#### 覆盖率
+- **功能覆盖**: 覆盖策略的所有主要功能分支
+- **场景覆盖**: 包含正常场景、边界场景、异常场景
+- **方法覆盖**: 覆盖策略的核心方法（analyze、execute等）
+- **配置覆盖**: 验证所有配置字段的有效性
+
+#### 可维护性
+- 使用测试基类提供通用测试工具
+- 使用辅助方法简化测试代码
+- 测试数据与测试逻辑分离
+- 每个测试方法独立运行
+
+#### 关键断言
+- **状态断言**: 验证策略执行后的状态（changed、status）
+- **数据断言**: 验证变更记录的数量和内容
+- **文件断言**: 验证文件系统的变化
+- **配置断言**: 验证配置字段的完整性
+
+### 10.8 测试用例维护
+
+#### 添加新策略时
+1. 创建策略测试类，继承StrategyTestBase
+2. 添加策略注册测试
+3. 添加配置完整性测试
+4. 添加核心功能测试（至少3个）
+5. 添加边界条件测试（至少2个）
+6. 添加异常处理测试（至少2个）
+
+#### 修改策略功能时
+1. 识别受影响的功能
+2. 更新相关测试用例
+3. 添加新的测试用例覆盖新功能
+4. 运行所有测试用例确保回归
+
+#### 修复Bug时
+1. 添加失败的测试用例复现Bug
+2. 修复Bug
+3. 验证测试用例通过
+4. 运行所有测试用例确保回归
+
+### 10.9 测试文档
+
+#### 相关文档
+- [策略测试用例设计文档](../backend/docs/strategy_test_cases_design.md)
+- [策略测试用例总结文档](../backend/docs/strategy_test_cases_summary.md)
+- [前端接口兼容性测试报告](../backend/docs/frontend_api_compatibility_test_report.md)
+- [新老架构功能覆盖度对比文档](../backend/docs/new_old_architecture_comparison.md)
+
+#### 测试用例统计
+- **总策略数**: 14个
+- **总测试用例数**: 112个
+- **已完成测试用例**: 8个（FileCollectionStrategy）
+- **待实现测试用例**: 104个
 
 ---
 
@@ -428,3 +681,5 @@ import org.springframework.web.bind.annotation.GetMapping;
 2. 老框架（JavaFX）代码保留但不维护
 3. 严禁在新框架中使用 JavaFX 或 JFoenix
 4. 所有新功能应在 Flutter 前端和 Spring Boot 后端中实现
+5. 每次迭代完成前必须运行统一测试脚本
+6. 所有测试必须通过后才能提交代码

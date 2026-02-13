@@ -72,7 +72,7 @@ public class AudioConverterStrategy extends AbstractConfigurableStrategy {
             "是否覆盖已存在的目标文件", false);
         addConfigField("ffmpegThreads", "FFmpeg线程数", "number", (Object) 4, 
             "FFmpeg的线程数", false);
-        addConfigField("ffmpegPath", "FFmpeg路径", "string", (Object) "ffmpeg", 
+        addConfigField("ffmpegPath", "FFmpeg路径", "text", (Object) "ffmpeg", 
             "FFmpeg可执行文件的路径", false);
         addConfigField("enableCache", "启用临时文件缓存", "boolean", (Object) false, 
             "启用临时文件缓存以缓解IO瓶颈", false);

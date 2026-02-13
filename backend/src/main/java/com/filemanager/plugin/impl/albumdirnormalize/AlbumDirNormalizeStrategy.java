@@ -51,7 +51,7 @@ public class AlbumDirNormalizeStrategy extends AbstractConfigurableStrategy {
         addEnumConfigField("template", "目录命名模板", "select", (Object) DirectoryTemplate.ARTIST_YEAR_ALBUM.getCode(), 
             "专辑目录的命名模板", true, 
             getDirectoryTemplateOptions());
-        addConfigField("customTemplate", "自定义模板", "string", (Object) "", 
+        addConfigField("customTemplate", "自定义模板", "text", (Object) "", 
             "自定义命名模板", false);
         addConfigField("cleanSpecialChars", "清理特殊字符", "boolean", (Object) true, 
             "清理目录名中的特殊字符", false);

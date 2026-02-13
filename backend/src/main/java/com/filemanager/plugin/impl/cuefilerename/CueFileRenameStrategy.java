@@ -50,7 +50,7 @@ public class CueFileRenameStrategy extends AbstractConfigurableStrategy {
     protected void initConfigFields() {
         addConfigField("mode", "修改模式", "select", "全自动修改", 
             "修改模式", false);
-        addConfigField("fileName", "文件名前缀", "string", "album", 
+        addConfigField("fileName", "文件名前缀", "text", "album", 
             "文件名前缀", false);
     }
 

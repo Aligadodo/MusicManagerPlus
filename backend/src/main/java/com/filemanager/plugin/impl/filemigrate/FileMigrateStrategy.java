@@ -70,7 +70,7 @@ public class FileMigrateStrategy extends AbstractConfigurableStrategy {
             "去重时保留最大的文件", false);
         addConfigField("keepEarliest", "保留最早文件", "boolean", (Object) true, 
             "去重时保留日期最早的文件", false);
-        addConfigField("keepExt", "优先后缀", "string", (Object) "wav", 
+        addConfigField("keepExt", "优先后缀", "text", (Object) "wav", 
             "去重时优先保留的文件后缀", false);
         addConfigField("audioSpecial", "音频特殊处理", "boolean", (Object) true, 
             "去重时对音频文件进行特殊处理", false);

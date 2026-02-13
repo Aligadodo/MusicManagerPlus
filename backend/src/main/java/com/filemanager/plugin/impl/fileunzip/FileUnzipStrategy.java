@@ -56,7 +56,7 @@ public class FileUnzipStrategy extends AbstractConfigurableStrategy {
             getUnzipEngineOptions());
         
         // 添加参数联动：当选择7zip或Bandizip时，显示exePath参数并自动检测路径
-        addConfigField("exePath", "可执行文件路径", "string", (Object) "", 
+        addConfigField("exePath", "可执行文件路径", "text", (Object) "", 
             "外部解压工具的可执行文件路径", false);
         
         addEnumConfigField("outputMode", "输出模式", "select", (Object) OutputMode.AUTO_SUBDIRECTORY.getCode(), 

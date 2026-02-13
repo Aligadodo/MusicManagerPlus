@@ -63,13 +63,13 @@ public class FileCleanupStrategy extends AbstractConfigurableStrategy {
         addEnumConfigField("method", "删除方式", "select", (Object) DeleteMethod.PSEUDO_DELETE.getCode(), 
             "删除的方式", true, 
             getDeleteMethodOptions());
-        addConfigField("trashPath", "回收站路径", "string", (Object) ".EchoTrash", 
+        addConfigField("trashPath", "回收站路径", "text", (Object) ".EchoTrash", 
             "回收站的位置", false);
         addConfigField("keepLargest", "保留体积/质量最佳的副本", "boolean", (Object) true, 
             "保留最大的文件", false);
         addConfigField("keepEarliest", "保留日期最早/最晚的副本", "boolean", (Object) true, 
             "保留日期最早的文件", false);
-        addConfigField("keepExt", "优先后缀", "string", (Object) "wav", 
+        addConfigField("keepExt", "优先后缀", "text", (Object) "wav", 
             "去重时优先保留的文件后缀", false);
         addConfigField("preprocessLower", "文件名转小写", "boolean", (Object) true, 
             "将文件名转换为小写后进行比较", false);

@@ -232,6 +232,14 @@ public class StrategyServiceImpl implements StrategyService {
         // 12. NcmIntegratedStrategy - 网易云音乐集成策略
         com.filemanager.plugin.impl.ncmintegrated.NcmIntegratedStrategy ncmIntegratedStrategy = new com.filemanager.plugin.impl.ncmintegrated.NcmIntegratedStrategy();
         strategyRegistry.registerStrategy(ncmIntegratedStrategy);
+
+        // 13. TrackNumberStrategy - 音轨编号策略
+        com.filemanager.plugin.impl.tracknumber.TrackNumberStrategy trackNumberStrategy = new com.filemanager.plugin.impl.tracknumber.TrackNumberStrategy();
+        strategyRegistry.registerStrategy(trackNumberStrategy);
+
+        // 14. FileRenameStrategy - 文件重命名策略
+        com.filemanager.plugin.impl.filerename.FileRenameStrategy fileRenameStrategy = new com.filemanager.plugin.impl.filerename.FileRenameStrategy();
+        strategyRegistry.registerStrategy(fileRenameStrategy);
     }
 
 
