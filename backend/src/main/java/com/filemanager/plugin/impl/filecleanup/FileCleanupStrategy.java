@@ -5,6 +5,9 @@ import com.filemanager.domain.dto.EnumOptionDTO;
 import com.filemanager.domain.entity.ChangeRecord;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
 import com.filemanager.plugin.ExecutionContext;
+import com.filemanager.domain.enums.ScanTarget;
+import com.filemanager.domain.enums.ExecStatus;
+import com.filemanager.domain.enums.OperationType;
 import com.filemanager.plugin.impl.filecleanup.enums.CleanupMode;
 import com.filemanager.plugin.impl.filecleanup.enums.DeleteMethod;
 import com.filemanager.plugin.impl.filecleanup.enums.FileSizeRange;
@@ -16,6 +19,7 @@ import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,8 +51,8 @@ public class FileCleanupStrategy extends AbstractConfigurableStrategy {
     }
 
     @Override
-    public List<com.filemanager.domain.dto.PreconditionGroupDTO> getDefaultPreconditionGroups() {
-        return new ArrayList<>();
+    public ScanTarget getTargetType() {
+        return ScanTarget.ALL;
     }
 
     @Override
@@ -96,50 +100,82 @@ public class FileCleanupStrategy extends AbstractConfigurableStrategy {
     }
 
     @Override
-    protected ChangeRecord createPreviewRecord(String filePath, StrategyConfigDTO config, ExecutionContext context) {
+    public List<ChangeRecord> analyze(ChangeRecord currentRecord, 
+        List<ChangeRecord> inputRecords, 
+        List<File> rootDirs, 
+        StrategyConfigDTO config, 
+        ExecutionContext context) {
+        
+        File file = currentRecord.getFileHandle();
         String mode = getConfigValue(config, "mode", "file_duplicate");
         String method = getConfigValue(config, "method", "pseudo_delete");
         
-        ChangeRecord record = createChangeRecord(filePath, filePath, "PENDING");
-        record.setOperationType(mode);
-        record.setReason("删除方式: " + method);
-        return record;
+        context.logInfo("分析文件清理: " + file.getName() + ", 模式: " + mode);
+        
+        Map<String, String> params = new HashMap<>();
+        params.put("mode", mode);
+        params.put("method", method);
+        
+        OperationType opType = getOperationType(mode);
+        
+        ChangeRecord record = new ChangeRecord(
+            currentRecord.getOriginalName(),
+            "",
+            currentRecord.getFileHandle(),
+            true,
+            "",
+            opType,
+            params,
+            ExecStatus.PENDING
+        );
+        
+        return Collections.singletonList(record);
     }
 
     @Override
-    protected ChangeRecord executeForFile(String filePath, StrategyConfigDTO config, ExecutionContext context) {
+    public void execute(ChangeRecord record, StrategyConfigDTO config, ExecutionContext context) throws Exception {
+        File file = record.getFileHandle();
         String mode = getConfigValue(config, "mode", "file_duplicate");
         String method = getConfigValue(config, "method", "pseudo_delete");
         String trashPath = getConfigValue(config, "trashPath", ".EchoTrash");
         
-        File file = new File(filePath);
         if (!file.exists()) {
-            context.logWarn("File does not exist: " + filePath);
-            return createChangeRecord(filePath, filePath, "SKIPPED");
-        }
-        
-        if (!checkFileSizeRange(file, config, context)) {
-            context.logDebug("File size not in range: " + filePath);
-            return createChangeRecord(filePath, filePath, "SKIPPED");
+            context.logWarn("文件/目录不存在: " + file.getPath());
+            record.setStatus(ExecStatus.FAILED.name());
+            return;
         }
         
         try {
-            switch (mode) {
-                case "file_duplicate":
-                    return handleFileDuplication(file, config, context);
-                case "folder_duplicate":
-                    return handleFolderDuplication(file, config, context);
-                case "empty_directory":
-                    return handleEmptyDirectory(file, config, context);
-                case "direct_cleanup":
-                    return handleDirectCleanup(file, method, trashPath, context);
-                default:
-                    context.logWarn("Unknown cleanup mode: " + mode);
-                    return createChangeRecord(filePath, filePath, "SKIPPED");
+            if ("pseudo_delete".equals(method)) {
+                moveToTrash(file, trashPath, context);
+            } else {
+                if (file.isDirectory()) {
+                    deleteDirectory(file, context);
+                } else {
+                    deleteFile(file, context);
+                }
             }
+            
+            context.logInfo("清理完成: " + file.getPath());
+            record.setStatus(ExecStatus.SUCCESS.name());
         } catch (Exception e) {
-            context.logError("Error processing file " + filePath + ": " + e.getMessage());
-            return createChangeRecord(filePath, filePath, "ERROR");
+            context.logError("清理失败: " + file.getPath() + ", 错误: " + e.getMessage());
+            record.setStatus(ExecStatus.FAILED.name());
+        }
+    }
+
+    private OperationType getOperationType(String mode) {
+        switch (mode) {
+            case "file_duplicate":
+                return OperationType.CLEANUP;
+            case "folder_duplicate":
+                return OperationType.CLEANUP;
+            case "empty_directory":
+                return OperationType.CLEANUP;
+            case "direct_cleanup":
+                return OperationType.DELETE;
+            default:
+                return OperationType.CLEANUP;
         }
     }
 

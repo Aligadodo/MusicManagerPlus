@@ -4,7 +4,10 @@ import com.filemanager.domain.dto.StrategyConfigDTO;
 import com.filemanager.domain.dto.ConfigFieldDTO;
 import com.filemanager.domain.dto.PluginConfigDTO;
 import com.filemanager.domain.dto.PluginParameterDTO;
+import com.filemanager.domain.dto.PreconditionGroupDTO;
+import com.filemanager.domain.dto.PreconditionDTO;
 import com.filemanager.domain.entity.ChangeRecord;
+import com.filemanager.domain.enums.ScanTarget;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -50,7 +53,9 @@ public abstract class AbstractConfigurableStrategy implements StrategyConfigurab
      * @param context 执行上下文
      * @return 变更记录
      */
-    protected abstract ChangeRecord executeForFile(String filePath, StrategyConfigDTO config, ExecutionContext context);
+    protected ChangeRecord executeForFile(String filePath, StrategyConfigDTO config, ExecutionContext context) {
+        return null;
+    }
 
     /**
      * 创建预览记录
@@ -60,7 +65,9 @@ public abstract class AbstractConfigurableStrategy implements StrategyConfigurab
      * @param context 执行上下文
      * @return 变更记录
      */
-    protected abstract ChangeRecord createPreviewRecord(String filePath, StrategyConfigDTO config, ExecutionContext context);
+    protected ChangeRecord createPreviewRecord(String filePath, StrategyConfigDTO config, ExecutionContext context) {
+        return null;
+    }
 
     @Override
     public List<ConfigFieldDTO> getConfigFields() {
@@ -334,15 +341,8 @@ public abstract class AbstractConfigurableStrategy implements StrategyConfigurab
         PluginConfigDTO config, 
         ExecutionContext context) {
         
-        String filePath = currentRecord.getFilePath();
         StrategyConfigDTO strategyConfig = convertToStrategyConfig(config);
-        ChangeRecord previewRecord = createPreviewRecord(filePath, strategyConfig, context);
-        
-        if (previewRecord != null) {
-            return Collections.singletonList(previewRecord);
-        }
-        
-        return Collections.emptyList();
+        return analyzeWithPreCheck(currentRecord, inputRecords, rootDirs, strategyConfig, context);
     }
 
     @Override
@@ -350,16 +350,302 @@ public abstract class AbstractConfigurableStrategy implements StrategyConfigurab
         PluginConfigDTO config, 
         ExecutionContext context) throws Exception {
         
-        String filePath = record.getFilePath();
         StrategyConfigDTO strategyConfig = convertToStrategyConfig(config);
-        ChangeRecord executedRecord = executeForFile(filePath, strategyConfig, context);
         
-        if (executedRecord != null) {
-            record.setStatus(executedRecord.getStatus());
-            record.setNewPath(executedRecord.getNewPath());
-            record.setNewName(executedRecord.getNewName());
-            record.setChanged(executedRecord.isChanged());
-            record.setFailReason(executedRecord.getFailReason());
+        // 前置条件检查
+        if (!checkPreconditions(record, strategyConfig)) {
+            record.setStatus("SKIPPED");
+            return;
         }
+        
+        // 类型检查
+        if (ScanTarget.FILES_ONLY == getTargetType() && record.getFileHandle().isDirectory()) {
+            record.setStatus("SKIPPED");
+            return;
+        }
+        if (ScanTarget.FOLDERS_ONLY == getTargetType() && record.getFileHandle().isFile()) {
+            record.setStatus("SKIPPED");
+            return;
+        }
+        
+        // 调用子类的execute方法
+        execute(record, strategyConfig, context);
+    }
+
+    /**
+     * 核心分析方法
+     * 
+     * @param currentRecord 当前记录
+     * @param inputRecords 输入记录列表 [扫描范围内的全量文件]
+     * @param rootDirs 根目录列表
+     * @param config 配置对象
+     * @param context 执行上下文
+     * @return 变更记录列表
+     */
+    public abstract List<ChangeRecord> analyze(ChangeRecord currentRecord, 
+        List<ChangeRecord> inputRecords, 
+        List<File> rootDirs,
+        StrategyConfigDTO config,
+        ExecutionContext context);
+
+    /**
+     * 核心执行方法
+     * 
+     * @param record 变更记录
+     * @param config 配置对象
+     * @param context 执行上下文
+     * @throws Exception 执行异常
+     */
+    public abstract void execute(ChangeRecord record, 
+        StrategyConfigDTO config, 
+        ExecutionContext context) throws Exception;
+
+    /**
+     * 核心分析逻辑 - 带前置检查
+     * 
+     * @param currentRecord 当前记录
+     * @param inputRecords 输入记录列表 [扫描范围内的全量文件]
+     * @param rootDirs 根目录列表
+     * @param config 配置对象
+     * @param context 执行上下文
+     * @return 变更记录列表
+     */
+    public List<ChangeRecord> analyzeWithPreCheck(ChangeRecord currentRecord, 
+        List<ChangeRecord> inputRecords, 
+        List<File> rootDirs,
+        StrategyConfigDTO config,
+        ExecutionContext context) {
+        
+        // 已经变更的文件不支持二次变更
+        if (currentRecord.isChanged()) {
+            return Collections.emptyList();
+        }
+        
+        // 前置条件检查
+        if (!checkPreconditions(currentRecord, config)) {
+            return Collections.emptyList();
+        }
+        
+        // 类型检查
+        if (ScanTarget.FILES_ONLY == getTargetType() && currentRecord.getFileHandle().isDirectory()) {
+            return Collections.emptyList();
+        }
+        if (ScanTarget.FOLDERS_ONLY == getTargetType() && currentRecord.getFileHandle().isFile()) {
+            return Collections.emptyList();
+        }
+        
+        return analyze(currentRecord, inputRecords, rootDirs, config, context);
+    }
+
+    /**
+     * 前置条件检查
+     * 
+     * @param record 变更记录
+     * @param config 配置对象
+     * @return 是否满足前置条件
+     */
+    protected boolean checkPreconditions(ChangeRecord record, StrategyConfigDTO config) {
+        if (config == null || config.getPreconditionGroups() == null || config.getPreconditionGroups().isEmpty()) {
+            return true;
+        }
+        
+        File f = record.getFileHandle();
+        
+        // 只要有一组满足 (组内是AND)，则通过
+        for (PreconditionGroupDTO group : config.getPreconditionGroups()) {
+            if (testPreconditionGroup(group, f)) {
+                return true;
+            }
+        }
+        
+        // 所有组都不满足
+        return false;
+    }
+
+    /**
+     * 测试前置条件组
+     * 
+     * @param group 前置条件组
+     * @param f 文件对象
+     * @return 是否满足条件组
+     */
+    protected boolean testPreconditionGroup(PreconditionGroupDTO group, File f) {
+        if (group == null || group.getPreconditions() == null || group.getPreconditions().isEmpty()) {
+            return true;
+        }
+        
+        // 组内所有条件都要满足 (AND)
+        for (PreconditionDTO condition : group.getPreconditions()) {
+            if (!testPrecondition(condition, f)) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+
+    /**
+     * 测试单个前置条件
+     * 
+     * @param condition 前置条件
+     * @param f 文件对象
+     * @return 是否满足条件
+     */
+    protected boolean testPrecondition(PreconditionDTO condition, File f) {
+        if (f == null || condition == null) {
+            return false;
+        }
+        
+        String name = f.getName();
+        String path = f.getAbsolutePath();
+        String ext = getExtension(name);
+        
+        try {
+            Object valueObj = condition.getValue();
+            String value = valueObj != null ? valueObj.toString() : "";
+            
+            switch (condition.getOperator()) {
+                case CONTAINS:
+                    return name.contains(value);
+                case NOT_CONTAINS:
+                    return !name.contains(value);
+                case STARTS_WITH:
+                    return name.startsWith(value);
+                case ENDS_WITH:
+                    return name.endsWith(value);
+                case REGEX_MATCH:
+                    return name.matches(value);
+                case GREATER_THAN:
+                    return f.length() > parseSize(value);
+                case LESS_THAN:
+                    return f.length() < parseSize(value);
+                case EQUALS:
+                    return name.equals(value);
+                case NOT_EQUALS:
+                    return !name.equals(value);
+                case IN:
+                    return checkExtensionList(name, value, true);
+                case NOT_IN:
+                    return checkExtensionList(name, value, false);
+                case IS:
+                    return "directory".equalsIgnoreCase(value) && f.isDirectory() || "file".equalsIgnoreCase(value) && f.isFile();
+                case IS_NOT:
+                    return !("directory".equalsIgnoreCase(value) && f.isDirectory() || "file".equalsIgnoreCase(value) && f.isFile());
+                case IS_EMPTY:
+                    return f.isDirectory() ? f.list() == null || f.list().length == 0 : f.length() == 0;
+                case IS_NOT_EMPTY:
+                    return f.isDirectory() ? f.list() != null && f.list().length > 0 : f.length() > 0;
+                case HAS_SUBDIRECTORIES:
+                    return f.isDirectory() && hasSubdirectories(f);
+                case HAS_NO_SUBDIRECTORIES:
+                    return f.isDirectory() && !hasSubdirectories(f);
+                case DEPTH_GREATER_THAN:
+                    return getDepth(f) > Integer.parseInt(value);
+                case DEPTH_LESS_THAN:
+                    return getDepth(f) < Integer.parseInt(value);
+                case FILE_COUNT_GREATER_THAN:
+                    return f.isDirectory() && f.list() != null && f.list().length > Integer.parseInt(value);
+                case FILE_COUNT_LESS_THAN:
+                    return f.isDirectory() && f.list() != null && f.list().length < Integer.parseInt(value);
+                case FORMAT_IN:
+                    return checkExtensionList(ext, value, true);
+                case FORMAT_NOT_IN:
+                    return checkExtensionList(ext, value, false);
+                default:
+                    return true;
+            }
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * 获取文件扩展名
+     */
+    private String getExtension(String filename) {
+        int dot = filename.lastIndexOf('.');
+        return dot > 0 ? filename.substring(dot + 1).toLowerCase() : "";
+    }
+
+    /**
+     * 解析文件大小
+     */
+    private long parseSize(String val) {
+        try {
+            return (long) (Double.parseDouble(val) * 1024 * 1024);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    /**
+     * 检查扩展名列表
+     */
+    private boolean checkExtensionList(String currentExt, String configStr, boolean matchIfIn) {
+        if (configStr == null || configStr.isEmpty()) {
+            return false;
+        }
+        
+        String[] exts = configStr.split(",");
+        for (String ext : exts) {
+            if (ext.trim().equalsIgnoreCase(currentExt)) {
+                return matchIfIn;
+            }
+        }
+        
+        return !matchIfIn;
+    }
+
+    /**
+     * 检查目录是否包含子目录
+     */
+    private boolean hasSubdirectories(File dir) {
+        if (!dir.isDirectory()) {
+            return false;
+        }
+        
+        File[] files = dir.listFiles();
+        if (files == null) {
+            return false;
+        }
+        
+        for (File file : files) {
+            if (file.isDirectory()) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    /**
+     * 获取目录深度
+     */
+    private int getDepth(File file) {
+        int depth = 0;
+        File parent = file.getParentFile();
+        
+        while (parent != null) {
+            depth++;
+            parent = parent.getParentFile();
+        }
+        
+        return depth;
+    }
+
+    /**
+     * 获取目标类型
+     * 
+     * @return 目标类型
+     */
+    public abstract ScanTarget getTargetType();
+
+    /**
+     * IPlugin接口实现：获取默认前置条件组
+     * 默认返回空列表，子类可以覆盖此方法提供默认的前置条件
+     */
+    @Override
+    public List<PreconditionGroupDTO> getDefaultPreconditionGroups() {
+        return new ArrayList<>();
     }
 }

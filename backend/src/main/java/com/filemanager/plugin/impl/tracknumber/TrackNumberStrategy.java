@@ -4,10 +4,11 @@ import com.filemanager.domain.dto.StrategyConfigDTO;
 import com.filemanager.domain.entity.ChangeRecord;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
 import com.filemanager.plugin.ExecutionContext;
+import com.filemanager.domain.enums.ScanTarget;
+import com.filemanager.domain.enums.ExecStatus;
+import com.filemanager.domain.enums.OperationType;
 import java.io.File;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,8 +45,8 @@ public class TrackNumberStrategy extends AbstractConfigurableStrategy {
     }
 
     @Override
-    public List<com.filemanager.domain.dto.PreconditionGroupDTO> getDefaultPreconditionGroups() {
-        return new ArrayList<>();
+    public ScanTarget getTargetType() {
+        return ScanTarget.FILES_ONLY;
     }
 
     @Override
@@ -81,54 +82,75 @@ public class TrackNumberStrategy extends AbstractConfigurableStrategy {
     }
 
     @Override
-    protected ChangeRecord createPreviewRecord(String filePath, StrategyConfigDTO config, ExecutionContext context) {
-        String mode = getConfigValue(config, "mode", "default");
+    public List<ChangeRecord> analyze(ChangeRecord currentRecord, 
+        List<ChangeRecord> inputRecords, 
+        List<File> rootDirs, 
+        StrategyConfigDTO config, 
+        ExecutionContext context) {
+        
+        File file = currentRecord.getFileHandle();
+        if (!file.isFile()) {
+            return Collections.emptyList();
+        }
+        
         String separator = getConfigValue(config, "separator", ". ");
         
         String formattedNumber = formatNumber(currentTrackNumber, config);
-        String newFileName = generateNewFileName(filePath, formattedNumber, separator);
+        String newFileName = generateNewFileName(file.getPath(), formattedNumber, separator);
+        String newPath = file.getParent() + File.separator + newFileName;
         
-        ChangeRecord record = createChangeRecord(filePath, newFileName, "PENDING");
-        record.setOperationType("RENAME");
-        record.setReason("添加音轨编号: " + formattedNumber);
-        return record;
+        context.logInfo("分析音轨编号: " + file.getName() + " -> " + newFileName);
+        
+        Map<String, String> params = new HashMap<>();
+        params.put("trackNumber", formattedNumber);
+        params.put("separator", separator);
+        
+        ChangeRecord record = new ChangeRecord(
+            currentRecord.getOriginalName(),
+            newFileName,
+            currentRecord.getFileHandle(),
+            true,
+            newPath,
+            OperationType.RENAME,
+            params,
+            ExecStatus.PENDING
+        );
+        
+        incrementTrackNumber();
+        
+        return Collections.singletonList(record);
     }
 
     @Override
-    protected ChangeRecord executeForFile(String filePath, StrategyConfigDTO config, ExecutionContext context) {
-        String mode = getConfigValue(config, "mode", "default");
-        String separator = getConfigValue(config, "separator", ". ");
+    public void execute(ChangeRecord record, StrategyConfigDTO config, ExecutionContext context) throws Exception {
+        File sourceFile = record.getFileHandle();
+        File targetFile = new File(record.getNewPath());
+        
+        if (!sourceFile.exists()) {
+            context.logWarn("源文件不存在: " + sourceFile.getPath());
+            record.setStatus(ExecStatus.FAILED.name());
+            return;
+        }
+        
         boolean preserveOriginal = getConfigValue(config, "preserveOriginal", false);
         
-        File sourceFile = new File(filePath);
-        if (!sourceFile.exists()) {
-            context.logWarn("File does not exist: " + filePath);
-            return createChangeRecord(filePath, filePath, "SKIPPED");
+        if (targetFile.exists() && !preserveOriginal) {
+            context.logWarn("目标文件已存在: " + targetFile.getPath());
+            record.setStatus(ExecStatus.FAILED.name());
+            return;
         }
-
+        
         try {
-            String formattedNumber = formatNumber(currentTrackNumber, config);
-            String newFileName = generateNewFileName(filePath, formattedNumber, separator);
-            File targetFile = new File(sourceFile.getParent(), newFileName);
-            
-            if (targetFile.exists() && !preserveOriginal) {
-                context.logWarn("Target file already exists: " + newFileName);
-                return createChangeRecord(filePath, filePath, "SKIPPED");
-            }
-            
             if (sourceFile.renameTo(targetFile)) {
-                context.logInfo("Added track number: " + filePath + " -> " + targetFile.getPath());
-                ChangeRecord record = createChangeRecord(filePath, targetFile.getPath(), "SUCCESS");
-                record.setOperationType("RENAME");
-                record.setReason("添加音轨编号: " + formattedNumber);
-                return record;
+                context.logInfo("添加音轨编号: " + sourceFile.getPath() + " -> " + targetFile.getPath());
+                record.setStatus(ExecStatus.SUCCESS.name());
             } else {
-                context.logError("Failed to rename file: " + filePath);
-                return createChangeRecord(filePath, filePath, "ERROR");
+                context.logError("重命名文件失败: " + sourceFile.getPath());
+                record.setStatus(ExecStatus.FAILED.name());
             }
         } catch (Exception e) {
-            context.logError("Error processing file " + filePath + ": " + e.getMessage());
-            return createChangeRecord(filePath, filePath, "ERROR");
+            context.logError("处理文件失败: " + sourceFile.getPath() + ", 错误: " + e.getMessage());
+            record.setStatus(ExecStatus.FAILED.name());
         }
     }
 

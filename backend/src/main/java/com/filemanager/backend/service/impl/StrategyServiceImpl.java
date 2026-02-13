@@ -2,6 +2,7 @@ package com.filemanager.backend.service.impl;
 
 import com.filemanager.domain.dto.StrategyInfoDTO;
 import com.filemanager.domain.dto.StrategyConfigDTO;
+import com.filemanager.domain.dto.PluginConfigDTO;
 import com.filemanager.domain.dto.ConfigFieldDTO;
 import com.filemanager.domain.dto.EnumOptionDTO;
 import com.filemanager.domain.entity.ChangeRecord;
@@ -350,25 +351,99 @@ public class StrategyServiceImpl implements StrategyService {
 
     @Override
     public List<ChangeRecord> analyzeFiles(String strategyId, List<String> filePaths, StrategyConfigDTO config) {
+        System.out.println("[Strategy] 开始分析文件: " + strategyId);
+        System.out.println("[Strategy] 文件数量: " + (filePaths != null ? filePaths.size() : 0));
+        
         // 使用策略实现
         StrategyConfigurable strategy = strategyRegistry.getStrategy(strategyId);
-        if (strategy != null) {
-            List<ChangeRecord> changes = new ArrayList<>();
-            for (String filePath : filePaths) {
-                ChangeRecord record = new ChangeRecord();
-                record.setId("change-" + System.currentTimeMillis() + "-" + filePath.hashCode());
-                record.setOriginalName(filePath);
-                record.setNewName(getTargetPath(filePath, strategyId, config));
-                record.setFilePath(filePath);
-                record.setChanged(true);
-                record.setStatus("PENDING");
-                changes.add(record);
-            }
-            return changes;
+        if (strategy == null) {
+            System.out.println("[Strategy] 未找到策略: " + strategyId);
+            return new ArrayList<>();
         }
         
-        // 如果没有对应的策略，返回空列表
-        return new ArrayList<>();
+        System.out.println("[Strategy] 找到策略: " + strategyId);
+        
+        // 创建执行上下文
+        com.filemanager.plugin.ExecutionContext context = new com.filemanager.plugin.ExecutionContext() {
+            private final List<String> logs = new ArrayList<>();
+            
+            @Override
+            public void logInfo(String message) {
+                logs.add("[INFO] " + message);
+                System.out.println("[INFO] " + message);
+            }
+            
+            @Override
+            public void logWarn(String message) {
+                logs.add("[WARN] " + message);
+                System.out.println("[WARN] " + message);
+            }
+            
+            @Override
+            public void logError(String message) {
+                logs.add("[ERROR] " + message);
+                System.err.println("[ERROR] " + message);
+            }
+            
+            @Override
+            public void logDebug(String message) {
+                logs.add("[DEBUG] " + message);
+                System.out.println("[DEBUG] " + message);
+            }
+        };
+        
+        List<ChangeRecord> changes = new ArrayList<>();
+        
+        try {
+            // 将文件路径转换为 File 对象
+            List<File> files = new ArrayList<>();
+            for (String filePath : filePaths) {
+                File file = new File(filePath);
+                if (file.exists()) {
+                    files.add(file);
+                } else {
+                    context.logWarn("文件不存在: " + filePath);
+                }
+            }
+            
+            // 获取根目录列表（用于分析）
+            List<File> rootDirs = new ArrayList<>();
+            if (!files.isEmpty()) {
+                rootDirs.add(files.get(0).getParentFile());
+            }
+            
+            // 调用策略的 analyze 方法
+            for (File file : files) {
+                ChangeRecord record = new ChangeRecord();
+                record.setId("change-" + System.currentTimeMillis() + "-" + file.hashCode());
+                record.setOriginalName(file.getName());
+                record.setNewName(file.getName());
+                record.setFilePath(file.getAbsolutePath());
+                record.setFileHandle(file);
+                record.setChanged(false);
+                record.setStatus("PENDING");
+                
+                // 调用策略的 analyze 方法
+                List<ChangeRecord> analysisResults = strategy.analyze(
+                    record,
+                    new ArrayList<>(),
+                    rootDirs,
+                    convertToPluginConfig(config),
+                    context
+                );
+                
+                if (analysisResults != null && !analysisResults.isEmpty()) {
+                    changes.addAll(analysisResults);
+                }
+            }
+            
+            System.out.println("[Strategy] 分析完成，结果数量: " + changes.size());
+        } catch (Exception e) {
+            System.err.println("[Strategy] 分析异常: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return changes;
     }
 
     @Override
@@ -379,40 +454,110 @@ public class StrategyServiceImpl implements StrategyService {
         
         long startTime = System.currentTimeMillis();
         
-        // 检查前置条件，过滤文件
-        List<String> filteredFilePaths = filterFilesByPreconditions(filePaths, config);
-        System.out.println("[Strategy] 前置条件过滤后文件数量: " + (filteredFilePaths != null ? filteredFilePaths.size() : 0));
-        
-        // 使用策略实现
-        System.out.println("[Strategy] 开始查找策略: " + strategyId);
         StrategyConfigurable strategy = strategyRegistry.getStrategy(strategyId);
+        if (strategy == null) {
+            System.out.println("[Strategy] 未找到策略: " + strategyId);
+            return new ArrayList<>();
+        }
+        
+        System.out.println("[Strategy] 找到策略: " + strategyId);
         
         List<ChangeRecord> changes = new ArrayList<>();
         
-        if (strategy != null) {
-            System.out.println("[Strategy] 找到策略: " + strategyId);
-            System.out.println("[Strategy] 开始执行策略");
+        try {
+            PluginConfigDTO pluginConfig = convertToPluginConfig(config);
             
-            try {
-                changes = analyzeFiles(strategyId, filteredFilePaths, config);
-                System.out.println("[Strategy] 策略执行完成，结果数量: " + (changes != null ? changes.size() : 0));
+            com.filemanager.plugin.ExecutionContext context = new com.filemanager.plugin.ExecutionContext() {
+                private final List<String> logs = new ArrayList<>();
                 
-                // 更新执行状态
-                if (changes != null) {
-                    for (ChangeRecord record : changes) {
-                        record.setStatus("SUCCESS");
-                    }
-                    System.out.println("[Strategy] 执行状态更新完成");
+                @Override
+                public void logInfo(String message) {
+                    logs.add("[INFO] " + message);
+                    System.out.println("[INFO] " + message);
                 }
-            } catch (Exception e) {
-                System.err.println("[Strategy] 策略执行异常: " + e.getMessage());
-                e.printStackTrace();
-                throw e;
+                
+                @Override
+                public void logWarn(String message) {
+                    logs.add("[WARN] " + message);
+                    System.out.println("[WARN] " + message);
+                }
+                
+                @Override
+                public void logError(String message) {
+                    logs.add("[ERROR] " + message);
+                    System.err.println("[ERROR] " + message);
+                }
+                
+                @Override
+                public void logDebug(String message) {
+                    logs.add("[DEBUG] " + message);
+                    System.out.println("[DEBUG] " + message);
+                }
+            };
+            
+            List<File> files = new ArrayList<>();
+            for (String filePath : filePaths) {
+                File file = new File(filePath);
+                if (file.exists()) {
+                    files.add(file);
+                } else {
+                    context.logWarn("文件不存在: " + filePath);
+                }
             }
-        } else {
-            System.out.println("[Strategy] 未找到策略: " + strategyId);
-            // 如果没有对应的策略，返回空列表
-            changes = new ArrayList<>();
+            
+            List<File> rootDirs = new ArrayList<>();
+            if (!files.isEmpty()) {
+                rootDirs.add(files.get(0).getParentFile());
+            }
+            
+            System.out.println("[Strategy] 开始分析阶段");
+            for (File file : files) {
+                ChangeRecord record = new ChangeRecord();
+                record.setId("change-" + System.currentTimeMillis() + "-" + file.hashCode());
+                record.setOriginalName(file.getName());
+                record.setNewName(file.getName());
+                record.setFilePath(file.getAbsolutePath());
+                record.setFileHandle(file);
+                record.setChanged(false);
+                record.setStatus("PENDING");
+                
+                List<ChangeRecord> analysisResults = strategy.analyze(
+                    record,
+                    new ArrayList<>(),
+                    rootDirs,
+                    pluginConfig,
+                    context
+                );
+                
+                if (analysisResults != null && !analysisResults.isEmpty()) {
+                    changes.addAll(analysisResults);
+                }
+            }
+            System.out.println("[Strategy] 分析完成，结果数量: " + changes.size());
+            
+            System.out.println("[Strategy] 开始执行阶段");
+            for (ChangeRecord record : changes) {
+                if (record.isChanged()) {
+                    try {
+                        strategy.execute(record, pluginConfig, context);
+                        record.setStatus("SUCCESS");
+                        context.logInfo("执行成功: " + record.getOriginalName() + " -> " + record.getNewName());
+                    } catch (Exception e) {
+                        record.setStatus("FAILED");
+                        context.logError("执行失败: " + record.getOriginalName() + " - " + e.getMessage());
+                        e.printStackTrace();
+                    }
+                } else {
+                    record.setStatus("SKIPPED");
+                    context.logInfo("跳过: " + record.getOriginalName());
+                }
+            }
+            System.out.println("[Strategy] 执行完成");
+            
+        } catch (Exception e) {
+            System.err.println("[Strategy] 策略执行异常: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
         }
         
         long endTime = System.currentTimeMillis();

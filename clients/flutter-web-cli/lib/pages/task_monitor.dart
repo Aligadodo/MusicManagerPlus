@@ -320,6 +320,73 @@ class _TaskMonitorPageState extends ConsumerState<TaskMonitorPage> {
                                 color: Colors.grey,
                               ),
                             ),
+                            if (task.totalFiles > 0)
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    '统计信息',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '总文件: ${task.totalFiles}',
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                  Text(
+                                    '已处理: ${task.processedFiles}',
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                  Row(
+                                    children: [
+                                      Text(
+                                        '成功: ${task.successCount}',
+                                        style: const TextStyle(fontSize: 12, color: Colors.green),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Text(
+                                        '失败: ${task.failedCount}',
+                                        style: const TextStyle(fontSize: 12, color: Colors.red),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Text(
+                                        '跳过: ${task.skippedCount}',
+                                        style: const TextStyle(fontSize: 12, color: Colors.orange),
+                                      ),
+                                    ],
+                                  ),
+                                  if (task.operationStats != null && task.operationStats!.isNotEmpty)
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const SizedBox(height: 4),
+                                        const Text(
+                                          '操作统计',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        ...task.operationStats!.entries.map((entry) {
+                                          return Padding(
+                                            padding: const EdgeInsets.only(left: 8),
+                                            child: Text(
+                                              '${entry.key}: ${entry.value}',
+                                              style: const TextStyle(fontSize: 12),
+                                            ),
+                                          );
+                                        }).toList(),
+                                      ],
+                                    ),
+                                ],
+                              ),
                             const SizedBox(height: 10),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.end,

@@ -5,10 +5,17 @@ import com.filemanager.domain.dto.EnumOptionDTO;
 import com.filemanager.domain.entity.ChangeRecord;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
 import com.filemanager.plugin.ExecutionContext;
+import com.filemanager.domain.enums.ScanTarget;
+import com.filemanager.domain.enums.ExecStatus;
+import com.filemanager.domain.enums.OperationType;
 import com.filemanager.plugin.impl.ncmintegrated.enums.NcmOperationMode;
 import com.filemanager.plugin.impl.ncmintegrated.enums.NcmOutputFormat;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class NcmIntegratedStrategy extends AbstractConfigurableStrategy {
 
@@ -37,8 +44,8 @@ public class NcmIntegratedStrategy extends AbstractConfigurableStrategy {
     }
 
     @Override
-    public java.util.List<com.filemanager.domain.dto.PreconditionGroupDTO> getDefaultPreconditionGroups() {
-        return new java.util.ArrayList<>();
+    public ScanTarget getTargetType() {
+        return ScanTarget.FILES_ONLY;
     }
 
     @Override
@@ -61,26 +68,53 @@ public class NcmIntegratedStrategy extends AbstractConfigurableStrategy {
     }
 
     @Override
-    protected ChangeRecord createPreviewRecord(String filePath, StrategyConfigDTO config, ExecutionContext context) {
+    public List<ChangeRecord> analyze(ChangeRecord currentRecord, 
+        List<ChangeRecord> inputRecords, 
+        List<File> rootDirs, 
+        StrategyConfigDTO config, 
+        ExecutionContext context) {
+        
+        File file = currentRecord.getFileHandle();
+        if (!file.isFile()) {
+            return Collections.emptyList();
+        }
+        
         String operationMode = getConfigValue(config, "operationMode", "convert");
         String outputFormat = getConfigValue(config, "outputFormat", "mp3");
         
-        ChangeRecord record = createChangeRecord(filePath, filePath, "PENDING");
-        record.setOperationType(operationMode.toUpperCase());
-        record.setReason("网易云音乐格式转换: " + outputFormat);
-        return record;
+        context.logInfo("分析网易云音乐操作: " + file.getName() + ", 模式: " + operationMode);
+        
+        Map<String, String> params = new HashMap<>();
+        params.put("operationMode", operationMode);
+        params.put("outputFormat", outputFormat);
+        
+        OperationType opType = getOperationType(operationMode);
+        
+        ChangeRecord record = new ChangeRecord(
+            currentRecord.getOriginalName(),
+            currentRecord.getOriginalName(),
+            currentRecord.getFileHandle(),
+            true,
+            file.getPath(),
+            opType,
+            params,
+            ExecStatus.PENDING
+        );
+        
+        return Collections.singletonList(record);
     }
 
     @Override
-    protected ChangeRecord executeForFile(String filePath, StrategyConfigDTO config, ExecutionContext context) {
+    public void execute(ChangeRecord record, StrategyConfigDTO config, ExecutionContext context) throws Exception {
+        File sourceFile = record.getFileHandle();
         String operationMode = getConfigValue(config, "operationMode", "convert");
         String outputFormat = getConfigValue(config, "outputFormat", "mp3");
         String outputDirectory = getConfigValue(config, "outputDirectory", "");
         
-        File sourceFile = new File(filePath);
         if (!sourceFile.exists()) {
-            context.logWarn("File does not exist: " + filePath);
-            return createChangeRecord(filePath, filePath, "SKIPPED");
+            context.logWarn("源文件不存在: " + sourceFile.getPath());
+            record.setStatus(ExecStatus.FAILED.name());
+            return;
         }
         
         try {
@@ -88,18 +122,30 @@ public class NcmIntegratedStrategy extends AbstractConfigurableStrategy {
             File targetFile = new File(targetPath);
             
             if (targetFile.exists()) {
-                context.logWarn("Target file already exists: " + targetPath);
-                return createChangeRecord(filePath, filePath, "SKIPPED");
+                context.logWarn("目标文件已存在: " + targetPath);
+                record.setStatus(ExecStatus.FAILED.name());
+                return;
             }
             
-            context.logInfo("NCM conversion: " + filePath + " -> " + targetPath);
-            ChangeRecord record = createChangeRecord(filePath, targetPath, "SUCCESS");
-            record.setOperationType(operationMode.toUpperCase());
-            record.setReason("网易云音乐格式转换: " + outputFormat);
-            return record;
+            context.logInfo("执行网易云音乐操作: " + sourceFile.getPath() + " -> " + targetPath);
+            
+            record.setStatus(ExecStatus.SUCCESS.name());
         } catch (Exception e) {
-            context.logError("Error processing NCM file " + filePath + ": " + e.getMessage());
-            return createChangeRecord(filePath, filePath, "ERROR");
+            context.logError("执行网易云音乐操作失败: " + sourceFile.getPath() + ", 错误: " + e.getMessage());
+            record.setStatus(ExecStatus.FAILED.name());
+        }
+    }
+
+    private OperationType getOperationType(String operationMode) {
+        switch (operationMode) {
+            case "convert":
+                return OperationType.NCM_CONVERT;
+            case "cache_scan":
+                return OperationType.NCM_CACHE_SCAN;
+            case "lyric_download":
+                return OperationType.NCM_LYRIC_DOWNLOAD;
+            default:
+                return OperationType.NCM_CONVERT;
         }
     }
 

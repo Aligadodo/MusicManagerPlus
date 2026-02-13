@@ -3,12 +3,15 @@ package com.filemanager.backend.service.impl;
 import com.filemanager.domain.dto.TaskRequestDTO;
 import com.filemanager.domain.dto.TaskStatusDTO;
 import com.filemanager.domain.entity.ChangeRecord;
+import com.filemanager.domain.enums.ExecStatus;
+import com.filemanager.domain.enums.OperationType;
 import com.filemanager.domain.service.StrategyService;
 import com.filemanager.domain.service.TaskService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -158,10 +161,15 @@ public class TaskServiceImpl implements TaskService {
             status.setStatus("RUNNING");
             status.setProgress(0);
             status.setMessage("Task started");
+            status.setTotalFiles(request.getFilePaths() != null ? request.getFilePaths().size() : 0);
+            status.setProcessedFiles(0);
+            status.setSuccessCount(0);
+            status.setFailedCount(0);
+            status.setSkippedCount(0);
+            status.setOperationStats(new HashMap<>());
 
             try {
                 System.out.println("[TaskExecution] 开始获取策略配置: " + request.getStrategyId());
-                // 获取策略配置
                 com.filemanager.domain.service.StrategyService strategyServiceLocal = strategyService;
                 com.filemanager.domain.dto.StrategyConfigDTO config = strategyServiceLocal.getStrategyConfig(request.getStrategyId());
                 System.out.println("[TaskExecution] 策略配置获取成功: " + request.getStrategyId());
@@ -177,7 +185,27 @@ public class TaskServiceImpl implements TaskService {
                 
                 if (executionResults != null) {
                     results.addAll(executionResults);
+                    
+                    // 统计结果
+                    Map<String, Integer> operationStats = new HashMap<>();
+                    for (ChangeRecord record : executionResults) {
+                        String opType = record.getOperationType();
+                        operationStats.put(opType, operationStats.getOrDefault(opType, 0) + 1);
+                        
+                        String recordStatus = record.getStatus();
+                        if (ExecStatus.SUCCESS.name().equals(recordStatus)) {
+                            status.setSuccessCount(status.getSuccessCount() + 1);
+                        } else if (ExecStatus.FAILED.name().equals(recordStatus)) {
+                            status.setFailedCount(status.getFailedCount() + 1);
+                        } else if ("SKIPPED".equals(recordStatus)) {
+                            status.setSkippedCount(status.getSkippedCount() + 1);
+                        }
+                    }
+                    status.setOperationStats(operationStats);
+                    status.setProcessedFiles(executionResults.size());
+                    
                     System.out.println("[TaskExecution] 结果添加完成: " + results.size() + " 条记录");
+                    System.out.println("[TaskExecution] 统计信息 - 成功: " + status.getSuccessCount() + ", 失败: " + status.getFailedCount() + ", 跳过: " + status.getSkippedCount());
                 }
 
                 System.out.println("[TaskExecution] 任务执行成功: " + taskId);

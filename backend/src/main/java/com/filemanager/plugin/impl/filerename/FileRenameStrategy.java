@@ -4,8 +4,11 @@ import com.filemanager.domain.dto.StrategyConfigDTO;
 import com.filemanager.domain.entity.ChangeRecord;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
 import com.filemanager.plugin.ExecutionContext;
+import com.filemanager.domain.enums.ScanTarget;
+import com.filemanager.domain.enums.ExecStatus;
+import com.filemanager.domain.enums.OperationType;
 import java.io.File;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class FileRenameStrategy extends AbstractConfigurableStrategy {
@@ -38,8 +41,8 @@ public class FileRenameStrategy extends AbstractConfigurableStrategy {
     }
 
     @Override
-    public List<com.filemanager.domain.dto.PreconditionGroupDTO> getDefaultPreconditionGroups() {
-        return new ArrayList<>();
+    public ScanTarget getTargetType() {
+        return ScanTarget.FILES_ONLY;
     }
 
     @Override
@@ -69,85 +72,80 @@ public class FileRenameStrategy extends AbstractConfigurableStrategy {
     }
 
     @Override
-    protected ChangeRecord createPreviewRecord(String filePath, StrategyConfigDTO config, ExecutionContext context) {
+    public List<ChangeRecord> analyze(ChangeRecord currentRecord, 
+        List<ChangeRecord> inputRecords, 
+        List<File> rootDirs, 
+        StrategyConfigDTO config, 
+        ExecutionContext context) {
+        
+        File file = currentRecord.getFileHandle();
+        if (!file.isFile()) {
+            return Collections.emptyList();
+        }
+        
         String pattern = getConfigValue(config, "pattern", "{name}_{index}");
         boolean preserveExtension = getConfigValue(config, "preserveExtension", true);
         boolean padZeros = getConfigValue(config, "padZeros", true);
         int zeroPadding = getConfigValue(config, "zeroPadding", 3);
-
-        String fileName = filePath.substring(filePath.lastIndexOf('/') + 1);
-        String dir = filePath.substring(0, filePath.lastIndexOf('/') + 1);
+        
+        context.logInfo("分析文件重命名: " + file.getName() + ", 模式: " + pattern);
+        
+        String fileName = file.getName();
+        String dir = file.getParent() + File.separator;
         String extension = "";
         String baseName = fileName;
-
+        
         if (preserveExtension && fileName.contains(".")) {
             extension = fileName.substring(fileName.lastIndexOf('.'));
             baseName = fileName.substring(0, fileName.lastIndexOf('.'));
         }
-
+        
         String indexStr = padZeros ? String.format("%0" + zeroPadding + "d", currentIndex) : String.valueOf(currentIndex);
         String newName = pattern
             .replace("{name}", baseName)
             .replace("{index}", indexStr);
-
+        
         String newFilePath = dir + newName + extension;
-
-        ChangeRecord record = createChangeRecord(filePath, newFilePath, "PENDING");
-        record.setOperationType("RENAME");
-        record.setReason("应用重命名规则");
-        return record;
+        
+        ChangeRecord record = new ChangeRecord(
+            currentRecord.getOriginalName(),
+            newName + extension,
+            currentRecord.getFileHandle(),
+            true,
+            newFilePath,
+            OperationType.RENAME,
+            new java.util.HashMap<>(),
+            ExecStatus.PENDING
+        );
+        
+        return Collections.singletonList(record);
     }
 
     @Override
-    protected ChangeRecord executeForFile(String filePath, StrategyConfigDTO config, ExecutionContext context) {
-        String pattern = getConfigValue(config, "pattern", "{name}_{index}");
-        boolean preserveExtension = getConfigValue(config, "preserveExtension", true);
-        boolean padZeros = getConfigValue(config, "padZeros", true);
-        int zeroPadding = getConfigValue(config, "zeroPadding", 3);
-        boolean overwriteExisting = getConfigValue(config, "overwriteExisting", false);
-
-        File sourceFile = new File(filePath);
+    public void execute(ChangeRecord record, StrategyConfigDTO config, ExecutionContext context) throws Exception {
+        File sourceFile = record.getFileHandle();
+        File targetFile = new File(record.getNewPath());
+        
         if (!sourceFile.exists()) {
-            context.logWarn("File does not exist: " + filePath);
-            return createChangeRecord(filePath, filePath, "SKIPPED");
+            context.logWarn("源文件不存在: " + sourceFile.getPath());
+            record.setStatus(ExecStatus.FAILED.name());
+            return;
         }
-
-        try {
-            String fileName = sourceFile.getName();
-            String dir = sourceFile.getParent() + File.separator;
-            String extension = "";
-            String baseName = fileName;
-
-            if (preserveExtension && fileName.contains(".")) {
-                extension = fileName.substring(fileName.lastIndexOf('.'));
-                baseName = fileName.substring(0, fileName.lastIndexOf('.'));
-            }
-
-            String indexStr = padZeros ? String.format("%0" + zeroPadding + "d", currentIndex) : String.valueOf(currentIndex);
-            String newName = pattern
-                .replace("{name}", baseName)
-                .replace("{index}", indexStr);
-
-            File targetFile = new File(dir + newName + extension);
-
-            if (targetFile.exists() && !overwriteExisting) {
-                context.logWarn("Target file already exists: " + targetFile.getName());
-                return createChangeRecord(filePath, filePath, "SKIPPED");
-            }
-
-            if (sourceFile.renameTo(targetFile)) {
-                context.logInfo("Renamed file: " + filePath + " -> " + targetFile.getPath());
-                ChangeRecord record = createChangeRecord(filePath, targetFile.getPath(), "SUCCESS");
-                record.setOperationType("RENAME");
-                record.setReason("应用重命名规则");
-                return record;
-            } else {
-                context.logError("Failed to rename file: " + filePath);
-                return createChangeRecord(filePath, filePath, "ERROR");
-            }
-        } catch (Exception e) {
-            context.logError("Error renaming file " + filePath + ": " + e.getMessage());
-            return createChangeRecord(filePath, filePath, "ERROR");
+        
+        boolean overwriteExisting = getConfigValue(config, "overwriteExisting", false);
+        
+        if (targetFile.exists() && !overwriteExisting) {
+            context.logWarn("目标文件已存在: " + targetFile.getName());
+            record.setStatus(ExecStatus.FAILED.name());
+            return;
+        }
+        
+        if (sourceFile.renameTo(targetFile)) {
+            context.logInfo("重命名文件: " + sourceFile.getPath() + " -> " + targetFile.getPath());
+            record.setStatus(ExecStatus.SUCCESS.name());
+        } else {
+            context.logError("重命名文件失败: " + sourceFile.getPath());
+            record.setStatus(ExecStatus.FAILED.name());
         }
     }
 }

@@ -5,8 +5,15 @@ import com.filemanager.domain.dto.EnumOptionDTO;
 import com.filemanager.domain.entity.ChangeRecord;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
 import com.filemanager.plugin.ExecutionContext;
+import com.filemanager.domain.enums.ScanTarget;
+import com.filemanager.domain.enums.ExecStatus;
+import com.filemanager.domain.enums.OperationType;
 import com.filemanager.plugin.impl.albumdirnormalize.enums.DirectoryTemplate;
 import java.io.File;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class AlbumDirNormalizeStrategy extends AbstractConfigurableStrategy {
 
@@ -35,8 +42,8 @@ public class AlbumDirNormalizeStrategy extends AbstractConfigurableStrategy {
     }
 
     @Override
-    public java.util.List<com.filemanager.domain.dto.PreconditionGroupDTO> getDefaultPreconditionGroups() {
-        return new java.util.ArrayList<>();
+    public ScanTarget getTargetType() {
+        return ScanTarget.FOLDERS_ONLY;
     }
 
     @Override
@@ -70,57 +77,77 @@ public class AlbumDirNormalizeStrategy extends AbstractConfigurableStrategy {
     }
 
     @Override
-    protected ChangeRecord createPreviewRecord(String filePath, StrategyConfigDTO config, ExecutionContext context) {
-        String template = getConfigValue(config, "template", "artist_year_album");
+    public List<ChangeRecord> analyze(ChangeRecord currentRecord, 
+        List<ChangeRecord> inputRecords, 
+        List<File> rootDirs, 
+        StrategyConfigDTO config, 
+        ExecutionContext context) {
         
-        ChangeRecord record = createChangeRecord(filePath, filePath, "PENDING");
-        record.setOperationType("RENAME");
-        record.setReason("专辑目录标准化: " + template);
-        return record;
-    }
-
-    @Override
-    protected ChangeRecord executeForFile(String filePath, StrategyConfigDTO config, ExecutionContext context) {
+        File directory = currentRecord.getFileHandle();
+        if (!directory.isDirectory()) {
+            return Collections.emptyList();
+        }
+        
         String template = getConfigValue(config, "template", "artist_year_album");
         String customTemplate = getConfigValue(config, "customTemplate", "");
         boolean cleanSpecialChars = getConfigValue(config, "cleanSpecialChars", true);
         boolean removeYearPrefix = getConfigValue(config, "removeYearPrefix", false);
         
-        File sourceFile = new File(filePath);
-        if (!sourceFile.exists()) {
-            context.logWarn("File does not exist: " + filePath);
-            return createChangeRecord(filePath, filePath, "SKIPPED");
+        context.logInfo("分析专辑目录标准化: " + directory.getName() + ", 模板: " + template);
+        
+        String newName = generateDirectoryName(directory, template, customTemplate, cleanSpecialChars, removeYearPrefix, context);
+        if (newName == null || newName.equals(directory.getName())) {
+            return Collections.emptyList();
         }
         
-        if (!sourceFile.isDirectory()) {
-            context.logDebug("Not a directory: " + filePath);
-            return createChangeRecord(filePath, filePath, "SKIPPED");
+        String newPath = directory.getParent() + File.separator + newName;
+        
+        Map<String, String> params = new HashMap<>();
+        params.put("template", template);
+        params.put("customTemplate", customTemplate);
+        
+        ChangeRecord record = new ChangeRecord(
+            currentRecord.getOriginalName(),
+            newName,
+            currentRecord.getFileHandle(),
+            true,
+            newPath,
+            OperationType.RENAME,
+            params,
+            ExecStatus.PENDING
+        );
+        
+        return Collections.singletonList(record);
+    }
+
+    @Override
+    public void execute(ChangeRecord record, StrategyConfigDTO config, ExecutionContext context) throws Exception {
+        File sourceDir = record.getFileHandle();
+        File targetDir = new File(record.getNewPath());
+        
+        if (!sourceDir.exists()) {
+            context.logWarn("源目录不存在: " + sourceDir.getPath());
+            record.setStatus(ExecStatus.FAILED.name());
+            return;
+        }
+        
+        if (targetDir.exists()) {
+            context.logWarn("目标目录已存在: " + targetDir.getPath());
+            record.setStatus(ExecStatus.FAILED.name());
+            return;
         }
         
         try {
-            String newName = generateDirectoryName(sourceFile, template, customTemplate, cleanSpecialChars, removeYearPrefix, context);
-            if (newName == null || newName.equals(sourceFile.getName())) {
-                context.logDebug("No rename needed for: " + filePath);
-                return createChangeRecord(filePath, filePath, "SKIPPED");
+            if (sourceDir.renameTo(targetDir)) {
+                context.logInfo("重命名专辑目录: " + sourceDir.getPath() + " -> " + targetDir.getPath());
+                record.setStatus(ExecStatus.SUCCESS.name());
+            } else {
+                context.logError("重命名专辑目录失败: " + sourceDir.getPath());
+                record.setStatus(ExecStatus.FAILED.name());
             }
-            
-            File targetDir = new File(sourceFile.getParent(), newName);
-            
-            if (targetDir.exists()) {
-                context.logWarn("Target directory already exists: " + targetDir.getPath());
-                return createChangeRecord(filePath, filePath, "SKIPPED");
-            }
-            
-            sourceFile.renameTo(targetDir);
-            
-            context.logInfo("Renamed album directory: " + filePath + " -> " + targetDir.getPath());
-            ChangeRecord record = createChangeRecord(filePath, targetDir.getPath(), "SUCCESS");
-            record.setOperationType("RENAME");
-            record.setReason("专辑目录标准化: " + template);
-            return record;
         } catch (Exception e) {
-            context.logError("Error renaming album directory " + filePath + ": " + e.getMessage());
-            return createChangeRecord(filePath, filePath, "ERROR");
+            context.logError("重命名专辑目录失败: " + sourceDir.getPath() + ", 错误: " + e.getMessage());
+            record.setStatus(ExecStatus.FAILED.name());
         }
     }
 

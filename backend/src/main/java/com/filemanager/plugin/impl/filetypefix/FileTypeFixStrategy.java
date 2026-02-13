@@ -5,8 +5,15 @@ import com.filemanager.domain.dto.EnumOptionDTO;
 import com.filemanager.domain.entity.ChangeRecord;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
 import com.filemanager.plugin.ExecutionContext;
+import com.filemanager.domain.enums.ScanTarget;
+import com.filemanager.domain.enums.ExecStatus;
+import com.filemanager.domain.enums.OperationType;
 import com.filemanager.plugin.impl.filetypefix.enums.TargetFormat;
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.util.Collections;
+import java.util.List;
 
 public class FileTypeFixStrategy extends AbstractConfigurableStrategy {
 
@@ -35,8 +42,8 @@ public class FileTypeFixStrategy extends AbstractConfigurableStrategy {
     }
 
     @Override
-    public java.util.List<com.filemanager.domain.dto.PreconditionGroupDTO> getDefaultPreconditionGroups() {
-        return new java.util.ArrayList<>();
+    public ScanTarget getTargetType() {
+        return ScanTarget.FILES_ONLY;
     }
 
     @Override
@@ -58,56 +65,71 @@ public class FileTypeFixStrategy extends AbstractConfigurableStrategy {
     }
 
     @Override
-    protected ChangeRecord createPreviewRecord(String filePath, StrategyConfigDTO config, ExecutionContext context) {
+    public List<ChangeRecord> analyze(ChangeRecord currentRecord, 
+        List<ChangeRecord> inputRecords, 
+        List<File> rootDirs, 
+        StrategyConfigDTO config, 
+        ExecutionContext context) {
+        
+        File file = currentRecord.getFileHandle();
+        if (!file.isFile()) {
+            return Collections.emptyList();
+        }
+        
         String targetFormat = getConfigValue(config, "targetFormat", "auto_detect");
         
-        ChangeRecord record = createChangeRecord(filePath, filePath, "PENDING");
-        record.setOperationType("TYPE_FIX");
-        record.setReason("文件类型修复: " + targetFormat);
-        return record;
+        context.logInfo("分析文件类型修复: " + file.getName() + ", 目标格式: " + targetFormat);
+        
+        String detectedFormat = detectFileFormat(file);
+        String newExtension = getExtension(targetFormat, detectedFormat);
+        
+        if (newExtension == null || file.getName().toLowerCase().endsWith("." + newExtension)) {
+            context.logDebug("文件格式已正确: " + file.getName());
+            return Collections.emptyList();
+        }
+        
+        String newPath = file.getPath().replaceAll("\\.[^.]+$", "." + newExtension);
+        
+        ChangeRecord record = new ChangeRecord(
+            currentRecord.getOriginalName(),
+            file.getName().replaceAll("\\.[^.]+$", "." + newExtension),
+            currentRecord.getFileHandle(),
+            true,
+            newPath,
+            OperationType.RENAME,
+            new java.util.HashMap<>(),
+            ExecStatus.PENDING
+        );
+        
+        return Collections.singletonList(record);
     }
 
     @Override
-    protected ChangeRecord executeForFile(String filePath, StrategyConfigDTO config, ExecutionContext context) {
-        String targetFormat = getConfigValue(config, "targetFormat", "auto_detect");
-        boolean keepOriginal = getConfigValue(config, "keepOriginal", true);
-        boolean backupOriginal = getConfigValue(config, "backupOriginal", true);
+    public void execute(ChangeRecord record, StrategyConfigDTO config, ExecutionContext context) throws Exception {
+        File sourceFile = record.getFileHandle();
+        File targetFile = new File(record.getNewPath());
         
-        File sourceFile = new File(filePath);
         if (!sourceFile.exists()) {
-            context.logWarn("File does not exist: " + filePath);
-            return createChangeRecord(filePath, filePath, "SKIPPED");
+            context.logWarn("源文件不存在: " + sourceFile.getPath());
+            record.setStatus(ExecStatus.FAILED.name());
+            return;
         }
         
-        try {
-            String detectedFormat = detectFileFormat(sourceFile);
-            String newExtension = getExtension(targetFormat, detectedFormat);
-            
-            if (newExtension == null || sourceFile.getName().toLowerCase().endsWith("." + newExtension)) {
-                context.logDebug("File format already correct: " + filePath);
-                return createChangeRecord(filePath, filePath, "SKIPPED");
-            }
-            
-            String newPath = sourceFile.getPath().replaceAll("\\.[^.]+$", "." + newExtension);
-            File targetFile = new File(newPath);
-            
-            if (backupOriginal) {
-                String backupPath = filePath + ".bak";
-                File backupFile = new File(backupPath);
-                java.nio.file.Files.copy(sourceFile.toPath(), backupFile.toPath());
-                context.logDebug("Created backup: " + backupPath);
-            }
-            
-            sourceFile.renameTo(targetFile);
-            
-            context.logInfo("Fixed file type: " + filePath + " -> " + newPath);
-            ChangeRecord record = createChangeRecord(filePath, newPath, "SUCCESS");
-            record.setOperationType("TYPE_FIX");
-            record.setReason("文件类型修复: " + targetFormat);
-            return record;
-        } catch (Exception e) {
-            context.logError("Error fixing file type for " + filePath + ": " + e.getMessage());
-            return createChangeRecord(filePath, filePath, "ERROR");
+        boolean backupOriginal = getConfigValue(config, "backupOriginal", true);
+        
+        if (backupOriginal) {
+            String backupPath = sourceFile.getPath() + ".bak";
+            File backupFile = new File(backupPath);
+            Files.copy(sourceFile.toPath(), backupFile.toPath());
+            context.logDebug("创建备份: " + backupPath);
+        }
+        
+        if (sourceFile.renameTo(targetFile)) {
+            context.logInfo("修复文件类型: " + sourceFile.getPath() + " -> " + targetFile.getPath());
+            record.setStatus(ExecStatus.SUCCESS.name());
+        } else {
+            context.logError("修复文件类型失败: " + sourceFile.getPath());
+            record.setStatus(ExecStatus.FAILED.name());
         }
     }
 

@@ -6,10 +6,14 @@ import com.filemanager.domain.dto.EnumOptionDTO;
 import com.filemanager.domain.entity.ChangeRecord;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
 import com.filemanager.plugin.ExecutionContext;
+import com.filemanager.domain.enums.ScanTarget;
+import com.filemanager.domain.enums.ExecStatus;
+import com.filemanager.domain.enums.OperationType;
 import com.filemanager.plugin.impl.fileunzip.enums.OutputMode;
 import com.filemanager.plugin.impl.fileunzip.enums.UnzipEngine;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,8 +45,8 @@ public class FileUnzipStrategy extends AbstractConfigurableStrategy {
     }
 
     @Override
-    public java.util.List<com.filemanager.domain.dto.PreconditionGroupDTO> getDefaultPreconditionGroups() {
-        return new java.util.ArrayList<>();
+    public ScanTarget getTargetType() {
+        return ScanTarget.FILES_ONLY;
     }
 
     @Override
@@ -132,61 +136,87 @@ public class FileUnzipStrategy extends AbstractConfigurableStrategy {
     }
 
     @Override
-    protected ChangeRecord createPreviewRecord(String filePath, StrategyConfigDTO config, ExecutionContext context) {
-        String engine = getConfigValue(config, "engine", "java_builtin");
-        String outputMode = getConfigValue(config, "outputMode", "auto_subdirectory");
+    public List<ChangeRecord> analyze(ChangeRecord currentRecord, 
+        List<ChangeRecord> inputRecords, 
+        List<File> rootDirs, 
+        StrategyConfigDTO config, 
+        ExecutionContext context) {
         
-        ChangeRecord record = createChangeRecord(filePath, filePath, "PENDING");
-        record.setOperationType("UNZIP");
-        record.setReason("解压: " + engine + ", " + outputMode);
-        return record;
-    }
-
-    @Override
-    protected ChangeRecord executeForFile(String filePath, StrategyConfigDTO config, ExecutionContext context) {
+        File file = currentRecord.getFileHandle();
+        if (!file.isFile()) {
+            return Collections.emptyList();
+        }
+        
+        if (!isArchiveFile(file)) {
+            return Collections.emptyList();
+        }
+        
         String engine = getConfigValue(config, "engine", "java_builtin");
         String outputMode = getConfigValue(config, "outputMode", "auto_subdirectory");
         String customPath = getConfigValue(config, "customPath", "");
         boolean smartFolder = getConfigValue(config, "smartFolder", true);
-        boolean mergeSameName = getConfigValue(config, "mergeSameName", false);
+        
+        context.logInfo("分析文件解压: " + file.getName() + ", 引擎: " + engine);
+        
+        String outputDir = getOutputDirectory(file, outputMode, customPath, smartFolder);
+        File outputDirectory = new File(outputDir);
+        
+        Map<String, String> params = new HashMap<>();
+        params.put("engine", engine);
+        params.put("outputMode", outputMode);
+        params.put("smartFolder", String.valueOf(smartFolder));
+        
+        ChangeRecord record = new ChangeRecord(
+            currentRecord.getOriginalName(),
+            outputDirectory.getName(),
+            currentRecord.getFileHandle(),
+            true,
+            outputDir,
+            OperationType.UNZIP,
+            params,
+            ExecStatus.PENDING
+        );
+        
+        return Collections.singletonList(record);
+    }
+
+    @Override
+    public void execute(ChangeRecord record, StrategyConfigDTO config, ExecutionContext context) throws Exception {
+        File sourceFile = record.getFileHandle();
+        File targetDir = new File(record.getNewPath());
+        
+        if (!sourceFile.exists()) {
+            context.logWarn("源文件不存在: " + sourceFile.getPath());
+            record.setStatus(ExecStatus.FAILED.name());
+            return;
+        }
+        
         boolean deleteSource = getConfigValue(config, "deleteSource", false);
         boolean overwrite = getConfigValue(config, "overwrite", false);
         boolean deleteOnFail = getConfigValue(config, "deleteOnFail", false);
-        boolean nestedFolderMerge = getConfigValue(config, "nestedFolderMerge", false);
-        
-        File sourceFile = new File(filePath);
-        if (!sourceFile.exists()) {
-            context.logWarn("File does not exist: " + filePath);
-            return createChangeRecord(filePath, filePath, "SKIPPED");
-        }
-        
-        if (!isArchiveFile(sourceFile)) {
-            context.logDebug("Not an archive file: " + filePath);
-            return createChangeRecord(filePath, filePath, "SKIPPED");
-        }
         
         try {
-            String outputDir = getOutputDirectory(sourceFile, outputMode, customPath);
-            File outputDirectory = new File(outputDir);
-            
-            if (!outputDirectory.exists()) {
-                outputDirectory.mkdirs();
-                context.logDebug("Created output directory: " + outputDir);
+            if (!targetDir.exists()) {
+                targetDir.mkdirs();
+                context.logDebug("创建输出目录: " + targetDir.getPath());
             }
             
-            context.logInfo("Unzipping file: " + filePath + " -> " + outputDir);
+            context.logInfo("解压文件: " + sourceFile.getPath() + " -> " + targetDir.getPath());
             
-            ChangeRecord record = createChangeRecord(filePath, outputDir, "SUCCESS");
-            record.setOperationType("UNZIP");
-            record.setReason("解压: " + engine + ", " + outputMode);
-            return record;
+            record.setStatus(ExecStatus.SUCCESS.name());
+            
+            if (deleteSource) {
+                sourceFile.delete();
+                context.logInfo("删除源文件: " + sourceFile.getPath());
+            }
         } catch (Exception e) {
-            context.logError("Error unzipping file " + filePath + ": " + e.getMessage());
+            context.logError("解压文件失败: " + sourceFile.getPath() + ", 错误: " + e.getMessage());
+            record.setStatus(ExecStatus.FAILED.name());
+            
             if (deleteOnFail) {
                 sourceFile.delete();
-                context.logInfo("Deleted source file due to failure: " + filePath);
+                context.logInfo("因失败删除源文件: " + sourceFile.getPath());
             }
-            return createChangeRecord(filePath, filePath, "ERROR");
         }
     }
 
@@ -196,7 +226,7 @@ public class FileUnzipStrategy extends AbstractConfigurableStrategy {
                name.endsWith(".tar") || name.endsWith(".gz") || name.endsWith(".bz2");
     }
 
-    private String getOutputDirectory(File sourceFile, String outputMode, String customPath) {
+    private String getOutputDirectory(File sourceFile, String outputMode, String customPath, boolean smartFolder) {
         File parentDir = sourceFile.getParentFile();
         if (parentDir == null) {
             return customPath;
@@ -209,7 +239,11 @@ public class FileUnzipStrategy extends AbstractConfigurableStrategy {
                 if (lastDotIndex > 0) {
                     baseName = baseName.substring(0, lastDotIndex);
                 }
-                return parentDir.getPath() + File.separator + baseName;
+                if (smartFolder) {
+                    return parentDir.getPath() + File.separator + baseName;
+                } else {
+                    return parentDir.getPath();
+                }
             case "same_as_source":
                 return parentDir.getPath();
             case "specified_directory":

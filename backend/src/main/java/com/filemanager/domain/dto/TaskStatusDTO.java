@@ -1,5 +1,7 @@
 package com.filemanager.domain.dto;
 
+import java.util.Map;
+
 /**
  * 任务状态DTO
  */
@@ -12,6 +14,14 @@ public class TaskStatusDTO {
     private long endTime;           // 结束时间
     private int progress;           // 进度（0-100）
     private String message;         // 状态消息
+    
+    // 统计信息
+    private int totalFiles;        // 总文件数
+    private int processedFiles;    // 已处理文件数
+    private int successCount;       // 成功数量
+    private int failedCount;        // 失败数量
+    private int skippedCount;       // 跳过数量
+    private Map<String, Integer> operationStats; // 操作类型统计
 
     public TaskStatusDTO() {
     }
@@ -78,5 +88,53 @@ public class TaskStatusDTO {
 
     public void setMessage(String message) {
         this.message = message;
+    }
+
+    public int getTotalFiles() {
+        return totalFiles;
+    }
+
+    public void setTotalFiles(int totalFiles) {
+        this.totalFiles = totalFiles;
+    }
+
+    public int getProcessedFiles() {
+        return processedFiles;
+    }
+
+    public void setProcessedFiles(int processedFiles) {
+        this.processedFiles = processedFiles;
+    }
+
+    public int getSuccessCount() {
+        return successCount;
+    }
+
+    public void setSuccessCount(int successCount) {
+        this.successCount = successCount;
+    }
+
+    public int getFailedCount() {
+        return failedCount;
+    }
+
+    public void setFailedCount(int failedCount) {
+        this.failedCount = failedCount;
+    }
+
+    public int getSkippedCount() {
+        return skippedCount;
+    }
+
+    public void setSkippedCount(int skippedCount) {
+        this.skippedCount = skippedCount;
+    }
+
+    public Map<String, Integer> getOperationStats() {
+        return operationStats;
+    }
+
+    public void setOperationStats(Map<String, Integer> operationStats) {
+        this.operationStats = operationStats;
     }
 }

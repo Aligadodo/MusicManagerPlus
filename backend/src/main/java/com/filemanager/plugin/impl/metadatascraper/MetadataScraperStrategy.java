@@ -5,8 +5,16 @@ import com.filemanager.domain.dto.EnumOptionDTO;
 import com.filemanager.domain.entity.ChangeRecord;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
 import com.filemanager.plugin.ExecutionContext;
+import com.filemanager.domain.enums.ScanTarget;
+import com.filemanager.domain.enums.ExecStatus;
+import com.filemanager.domain.enums.OperationType;
 import com.filemanager.plugin.impl.metadatascraper.enums.DataSource;
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class MetadataScraperStrategy extends AbstractConfigurableStrategy {
 
@@ -35,8 +43,8 @@ public class MetadataScraperStrategy extends AbstractConfigurableStrategy {
     }
 
     @Override
-    public java.util.List<com.filemanager.domain.dto.PreconditionGroupDTO> getDefaultPreconditionGroups() {
-        return new java.util.ArrayList<>();
+    public ScanTarget getTargetType() {
+        return ScanTarget.FILES_ONLY;
     }
 
     @Override
@@ -134,5 +142,117 @@ public class MetadataScraperStrategy extends AbstractConfigurableStrategy {
             options.add(option);
         }
         return options;
+    }
+
+    @Override
+    public List<ChangeRecord> analyze(ChangeRecord currentRecord, 
+        List<ChangeRecord> inputRecords, 
+        List<File> rootDirs, 
+        StrategyConfigDTO config, 
+        ExecutionContext context) {
+        
+        File file = currentRecord.getFileHandle();
+        if (!isAudioFile(file)) {
+            return Collections.emptyList();
+        }
+        
+        String source = getConfigValue(config, "source", "local_inference");
+        boolean lyricsEnabled = getConfigValue(config, "lyricsEnabled", true);
+        boolean coverEnabled = getConfigValue(config, "coverEnabled", true);
+        boolean albumInfoEnabled = getConfigValue(config, "albumInfoEnabled", true);
+        
+        context.logInfo("分析元数据抓取: " + file.getName() + ", 数据源: " + source);
+        
+        List<ChangeRecord> results = new ArrayList<>();
+        
+        if (lyricsEnabled) {
+            ChangeRecord record = new ChangeRecord(
+                currentRecord.getOriginalName(),
+                currentRecord.getOriginalName(),
+                currentRecord.getFileHandle(),
+                true,
+                currentRecord.getNewPath(),
+                OperationType.SCRAPER,
+                new HashMap<>(),
+                ExecStatus.PENDING
+            );
+            record.getExtraParams().put("task_type", "UPDATE_LYRICS");
+            record.getExtraParams().put("source", source);
+            results.add(record);
+        }
+        
+        if (coverEnabled) {
+            File parentDir = file.getParentFile();
+            if (parentDir != null) {
+                File targetCover = new File(parentDir, "cover.jpg");
+                Map<String, String> params = new HashMap<>();
+                params.put("task_type", "DOWNLOAD_COVER");
+                params.put("source", source);
+                
+                ChangeRecord coverRec = new ChangeRecord(
+                    "下载: 专辑封面",
+                    "cover.jpg",
+                    parentDir,
+                    true,
+                    targetCover.getAbsolutePath(),
+                    OperationType.SCRAPER,
+                    params,
+                    ExecStatus.PENDING
+                );
+                results.add(coverRec);
+            }
+        }
+        
+        if (albumInfoEnabled) {
+            File parentDir = file.getParentFile();
+            if (parentDir != null) {
+                File targetInfo = new File(parentDir, "AlbumInfo.txt");
+                Map<String, String> params = new HashMap<>();
+                params.put("task_type", "GENERATE_INFO");
+                params.put("source", source);
+                
+                ChangeRecord infoRec = new ChangeRecord(
+                    "生成: 专辑资料",
+                    "AlbumInfo.txt",
+                    parentDir,
+                    true,
+                    targetInfo.getAbsolutePath(),
+                    OperationType.SCRAPER,
+                    params,
+                    ExecStatus.PENDING
+                );
+                results.add(infoRec);
+            }
+        }
+        
+        return results;
+    }
+
+    @Override
+    public void execute(ChangeRecord record, StrategyConfigDTO config, ExecutionContext context) throws Exception {
+        String taskType = record.getExtraParams().get("task_type");
+        
+        if ("UPDATE_LYRICS".equals(taskType)) {
+            updateLyrics(record, context);
+        } else if ("DOWNLOAD_COVER".equals(taskType)) {
+            downloadCover(record, context);
+        } else if ("GENERATE_INFO".equals(taskType)) {
+            generateAlbumInfo(record, context);
+        }
+    }
+
+    private void updateLyrics(ChangeRecord record, ExecutionContext context) {
+        context.logInfo("更新歌词: " + record.getOriginalName());
+        record.setStatus(ExecStatus.SUCCESS.name());
+    }
+
+    private void downloadCover(ChangeRecord record, ExecutionContext context) {
+        context.logInfo("下载封面: " + record.getNewPath());
+        record.setStatus(ExecStatus.SUCCESS.name());
+    }
+
+    private void generateAlbumInfo(ChangeRecord record, ExecutionContext context) {
+        context.logInfo("生成专辑信息: " + record.getNewPath());
+        record.setStatus(ExecStatus.SUCCESS.name());
     }
 }

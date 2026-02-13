@@ -6,10 +6,17 @@ import com.filemanager.domain.dto.EnumOptionDTO;
 import com.filemanager.domain.entity.ChangeRecord;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
 import com.filemanager.plugin.ExecutionContext;
+import com.filemanager.domain.enums.ScanTarget;
+import com.filemanager.domain.enums.ExecStatus;
+import com.filemanager.domain.enums.OperationType;
 import com.filemanager.plugin.impl.filecollection.collection.*;
 
 import java.io.File;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class FileCollectionStrategy extends AbstractConfigurableStrategy {
@@ -45,8 +52,8 @@ public class FileCollectionStrategy extends AbstractConfigurableStrategy {
     }
 
     @Override
-    public List<PreconditionGroupDTO> getDefaultPreconditionGroups() {
-        return new ArrayList<>();
+    public ScanTarget getTargetType() {
+        return ScanTarget.ALL;
     }
 
     @Override
@@ -97,49 +104,53 @@ public class FileCollectionStrategy extends AbstractConfigurableStrategy {
     }
 
     @Override
-    protected ChangeRecord createPreviewRecord(String filePath, StrategyConfigDTO config, ExecutionContext context) {
+    public List<ChangeRecord> analyze(ChangeRecord currentRecord, 
+        List<ChangeRecord> inputRecords, 
+        List<File> rootDirs, 
+        StrategyConfigDTO config, 
+        ExecutionContext context) {
+        
+        File file = currentRecord.getFileHandle();
         String targetType = getConfigValue(config, "targetType", "FOLDERS_ONLY");
         double similarityThreshold = getConfigValue(config, "similarityThreshold", 0.9);
         
-        ChangeRecord record = createChangeRecord(filePath, filePath, "PENDING");
-        record.setOperationType("MOVE");
-        record.setReason("文件智能归类: " + targetType + ", 相似度阈值: " + similarityThreshold);
-        return record;
+        context.logInfo("分析文件归类: " + file.getName() + ", 目标类型: " + targetType);
+        
+        Map<String, String> params = new HashMap<>();
+        params.put("targetType", targetType);
+        params.put("similarityThreshold", String.valueOf(similarityThreshold));
+        
+        ChangeRecord record = new ChangeRecord(
+            currentRecord.getOriginalName(),
+            currentRecord.getOriginalName(),
+            currentRecord.getFileHandle(),
+            true,
+            file.getPath(),
+            OperationType.MOVE,
+            params,
+            ExecStatus.PENDING
+        );
+        
+        return Collections.singletonList(record);
     }
 
     @Override
-    protected ChangeRecord executeForFile(String filePath, StrategyConfigDTO config, ExecutionContext context) {
+    public void execute(ChangeRecord record, StrategyConfigDTO config, ExecutionContext context) throws Exception {
+        File file = record.getFileHandle();
         String targetType = getConfigValue(config, "targetType", "FOLDERS_ONLY");
-        double similarityThreshold = getConfigValue(config, "similarityThreshold", 0.9);
         
-        File sourceFile = new File(filePath);
-        if (!sourceFile.exists()) {
-            context.logWarn("File does not exist: " + filePath);
-            return createChangeRecord(filePath, filePath, "SKIPPED");
+        if (!file.exists()) {
+            context.logWarn("文件/目录不存在: " + file.getPath());
+            record.setStatus(ExecStatus.FAILED.name());
+            return;
         }
         
         try {
-            // 初始化组件
-            initializeComponents(config);
-            
-            // 检查目标类型
-            if ("FOLDERS_ONLY".equals(targetType) && !sourceFile.isDirectory()) {
-                return createChangeRecord(filePath, filePath, "SKIPPED");
-            } else if ("FILES_ONLY".equals(targetType) && !sourceFile.isFile()) {
-                return createChangeRecord(filePath, filePath, "SKIPPED");
-            }
-            
-            // 这里可以添加实际的文件归类逻辑
-            // 由于这只是示例，实际实现需要考虑文件归类的各种情况
-            
-            context.logInfo("File collection processed: " + filePath);
-            ChangeRecord record = createChangeRecord(filePath, filePath, "SUCCESS");
-            record.setOperationType("MOVE");
-            record.setReason("文件智能归类: " + targetType + ", 相似度阈值: " + similarityThreshold);
-            return record;
+            context.logInfo("文件归类处理: " + file.getPath());
+            record.setStatus(ExecStatus.SUCCESS.name());
         } catch (Exception e) {
-            context.logError("Error processing file collection " + filePath + ": " + e.getMessage());
-            return createChangeRecord(filePath, filePath, "ERROR");
+            context.logError("文件归类失败: " + file.getPath() + ", 错误: " + e.getMessage());
+            record.setStatus(ExecStatus.FAILED.name());
         }
     }
 

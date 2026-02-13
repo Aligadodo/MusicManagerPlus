@@ -5,11 +5,17 @@ import com.filemanager.domain.dto.EnumOptionDTO;
 import com.filemanager.domain.entity.ChangeRecord;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
 import com.filemanager.plugin.ExecutionContext;
+import com.filemanager.domain.enums.ScanTarget;
+import com.filemanager.domain.enums.ExecStatus;
+import com.filemanager.domain.enums.OperationType;
 import com.filemanager.plugin.enums.common.OutputDirMode;
 import com.filemanager.plugin.impl.filemigrate.enums.OperationMode;
 import com.filemanager.plugin.impl.filemigrate.enums.ScopeMode;
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,8 +47,8 @@ public class FileMigrateStrategy extends AbstractConfigurableStrategy {
     }
 
     @Override
-    public java.util.List<com.filemanager.domain.dto.PreconditionGroupDTO> getDefaultPreconditionGroups() {
-        return new java.util.ArrayList<>();
+    public ScanTarget getTargetType() {
+        return ScanTarget.FILES_ONLY;
     }
 
     @Override
@@ -110,64 +116,77 @@ public class FileMigrateStrategy extends AbstractConfigurableStrategy {
     }
 
     @Override
-    protected ChangeRecord createPreviewRecord(String filePath, StrategyConfigDTO config, ExecutionContext context) {
-        String operationMode = getConfigValue(config, "operationMode", "move");
-        String outputDirMode = getConfigValue(config, "outputDirMode", "subdirectory");
+    public List<ChangeRecord> analyze(ChangeRecord currentRecord, 
+        List<ChangeRecord> inputRecords, 
+        List<File> rootDirs, 
+        StrategyConfigDTO config, 
+        ExecutionContext context) {
         
-        ChangeRecord record = createChangeRecord(filePath, filePath, "PENDING");
-        record.setOperationType(operationMode.toUpperCase());
-        record.setReason("文件迁移: " + operationMode);
-        return record;
-    }
-
-    @Override
-    protected ChangeRecord executeForFile(String filePath, StrategyConfigDTO config, ExecutionContext context) {
+        File file = currentRecord.getFileHandle();
+        if (!file.isFile()) {
+            return Collections.emptyList();
+        }
+        
         String operationMode = getConfigValue(config, "operationMode", "move");
         String outputDirMode = getConfigValue(config, "outputDirMode", "subdirectory");
         String outputPath = getConfigValue(config, "outputPath", "Archive");
-        String scope = getConfigValue(config, "scope", "all");
-        int depth = getConfigValue(config, "depth", 0);
-        boolean keepLargest = getConfigValue(config, "keepLargest", true);
-        boolean keepEarliest = getConfigValue(config, "keepEarliest", true);
-        String keepExt = getConfigValue(config, "keepExt", "wav");
-        boolean audioSpecial = getConfigValue(config, "audioSpecial", true);
         
-        File sourceFile = new File(filePath);
+        context.logInfo("分析文件迁移: " + file.getName() + ", 操作模式: " + operationMode);
+        
+        String targetPath = getTargetPath(file, outputDirMode, outputPath);
+        File targetFile = new File(targetPath, file.getName());
+        
+        if (targetFile.exists()) {
+            context.logWarn("目标文件已存在: " + targetFile.getPath());
+            return Collections.emptyList();
+        }
+        
+        OperationType opType = OperationType.MOVE;
+        if ("copy".equals(operationMode)) {
+            opType = OperationType.COPY;
+        }
+        
+        ChangeRecord record = new ChangeRecord(
+            currentRecord.getOriginalName(),
+            targetFile.getName(),
+            currentRecord.getFileHandle(),
+            true,
+            targetFile.getAbsolutePath(),
+            opType,
+            new HashMap<>(),
+            ExecStatus.PENDING
+        );
+        
+        return Collections.singletonList(record);
+    }
+
+    @Override
+    public void execute(ChangeRecord record, StrategyConfigDTO config, ExecutionContext context) throws Exception {
+        File sourceFile = record.getFileHandle();
+        File targetFile = new File(record.getNewPath());
+        
         if (!sourceFile.exists()) {
-            context.logWarn("File does not exist: " + filePath);
-            return createChangeRecord(filePath, filePath, "SKIPPED");
+            context.logWarn("源文件不存在: " + sourceFile.getPath());
+            record.setStatus(ExecStatus.FAILED.name());
+            return;
         }
         
-        try {
-            String targetPath = getTargetPath(sourceFile, outputDirMode, outputPath);
-            File targetFile = new File(targetPath, sourceFile.getName());
-            
-            if (targetFile.exists()) {
-                context.logWarn("Target file already exists: " + targetFile.getPath());
-                return createChangeRecord(filePath, filePath, "SKIPPED");
-            }
-            
-            if (!targetFile.getParentFile().exists()) {
-                targetFile.getParentFile().mkdirs();
-                context.logDebug("Created directory: " + targetFile.getParentFile().getPath());
-            }
-            
-            if (operationMode.equals("copy")) {
-                java.nio.file.Files.copy(sourceFile.toPath(), targetFile.toPath());
-                context.logInfo("Copied file: " + filePath + " -> " + targetFile.getPath());
-            } else {
-                sourceFile.renameTo(targetFile);
-                context.logInfo("Moved file: " + filePath + " -> " + targetFile.getPath());
-            }
-            
-            ChangeRecord record = createChangeRecord(filePath, targetFile.getPath(), "SUCCESS");
-            record.setOperationType(operationMode.toUpperCase());
-            record.setReason("文件迁移: " + operationMode);
-            return record;
-        } catch (Exception e) {
-            context.logError("Error migrating file " + filePath + ": " + e.getMessage());
-            return createChangeRecord(filePath, filePath, "ERROR");
+        if (!targetFile.getParentFile().exists()) {
+            targetFile.getParentFile().mkdirs();
+            context.logDebug("创建目录: " + targetFile.getParentFile().getPath());
         }
+        
+        OperationType opType = OperationType.valueOf(record.getOperationType());
+        
+        if (opType == OperationType.COPY) {
+            Files.copy(sourceFile.toPath(), targetFile.toPath(), StandardCopyOption.COPY_ATTRIBUTES);
+            context.logInfo("复制文件: " + sourceFile.getPath() + " -> " + targetFile.getPath());
+        } else {
+            Files.move(sourceFile.toPath(), targetFile.toPath(), StandardCopyOption.ATOMIC_MOVE);
+            context.logInfo("移动文件: " + sourceFile.getPath() + " -> " + targetFile.getPath());
+        }
+        
+        record.setStatus(ExecStatus.SUCCESS.name());
     }
 
     private String getTargetPath(File sourceFile, String outputDirMode, String outputPath) {

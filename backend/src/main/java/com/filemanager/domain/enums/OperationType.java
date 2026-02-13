@@ -8,6 +8,7 @@ public enum OperationType {
     COPY,
     CONVERT,
     SPLIT,
+    UNZIP,
     SCRAPER,
     MERGE,
     CLEANUP,

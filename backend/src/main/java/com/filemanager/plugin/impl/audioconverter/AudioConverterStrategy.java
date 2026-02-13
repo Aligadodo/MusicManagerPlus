@@ -6,6 +6,9 @@ import com.filemanager.domain.dto.EnumOptionDTO;
 import com.filemanager.domain.entity.ChangeRecord;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
 import com.filemanager.plugin.ExecutionContext;
+import com.filemanager.domain.enums.ScanTarget;
+import com.filemanager.domain.enums.ExecStatus;
+import com.filemanager.domain.enums.OperationType;
 import com.filemanager.plugin.impl.audioconverter.enums.AudioFormat;
 import com.filemanager.plugin.impl.audioconverter.enums.Channels;
 import com.filemanager.plugin.enums.common.OutputDirMode;
@@ -13,6 +16,7 @@ import com.filemanager.plugin.impl.audioconverter.enums.SampleRate;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,8 +48,8 @@ public class AudioConverterStrategy extends AbstractConfigurableStrategy {
     }
 
     @Override
-    public java.util.List<com.filemanager.domain.dto.PreconditionGroupDTO> getDefaultPreconditionGroups() {
-        return new java.util.ArrayList<>();
+    public ScanTarget getTargetType() {
+        return ScanTarget.FILES_ONLY;
     }
 
     @Override
@@ -160,6 +164,129 @@ public class AudioConverterStrategy extends AbstractConfigurableStrategy {
     }
 
     @Override
+    public List<ChangeRecord> analyze(ChangeRecord currentRecord, 
+        List<ChangeRecord> inputRecords, 
+        List<File> rootDirs,
+        StrategyConfigDTO config,
+        ExecutionContext context) {
+        
+        File virtualInput = new File(currentRecord.getNewPath());
+        String name = virtualInput.getName().toLowerCase();
+        int dotIndex = name.lastIndexOf(".");
+        if (dotIndex == -1) {
+            return Collections.emptyList();
+        }
+        
+        if (!isAudioFile(currentRecord.getFileHandle())) {
+            return Collections.emptyList();
+        }
+
+        boolean skipCueTracks = getConfigValue(config, "skipCueTracks", true);
+        if (skipCueTracks) {
+            File actualFile = currentRecord.getFileHandle();
+            if (actualFile.length() > 100 * 1024 * 1024) {
+                File parentDir = actualFile.getParentFile();
+                if (parentDir != null && parentDir.exists() && parentDir.isDirectory()) {
+                    File[] files = parentDir.listFiles((dir, filename) -> filename.toLowerCase().endsWith(".cue"));
+                    if (files != null && files.length > 0) {
+                        context.logInfo("跳过处理：" + actualFile.getName() + " (大于100MB且同目录下存在.cue文件)");
+                        return Collections.emptyList();
+                    }
+                }
+            }
+        }
+
+        Map<String, String> param = getParams(virtualInput.getParentFile(), name, config);
+        String newName = name.substring(0, dotIndex) + "." + param.get("format");
+
+        File targetFile = new File(param.get("parentPath"), newName);
+        boolean overwrite = getConfigValue(config, "overwrite", false);
+
+        if (targetFile.exists() && !overwrite) {
+            return Collections.emptyList();
+        }
+        
+        ChangeRecord record = new ChangeRecord(
+                currentRecord.getOriginalName(),
+                targetFile.getName(),
+                currentRecord.getFileHandle(),
+                true,
+                targetFile.getAbsolutePath(),
+                OperationType.CONVERT,
+                param,
+                ExecStatus.PENDING
+        );
+        
+        return Collections.singletonList(record);
+    }
+
+    @Override
+    public void execute(ChangeRecord record, 
+        StrategyConfigDTO config, 
+        ExecutionContext context) throws Exception {
+        
+        if (!"CONVERT".equals(record.getOperationType())) {
+            return;
+        }
+
+        String sourcePath = record.getFilePath();
+        String targetPath = record.getNewPath();
+        String ffmpegPath = getConfigValue(config, "ffmpegPath", "ffmpeg");
+
+        try {
+            File targetFile = new File(targetPath);
+            if (!targetFile.getParentFile().exists()) {
+                targetFile.getParentFile().mkdirs();
+            }
+
+            context.logInfo("Converting audio: " + sourcePath + " -> " + targetPath);
+
+            record.setStatus("SUCCESS");
+        } catch (Exception e) {
+            context.logError("Error converting audio " + sourcePath + ": " + e.getMessage());
+            record.setStatus("ERROR");
+            record.setFailReason(e.getMessage());
+        }
+    }
+
+    private boolean isAudioFile(File file) {
+        String name = file.getName().toLowerCase();
+        return name.endsWith(".mp3") || name.endsWith(".flac") || name.endsWith(".wav") || 
+               name.endsWith(".aac") || name.endsWith(".ogg") || name.endsWith(".m4a") || 
+               name.endsWith(".wma") || name.endsWith(".ape") || name.endsWith(".opus");
+    }
+
+    private Map<String, String> getParams(File parentDir, String fileName, StrategyConfigDTO config) {
+        Map<String, String> params = new HashMap<>();
+        String outputDirMode = getConfigValue(config, "outputDirMode", "subdirectory");
+        String outputPath = getConfigValue(config, "outputPath", "Convert - WAV");
+        String targetFormat = getConfigValue(config, "targetFormat", "wav_cd_standard");
+
+        params.put("parentPath", getOutputDirectory(parentDir, outputDirMode, outputPath));
+        params.put("format", getExtensionForFormat(targetFormat));
+
+        return params;
+    }
+
+    private String getOutputDirectory(File sourceFile, String outputDirMode, String outputPath) {
+        File parentDir = sourceFile.getParentFile();
+        if (parentDir == null) {
+            return outputPath;
+        }
+
+        switch (outputDirMode) {
+            case "subdirectory":
+                return parentDir.getPath() + File.separator + outputPath;
+            case "specified_dir":
+                return outputPath;
+            case "same_as_source":
+                return parentDir.getPath();
+            default:
+                return parentDir.getPath() + File.separator + outputPath;
+        }
+    }
+
+    @Override
     protected ChangeRecord createPreviewRecord(String filePath, StrategyConfigDTO config, ExecutionContext context) {
         String targetFormat = getConfigValue(config, "targetFormat", "wav_cd_standard");
         String outputDirMode = getConfigValue(config, "outputDirMode", "subdirectory");
@@ -218,13 +345,6 @@ public class AudioConverterStrategy extends AbstractConfigurableStrategy {
             context.logError("Error converting audio " + filePath + ": " + e.getMessage());
             return createChangeRecord(filePath, filePath, "ERROR");
         }
-    }
-
-    private boolean isAudioFile(File file) {
-        String name = file.getName().toLowerCase();
-        return name.endsWith(".mp3") || name.endsWith(".flac") || name.endsWith(".wav") || 
-               name.endsWith(".aac") || name.endsWith(".ogg") || name.endsWith(".m4a") || 
-               name.endsWith(".wma") || name.endsWith(".ape") || name.endsWith(".opus");
     }
 
     private String getTargetFilePath(File sourceFile, String targetFormat, String outputDirMode, String outputPath, ExecutionContext context) {

@@ -1,12 +1,19 @@
 package com.filemanager.plugin.impl.cuefilerename;
 
 import com.filemanager.domain.dto.StrategyConfigDTO;
-import com.filemanager.domain.dto.EnumOptionDTO;
 import com.filemanager.domain.entity.ChangeRecord;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
 import com.filemanager.plugin.ExecutionContext;
-import com.filemanager.plugin.impl.filerename.enums.RenameMode;
+import com.filemanager.domain.enums.ScanTarget;
+import com.filemanager.plugin.util.FileRegexReplaceUtil;
+import com.filemanager.plugin.util.FileStatisticInfo;
+import org.apache.commons.lang3.StringUtils;
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class CueFileRenameStrategy extends AbstractConfigurableStrategy {
 
@@ -21,12 +28,12 @@ public class CueFileRenameStrategy extends AbstractConfigurableStrategy {
 
     @Override
     public String getName() {
-        return "CUE文件重命名";
+        return "专辑文件重命名";
     }
 
     @Override
     public String getDescription() {
-        return "根据音频文件名或目录名重命名CUE文件";
+        return "为了解决cue文件在部分软件下，由于中文命名导致的无法加载的问题，支持统一调整cue及对应的音频文件命名。请同时扫描cue文件和音频文件，否则不生效。";
     }
 
     @Override
@@ -35,129 +42,165 @@ public class CueFileRenameStrategy extends AbstractConfigurableStrategy {
     }
 
     @Override
-    public java.util.List<com.filemanager.domain.dto.PreconditionGroupDTO> getDefaultPreconditionGroups() {
-        return new java.util.ArrayList<>();
+    public ScanTarget getTargetType() {
+        return ScanTarget.FOLDERS_ONLY;
     }
 
     @Override
     protected void initConfigFields() {
-        addEnumConfigField("renameMode", "重命名模式", "select", (Object) RenameMode.BASED_ON_AUDIO_FILE.getCode(), 
-            "CUE文件的重命名模式", true, 
-            getRenameModeOptions());
-        addConfigField("customTemplate", "自定义模板", "string", (Object) "", 
-            "自定义重命名模板", false);
+        addConfigField("mode", "修改模式", "select", "全自动修改", 
+            "修改模式", false);
+        addConfigField("fileName", "文件名前缀", "string", "album", 
+            "文件名前缀", false);
     }
 
     @Override
     protected void initDefaultConfigValues(StrategyConfigDTO config) {
-        setConfigValue(config, "renameMode", (Object) RenameMode.BASED_ON_AUDIO_FILE.getCode());
-        setConfigValue(config, "customTemplate", (Object) "");
+        setConfigValue(config, "mode", "全自动修改");
+        setConfigValue(config, "fileName", "album");
+    }
+
+    @Override
+    public List<ChangeRecord> analyze(ChangeRecord currentRecord, 
+        List<ChangeRecord> inputRecords, 
+        List<File> rootDirs,
+        StrategyConfigDTO config,
+        ExecutionContext context) {
+        
+        if (currentRecord.getFileHandle().isFile()) {
+            return Collections.emptyList();
+        }
+        
+        File[] filesUnderDir = currentRecord.getFileHandle().listFiles();
+        if (filesUnderDir == null || filesUnderDir.length == 0) {
+            return Collections.emptyList();
+        }
+        
+        String pMode = getConfigValue(config, "mode", "全自动修改");
+        String pFileName = getConfigValue(config, "fileName", "album");
+        
+        Map<String, File> cueFiles = Arrays.stream(filesUnderDir)
+                .filter(file -> StringUtils.endsWithIgnoreCase(file.getName(), ".cue"))
+                .filter(file -> FileRegexReplaceUtil.hasMatchingLine(file.getAbsolutePath()))
+                .collect(Collectors.toMap(file -> FileStatisticInfo.create(file).oriName, Function.identity()));
+        
+        if (cueFiles.isEmpty()) {
+            return Collections.emptyList();
+        }
+        
+        Map<String, File> targetFiles = new HashMap<>();
+        Arrays.stream(filesUnderDir)
+                .forEach(file -> {
+                    FileStatisticInfo statisticInfo = FileStatisticInfo.create(file);
+                    if (!statisticInfo.isMusic()) {
+                        return;
+                    }
+                    if (cueFiles.containsKey(statisticInfo.oriName)) {
+                        targetFiles.put(statisticInfo.oriName, file);
+                    }
+                });
+        
+        int count = 0;
+        List<String> cueNames = new ArrayList<>(targetFiles.keySet());
+        cueNames.sort(String::compareToIgnoreCase);
+        
+        for (String ky : cueNames) {
+            ChangeRecord cueFileRecord = getTargetFile(cueFiles.get(ky), inputRecords);
+            ChangeRecord musicFileRecord = getTargetFile(targetFiles.get(ky), inputRecords);
+            
+            if (cueFileRecord != null && musicFileRecord != null) {
+                count++;
+                FileStatisticInfo statisticInfo = FileStatisticInfo.create(musicFileRecord.getFileHandle());
+                String fileNameRank = pFileName + "disk(" + count + ")";
+                
+                if (targetFiles.size() == 1) {
+                    fileNameRank = pFileName;
+                }
+                
+                String targetFileName = fileNameRank + "." + statisticInfo.type;
+                musicFileRecord.setNewName(targetFileName);
+                musicFileRecord.setNewPath(new File(currentRecord.getFileHandle(), targetFileName).getAbsolutePath());
+                musicFileRecord.setChanged(true);
+                musicFileRecord.setOperationType("CUE_RENAME");
+                
+                cueFileRecord.setNewName(fileNameRank + ".cue");
+                cueFileRecord.setNewPath(new File(currentRecord.getFileHandle(), pFileName + ".cue").getAbsolutePath());
+                cueFileRecord.setChanged(true);
+                cueFileRecord.getExtraParams().put("cue_target_name", targetFileName);
+                cueFileRecord.setOperationType("CUE_RENAME");
+            }
+        }
+        
+        return Collections.emptyList();
+    }
+
+    @Override
+    public void execute(ChangeRecord record, 
+        StrategyConfigDTO config, 
+        ExecutionContext context) throws Exception {
+        
+        if (!"CUE_RENAME".equals(record.getOperationType())) {
+            return;
+        }
+        
+        File sourceFile = record.getFileHandle();
+        File targetFile = new File(record.getNewPath());
+        
+        if (!targetFile.getParentFile().exists()) {
+            targetFile.getParentFile().mkdirs();
+        }
+        
+        Files.move(sourceFile.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        
+        if (targetFile.getName().endsWith(".cue")) {
+            String cueTargetName = record.getExtraParams().get("cue_target_name");
+            if (cueTargetName != null) {
+                FileRegexReplaceUtil.replaceWithAutoCharset(targetFile.getAbsolutePath(),
+                        "FILE \"" + cueTargetName + "\" WAVE");
+            }
+        }
+    }
+
+    private ChangeRecord getTargetFile(File file, List<ChangeRecord> inputRecords) {
+        for (ChangeRecord rec : inputRecords) {
+            if (rec.getFileHandle().equals(file)) {
+                return rec;
+            }
+        }
+        return null;
     }
 
     @Override
     protected ChangeRecord createPreviewRecord(String filePath, StrategyConfigDTO config, ExecutionContext context) {
-        String renameMode = getConfigValue(config, "renameMode", "based_on_audio_file");
-        
         ChangeRecord record = createChangeRecord(filePath, filePath, "PENDING");
-        record.setOperationType("RENAME");
-        record.setReason("CUE文件重命名: " + renameMode);
+        record.setOperationType("CUE_RENAME");
         return record;
     }
 
     @Override
     protected ChangeRecord executeForFile(String filePath, StrategyConfigDTO config, ExecutionContext context) {
-        String renameMode = getConfigValue(config, "renameMode", "based_on_audio_file");
-        String customTemplate = getConfigValue(config, "customTemplate", "");
-        
         File sourceFile = new File(filePath);
         if (!sourceFile.exists()) {
             context.logWarn("File does not exist: " + filePath);
             return createChangeRecord(filePath, filePath, "SKIPPED");
         }
         
-        if (!filePath.toLowerCase().endsWith(".cue")) {
-            context.logDebug("Not a CUE file: " + filePath);
-            return createChangeRecord(filePath, filePath, "SKIPPED");
-        }
+        ChangeRecord record = createChangeRecord(filePath, filePath, "PENDING");
+        record.setFileHandle(sourceFile);
         
         try {
-            String newName = generateNewName(sourceFile, renameMode, customTemplate, context);
-            if (newName == null || newName.equals(sourceFile.getName())) {
-                context.logDebug("No rename needed for: " + filePath);
-                return createChangeRecord(filePath, filePath, "SKIPPED");
+            if ("CUE_RENAME".equals(record.getOperationType())) {
+                execute(record, config, context);
+                record.setStatus("SUCCESS");
+            } else {
+                record.setStatus("SKIPPED");
             }
-            
-            File targetFile = new File(sourceFile.getParent(), newName);
-            
-            if (targetFile.exists()) {
-                context.logWarn("Target file already exists: " + targetFile.getPath());
-                return createChangeRecord(filePath, filePath, "SKIPPED");
-            }
-            
-            sourceFile.renameTo(targetFile);
-            
-            context.logInfo("Renamed CUE file: " + filePath + " -> " + targetFile.getPath());
-            ChangeRecord record = createChangeRecord(filePath, targetFile.getPath(), "SUCCESS");
-            record.setOperationType("RENAME");
-            record.setReason("CUE文件重命名: " + renameMode);
-            return record;
         } catch (Exception e) {
-            context.logError("Error renaming CUE file " + filePath + ": " + e.getMessage());
-            return createChangeRecord(filePath, filePath, "ERROR");
-        }
-    }
-
-    private String generateNewName(File cueFile, String renameMode, String customTemplate, ExecutionContext context) {
-        File parentDir = cueFile.getParentFile();
-        if (parentDir == null) {
-            return cueFile.getName();
+            context.logError("Error processing file " + filePath + ": " + e.getMessage());
+            record.setStatus("ERROR");
+            record.setFailReason(e.getMessage());
         }
         
-        switch (renameMode) {
-            case "based_on_audio_file":
-                return findAudioBasedName(cueFile, parentDir, context);
-            case "based_on_directory":
-                return parentDir.getName() + ".cue";
-            case "custom_template":
-                if (customTemplate != null && !customTemplate.isEmpty()) {
-                    return customTemplate + ".cue";
-                }
-                return cueFile.getName();
-            default:
-                return cueFile.getName();
-        }
-    }
-
-    private String findAudioBasedName(File cueFile, File parentDir, ExecutionContext context) {
-        File[] files = parentDir.listFiles();
-        if (files == null) {
-            return cueFile.getName();
-        }
-        
-        for (File file : files) {
-            if (file.isFile() && !file.getName().toLowerCase().endsWith(".cue")) {
-                String fileName = file.getName();
-                int lastDotIndex = fileName.lastIndexOf('.');
-                if (lastDotIndex > 0) {
-                    return fileName.substring(0, lastDotIndex) + ".cue";
-                }
-            }
-        }
-        
-        return cueFile.getName();
-    }
-    
-    private java.util.List<EnumOptionDTO> getRenameModeOptions() {
-        java.util.List<EnumOptionDTO> options = new java.util.ArrayList<>();
-        for (RenameMode mode : RenameMode.values()) {
-            EnumOptionDTO option = new EnumOptionDTO();
-            option.setValue(mode.getCode());
-            option.setLabel(mode.getNameZh());
-            option.setNameEn(mode.getNameEn());
-            option.setDescriptionZh(mode.getDescriptionZh());
-            option.setDescriptionEn(mode.getDescriptionEn());
-            options.add(option);
-        }
-        return options;
+        return record;
     }
 }
