@@ -3,6 +3,7 @@ import 'package:filemanager_flutter/models/precondition.dart';
 import 'package:filemanager_flutter/models/precondition_group.dart';
 import 'package:filemanager_flutter/models/precondition_field_config.dart';
 import 'package:filemanager_flutter/widgets/precondition_group_item.dart';
+import 'package:filemanager_flutter/utils/theme_utils.dart';
 
 class ComposePreconditionPanel extends StatefulWidget {
   final List<PreconditionGroup> preconditionGroups;
@@ -102,9 +103,9 @@ class _ComposePreconditionPanelState extends State<ComposePreconditionPanel> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: ThemeUtils.getBackgroundColor(context).withOpacity(0.5),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: ThemeUtils.getBorderColor(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -123,7 +124,7 @@ class _ComposePreconditionPanelState extends State<ComposePreconditionPanel> {
   Widget _buildHeader() {
     return Row(
       children: [
-        Icon(Icons.filter_list, color: Colors.blue.shade700, size: 18),
+        Icon(Icons.filter_list, color: ThemeUtils.getPrimaryColor(context), size: 18),
         const SizedBox(width: 8),
         const Text(
           '前置条件配置',
@@ -136,7 +137,7 @@ class _ComposePreconditionPanelState extends State<ComposePreconditionPanel> {
         const SizedBox(width: 8),
         Tooltip(
           message: '设置文件处理的前置条件，只有满足条件的文件才会被处理',
-          child: Icon(Icons.help_outline, color: Colors.grey.shade600, size: 16),
+          child: Icon(Icons.help_outline, color: ThemeUtils.getTextSecondaryColor(context), size: 16),
         ),
       ],
     );
@@ -148,16 +149,16 @@ class _ComposePreconditionPanelState extends State<ComposePreconditionPanel> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300, style: BorderStyle.solid),
+        border: Border.all(color: ThemeUtils.getBorderColor(context), style: BorderStyle.solid),
       ),
       child: Column(
         children: [
-          Icon(Icons.inbox, color: Colors.grey.shade400, size: 40),
+          Icon(Icons.inbox, color: ThemeUtils.getTextSecondaryColor(context), size: 40),
           const SizedBox(height: 10),
           Text(
             '暂无前置条件',
             style: TextStyle(
-              color: Colors.grey.shade600,
+              color: ThemeUtils.getTextSecondaryColor(context),
               fontSize: 13,
             ),
           ),
@@ -165,7 +166,7 @@ class _ComposePreconditionPanelState extends State<ComposePreconditionPanel> {
           Text(
             '点击下方按钮添加条件组开始配置',
             style: TextStyle(
-              color: Colors.grey.shade500,
+              color: ThemeUtils.getTextSecondaryColor(context),
               fontSize: 11,
             ),
           ),
@@ -198,7 +199,7 @@ class _ComposePreconditionPanelState extends State<ComposePreconditionPanel> {
       icon: const Icon(Icons.add_circle_outline, size: 18),
       label: const Text('添加条件组', style: TextStyle(fontSize: 13)),
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.blue.shade700,
+        backgroundColor: ThemeUtils.getPrimaryColor(context),
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         shape: RoundedRectangleBorder(

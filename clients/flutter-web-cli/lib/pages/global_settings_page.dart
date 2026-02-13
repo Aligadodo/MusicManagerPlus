@@ -233,7 +233,7 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('全局设置'),
+        title: const Text(''),
       ),
       body: Row(
         children: [
@@ -255,26 +255,16 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
               padding: const EdgeInsets.all(20.0),
               child: ListView(
                 children: [
-                  if (_selectedSection == 0) ...[
+                  if (_selectedSection == 0)
                     _buildThreadPoolSection(theme),
-                    const SizedBox(height: 30),
-                  ],
-                  if (_selectedSection ==1) ...[
+                  if (_selectedSection ==1)
                     _buildRunSettingsSection(theme),
-                    const SizedBox(height: 30),
-                  ],
-                  if (_selectedSection == 2) ...[
+                  if (_selectedSection == 2)
                     _buildScanSettingsSection(theme),
-                    const SizedBox(height: 30),
-                  ],
-                  if (_selectedSection == 3) ...[
+                  if (_selectedSection == 3)
                     _buildFilterRulesSection(theme),
-                    const SizedBox(height: 30),
-                  ],
-                  if (_selectedSection == 4) ...[
+                  if (_selectedSection == 4)
                     _buildFileTypeTreeSection(theme),
-                    const SizedBox(height: 30),
-                  ],
                 ],
               ),
             ),
@@ -323,7 +313,6 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 16),
             Row(
               key: const ValueKey('preview_threads_row'),
               children: [
@@ -410,7 +399,6 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 16),
             Row(
               key: const ValueKey('scan_mode_row'),
               children: [
@@ -535,7 +523,6 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 16),
             Row(
               key: const ValueKey('add_filter_rule_row'),
               children: [
@@ -627,7 +614,6 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -956,7 +942,6 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 16),
             Row(
               key: const ValueKey('auto_refresh_row'),
               children: [

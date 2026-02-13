@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:filemanager_flutter/models/precondition.dart';
 import 'package:filemanager_flutter/models/precondition_field_config.dart';
 import 'package:filemanager_flutter/widgets/selectable_text_widget.dart';
+import 'package:filemanager_flutter/utils/theme_utils.dart';
 
 class PreconditionItem extends StatefulWidget {
   final int groupIndex;
@@ -154,12 +155,12 @@ class _PreconditionItemState extends State<PreconditionItem> {
       child: Container(
         margin: const EdgeInsets.only(bottom: 6),
         decoration: BoxDecoration(
-          color: _isExpanded ? Colors.blue.shade50 : Colors.white,
+          color: _isExpanded ? ThemeUtils.getPrimaryColor(context).withOpacity(0.1) : Colors.white,
           borderRadius: BorderRadius.circular(6),
           border: Border.all(
             color: validationError != null 
-              ? Colors.red.shade300 
-              : (_isExpanded ? Colors.blue.shade200 : Colors.grey.shade200),
+              ? ThemeUtils.getErrorColor(context).withOpacity(0.5)
+              : (_isExpanded ? ThemeUtils.getPrimaryColor(context).withOpacity(0.3) : ThemeUtils.getBorderColor(context)),
           ),
         ),
         child: Column(
@@ -168,7 +169,7 @@ class _PreconditionItemState extends State<PreconditionItem> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: BoxDecoration(
-                color: _isExpanded ? Colors.blue.shade100 : Colors.grey.shade50,
+                color: _isExpanded ? ThemeUtils.getPrimaryColor(context).withOpacity(0.2) : ThemeUtils.getBackgroundColor(context).withOpacity(0.5),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(6),
                   topRight: Radius.circular(6),
@@ -178,7 +179,7 @@ class _PreconditionItemState extends State<PreconditionItem> {
                 children: [
                   Icon(
                     _isExpanded ? Icons.expand_less : Icons.expand_more,
-                    color: Colors.grey.shade600,
+                    color: ThemeUtils.getTextSecondaryColor(context),
                     size: 16,
                   ),
                   const SizedBox(width: 6),
@@ -188,13 +189,13 @@ class _PreconditionItemState extends State<PreconditionItem> {
                       style: TextStyle(
                         fontWeight: FontWeight.w500,
                         fontSize: 12,
-                        color: Colors.grey.shade800,
+                        color: ThemeUtils.getTextPrimaryColor(context),
                       ),
                     ),
                   ),
                   if (!_isExpanded)
                     IconButton(
-                      icon: Icon(Icons.edit, color: Colors.blue.shade400, size: 16),
+                      icon: Icon(Icons.edit, color: ThemeUtils.getPrimaryColor(context).withOpacity(0.7), size: 16),
                       onPressed: () {
                         setState(() {
                           _isExpanded = true;
@@ -206,7 +207,7 @@ class _PreconditionItemState extends State<PreconditionItem> {
                     ),
                   const SizedBox(width: 4),
                   IconButton(
-                    icon: Icon(Icons.close, color: Colors.red.shade400, size: 16),
+                    icon: Icon(Icons.close, color: ThemeUtils.getErrorColor(context).withOpacity(0.7), size: 16),
                     onPressed: () => widget.onDelete(widget.groupIndex, widget.conditionIndex),
                     tooltip: '删除条件',
                     padding: EdgeInsets.zero,
@@ -223,17 +224,17 @@ class _PreconditionItemState extends State<PreconditionItem> {
                     Row(
                       children: [
                         Expanded(
-                          child: _buildFieldDropdown(fieldConfig),
+                          child: _buildFieldDropdown(context, fieldConfig),
                         ),
                         const SizedBox(width: 8),
                         if (fieldConfig.code == 'fileType') ...[
                           Expanded(
-                            child: _buildSubFieldDropdown(fieldConfig),
+                            child: _buildSubFieldDropdown(context, fieldConfig),
                           ),
                           const SizedBox(width: 8),
                         ],
                         Expanded(
-                          child: _buildOperatorDropdown(fieldConfig, subFieldConfig),
+                          child: _buildOperatorDropdown(context, fieldConfig, subFieldConfig),
                         ),
                       ],
                     ),
@@ -242,20 +243,20 @@ class _PreconditionItemState extends State<PreconditionItem> {
                         fieldConfig.operatorRequiresValue(widget.condition.operator)))
                     ...[
                       const SizedBox(height: 8),
-                      _buildValueInput(operatorConfig),
+                      _buildValueInput(context, operatorConfig),
                     ],
                     if (validationError != null) ...[
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          Icon(Icons.warning_amber_rounded, color: Colors.amber.shade700, size: 14),
+                          Icon(Icons.warning_amber_rounded, color: ThemeUtils.getWarningColor(context), size: 14),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
                               validationError,
                               style: TextStyle(
                                 fontSize: 11,
-                                color: Colors.amber.shade700,
+                                color: ThemeUtils.getWarningColor(context),
                               ),
                             ),
                           ),
@@ -287,7 +288,7 @@ class _PreconditionItemState extends State<PreconditionItem> {
                           icon: const Icon(Icons.check, size: 16),
                           label: const Text('保存', style: TextStyle(fontSize: 12)),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green.shade600,
+                            backgroundColor: ThemeUtils.getSuccessColor(context),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             minimumSize: const Size(0, 0),
@@ -308,12 +309,12 @@ class _PreconditionItemState extends State<PreconditionItem> {
     );
   }
 
-  Widget _buildFieldDropdown(PreconditionFieldConfig fieldConfig) {
+  Widget _buildFieldDropdown(BuildContext context, PreconditionFieldConfig fieldConfig) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: ThemeUtils.getBorderColor(context)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: DropdownButton<String>(
@@ -353,12 +354,12 @@ class _PreconditionItemState extends State<PreconditionItem> {
         style: const TextStyle(fontSize: 12),
         dropdownColor: Colors.white,
         underline: const SizedBox.shrink(),
-        icon: Icon(Icons.arrow_drop_down, color: Colors.grey.shade600, size: 20),
+        icon: Icon(Icons.arrow_drop_down, color: ThemeUtils.getTextSecondaryColor(context), size: 20),
       ),
     );
   }
 
-  Widget _buildSubFieldDropdown(PreconditionFieldConfig fieldConfig) {
+  Widget _buildSubFieldDropdown(BuildContext context, PreconditionFieldConfig fieldConfig) {
     final subFields = fieldConfig.subFields ?? [];
     final subFieldCodes = subFields.map((sf) => sf.code).toList();
     final currentSubField = widget.condition.subField != null && subFieldCodes.contains(widget.condition.subField)
@@ -369,7 +370,7 @@ class _PreconditionItemState extends State<PreconditionItem> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: ThemeUtils.getBorderColor(context)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: DropdownButton<String>(
@@ -397,12 +398,12 @@ class _PreconditionItemState extends State<PreconditionItem> {
         style: const TextStyle(fontSize: 12),
         dropdownColor: Colors.white,
         underline: const SizedBox.shrink(),
-        icon: Icon(Icons.arrow_drop_down, color: Colors.grey.shade600, size: 20),
+        icon: Icon(Icons.arrow_drop_down, color: ThemeUtils.getTextSecondaryColor(context), size: 20),
       ),
     );
   }
 
-  Widget _buildOperatorDropdown(PreconditionFieldConfig fieldConfig, PreconditionSubFieldConfig? subFieldConfig) {
+  Widget _buildOperatorDropdown(BuildContext context, PreconditionFieldConfig fieldConfig, PreconditionSubFieldConfig? subFieldConfig) {
     final operators = subFieldConfig != null ? subFieldConfig.operators : fieldConfig.operators;
     final operatorCodes = operators.map((op) => op.code).toList();
     final currentOperator = operatorCodes.contains(widget.condition.operator) 
@@ -413,7 +414,7 @@ class _PreconditionItemState extends State<PreconditionItem> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: ThemeUtils.getBorderColor(context)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: DropdownButton<String>(
@@ -438,12 +439,12 @@ class _PreconditionItemState extends State<PreconditionItem> {
         style: const TextStyle(fontSize: 12),
         dropdownColor: Colors.white,
         underline: const SizedBox.shrink(),
-        icon: Icon(Icons.arrow_drop_down, color: Colors.grey.shade600, size: 20),
+        icon: Icon(Icons.arrow_drop_down, color: ThemeUtils.getTextSecondaryColor(context), size: 20),
       ),
     );
   }
 
-  Widget _buildValueInput(PreconditionOperatorConfig operatorConfig) {
+  Widget _buildValueInput(BuildContext context, PreconditionOperatorConfig operatorConfig) {
     return TextField(
       controller: _valueController,
       onChanged: (value) {
@@ -460,15 +461,15 @@ class _PreconditionItemState extends State<PreconditionItem> {
         hintText: operatorConfig.valuePlaceholder,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(4),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: ThemeUtils.getBorderColor(context)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(4),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: ThemeUtils.getBorderColor(context)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(4),
-          borderSide: const BorderSide(color: Colors.blue, width: 1.5),
+          borderSide: BorderSide(color: ThemeUtils.getPrimaryColor(context), width: 1.5),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         isDense: true,

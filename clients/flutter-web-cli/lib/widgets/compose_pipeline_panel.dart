@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:filemanager_flutter/models/strategy_info.dart';
 import 'package:filemanager_flutter/api/pipeline_service.dart';
 import 'package:filemanager_flutter/widgets/pipeline_list_item.dart';
+import 'package:filemanager_flutter/utils/theme_utils.dart';
 
 class ComposePipelinePanel extends StatefulWidget {
   final List<StrategyInfo> pipelineStrategies;
@@ -78,11 +79,7 @@ class _ComposePipelinePanelState extends State<ComposePipelinePanel> {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
+      decoration: ThemeUtils.getCardDecoration(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -101,7 +98,7 @@ class _ComposePipelinePanelState extends State<ComposePipelinePanel> {
   Widget _buildHeader() {
     return Row(
       children: [
-        Icon(Icons.account_tree, color: Colors.blue.shade700, size: 18),
+        Icon(Icons.account_tree, color: ThemeUtils.getPrimaryColor(context), size: 18),
         const SizedBox(width: 8),
         const Text(
           '流水线配置',
@@ -114,7 +111,7 @@ class _ComposePipelinePanelState extends State<ComposePipelinePanel> {
         const SizedBox(width: 8),
         Tooltip(
           message: '配置文件处理的流水线步骤，按顺序执行',
-          child: Icon(Icons.help_outline, color: Colors.grey.shade600, size: 16),
+          child: Icon(Icons.help_outline, color: ThemeUtils.getTextSecondaryColor(context), size: 16),
         ),
       ],
     );
@@ -129,7 +126,7 @@ class _ComposePipelinePanelState extends State<ComposePipelinePanel> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: Colors.grey.shade300),
+            border: Border.all(color: ThemeUtils.getBorderColor(context)),
           ),
           child: DropdownButton<StrategyInfo>(
             hint: const Text('选择功能...', style: TextStyle(fontSize: 12)),
@@ -148,7 +145,7 @@ class _ComposePipelinePanelState extends State<ComposePipelinePanel> {
             style: const TextStyle(fontSize: 12),
             dropdownColor: Colors.white,
             underline: const SizedBox.shrink(),
-            icon: Icon(Icons.arrow_drop_down, color: Colors.grey.shade600, size: 20),
+            icon: Icon(Icons.arrow_drop_down, color: ThemeUtils.getTextSecondaryColor(context), size: 20),
             isDense: true,
           ),
         ),
@@ -158,7 +155,7 @@ class _ComposePipelinePanelState extends State<ComposePipelinePanel> {
           icon: const Icon(Icons.add, size: 16),
           label: const Text('添加步骤', style: TextStyle(fontSize: 12)),
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blue,
+            backgroundColor: ThemeUtils.getPrimaryColor(context),
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             shape: RoundedRectangleBorder(
@@ -177,7 +174,7 @@ class _ComposePipelinePanelState extends State<ComposePipelinePanel> {
         child: Text(
           '暂无流水线步骤',
           style: TextStyle(
-            color: Colors.grey.shade400,
+            color: ThemeUtils.getTextSecondaryColor(context),
             fontSize: 13,
           ),
         ),

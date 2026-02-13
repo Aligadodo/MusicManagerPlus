@@ -12,6 +12,7 @@ import 'package:filemanager_flutter/pages/preview_page.dart';
 import 'package:filemanager_flutter/widgets/compose_directory_panel.dart';
 import 'package:filemanager_flutter/widgets/compose_pipeline_panel.dart';
 import 'package:filemanager_flutter/widgets/compose_config_panel.dart';
+import 'package:filemanager_flutter/utils/theme_utils.dart';
 
 class ComposePage extends ConsumerStatefulWidget {
   const ComposePage({super.key});
@@ -204,20 +205,17 @@ class _ComposePageState extends ConsumerState<ComposePage> {
     return Container(
       key: ValueKey(key),
       padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
+      decoration: ThemeUtils.getCardDecoration(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: ThemeUtils.getTextPrimaryColor(context),
             ),
           ),
           const SizedBox(height: 8),
@@ -225,7 +223,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
             description,
             style: TextStyle(
               fontSize: 12,
-              color: Colors.grey.shade600,
+              color: ThemeUtils.getTextSecondaryColor(context),
             ),
           ),
         ],

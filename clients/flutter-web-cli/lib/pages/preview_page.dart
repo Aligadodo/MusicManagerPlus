@@ -9,6 +9,7 @@ import '../models/change_record.dart';
 import '../models/source_directory.dart';
 import '../models/strategy_info.dart';
 import '../utils/tooltip_utils.dart';
+import '../utils/theme_utils.dart';
 
 // 导入main.dart中的taskStateProvider
 import '../main.dart';
@@ -411,7 +412,6 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
                 ],
               ),
             ),
-            _buildActionButtons(),
             _buildStatusBar(),
           ],
         ),
@@ -582,11 +582,7 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
   Widget _buildStatusBar() {
     return Container(
       padding: const EdgeInsets.all(12.0),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(8),
-        color: Colors.grey.shade50,
-      ),
+      decoration: ThemeUtils.getCardDecoration(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -614,10 +610,10 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
               if (_taskState.isCompleted)
-                const Icon(
+                Icon(
                   Icons.check_circle,
                   size: 20,
-                  color: Colors.green,
+                  color: ThemeUtils.getSuccessColor(context),
                 ),
               IconButton(
                 icon: Icon(
@@ -792,51 +788,6 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
       case LocalTaskState.cancelled:
         return '已中止';
     }
-  }
-
-  Widget _buildActionButtons() {
-    return Container(
-      padding: const EdgeInsets.all(12.0),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(8),
-        color: Colors.grey.shade50,
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          ElevatedButton.icon(
-            onPressed: _taskState.isRunning ? null : _analyzePipeline,
-            icon: const Icon(Icons.visibility),
-            label: const Text('预览'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-            ),
-          ),
-          const SizedBox(width: 10),
-          ElevatedButton.icon(
-            onPressed: _taskState.isRunning || _taskState != LocalTaskState.previewCompleted ? null : _executePipeline,
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('执行'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-            ),
-          ),
-          const SizedBox(width: 10),
-          ElevatedButton.icon(
-            onPressed: _taskState.isRunning ? _stopPipeline : null,
-            icon: const Icon(Icons.stop),
-            label: const Text('停止'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _buildPreviewTable() {

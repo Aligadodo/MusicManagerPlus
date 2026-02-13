@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:filemanager_flutter/models/source_directory.dart';
+import 'package:filemanager_flutter/utils/theme_utils.dart';
 
 class DirectoryListItem extends StatelessWidget {
   final SourceDirectory directory;
@@ -25,12 +26,12 @@ class DirectoryListItem extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(6),
         border: Border(
-          bottom: BorderSide(color: Colors.grey.shade300),
+          bottom: BorderSide(color: ThemeUtils.getBorderColor(context)),
         ),
       ),
       child: Row(
         children: [
-          Icon(Icons.folder, color: Colors.blue.shade600, size: 20),
+          Icon(Icons.folder, color: ThemeUtils.getPrimaryColor(context), size: 20),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
@@ -47,7 +48,7 @@ class DirectoryListItem extends StatelessWidget {
                 Text(
                   directory.path,
                   style: TextStyle(
-                    color: Colors.grey.shade600,
+                    color: ThemeUtils.getTextSecondaryColor(context),
                     fontSize: 11,
                   ),
                   maxLines: 1,

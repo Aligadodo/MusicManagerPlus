@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:filemanager_flutter/models/strategy_info.dart';
+import 'package:filemanager_flutter/utils/theme_utils.dart';
 
 class PipelineListItem extends StatelessWidget {
   final StrategyInfo strategy;
@@ -26,10 +27,10 @@ class PipelineListItem extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
       decoration: BoxDecoration(
-        color: isSelected ? Colors.blue.withOpacity(0.1) : Colors.white,
+        color: isSelected ? ThemeUtils.getPrimaryColor(context).withOpacity(0.1) : Colors.white,
         borderRadius: BorderRadius.circular(6),
         border: Border.all(
-          color: isSelected ? Colors.blue : Colors.grey.shade300,
+          color: isSelected ? ThemeUtils.getPrimaryColor(context) : ThemeUtils.getBorderColor(context),
         ),
       ),
       child: InkWell(
@@ -41,7 +42,7 @@ class PipelineListItem extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 14,
-                backgroundColor: Colors.blue,
+                backgroundColor: ThemeUtils.getPrimaryColor(context),
                 child: Text(
                   '${index + 1}',
                   style: const TextStyle(color: Colors.white, fontSize: 12),
@@ -66,7 +67,7 @@ class PipelineListItem extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 11,
-                        color: Colors.grey.shade600,
+                        color: ThemeUtils.getTextSecondaryColor(context),
                       ),
                     ),
                   ],

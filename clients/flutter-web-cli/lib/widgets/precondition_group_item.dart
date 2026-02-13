@@ -3,6 +3,7 @@ import 'package:filemanager_flutter/models/precondition.dart';
 import 'package:filemanager_flutter/models/precondition_group.dart';
 import 'package:filemanager_flutter/widgets/precondition_item.dart';
 import 'package:filemanager_flutter/widgets/selectable_text_widget.dart';
+import 'package:filemanager_flutter/utils/theme_utils.dart';
 
 class PreconditionGroupItem extends StatelessWidget {
   final int index;
@@ -41,7 +42,7 @@ class PreconditionGroupItem extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.blue.shade100),
+        border: Border.all(color: ThemeUtils.getPrimaryColor(context).withOpacity(0.3)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.03),
@@ -53,31 +54,31 @@ class PreconditionGroupItem extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildHeader(),
-          if (group.preconditions.isEmpty) _buildEmptyState(),
-          if (group.preconditions.isNotEmpty) _buildConditions(),
-          _buildAddButton(),
+          _buildHeader(context),
+          if (group.preconditions.isEmpty) _buildEmptyState(context),
+          if (group.preconditions.isNotEmpty) _buildConditions(context),
+          _buildAddButton(context),
         ],
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: ThemeUtils.getBackgroundColor(context).withOpacity(0.5),
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(8),
           topRight: Radius.circular(8),
         ),
         border: Border(
-          bottom: BorderSide(color: Colors.grey.shade200),
+          bottom: BorderSide(color: ThemeUtils.getBorderColor(context)),
         ),
       ),
       child: Row(
         children: [
-          Icon(Icons.folder_open, color: Colors.blue.shade600, size: 18),
+          Icon(Icons.folder_open, color: ThemeUtils.getPrimaryColor(context), size: 18),
           const SizedBox(width: 8),
           Expanded(
             child: SelectableTextWidget(
@@ -94,7 +95,7 @@ class PreconditionGroupItem extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: Colors.grey.shade300),
+              border: Border.all(color: ThemeUtils.getBorderColor(context)),
             ),
             child: DropdownButton<String>(
               value: group.logicType,
@@ -106,13 +107,13 @@ class PreconditionGroupItem extends StatelessWidget {
               style: const TextStyle(fontSize: 12),
               dropdownColor: Colors.white,
               underline: const SizedBox.shrink(),
-              icon: Icon(Icons.arrow_drop_down, color: Colors.grey.shade600, size: 18),
+              icon: Icon(Icons.arrow_drop_down, color: ThemeUtils.getTextSecondaryColor(context), size: 18),
               isDense: true,
             ),
           ),
           const SizedBox(width: 8),
           IconButton(
-            icon: Icon(Icons.delete_outline, color: Colors.red.shade400, size: 18),
+            icon: Icon(Icons.delete_outline, color: ThemeUtils.getErrorColor(context).withOpacity(0.7), size: 18),
             onPressed: () => onDelete(index),
             tooltip: '删除条件组',
             padding: EdgeInsets.zero,
@@ -123,18 +124,18 @@ class PreconditionGroupItem extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 20),
       child: Center(
         child: Column(
           children: [
-            Icon(Icons.rule, color: Colors.grey.shade400, size: 28),
+            Icon(Icons.rule, color: ThemeUtils.getTextSecondaryColor(context), size: 28),
             const SizedBox(height: 8),
             Text(
               '暂无条件',
               style: TextStyle(
-                color: Colors.grey.shade600,
+                color: ThemeUtils.getTextSecondaryColor(context),
                 fontSize: 12,
               ),
             ),
@@ -144,7 +145,7 @@ class PreconditionGroupItem extends StatelessWidget {
     );
   }
 
-  Widget _buildConditions() {
+  Widget _buildConditions(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(8),
       child: Column(
@@ -163,27 +164,27 @@ class PreconditionGroupItem extends StatelessWidget {
     );
   }
 
-  Widget _buildAddButton() {
+  Widget _buildAddButton(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: ThemeUtils.getBackgroundColor(context).withOpacity(0.5),
         borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(8),
           bottomRight: Radius.circular(8),
         ),
         border: Border(
-          top: BorderSide(color: Colors.grey.shade200),
+          top: BorderSide(color: ThemeUtils.getBorderColor(context)),
         ),
       ),
       child: SizedBox(
         width: double.infinity,
         child: OutlinedButton.icon(
           onPressed: () => onAddCondition(index),
-          icon: Icon(Icons.add, size: 16, color: Colors.green.shade700),
-          label: Text('添加条件', style: TextStyle(color: Colors.green.shade700, fontSize: 12)),
+          icon: Icon(Icons.add, size: 16, color: ThemeUtils.getSuccessColor(context)),
+          label: Text('添加条件', style: TextStyle(color: ThemeUtils.getSuccessColor(context), fontSize: 12)),
           style: OutlinedButton.styleFrom(
-            side: BorderSide(color: Colors.green.shade300),
+            side: BorderSide(color: ThemeUtils.getSuccessColor(context).withOpacity(0.5)),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(4),

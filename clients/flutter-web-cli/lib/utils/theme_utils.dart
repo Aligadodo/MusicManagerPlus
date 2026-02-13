@@ -112,26 +112,19 @@ class ThemeUtils {
     bool withBorder = true,
     bool withShadow = false,
   }) {
-    final decorations = <BoxDecoration>[{
-      'color': getCardColor(context),
-      if (withBorder) 'border': Border.all(color: getBorderColor(context)),
-      if (withShadow) 'boxShadow': [
+    return BoxDecoration(
+      color: getCardColor(context),
+      border: withBorder ? Border.all(color: getBorderColor(context)) : null,
+      boxShadow: withShadow ? [
         BoxShadow(
           color: Colors.black.withOpacity(0.1),
           spreadRadius: 1,
           blurRadius: 3,
           offset: const Offset(0, 2),
         ),
-      ],
-      'borderRadius': BorderRadius.circular(8),
-    }].map((d) => BoxDecoration(
-      color: d['color'] as Color,
-      border: d['border'] as Border?,
-      boxShadow: d['boxShadow'] as List<BoxShadow>?,
-      borderRadius: d['borderRadius'] as BorderRadius,
-    )).first;
-
-    return decorations;
+      ] : null,
+      borderRadius: BorderRadius.circular(8),
+    );
   }
 
   /// 获取错误卡片装饰

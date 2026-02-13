@@ -5,6 +5,7 @@ import 'package:filemanager_flutter/models/source_directory.dart';
 import 'package:filemanager_flutter/api/source_directory_service.dart';
 import 'package:filemanager_flutter/widgets/directory_list_item.dart';
 import 'package:filemanager_flutter/widgets/selectable_text_widget.dart';
+import 'package:filemanager_flutter/utils/theme_utils.dart';
 
 class ComposeDirectoryPanel extends StatefulWidget {
   final List<SourceDirectory> sourceDirectories;
@@ -201,11 +202,7 @@ class _ComposeDirectoryPanelState extends State<ComposeDirectoryPanel> {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
+      decoration: ThemeUtils.getCardDecoration(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -226,14 +223,14 @@ class _ComposeDirectoryPanelState extends State<ComposeDirectoryPanel> {
                     _buildSourceList(),
                     if (candidateData.isNotEmpty)
                       Container(
-                        color: Colors.blue.withOpacity(0.2),
+                        color: ThemeUtils.getPrimaryColor(context).withOpacity(0.2),
                         child: Center(
                           child: Text(
                             '释放以添加目录',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Colors.blue.shade700,
+                              color: ThemeUtils.getPrimaryColor(context),
                             ),
                           ),
                         ),
@@ -251,7 +248,7 @@ class _ComposeDirectoryPanelState extends State<ComposeDirectoryPanel> {
   Widget _buildHeader() {
     return Row(
       children: [
-        Icon(Icons.folder_open, color: Colors.blue.shade700, size: 18),
+        Icon(Icons.folder_open, color: ThemeUtils.getPrimaryColor(context), size: 18),
         const SizedBox(width: 8),
         const Text(
           '源目录配置',
@@ -264,7 +261,7 @@ class _ComposeDirectoryPanelState extends State<ComposeDirectoryPanel> {
         const SizedBox(width: 8),
         Tooltip(
           message: '添加要处理的源目录',
-          child: Icon(Icons.help_outline, color: Colors.grey.shade600, size: 16),
+          child: Icon(Icons.help_outline, color: ThemeUtils.getTextSecondaryColor(context), size: 16),
         ),
       ],
     );
@@ -279,7 +276,7 @@ class _ComposeDirectoryPanelState extends State<ComposeDirectoryPanel> {
           icon: const Icon(Icons.add, size: 16),
           label: const Text('添加目录', style: TextStyle(fontSize: 12)),
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blue,
+            backgroundColor: ThemeUtils.getPrimaryColor(context),
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             shape: RoundedRectangleBorder(
@@ -287,13 +284,13 @@ class _ComposeDirectoryPanelState extends State<ComposeDirectoryPanel> {
             ),
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width:8),
         ElevatedButton.icon(
           onPressed: _clearDirectories,
           icon: const Icon(Icons.clear, size: 16),
           label: const Text('清空', style: TextStyle(fontSize: 12)),
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red,
+            backgroundColor: ThemeUtils.getErrorColor(context),
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             shape: RoundedRectangleBorder(
@@ -312,7 +309,7 @@ class _ComposeDirectoryPanelState extends State<ComposeDirectoryPanel> {
         child: Text(
           '暂无源目录',
           style: TextStyle(
-            color: Colors.grey.shade400,
+            color: ThemeUtils.getTextSecondaryColor(context),
             fontSize: 13,
           ),
         ),

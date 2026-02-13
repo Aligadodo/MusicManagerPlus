@@ -5,6 +5,7 @@ import 'package:filemanager_flutter/models/config_field.dart';
 import 'package:filemanager_flutter/models/precondition_group.dart';
 import 'package:filemanager_flutter/widgets/parameter_field.dart';
 import 'package:filemanager_flutter/widgets/compose_precondition_panel.dart';
+import 'package:filemanager_flutter/utils/theme_utils.dart';
 
 class ComposeConfigPanel extends StatefulWidget {
   final StrategyInfo? strategyInfo;
@@ -41,17 +42,13 @@ class _ComposeConfigPanelState extends State<ComposeConfigPanel> {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
+      decoration: ThemeUtils.getCardDecoration(context),
       child: widget.strategyConfig == null
           ? Center(
               child: Text(
                 '请选择一个步骤以查看配置',
                 style: TextStyle(
-                  color: Color(0xFFBDBDBD),
+                  color: ThemeUtils.getTextSecondaryColor(context),
                   fontSize: 13,
                 ),
               ),
@@ -85,7 +82,7 @@ class _ComposeConfigPanelState extends State<ComposeConfigPanel> {
       children: [
         Row(
           children: [
-            Icon(Icons.settings, color: Colors.blue.shade700, size: 18),
+            Icon(Icons.settings, color: ThemeUtils.getPrimaryColor(context), size: 18),
             const SizedBox(width: 8),
             const Text(
               '参数配置',
@@ -98,7 +95,7 @@ class _ComposeConfigPanelState extends State<ComposeConfigPanel> {
             const SizedBox(width: 8),
             Tooltip(
               message: '配置当前步骤的参数',
-              child: Icon(Icons.help_outline, color: Colors.grey.shade600, size: 16),
+              child: Icon(Icons.help_outline, color: ThemeUtils.getTextSecondaryColor(context), size: 16),
             ),
           ],
         ),
@@ -115,13 +112,13 @@ class _ComposeConfigPanelState extends State<ComposeConfigPanel> {
               margin: const EdgeInsets.only(bottom: 10),
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.red.shade50,
+                color: ThemeUtils.getErrorColor(context).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: Colors.red.shade200),
+                border: Border.all(color: ThemeUtils.getErrorColor(context).withOpacity(0.3)),
               ),
               child: Text(
                 '构建参数字段失败: $e',
-                style: const TextStyle(color: Colors.red, fontSize: 12),
+                style: TextStyle(color: ThemeUtils.getErrorColor(context), fontSize: 12),
               ),
             );
           }

@@ -329,7 +329,7 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('界面设置'),
+        title: const Text(''),
       ),
       body: Row(
         children: [
@@ -355,7 +355,6 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
                     const Center(
                       child: CircularProgressIndicator(),
                     ),
-                  const SizedBox(height: 20),
                   if (_selectedSection == 0)
                     _buildPresetTabContent(theme),
                   if (_selectedSection == 1)
@@ -415,7 +414,6 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 20),
           if (_themePresets.isEmpty)
             Center(
               child: Text('暂无主题预设', style: theme.textTheme.bodyMedium),
@@ -571,7 +569,6 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 20),
           _buildColorField('背景颜色', 'bgColor', theme),
           _buildColorField('强调色', 'accentColor', theme),
           _buildColorField('主文本颜色', 'textPrimaryColor', theme),
@@ -693,7 +690,6 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 20),
           _buildSliderField('玻璃效果透明度', 'glassOpacity', 0.0, 1.0, 0.1, theme),
           _buildSwitchField('深色背景', 'darkBackground', theme),
         ],
@@ -706,7 +702,6 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 20),
           _buildDropdownField('字体', 'fontFamily', [
             'Roboto',
             'Arial',
@@ -726,7 +721,6 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 20),
           _buildNumberField('圆角半径', 'cornerRadius', 0, 20, theme),
           _buildNumberField('边框宽度', 'borderWidth', 0, 5, theme),
           _buildNumberField('大按钮尺寸', 'buttonLargeSize', 32, 64, theme),

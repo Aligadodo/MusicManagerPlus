@@ -219,6 +219,97 @@ public com.fasterxml.jackson.databind.ObjectMapper objectMapper() {
 
 ---
 
+### 跨系统兼容的主题存储方案改进
+
+**问题描述**: 主题预设文件存储在特定系统目录下（如 macOS 的 bin/macos/themes），导致跨系统兼容性问题。当在不同操作系统或不同部署方式下运行时，无法正确读取主题预设文件。
+
+**问题原因**:
+1. 主题目录路径硬编码为相对路径，依赖于当前工作目录
+2. 没有考虑不同操作系统的目录结构差异
+3. 打包部署和本地开发部署使用不同的工作目录，导致路径不一致
+
+**改进方案**:
+1. 创建 [PathResolver.java](../../backend/src/main/java/com/filemanager/backend/util/PathResolver.java) 工具类，提供跨系统兼容的路径解析功能
+2. 修改 [ThemeService.java](../../backend/src/main/java/com/filemanager/backend/service/ThemeService.java) 使用 PathResolver 获取主题目录
+3. 支持多路径查找，确保在不同部署方式下都能找到主题文件
+
+**实现细节**:
+
+#### PathResolver 工具类功能
+- **getUserConfigDir()**: 获取用户配置目录（跨系统兼容）
+  - Windows: `%USERHOME%\AppData\Roaming\MusicManagerPlus`
+  - macOS: `~/Library/Application Support/MusicManagerPlus`
+  - Linux: `~/.musicmanagerplus`
+
+- **getAppRootDir()**: 获取应用程序根目录
+  - JAR包运行时：返回JAR文件所在目录
+  - 开发环境：返回当前工作目录
+
+- **getWorkingDir()**: 获取当前工作目录
+
+- **getDefaultThemesStorageDir()**: 获取默认主题存储目录（用户配置目录）
+  - 路径: `getUserConfigDir()/themes/default`
+
+- **getCustomThemesStorageDir()**: 获取自定义主题存储目录（用户配置目录）
+  - 路径: `getUserConfigDir()/themes/custom`
+
+- **getThemePresetSearchPaths()**: 获取主题预设查找路径列表（按优先级排序）
+  - 优先级1: 应用程序目录/themes/default
+  - 优先级2: 当前工作目录/themes/default
+  - 优先级3: 用户配置目录/themes/default
+
+- **findThemeFile()**: 在多个路径中查找主题文件
+
+- **findAllThemeFiles()**: 获取所有主题文件（从多个路径合并，去重）
+
+#### ThemeService 改进
+- 使用实例变量 `defaultThemesDir` 和 `customThemesDir` 替代静态常量
+- 在 `initThemesDirectories()` 中调用 `PathResolver` 获取主题目录
+- 在 `initDefaultThemes()` 中使用动态路径检查主题文件
+
+**代码示例**:
+```java
+// ThemeService.java
+private String defaultThemesDir;
+private String customThemesDir;
+
+private void initThemesDirectories() {
+    try {
+        defaultThemesDir = PathResolver.getDefaultThemesStorageDir();
+        customThemesDir = PathResolver.getCustomThemesStorageDir();
+        
+        System.out.println("[ThemeService] 初始化主题目录");
+        System.out.println("[ThemeService] 默认主题目录: " + defaultThemesDir);
+        System.out.println("[ThemeService] 自定义主题目录: " + customThemesDir);
+        
+        PathResolver.ensureDirectoryExists(defaultThemesDir);
+        PathResolver.ensureDirectoryExists(customThemesDir);
+        
+        System.out.println("[ThemeService] 主题目录初始化完成");
+    } catch (Exception e) {
+        System.out.println("[ThemeService] 初始化主题目录失败: " + e.getMessage());
+        e.printStackTrace();
+    }
+}
+```
+
+**优势**:
+1. **跨系统兼容**: 自动适配不同操作系统的目录结构
+2. **部署方式无关**: 支持本地开发、JAR包运行、打包部署等多种方式
+3. **多路径查找**: 支持从多个位置查找主题文件，提高容错性
+4. **用户数据隔离**: 用户自定义主题存储在用户配置目录，与应用程序目录分离
+5. **易于维护**: 路径逻辑集中在 PathResolver 中，便于统一管理
+
+**验证结果**:
+- 17 个主题预设成功加载
+- macOS 系统下测试通过
+- 支持从多个路径查找主题文件
+- 用户配置目录自动创建
+
+**改进时间**: 2026-02-13 03:19
+
+---
+
 **文档版本**: 1.0  
 **最后更新**: 2026-02-12  
 **维护者**: FileManager Plus Team

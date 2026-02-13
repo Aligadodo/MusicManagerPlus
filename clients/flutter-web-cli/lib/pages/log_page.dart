@@ -5,6 +5,7 @@ import 'dart:html' as html;
 import 'dart:async';
 import '../api/api_client.dart';
 import '../api/log_service.dart';
+import '../utils/theme_utils.dart';
 
 class LogPage extends ConsumerStatefulWidget {
   const LogPage({super.key});
@@ -317,7 +318,7 @@ class _LogPageState extends ConsumerState<LogPage> {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: isSelected ? Colors.blue.shade50 : Colors.transparent,
+          color: isSelected ? ThemeUtils.getPrimaryColor(context).withOpacity(0.1) : Colors.transparent,
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -331,7 +332,7 @@ class _LogPageState extends ConsumerState<LogPage> {
                     _selectLogFile(value);
                   }
                 },
-                activeColor: Colors.blue,
+                activeColor: ThemeUtils.getPrimaryColor(context),
                 visualDensity: VisualDensity.standard,
                 materialTapTargetSize: MaterialTapTargetSize.padded,
               ),
@@ -345,11 +346,15 @@ class _LogPageState extends ConsumerState<LogPage> {
                       style: TextStyle(
                         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                         fontSize: 13,
+                        color: isSelected ? ThemeUtils.getPrimaryColor(context) : null,
                       ),
                     ),
                     Text(
                       '${file.fileSize} | ${file.createTime}',
-                      style: const TextStyle(fontSize: 11),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: ThemeUtils.getTextSecondaryColor(context),
+                      ),
                     ),
                   ],
                 ),
@@ -357,7 +362,7 @@ class _LogPageState extends ConsumerState<LogPage> {
               SizedBox(
                 width: 40,
                 child: IconButton(
-                  icon: const Icon(Icons.download, size: 16),
+                  icon: Icon(Icons.download, size: 16, color: ThemeUtils.getPrimaryColor(context)),
                   onPressed: () {
                     _downloadLogFile(file.fileName);
                   },
