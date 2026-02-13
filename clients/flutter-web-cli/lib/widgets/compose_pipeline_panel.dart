@@ -45,6 +45,7 @@ class _ComposePipelinePanelState extends State<ComposePipelinePanel> {
       widget.onPipelineChanged(newPipeline);
       await widget.pipelineService.updatePipeline(newPipeline);
     } catch (e) {
+      print('添加步骤失败: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('添加步骤失败: $e')),

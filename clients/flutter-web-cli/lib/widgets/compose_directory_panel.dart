@@ -103,6 +103,7 @@ class _ComposeDirectoryPanelState extends State<ComposeDirectoryPanel> {
         },
       );
     } catch (e) {
+      print('选择目录失败: $e');
       if (!_isDisposed) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: SelectableTextWidget(text: '选择目录失败: $e')),
@@ -142,6 +143,7 @@ class _ComposeDirectoryPanelState extends State<ComposeDirectoryPanel> {
 
       input.click();
     } catch (e) {
+      print('文件选择器选择目录失败: $e');
       if (!_isDisposed) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: SelectableTextWidget(text: '文件选择器选择目录失败: $e')),
@@ -159,6 +161,7 @@ class _ComposeDirectoryPanelState extends State<ComposeDirectoryPanel> {
         widget.onDirectoriesChanged(sources);
       }
     } catch (e) {
+      print('添加目录失败: $e');
       if (!_isDisposed) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: SelectableTextWidget(text: '添加目录失败: $e')),
@@ -180,6 +183,7 @@ class _ComposeDirectoryPanelState extends State<ComposeDirectoryPanel> {
         widget.onDirectoriesChanged([]);
       }
     } catch (e) {
+      print('清空目录失败: $e');
       if (!_isDisposed) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: SelectableTextWidget(text: '清空目录失败: $e')),

@@ -100,6 +100,7 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
         _isLoading = false;
       });
     } catch (e) {
+      print('加载数据失败: $e');
       setState(() {
         _errorMessage = '加载数据失败: $e';
         _isLoading = false;
@@ -137,6 +138,7 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
   }
 
   void _showError(String message) {
+    print('错误: $message');
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -148,6 +150,7 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
   }
 
   void _showSuccess(String message) {
+    print('成功: $message');
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -204,6 +207,7 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
         taskNotifier.error(_errorMessage);
       }
     } catch (e) {
+      print('分析流水线失败: $e');
       setState(() {
         _taskState = LocalTaskState.previewFailed;
         _errorMessage = '分析流水线失败: $e';
@@ -270,6 +274,7 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
         taskNotifier.error(_errorMessage);
       }
     } catch (e) {
+      print('执行流水线失败: $e');
       setState(() {
         _taskState = LocalTaskState.executionFailed;
         _errorMessage = '执行流水线失败: $e';
@@ -297,6 +302,7 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
       taskNotifier.stop();
       taskNotifier.stopComplete();
     } catch (e) {
+      print('停止任务失败: $e');
       _showError('停止任务失败: $e');
       
       // 更新全局任务状态

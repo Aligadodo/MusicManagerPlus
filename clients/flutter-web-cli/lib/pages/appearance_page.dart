@@ -176,6 +176,7 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
           );
         }
       } catch (e) {
+        print('保存主题预设失败: $e');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('保存主题预设失败: $e')),
@@ -244,6 +245,7 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
           );
         }
       } catch (e) {
+        print('编辑主题失败: $e');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('编辑主题失败: $e')),
@@ -290,6 +292,7 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
           );
         }
       } catch (e) {
+        print('删除主题失败: $e');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('删除主题失败: $e')),
