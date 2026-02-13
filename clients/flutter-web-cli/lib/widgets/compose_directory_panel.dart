@@ -1,6 +1,6 @@
 import 'dart:convert';
-import 'dart:html' as html;
 import 'package:flutter/material.dart';
+import 'dart:html' as html;
 import 'package:filemanager_flutter/models/source_directory.dart';
 import 'package:filemanager_flutter/api/source_directory_service.dart';
 import 'package:filemanager_flutter/widgets/directory_list_item.dart';
@@ -129,14 +129,21 @@ class _ComposeDirectoryPanelState extends State<ComposeDirectoryPanel> {
             if (firstSlashIndex != -1) {
               path = file.relativePath!.substring(0, firstSlashIndex);
             } else {
-              path = file.name;
+              path = file.name ?? '';
             }
           } else {
-            path = file.name;
+            path = file.name ?? '';
           }
           
           if (path.isNotEmpty) {
             _doAddDirectory(path);
+          } else {
+            print('无法获取目录路径: 文件信息不完整');
+            if (!_isDisposed) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: SelectableTextWidget(text: '无法获取目录路径: 文件信息不完整')),
+              );
+            }
           }
         }
       });

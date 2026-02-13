@@ -40,4 +40,9 @@ echo "访问地址: http://localhost:8081"
 echo "按 Ctrl+C 停止服务"
 echo ""
 
-python3 -m http.server 8081 --directory "$SCRIPT_DIR/../../frontend"
+python3 -m http.server 8081 --directory "$SCRIPT_DIR/../../frontend" &
+FRONTEND_PID=$!
+
+echo "前端服务已启动 (PID: $FRONTEND_PID)"
+echo "将在 3 秒后自动退出..."
+sleep 3

@@ -7,6 +7,7 @@ import '../api/pipeline_service.dart';
 import '../models/plugin_info.dart';
 import '../models/strategy_info.dart';
 import '../models/config_field.dart';
+import '../models/precondition_group.dart';
 import '../widgets/strategy_config_card.dart';
 import '../widgets/selectable_text_widget.dart';
 
