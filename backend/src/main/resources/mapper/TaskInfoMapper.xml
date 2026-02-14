@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.filemanager.backend.mapper.TaskInfoMapper">
+
+    <resultMap id="TaskInfoResultMap" type="com.filemanager.backend.entity.TaskInfoPO">
+        <id property="taskId" column="task_id"/>
+        <result property="taskName" column="task_name"/>
+        <result property="status" column="status"/>
+        <result property="currentStage" column="current_stage"/>
+        <result property="overallProgress" column="overall_progress"/>
+        <result property="message" column="message"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="completedAt" column="completed_at"/>
+        <result property="configSnapshotId" column="config_snapshot_id"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.filemanager.backend.entity.TaskInfoPO">
+        INSERT INTO task_info (
+            task_id, task_name, status, current_stage, overall_progress,
+            message, created_at, updated_at, completed_at, config_snapshot_id
+        ) VALUES (
+            #{taskId}, #{taskName}, #{status}, #{currentStage}, #{overallProgress},
+            #{message}, #{createdAt}, #{updatedAt}, #{completedAt}, #{configSnapshotId}
+        )
+    </insert>
+
+    <update id="update" parameterType="com.filemanager.backend.entity.TaskInfoPO">
+        UPDATE task_info
+        <set>
+            <if test="taskName != null">task_name = #{taskName},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="currentStage != null">current_stage = #{currentStage},</if>
+            <if test="overallProgress != null">overall_progress = #{overallProgress},</if>
+            <if test="message != null">message = #{message},</if>
+            <if test="updatedAt != null">updated_at = #{updatedAt},</if>
+            <if test="completedAt != null">completed_at = #{completedAt},</if>
+            <if test="configSnapshotId != null">config_snapshot_id = #{configSnapshotId},</if>
+        </set>
+        WHERE task_id = #{taskId}
+    </update>
+
+    <delete id="deleteByTaskId">
+        DELETE FROM task_info WHERE task_id = #{taskId}
+    </delete>
+
+    <select id="selectByTaskId" resultMap="TaskInfoResultMap">
+        SELECT * FROM task_info WHERE task_id = #{taskId}
+    </select>
+
+    <select id="selectAll" resultMap="TaskInfoResultMap">
+        SELECT * FROM task_info ORDER BY created_at DESC
+    </select>
+
+    <select id="selectByStatus" resultMap="TaskInfoResultMap">
+        SELECT * FROM task_info WHERE status = #{status} ORDER BY created_at DESC
+    </select>
+
+    <select id="selectByDateRange" resultMap="TaskInfoResultMap">
+        SELECT * FROM task_info
+        WHERE created_at &gt;= #{startDate} AND created_at &lt;= #{endDate}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectByKeyword" resultMap="TaskInfoResultMap">
+        SELECT * FROM task_info
+        WHERE task_name LIKE '%' || #{keyword} || '%'
+           OR message LIKE '%' || #{keyword} || '%'
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="selectByPage" resultMap="TaskInfoResultMap">
+        SELECT * FROM task_info
+        <where>
+            <if test="status != null and status != ''">
+                AND status = #{status}
+            </if>
+            <if test="startDate != null">
+                AND created_at &gt;= #{startDate}
+            </if>
+            <if test="endDate != null">
+                AND created_at &lt;= #{endDate}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (task_name LIKE '%' || #{keyword} || '%'
+                     OR message LIKE '%' || #{keyword} || '%')
+            </if>
+        </where>
+        <choose>
+            <when test="sortBy != null and sortBy != ''">
+                ORDER BY ${sortBy} ${sortOrder}
+            </when>
+            <otherwise>
+                ORDER BY created_at DESC
+            </otherwise>
+        </choose>
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countByPage" resultType="int">
+        SELECT COUNT(*) FROM task_info
+        <where>
+            <if test="status != null and status != ''">
+                AND status = #{status}
+            </if>
+            <if test="startDate != null">
+                AND created_at &gt;= #{startDate}
+            </if>
+            <if test="endDate != null">
+                AND created_at &lt;= #{endDate}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (task_name LIKE '%' || #{keyword} || '%'
+                     OR message LIKE '%' || #{keyword} || '%')
+            </if>
+        </where>
+    </select>
+
+    <update id="updateStatus">
+        UPDATE task_info SET status = #{status}, updated_at = datetime('now')
+        WHERE task_id = #{taskId}
+    </update>
+
+    <update id="updateProgress">
+        UPDATE task_info SET overall_progress = #{progress}, updated_at = datetime('now')
+        WHERE task_id = #{taskId}
+    </update>
+
+    <update id="updateMessage">
+        UPDATE task_info SET message = #{message}, updated_at = datetime('now')
+        WHERE task_id = #{taskId}
+    </update>
+
+</mapper>

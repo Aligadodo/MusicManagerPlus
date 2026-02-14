@@ -178,6 +178,14 @@ public class OptimizedTaskExecutionService {
             throw new IllegalArgumentException("任务不存在: " + taskId);
         }
         
+        if (taskInfo.getStatus() != TaskInfo.TaskStatus.PREVIEWED) {
+            throw new IllegalStateException("任务未完成预览，无法执行选中的记录");
+        }
+        
+        if (selectedRecordIds == null || selectedRecordIds.isEmpty()) {
+            throw new IllegalArgumentException("选中的记录列表不能为空");
+        }
+        
         // 获取执行次数
         int executionNum = taskInfo.getStages().getExecution().getExecutionCount() + 1;
         
@@ -212,6 +220,11 @@ public class OptimizedTaskExecutionService {
         TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
         if (taskInfo == null) {
             throw new IllegalArgumentException("任务不存在: " + taskId);
+        }
+        
+        if (taskInfo.getStatus() != TaskInfo.TaskStatus.FAILED && 
+            taskInfo.getStatus() != TaskInfo.TaskStatus.EXECUTING) {
+            throw new IllegalStateException("任务状态不允许重试，当前状态: " + taskInfo.getStatus());
         }
         
         // 获取执行次数

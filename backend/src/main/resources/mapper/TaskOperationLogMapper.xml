@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.filemanager.backend.mapper.TaskOperationLogMapper">
+
+    <resultMap id="TaskOperationLogResultMap" type="com.filemanager.backend.entity.TaskOperationLogPO">
+        <id property="id" column="id"/>
+        <result property="taskId" column="task_id"/>
+        <result property="operationType" column="operation_type"/>
+        <result property="operationStage" column="operation_stage"/>
+        <result property="operator" column="operator"/>
+        <result property="operationTime" column="operation_time"/>
+        <result property="operationDetail" column="operation_detail"/>
+        <result property="result" column="result"/>
+        <result property="errorMessage" column="error_message"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.filemanager.backend.entity.TaskOperationLogPO">
+        INSERT INTO task_operation_log (
+            task_id, operation_type, operation_stage, operator, operation_time,
+            operation_detail, result, error_message
+        ) VALUES (
+            #{taskId}, #{operationType}, #{operationStage}, #{operator}, #{operationTime},
+            #{operationDetail}, #{result}, #{errorMessage}
+        )
+    </insert>
+
+    <update id="update" parameterType="com.filemanager.backend.entity.TaskOperationLogPO">
+        UPDATE task_operation_log
+        <set>
+            <if test="operationType != null">operation_type = #{operationType},</if>
+            <if test="operationStage != null">operation_stage = #{operationStage},</if>
+            <if test="operator != null">operator = #{operator},</if>
+            <if test="operationTime != null">operation_time = #{operationTime},</if>
+            <if test="operationDetail != null">operation_detail = #{operationDetail},</if>
+            <if test="result != null">result = #{result},</if>
+            <if test="errorMessage != null">error_message = #{errorMessage},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM task_operation_log WHERE id = #{id}
+    </delete>
+
+    <delete id="deleteByTaskId">
+        DELETE FROM task_operation_log WHERE task_id = #{taskId}
+    </delete>
+
+    <select id="selectById" resultMap="TaskOperationLogResultMap">
+        SELECT * FROM task_operation_log WHERE id = #{id}
+    </select>
+
+    <select id="selectByTaskId" resultMap="TaskOperationLogResultMap">
+        SELECT * FROM task_operation_log WHERE task_id = #{taskId} ORDER BY operation_time DESC
+    </select>
+
+    <select id="selectByTaskIdAndOperationType" resultMap="TaskOperationLogResultMap">
+        SELECT * FROM task_operation_log
+        WHERE task_id = #{taskId} AND operation_type = #{operationType}
+        ORDER BY operation_time DESC
+    </select>
+
+    <select id="selectByTaskIdOrderByTime" resultMap="TaskOperationLogResultMap">
+        SELECT * FROM task_operation_log
+        WHERE task_id = #{taskId}
+        ORDER BY operation_time ${sortOrder}
+    </select>
+
+    <select id="selectByPage" resultMap="TaskOperationLogResultMap">
+        SELECT * FROM task_operation_log
+        <where>
+            <if test="taskId != null and taskId != ''">
+                AND task_id = #{taskId}
+            </if>
+            <if test="operationType != null and operationType != ''">
+                AND operation_type = #{operationType}
+            </if>
+            <if test="startDate != null">
+                AND operation_time &gt;= #{startDate}
+            </if>
+            <if test="endDate != null">
+                AND operation_time &lt;= #{endDate}
+            </if>
+        </where>
+        <choose>
+            <when test="sortBy != null and sortBy != ''">
+                ORDER BY ${sortBy} ${sortOrder}
+            </when>
+            <otherwise>
+                ORDER BY operation_time DESC
+            </otherwise>
+        </choose>
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countByPage" resultType="int">
+        SELECT COUNT(*) FROM task_operation_log
+        <where>
+            <if test="taskId != null and taskId != ''">
+                AND task_id = #{taskId}
+            </if>
+            <if test="operationType != null and operationType != ''">
+                AND operation_type = #{operationType}
+            </if>
+            <if test="startDate != null">
+                AND operation_time &gt;= #{startDate}
+            </if>
+            <if test="endDate != null">
+                AND operation_time &lt;= #{endDate}
+            </if>
+        </where>
+    </select>
+
+</mapper>

@@ -1,7 +1,15 @@
 package com.filemanager.backend.service;
 
+import com.filemanager.backend.entity.TaskInfoPO;
+import com.filemanager.backend.entity.TaskStagePO;
+import com.filemanager.backend.entity.TaskOperationLogPO;
+import com.filemanager.backend.entity.ChangeRecordPO;
 import com.filemanager.backend.model.TaskInfo;
 import com.filemanager.backend.logging.UnifiedLogger;
+import com.filemanager.backend.service.TaskInfoService;
+import com.filemanager.backend.service.TaskStageService;
+import com.filemanager.backend.service.TaskOperationLogService;
+import com.filemanager.backend.service.ChangeRecordService;
 import com.filemanager.domain.dto.PipelineTaskStatusDTO;
 import com.filemanager.domain.enums.TaskStatus;
 import com.filemanager.domain.service.PipelineTaskManager;
@@ -28,6 +36,18 @@ public class TaskRegistry {
     @Autowired
     private OptimizedTaskStorageService storageService;
     
+    @Autowired
+    private TaskInfoService taskInfoService;
+    
+    @Autowired
+    private TaskStageService taskStageService;
+    
+    @Autowired
+    private TaskOperationLogService taskOperationLogService;
+    
+    @Autowired
+    private ChangeRecordService changeRecordService;
+    
     private final Map<String, TaskInfo> registeredTasks = new ConcurrentHashMap<>();
     private final Map<String, PipelineTaskStatusDTO> runningTasks = new ConcurrentHashMap<>();
     private final AtomicInteger taskCounter = new AtomicInteger(0);
@@ -50,9 +70,80 @@ public class TaskRegistry {
         }
         
         registeredTasks.put(taskInfo.getTaskId(), taskInfo);
+        
+        saveTaskToDatabase(taskInfo);
+        
         UnifiedLogger.backendOperation("TaskRegistry", "任务已注册: " + taskInfo.getTaskId());
         
         return taskInfo.getTaskId();
+    }
+    
+    /**
+     * 将任务信息保存到数据库
+     */
+    private void saveTaskToDatabase(TaskInfo taskInfo) {
+        try {
+            TaskInfoPO taskInfoPO = convertToTaskInfoPO(taskInfo);
+            TaskInfoPO existingTask = taskInfoService.getTaskById(taskInfo.getTaskId());
+            
+            if (existingTask == null) {
+                taskInfoService.createTask(taskInfoPO);
+            } else {
+                taskInfoService.updateTask(taskInfoPO);
+            }
+        } catch (Exception e) {
+            UnifiedLogger.backendError("TaskRegistry", "保存任务到数据库失败: " + taskInfo.getTaskId(), e);
+        }
+    }
+    
+    /**
+     * 将 TaskInfo 转换为 TaskInfoPO
+     */
+    private TaskInfoPO convertToTaskInfoPO(TaskInfo taskInfo) {
+        TaskInfoPO taskInfoPO = new TaskInfoPO();
+        taskInfoPO.setTaskId(taskInfo.getTaskId());
+        taskInfoPO.setTaskName(taskInfo.getTaskName());
+        taskInfoPO.setStatus(taskInfo.getStatus().name());
+        taskInfoPO.setCurrentStage(taskInfo.getCurrentStage());
+        taskInfoPO.setOverallProgress(taskInfo.getOverallProgress());
+        taskInfoPO.setMessage(taskInfo.getMessage());
+        
+        if (taskInfo.getCreatedAt() > 0) {
+            taskInfoPO.setCreatedAt(new Date(taskInfo.getCreatedAt()));
+        } else {
+            taskInfoPO.setCreatedAt(new Date());
+        }
+        
+        if (taskInfo.getUpdatedAt() > 0) {
+            taskInfoPO.setUpdatedAt(new Date(taskInfo.getUpdatedAt()));
+        } else {
+            taskInfoPO.setUpdatedAt(new Date());
+        }
+        
+        return taskInfoPO;
+    }
+    
+    /**
+     * 将 TaskInfoPO 转换为 TaskInfo
+     */
+    private TaskInfo convertFromTaskInfoPO(TaskInfoPO taskInfoPO) {
+        TaskInfo taskInfo = new TaskInfo();
+        taskInfo.setTaskId(taskInfoPO.getTaskId());
+        taskInfo.setTaskName(taskInfoPO.getTaskName());
+        taskInfo.setStatus(TaskInfo.TaskStatus.valueOf(taskInfoPO.getStatus()));
+        taskInfo.setCurrentStage(taskInfoPO.getCurrentStage());
+        taskInfo.setOverallProgress(taskInfoPO.getOverallProgress() != null ? taskInfoPO.getOverallProgress() : 0.0);
+        taskInfo.setMessage(taskInfoPO.getMessage());
+        
+        if (taskInfoPO.getCreatedAt() != null) {
+            taskInfo.setCreatedAt(taskInfoPO.getCreatedAt().getTime());
+        }
+        
+        if (taskInfoPO.getUpdatedAt() != null) {
+            taskInfo.setUpdatedAt(taskInfoPO.getUpdatedAt().getTime());
+        }
+        
+        return taskInfo;
     }
     
     /**
@@ -62,12 +153,24 @@ public class TaskRegistry {
         TaskInfo task = registeredTasks.get(taskId);
         if (task == null) {
             try {
-                task = storageService.loadTaskInfo(taskId);
-                if (task != null) {
-                    registeredTasks.put(taskId, task);
+                TaskInfoPO taskInfoPO = taskInfoService.getTaskById(taskId);
+                if (taskInfoPO != null) {
+                    task = convertFromTaskInfoPO(taskInfoPO);
+                    if (task != null) {
+                        registeredTasks.put(taskId, task);
+                    }
                 }
             } catch (Exception e) {
-                UnifiedLogger.backendError("TaskRegistry", "加载任务信息失败: " + taskId, e);
+                UnifiedLogger.backendError("TaskRegistry", "从数据库加载任务信息失败: " + taskId, e);
+                
+                try {
+                    task = storageService.loadTaskInfo(taskId);
+                    if (task != null) {
+                        registeredTasks.put(taskId, task);
+                    }
+                } catch (Exception ex) {
+                    UnifiedLogger.backendError("TaskRegistry", "从文件系统加载任务信息失败: " + taskId, ex);
+                }
             }
         }
         return task;
@@ -80,10 +183,11 @@ public class TaskRegistry {
         Map<String, TaskInfo> allTasks = new HashMap<>(registeredTasks);
         
         try {
-            List<String> taskIds = storageService.getAllTaskIds();
-            for (String taskId : taskIds) {
+            List<TaskInfoPO> taskInfoPOList = taskInfoService.getAllTasks();
+            for (TaskInfoPO taskInfoPO : taskInfoPOList) {
+                String taskId = taskInfoPO.getTaskId();
                 if (!allTasks.containsKey(taskId)) {
-                    TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
+                    TaskInfo taskInfo = convertFromTaskInfoPO(taskInfoPO);
                     if (taskInfo != null) {
                         allTasks.put(taskId, taskInfo);
                         registeredTasks.put(taskId, taskInfo);
@@ -91,7 +195,22 @@ public class TaskRegistry {
                 }
             }
         } catch (Exception e) {
-            UnifiedLogger.backendError("TaskRegistry", "加载所有任务失败", e);
+            UnifiedLogger.backendError("TaskRegistry", "从数据库加载所有任务失败", e);
+            
+            try {
+                List<String> taskIds = storageService.getAllTaskIds();
+                for (String taskId : taskIds) {
+                    if (!allTasks.containsKey(taskId)) {
+                        TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
+                        if (taskInfo != null) {
+                            allTasks.put(taskId, taskInfo);
+                            registeredTasks.put(taskId, taskInfo);
+                        }
+                    }
+                }
+            } catch (Exception ex) {
+                UnifiedLogger.backendError("TaskRegistry", "从文件系统加载所有任务失败", ex);
+            }
         }
         
         return allTasks.values().stream()
@@ -128,6 +247,12 @@ public class TaskRegistry {
             task.setStatus(status);
             task.setUpdatedAt(System.currentTimeMillis());
             saveTask(task);
+            
+            try {
+                taskInfoService.updateTaskStatus(taskId, status.name());
+            } catch (Exception e) {
+                UnifiedLogger.backendError("TaskRegistry", "更新数据库任务状态失败: " + taskId, e);
+            }
             
             PipelineTaskStatusDTO pipelineTask = runningTasks.get(taskId);
             if (pipelineTask != null) {
@@ -170,6 +295,12 @@ public class TaskRegistry {
             task.setOverallProgress(progress);
             task.setUpdatedAt(System.currentTimeMillis());
             saveTask(task);
+            
+            try {
+                taskInfoService.updateTaskProgress(taskId, (int) progress);
+            } catch (Exception e) {
+                UnifiedLogger.backendError("TaskRegistry", "更新数据库任务进度失败: " + taskId, e);
+            }
         }
     }
     
@@ -287,6 +418,15 @@ public class TaskRegistry {
         try {
             registeredTasks.remove(taskId);
             runningTasks.remove(taskId);
+            
+            try {
+                taskInfoService.deleteTask(taskId);
+                taskStageService.deleteStagesByTaskId(taskId);
+                taskOperationLogService.deleteLogsByTaskId(taskId);
+                changeRecordService.deleteRecordsByTaskId(taskId);
+            } catch (Exception e) {
+                UnifiedLogger.backendError("TaskRegistry", "从数据库删除任务失败: " + taskId, e);
+            }
             
             storageService.deleteTask(taskId);
             

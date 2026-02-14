@@ -8,6 +8,8 @@ import 'package:filemanager_flutter/api/pipeline_service.dart';
 import 'package:filemanager_flutter/api/thread_pool_service.dart';
 import 'package:filemanager_flutter/api/log_service.dart';
 import 'package:filemanager_flutter/api/config_service.dart';
+import 'package:filemanager_flutter/api/database_task_service.dart';
+import 'package:filemanager_flutter/api/database_config_service.dart';
 
 // 创建 ApiClient 实例的 provider
 final apiClientProvider = Provider<ApiClient>((ref) {
@@ -60,4 +62,16 @@ final logServiceProvider = Provider<LogService>((ref) {
 final configServiceProvider = Provider<ConfigService>((ref) {
   final apiClient = ref.watch(apiClientProvider);
   return ConfigService(apiClient);
+});
+
+// 创建 DatabaseTaskService 实例的 provider
+final databaseTaskServiceProvider = Provider<DatabaseTaskService>((ref) {
+  final apiClient = ref.watch(apiClientProvider);
+  return DatabaseTaskService(apiClient);
+});
+
+// 创建 DatabaseConfigService 实例的 provider
+final databaseConfigServiceProvider = Provider<DatabaseConfigService>((ref) {
+  final apiClient = ref.watch(apiClientProvider);
+  return DatabaseConfigService(apiClient);
 });
