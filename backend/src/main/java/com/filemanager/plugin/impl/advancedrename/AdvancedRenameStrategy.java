@@ -145,7 +145,7 @@ public class AdvancedRenameStrategy extends AbstractConfigurableStrategy {
             currentRecord.getExtraParams().put("action", "copy");
         }
 
-        return Collections.emptyList();
+        return Collections.singletonList(currentRecord);
     }
 
     @Override
