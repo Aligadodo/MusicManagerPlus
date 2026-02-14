@@ -229,6 +229,7 @@ public class PipelineManager {
         task.setOnSucceeded(e -> {
             fullChangeList = task.getValue();
             app.setFullChangeList(fullChangeList);
+            app.refreshPreviewTableFilter();
             setFinishTaskUI("➡ ➡ ➡ 预览完成 ⬅ ⬅ ⬅", TaskStatus.SUCCESS);
             boolean hasChanges = fullChangeList.stream().anyMatch(ChangeRecord::isChanged);
             app.changeExecuteButton(hasChanges);
@@ -262,7 +263,10 @@ public class PipelineManager {
 
         Task<Void> task = createExecutionTask();
         setStartTaskUI("▶ ▶ ▶ 执行中...", task);
-        task.setOnSucceeded(e -> setFinishTaskUI("➡ ➡ ➡ 执行成功 ⬅ ⬅ ⬅", TaskStatus.SUCCESS));
+        task.setOnSucceeded(e -> {
+            app.refreshPreviewTableFilter();
+            setFinishTaskUI("➡ ➡ ➡ 执行成功 ⬅ ⬅ ⬅", TaskStatus.SUCCESS);
+        });
 
         handleTaskLifecycle(task);
         new Thread(task).start();
@@ -296,7 +300,10 @@ public class PipelineManager {
 
         Task<Void> task = createExecutionTask(pendingRecords);
         setStartTaskUI("▶ ▶ ▶ 执行中...", task);
-        task.setOnSucceeded(e -> setFinishTaskUI("➡ ➡ ➡ 执行成功 ⬅ ⬅ ⬅", TaskStatus.SUCCESS));
+        task.setOnSucceeded(e -> {
+            app.refreshPreviewTableFilter();
+            setFinishTaskUI("➡ ➡ ➡ 执行成功 ⬅ ⬅ ⬅", TaskStatus.SUCCESS);
+        });
 
         handleTaskLifecycle(task);
         new Thread(task).start();
@@ -628,10 +635,12 @@ public class PipelineManager {
     private void handleTaskLifecycle(Task<?> t) {
         currentTask = t;
         t.setOnFailed(e -> {
+            app.refreshPreviewTableFilter();
             setFinishTaskUI("❌ ❌ ❌ 出错 ❌ ❌ ❌", TaskStatus.FAILURE);
             app.logError("❌ 失败: " + e.getSource().getException().getMessage());
         });
         t.setOnCancelled(e -> {
+            app.refreshPreviewTableFilter();
             setFinishTaskUI("🛑 🛑 🛑 已取消 🛑 🛑 🛑", TaskStatus.CANCELED);
         });
     }
@@ -657,6 +666,7 @@ public class PipelineManager {
             }
             threadPoolManager.shutdownAll();
             app.log("🛑 强制停止");
+            app.refreshPreviewTableFilter();
             setFinishTaskUI("🛑 🛑 🛑 已停止 🛑 🛑 🛑", TaskStatus.CANCELED);
         }
     }
