@@ -10,6 +10,7 @@
 package com.filemanager.strategy.base;
 
 import com.filemanager.app.tools.display.StyleFactory;
+import com.filemanager.tool.file.PathUtils;
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXComboBox;
 import com.jfoenix.controls.JFXTextField;
@@ -55,7 +56,7 @@ public class PathSelectionComponent implements IConfigComponent {
 
         // 输出目录模式
         cbOutputDirMode = new JFXComboBox<>();
-        cbOutputDirMode.getItems().addAll("原目录", "子目录", "相对路径", "指定目录");
+        cbOutputDirMode.getItems().addAll("原目录", "子目录", "相对路径", "指定目录", "影子路径");
         cbOutputDirMode.getSelectionModel().select(0);
         
         // 添加悬浮提示信息
@@ -67,6 +68,7 @@ public class PathSelectionComponent implements IConfigComponent {
         modeTooltipLines.add("- 子目录：输出到源文件所在目录的子目录中");
         modeTooltipLines.add("- 相对路径：输出到指定的相对路径");
         modeTooltipLines.add("- 指定目录：输出到指定的绝对路径");
+        modeTooltipLines.add("- 影子路径：以特定目录作为根目录，模拟文件原目录");
         com.filemanager.app.tools.display.FloatingTooltip.bindToNode(cbOutputDirMode, "输出设置", modeTooltipLines);
 
         // 路径输入框
@@ -215,6 +217,8 @@ public class PathSelectionComponent implements IConfigComponent {
                 return path.isEmpty() ? sourceFile.getParent() : path;
             case "指定目录":
                 return path.isEmpty() ? sourceFile.getParent() : path;
+            case "影子路径":
+                return path.isEmpty() ? sourceFile.getParent() :  PathUtils.mapToNewRoot(sourceFile.getParent(), path);
             default:
                 return sourceFile.getParent();
         }
