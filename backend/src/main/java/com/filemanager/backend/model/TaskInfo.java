@@ -1,5 +1,7 @@
 package com.filemanager.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import java.util.Map;
 
@@ -7,15 +9,25 @@ import java.util.Map;
  * 任务信息模型
  * 包含任务的基本信息和各阶段的状态
  */
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class TaskInfo {
+    @JsonProperty("taskId")
     private String taskId;
+    @JsonProperty("taskName")
     private String taskName;
+    @JsonProperty("createdAt")
     private long createdAt;
+    @JsonProperty("currentStage")
     private String currentStage;
+    @JsonProperty("status")
     private TaskStatus status;
+    @JsonProperty("overallProgress")
     private double overallProgress;
+    @JsonProperty("message")
     private String message;
+    @JsonProperty("configSnapshot")
     private TaskConfigSnapshot configSnapshot;
+    @JsonProperty("stages")
     private TaskStages stages;
 
     public TaskInfo() {
@@ -26,6 +38,8 @@ public class TaskInfo {
         this.createdAt = System.currentTimeMillis();
         this.status = TaskStatus.CREATED;
         this.currentStage = "CREATED";
+        this.overallProgress = 0.0;
+        this.message = "任务已创建";
         this.stages = new TaskStages();
     }
 

@@ -40,6 +40,15 @@ public class TaskController {
                          OptimizedTaskExecutionService executionService) {
         this.storageService = storageService;
         this.executionService = executionService;
+        logger.info("[TaskController] TaskController初始化成功");
+    }
+
+    /**
+     * 测试端点
+     */
+    @GetMapping("/test")
+    public ResponseEntity<String> test() {
+        return ResponseEntity.ok("TaskController工作正常");
     }
 
     /**
@@ -50,9 +59,12 @@ public class TaskController {
         Map<String, Object> response = new HashMap<>();
         
         try {
+            logger.info("[TaskController] 开始创建任务，请求参数: {}", request);
             String taskId = executionService.createTask(request);
+            logger.info("[TaskController] 任务已创建，ID: {}", taskId);
             
             TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
+            logger.info("[TaskController] 任务信息已加载: {}", taskInfo);
             
             response.put("success", true);
             response.put("data", taskInfoToMap(taskInfo));
@@ -953,6 +965,52 @@ public class TaskController {
         stages.put("preview", previewStageToMap(taskInfo.getStages().getPreview()));
         stages.put("execution", executionStageToMap(taskInfo.getStages().getExecution()));
         map.put("stages", stages);
+        
+        TaskConfigSnapshot configSnapshot = taskInfo.getConfigSnapshot();
+        if (configSnapshot != null) {
+            Map<String, Object> configMap = new HashMap<>();
+            
+            List<TaskConfigSnapshot.SourceDirectoryConfig> sourceDirs = configSnapshot.getSourceDirectories();
+            if (sourceDirs != null && !sourceDirs.isEmpty()) {
+                List<Map<String, Object>> sourceDirList = new java.util.ArrayList<>();
+                for (TaskConfigSnapshot.SourceDirectoryConfig sourceDir : sourceDirs) {
+                    Map<String, Object> sourceDirMap = new HashMap<>();
+                    sourceDirMap.put("path", sourceDir.getPath());
+                    sourceDirMap.put("depth", sourceDir.getDepth());
+                    sourceDirMap.put("recursive", sourceDir.isRecursive());
+                    sourceDirMap.put("includePatterns", sourceDir.getIncludePatterns());
+                    sourceDirMap.put("excludePatterns", sourceDir.getExcludePatterns());
+                    sourceDirList.add(sourceDirMap);
+                }
+                configMap.put("sourceDirectories", sourceDirList);
+            }
+            
+            TaskConfigSnapshot.PipelineConfig pipelineConfig = configSnapshot.getPipelineConfig();
+            if (pipelineConfig != null) {
+                Map<String, Object> pipelineMap = new HashMap<>();
+                pipelineMap.put("pipelineId", pipelineConfig.getPipelineId());
+                pipelineMap.put("name", pipelineConfig.getName());
+                pipelineMap.put("description", pipelineConfig.getDescription());
+                pipelineMap.put("items", pipelineConfig.getItems());
+                configMap.put("pipelineConfig", pipelineMap);
+            }
+            
+            TaskConfigSnapshot.GlobalSettings globalSettings = configSnapshot.getGlobalSettings();
+            if (globalSettings != null) {
+                Map<String, Object> settingsMap = new HashMap<>();
+                settingsMap.put("maxThreads", globalSettings.getMaxThreads());
+                settingsMap.put("timeout", globalSettings.getTimeout());
+                settingsMap.put("dryRun", globalSettings.isDryRun());
+                settingsMap.put("overwrite", globalSettings.isOverwrite());
+                settingsMap.put("backup", globalSettings.isBackup());
+                settingsMap.put("backupPath", globalSettings.getBackupPath());
+                settingsMap.put("retryCount", globalSettings.getRetryCount());
+                settingsMap.put("retryInterval", globalSettings.getRetryInterval());
+                configMap.put("globalSettings", settingsMap);
+            }
+            
+            map.put("configSnapshot", configMap);
+        }
         
         return map;
     }

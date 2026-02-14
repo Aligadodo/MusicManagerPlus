@@ -3,9 +3,10 @@ spring:
     name: filemanager-backend
   web:
     cors:
-      allowed-origins: "*"
+      allowed-origins: "http://localhost:3000,http://localhost:8080"
       allowed-methods: "GET, POST, PUT, DELETE, OPTIONS"
       allowed-headers: "*"
+      allow-credentials: false
 
 server:
   port: 8080
@@ -21,8 +22,10 @@ filemanager:
 
 logging:
   level:
-    com.filemanager: info
-    org.springframework: warn
+    com.filemanager: debug
+    com.filemanager.backend: debug
+    org.springframework: debug
+    org.springframework.web: debug
   file:
     name: logs/filemanager.log
     max-size: 50MB

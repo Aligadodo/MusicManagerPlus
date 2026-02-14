@@ -430,10 +430,12 @@ public class OptimizedTaskStorageService {
         List<String> taskIds = new ArrayList<>();
         try {
             File baseDir = new File(BASE_DIR);
-            File[] taskDirs = baseDir.listFiles(File::isDirectory);
+            File[] taskDirs = baseDir.listFiles();
             if (taskDirs != null) {
                 for (File taskDir : taskDirs) {
-                    taskIds.add(taskDir.getName());
+                    if (taskDir.isDirectory()) {
+                        taskIds.add(taskDir.getName());
+                    }
                 }
             }
         } catch (Exception e) {

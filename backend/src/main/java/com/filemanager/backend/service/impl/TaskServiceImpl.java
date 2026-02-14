@@ -155,13 +155,23 @@ public class TaskServiceImpl implements TaskService {
 
         public void execute(StrategyService strategyService) {
             System.out.println("[TaskExecution] 开始执行任务: " + taskId);
-            System.out.println("[TaskExecution] 策略ID: " + request.getStrategyId());
-            System.out.println("[TaskExecution] 文件数量: " + (request.getFilePaths() != null ? request.getFilePaths().size() : 0));
+            
+            List<String> filePaths = new java.util.ArrayList<>();
+            if (request.getSourceDirectories() != null) {
+                for (TaskRequestDTO.SourceDirectoryDTO sourceDir : request.getSourceDirectories()) {
+                    filePaths.add(sourceDir.getPath());
+                }
+            }
+            
+            String strategyId = request.getPipelineId() != null ? request.getPipelineId() : "default-pipeline";
+            
+            System.out.println("[TaskExecution] 策略ID: " + strategyId);
+            System.out.println("[TaskExecution] 文件数量: " + filePaths.size());
             
             status.setStatus("RUNNING");
             status.setProgress(0);
             status.setMessage("Task started");
-            status.setTotalFiles(request.getFilePaths() != null ? request.getFilePaths().size() : 0);
+            status.setTotalFiles(filePaths.size());
             status.setProcessedFiles(0);
             status.setSuccessCount(0);
             status.setFailedCount(0);
@@ -169,19 +179,19 @@ public class TaskServiceImpl implements TaskService {
             status.setOperationStats(new HashMap<>());
 
             try {
-                System.out.println("[TaskExecution] 开始获取策略配置: " + request.getStrategyId());
+                System.out.println("[TaskExecution] 开始获取策略配置: " + strategyId);
                 com.filemanager.domain.service.StrategyService strategyServiceLocal = strategyService;
-                com.filemanager.domain.dto.StrategyConfigDTO config = strategyServiceLocal.getStrategyConfig(request.getStrategyId());
-                System.out.println("[TaskExecution] 策略配置获取成功: " + request.getStrategyId());
+                com.filemanager.domain.dto.StrategyConfigDTO config = strategyServiceLocal.getStrategyConfig(strategyId);
+                System.out.println("[TaskExecution] 策略配置获取成功: " + strategyId);
                 
-                System.out.println("[TaskExecution] 开始执行策略: " + request.getStrategyId());
+                System.out.println("[TaskExecution] 开始执行策略: " + strategyId);
                 // 执行任务逻辑
                 java.util.List<com.filemanager.domain.entity.ChangeRecord> executionResults = strategyServiceLocal.executeStrategy(
-                        request.getStrategyId(),
-                        request.getFilePaths(),
+                        strategyId,
+                        filePaths,
                         config
                 );
-                System.out.println("[TaskExecution] 策略执行完成: " + request.getStrategyId() + ", 结果数量: " + (executionResults != null ? executionResults.size() : 0));
+                System.out.println("[TaskExecution] 策略执行完成: " + strategyId + ", 结果数量: " + (executionResults != null ? executionResults.size() : 0));
                 
                 if (executionResults != null) {
                     results.addAll(executionResults);
@@ -216,7 +226,7 @@ public class TaskServiceImpl implements TaskService {
                 
                 System.out.println("[TaskExecution] 任务执行完成: " + taskId);
                 System.out.println("[TaskExecution] 最终状态: COMPLETED");
-                System.out.println("[TaskExecution] 处理文件数: " + (request.getFilePaths() != null ? request.getFilePaths().size() : 0));
+                System.out.println("[TaskExecution] 处理文件数: " + filePaths.size());
                 System.out.println("[TaskExecution] 生成结果数: " + results.size());
             } catch (Exception e) {
                 System.err.println("[TaskExecution] 任务执行失败: " + taskId);

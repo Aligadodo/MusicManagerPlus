@@ -389,10 +389,18 @@ public class PipelineController {
             taskManager.updateTaskMessage(taskId, "开始执行流水线...");
 
             TaskRequestDTO taskRequest = new TaskRequestDTO();
-            taskRequest.setStrategyId("pipeline");
-            taskRequest.setFilePaths(sourceDirectories);
             taskRequest.setTaskName("Pipeline Execution");
             taskRequest.setDescription("Execute pipeline with " + pipeline.size() + " plugins");
+            
+            List<TaskRequestDTO.SourceDirectoryDTO> sourceDirDTOs = new java.util.ArrayList<>();
+            for (String sourceDir : sourceDirectories) {
+                TaskRequestDTO.SourceDirectoryDTO sourceDirDTO = new TaskRequestDTO.SourceDirectoryDTO();
+                sourceDirDTO.setPath(sourceDir);
+                sourceDirDTO.setDepth(4);
+                sourceDirDTO.setRecursive(true);
+                sourceDirDTOs.add(sourceDirDTO);
+            }
+            taskRequest.setSourceDirectories(sourceDirDTOs);
 
             String taskServiceId = taskService.createTask(taskRequest);
 

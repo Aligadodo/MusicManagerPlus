@@ -21,8 +21,8 @@ public class SecurityConfig {
             .csrf().disable()
             .cors().and()
             .authorizeRequests()
-                .antMatchers("/files/scan", "/files/info", "/files/exists", "/strategies").permitAll()
-                .antMatchers("/files/**", "/strategies/**", "/tasks/**", "/plugins/**").authenticated()
+                .antMatchers("/files/scan", "/files/info", "/files/exists", "/strategies", "/api/tasks/**").permitAll()
+                .antMatchers("/files/**", "/strategies/**", "/plugins/**").authenticated()
                 .anyRequest().permitAll()
             .and()
             .httpBasic();

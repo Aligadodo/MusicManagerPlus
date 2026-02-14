@@ -273,22 +273,55 @@ public class OptimizedTaskExecutionService {
         
         // 源目录配置
         List<TaskConfigSnapshot.SourceDirectoryConfig> sourceDirs = new ArrayList<>();
-        if (request.getFilePaths() != null) {
-            for (String path : request.getFilePaths()) {
-                sourceDirs.add(new TaskConfigSnapshot.SourceDirectoryConfig(path, 4));
+        if (request.getSourceDirectories() != null) {
+            for (TaskRequestDTO.SourceDirectoryDTO dto : request.getSourceDirectories()) {
+                TaskConfigSnapshot.SourceDirectoryConfig sourceDir = new TaskConfigSnapshot.SourceDirectoryConfig();
+                sourceDir.setPath(dto.getPath());
+                sourceDir.setDepth(dto.getDepth() != null ? dto.getDepth() : 4);
+                sourceDir.setRecursive(dto.isRecursive() != null ? dto.isRecursive() : true);
+                sourceDir.setIncludePatterns(dto.getIncludePatterns());
+                sourceDir.setExcludePatterns(dto.getExcludePatterns());
+                sourceDirs.add(sourceDir);
             }
         }
         configSnapshot.setSourceDirectories(sourceDirs);
         
         // 流水线配置
         TaskConfigSnapshot.PipelineConfig pipelineConfig = new TaskConfigSnapshot.PipelineConfig();
-        pipelineConfig.setPipelineId("default-pipeline");
+        pipelineConfig.setPipelineId(request.getPipelineId() != null ? request.getPipelineId() : "default-pipeline");
         pipelineConfig.setName("默认流水线");
         pipelineConfig.setItems(new ArrayList<>());
         configSnapshot.setPipelineConfig(pipelineConfig);
         
         // 全局设置
         TaskConfigSnapshot.GlobalSettings globalSettings = new TaskConfigSnapshot.GlobalSettings();
+        if (request.getGlobalSettings() != null) {
+            TaskRequestDTO.GlobalSettingsDTO dto = request.getGlobalSettings();
+            if (dto.getMaxThreads() != null) {
+                globalSettings.setMaxThreads(dto.getMaxThreads());
+            }
+            if (dto.getTimeout() != null) {
+                globalSettings.setTimeout(dto.getTimeout());
+            }
+            if (dto.isDryRun() != null) {
+                globalSettings.setDryRun(dto.isDryRun());
+            }
+            if (dto.isOverwrite() != null) {
+                globalSettings.setOverwrite(dto.isOverwrite());
+            }
+            if (dto.isBackup() != null) {
+                globalSettings.setBackup(dto.isBackup());
+            }
+            if (dto.getBackupPath() != null) {
+                globalSettings.setBackupPath(dto.getBackupPath());
+            }
+            if (dto.getRetryCount() != null) {
+                globalSettings.setRetryCount(dto.getRetryCount());
+            }
+            if (dto.getRetryInterval() != null) {
+                globalSettings.setRetryInterval(dto.getRetryInterval());
+            }
+        }
         configSnapshot.setGlobalSettings(globalSettings);
         
         return configSnapshot;
