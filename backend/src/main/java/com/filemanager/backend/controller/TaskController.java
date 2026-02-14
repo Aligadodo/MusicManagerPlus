@@ -960,11 +960,13 @@ public class TaskController {
         map.put("progress", taskInfo.getOverallProgress());
         map.put("message", taskInfo.getMessage());
         
-        Map<String, Object> stages = new HashMap<>();
-        stages.put("scan", scanStageToMap(taskInfo.getStages().getScan()));
-        stages.put("preview", previewStageToMap(taskInfo.getStages().getPreview()));
-        stages.put("execution", executionStageToMap(taskInfo.getStages().getExecution()));
-        map.put("stages", stages);
+        if (taskInfo.getStages() != null) {
+            Map<String, Object> stages = new HashMap<>();
+            stages.put("scan", scanStageToMap(taskInfo.getStages().getScan()));
+            stages.put("preview", previewStageToMap(taskInfo.getStages().getPreview()));
+            stages.put("execution", executionStageToMap(taskInfo.getStages().getExecution()));
+            map.put("stages", stages);
+        }
         
         TaskConfigSnapshot configSnapshot = taskInfo.getConfigSnapshot();
         if (configSnapshot != null) {

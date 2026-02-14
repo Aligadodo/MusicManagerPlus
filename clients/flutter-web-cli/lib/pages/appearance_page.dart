@@ -5,6 +5,7 @@ import '../api/api_client.dart';
 import '../api/config_service.dart';
 import '../providers/config_provider.dart';
 import '../utils/ui_utils.dart';
+import '../widgets/selectable_text_widget.dart';
 
 class AppearancePage extends ConsumerStatefulWidget {
   const AppearancePage({super.key});
@@ -72,7 +73,15 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
         print('加载主题预设失败: $fallbackError');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('加载主题失败: $fallbackError')),
+            SnackBar(
+              content: SelectableTextWidget(
+                text: '加载主题失败: $fallbackError',
+                style: const TextStyle(color: Colors.white),
+                maxLines: 5,
+              ),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 5),
+            ),
           );
         }
       }
@@ -108,7 +117,15 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
       print('应用主题预设失败: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('应用主题预设失败: $e')),
+          SnackBar(
+            content: SelectableTextWidget(
+              text: '应用主题预设失败: $e',
+              style: const TextStyle(color: Colors.white),
+              maxLines: 5,
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
         );
       }
     } finally {
@@ -179,7 +196,15 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
         print('保存主题预设失败: $e');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('保存主题预设失败: $e')),
+            SnackBar(
+              content: SelectableTextWidget(
+                text: '保存主题预设失败: $e',
+                style: const TextStyle(color: Colors.white),
+                maxLines: 5,
+              ),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 5),
+            ),
           );
         }
       }
@@ -248,7 +273,15 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
         print('编辑主题失败: $e');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('编辑主题失败: $e')),
+            SnackBar(
+              content: SelectableTextWidget(
+                text: '编辑主题失败: $e',
+                style: const TextStyle(color: Colors.white),
+                maxLines: 5,
+              ),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 5),
+            ),
           );
         }
       }
@@ -295,7 +328,15 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
         print('删除主题失败: $e');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('删除主题失败: $e')),
+            SnackBar(
+              content: SelectableTextWidget(
+                text: '删除主题失败: $e',
+                style: const TextStyle(color: Colors.white),
+                maxLines: 5,
+              ),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 5),
+            ),
           );
         }
       }

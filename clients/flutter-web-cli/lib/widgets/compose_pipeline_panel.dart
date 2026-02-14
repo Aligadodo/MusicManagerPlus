@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:filemanager_flutter/models/strategy_info.dart';
 import 'package:filemanager_flutter/api/pipeline_service.dart';
 import 'package:filemanager_flutter/widgets/pipeline_list_item.dart';
+import 'package:filemanager_flutter/widgets/selectable_text_widget.dart';
 import 'package:filemanager_flutter/utils/theme_utils.dart';
 
 class ComposePipelinePanel extends StatefulWidget {
@@ -48,7 +49,15 @@ class _ComposePipelinePanelState extends State<ComposePipelinePanel> {
       print('添加步骤失败: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('添加步骤失败: $e')),
+          SnackBar(
+            content: SelectableTextWidget(
+              text: '添加步骤失败: $e',
+              style: const TextStyle(color: Colors.white),
+              maxLines: 5,
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
         );
       }
     }

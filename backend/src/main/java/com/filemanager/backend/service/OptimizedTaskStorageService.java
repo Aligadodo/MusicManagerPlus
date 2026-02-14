@@ -1,8 +1,10 @@
 package com.filemanager.backend.service;
 
 import com.filemanager.backend.model.*;
+import com.filemanager.domain.entity.ChangeRecord;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -191,6 +193,37 @@ public class OptimizedTaskStorageService {
         } catch (IOException e) {
             logger.error("[OptimizedTaskStorage] 加载预览统计失败: {}", taskId, e);
             return null;
+        }
+    }
+
+    /**
+     * 保存变更记录
+     */
+    public void saveChangeRecords(String taskId, List<ChangeRecord> changeRecords) {
+        try {
+            String filePath = getTaskDirectory(taskId) + "/preview/changes.json";
+            objectMapper.writeValue(new File(filePath), changeRecords);
+            logger.debug("[OptimizedTaskStorage] 变更记录已保存: {} - {} 条记录", taskId, changeRecords.size());
+        } catch (IOException e) {
+            logger.error("[OptimizedTaskStorage] 保存变更记录失败: {}", taskId, e);
+        }
+    }
+
+    /**
+     * 加载变更记录
+     */
+    public List<ChangeRecord> loadChangeRecords(String taskId) {
+        try {
+            String filePath = getTaskDirectory(taskId) + "/preview/changes.json";
+            File file = new File(filePath);
+            if (!file.exists()) {
+                logger.warn("[OptimizedTaskStorage] 变更记录不存在: {}", taskId);
+                return new ArrayList<>();
+            }
+            return objectMapper.readValue(file, new TypeReference<List<ChangeRecord>>() {});
+        } catch (IOException e) {
+            logger.error("[OptimizedTaskStorage] 加载变更记录失败: {}", taskId, e);
+            return new ArrayList<>();
         }
     }
 

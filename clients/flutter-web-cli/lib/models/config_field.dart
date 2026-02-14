@@ -102,6 +102,21 @@ class ConfigField {
       }
     }
 
+    List<Map<String, dynamic>>? parsedBlockConditions;
+    if (json['blockConditions'] != null) {
+      try {
+        final blockConditionsList = json['blockConditions'] as List<dynamic>?;
+        if (blockConditionsList != null) {
+          parsedBlockConditions = blockConditionsList
+              .where((condition) => condition != null && condition is Map<String, dynamic>)
+              .map((condition) => condition as Map<String, dynamic>)
+              .toList();
+        }
+      } catch (e) {
+        print('Failed to parse blockConditions: ${json['blockConditions']}, error: $e');
+      }
+    }
+
     return ConfigField(
       name: json['name'] as String? ?? 'unknown',
       label: json['label'] as String? ?? 'Unknown Field',
@@ -117,7 +132,7 @@ class ConfigField {
       isModule: json['isModule'] as bool? ?? json['module'] as bool? ?? false,
       moduleType: json['moduleType'] as String?,
       exclusiveGroup: json['exclusiveGroup'] as String?,
-      blockConditions: json['blockConditions'] as List<Map<String, dynamic>>?,
+      blockConditions: parsedBlockConditions,
       autoFillConfig: parsedAutoFillConfig,
       childFields: parsedChildFields,
     );

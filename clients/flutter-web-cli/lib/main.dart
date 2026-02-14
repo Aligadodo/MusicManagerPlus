@@ -14,6 +14,7 @@ import 'package:filemanager_flutter/pages/task_detail_page.dart';
 import 'package:filemanager_flutter/pages/global_settings_page.dart';
 import 'package:filemanager_flutter/providers/theme_provider.dart';
 import 'package:filemanager_flutter/providers/config_provider.dart';
+import 'package:filemanager_flutter/widgets/selectable_text_widget.dart';
 
 
 final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());
@@ -207,7 +208,15 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
     } catch (e) {
       taskNotifier.error(e.toString());
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('创建任务失败: $e')),
+        SnackBar(
+          content: SelectableTextWidget(
+            text: '创建任务失败: $e',
+            style: const TextStyle(color: Colors.white),
+            maxLines: 5,
+          ),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
       );
     }
   }
@@ -237,7 +246,15 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
     } catch (e) {
       taskNotifier.error(e.toString());
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('执行任务失败: $e')),
+        SnackBar(
+          content: SelectableTextWidget(
+            text: '执行任务失败: $e',
+            style: const TextStyle(color: Colors.white),
+            maxLines: 5,
+          ),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
       );
     }
   }
@@ -314,7 +331,15 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
     } catch (e) {
       taskNotifier.error(e.toString());
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('停止任务失败: $e')),
+        SnackBar(
+          content: SelectableTextWidget(
+            text: '停止任务失败: $e',
+            style: const TextStyle(color: Colors.white),
+            maxLines: 5,
+          ),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
       );
     }
   }
@@ -410,7 +435,15 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
             } catch (e) {
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('配置加载失败: $e')),
+                  SnackBar(
+                    content: SelectableTextWidget(
+                      text: '配置加载失败: $e',
+                      style: const TextStyle(color: Colors.white),
+                      maxLines: 5,
+                    ),
+                    backgroundColor: Colors.red,
+                    duration: const Duration(seconds: 5),
+                  ),
                 );
               }
             }
@@ -426,7 +459,15 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
             } catch (e) {
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('配置保存失败: $e')),
+                  SnackBar(
+                    content: SelectableTextWidget(
+                      text: '配置保存失败: $e',
+                      style: const TextStyle(color: Colors.white),
+                      maxLines: 5,
+                    ),
+                    backgroundColor: Colors.red,
+                    duration: const Duration(seconds: 5),
+                  ),
                 );
               }
             }
@@ -472,7 +513,15 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('配置重置失败: $e')),
+                    SnackBar(
+                      content: SelectableTextWidget(
+                        text: '配置重置失败: $e',
+                        style: const TextStyle(color: Colors.white),
+                        maxLines: 5,
+                      ),
+                      backgroundColor: Colors.red,
+                      duration: const Duration(seconds: 5),
+                    ),
                   );
                 }
               }

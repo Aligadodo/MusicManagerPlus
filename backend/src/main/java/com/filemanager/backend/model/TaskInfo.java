@@ -2,6 +2,7 @@ package com.filemanager.backend.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.filemanager.domain.entity.ChangeRecord;
 import java.util.List;
 import java.util.Map;
 
@@ -17,6 +18,8 @@ public class TaskInfo {
     private String taskName;
     @JsonProperty("createdAt")
     private long createdAt;
+    @JsonProperty("updatedAt")
+    private long updatedAt;
     @JsonProperty("currentStage")
     private String currentStage;
     @JsonProperty("status")
@@ -29,6 +32,8 @@ public class TaskInfo {
     private TaskConfigSnapshot configSnapshot;
     @JsonProperty("stages")
     private TaskStages stages;
+    @JsonProperty("changeRecords")
+    private List<ChangeRecord> changeRecords;
 
     public TaskInfo() {
     }
@@ -65,6 +70,14 @@ public class TaskInfo {
 
     public void setCreatedAt(long createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public long getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(long updatedAt) {
+        this.updatedAt = updatedAt;
     }
 
     public String getCurrentStage() {
@@ -113,6 +126,14 @@ public class TaskInfo {
 
     public void setStages(TaskStages stages) {
         this.stages = stages;
+    }
+
+    public List<ChangeRecord> getChangeRecords() {
+        return changeRecords;
+    }
+
+    public void setChangeRecords(List<ChangeRecord> changeRecords) {
+        this.changeRecords = changeRecords;
     }
 
     /**

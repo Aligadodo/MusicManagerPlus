@@ -12,6 +12,7 @@ import 'package:filemanager_flutter/pages/preview_page.dart';
 import 'package:filemanager_flutter/widgets/compose_directory_panel.dart';
 import 'package:filemanager_flutter/widgets/compose_pipeline_panel.dart';
 import 'package:filemanager_flutter/widgets/compose_config_panel.dart';
+import 'package:filemanager_flutter/widgets/selectable_text_widget.dart';
 import 'package:filemanager_flutter/utils/theme_utils.dart';
 
 class ComposePage extends ConsumerStatefulWidget {
@@ -112,7 +113,15 @@ class _ComposePageState extends ConsumerState<ComposePage> {
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('加载配置失败: $e')),
+        SnackBar(
+          content: SelectableTextWidget(
+            text: '加载配置失败: $e',
+            style: const TextStyle(color: Colors.white),
+            maxLines: 5,
+          ),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
       );
     }
   }
@@ -176,7 +185,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
             flex: 3,
             child: _buildSectionHeader(
               'Step1-选择目录',
-              '通过弹窗或者拖拽至空白处来添加需要处理的文件或文件夹。',
+              '通过弹窗或者拖拽至空白处来添加需要处理的文件或文件夹。注：全局设置内有更详细的参数扫描参数设置，默认是处理所选择目录下全部文件。',
               'step1_header',
             ),
           ),

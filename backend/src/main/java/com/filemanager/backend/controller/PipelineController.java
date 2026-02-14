@@ -17,6 +17,7 @@ import com.filemanager.backend.service.FileFilterService;
 import com.filemanager.backend.service.FileTypeFilterService;
 import com.filemanager.backend.service.OptimizedTaskStorageService;
 import com.filemanager.backend.service.PreviewLimitService;
+import com.filemanager.backend.service.TaskRegistry;
 import com.filemanager.backend.util.FileScanner;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -46,6 +47,9 @@ public class PipelineController {
 
     @Autowired
     private TaskService taskService;
+
+    @Autowired
+    private TaskRegistry taskRegistry;
 
     @Autowired
     private FileFilterService fileFilterService;
@@ -147,15 +151,7 @@ public class PipelineController {
     @PostMapping("/analyze")
     public ResponseEntity<Map<String, Object>> analyzePipeline(@RequestBody Map<String, Object> request) {
         try {
-            if (taskManager.isTaskRunning()) {
-                Map<String, Object> result = new HashMap<>();
-                result.put("success", false);
-                result.put("message", "已有任务在运行，请先中止");
-                return ResponseEntity.badRequest().body(result);
-            }
-
             currentChanges.clear();
-            taskManager.clearAllTasks();
 
             List<String> sourceDirectories = (List<String>) request.get("sourceDirectories");
             List<Map<String, Object>> pipeline = (List<Map<String, Object>>) request.get("pipeline");
@@ -197,9 +193,19 @@ public class PipelineController {
             // 创建任务
             String taskId = taskService.createTask(taskRequest);
             
+            // 注册任务到 TaskRegistry
+            TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
+            if (taskInfo != null) {
+                taskRegistry.registerTask(taskInfo);
+                taskInfo.setStatus(TaskInfo.TaskStatus.PREVIEWING);
+                taskInfo.setCurrentStage("PREVIEW");
+                taskInfo.setMessage("正在预览分析...");
+                taskRegistry.updateTaskStatus(taskId, TaskInfo.TaskStatus.PREVIEWING);
+            }
+            
             // 同时创建 PipelineTaskManager 中的任务，使用相同的任务ID
             taskManager.createTaskWithId(taskId, "preview");
-            taskManager.updateTaskStatus(taskId, TaskStatus.PREVIEWING);
+            taskManager.updateTaskStatus(taskId, com.filemanager.domain.enums.TaskStatus.PREVIEWING);
             taskManager.setCurrentTaskRunning(true);
             taskManager.updateTaskStep(taskId, "初始化预览任务");
             taskManager.updateTaskMessage(taskId, "开始分析流水线...");
@@ -360,13 +366,15 @@ public class PipelineController {
                         
                         // 更新持久化的任务记录
                         try {
-                            TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
-                            if (taskInfo != null) {
-                                taskInfo.setStatus(TaskInfo.TaskStatus.PREVIEWED);
-                                taskInfo.setCurrentStage("PREVIEW");
-                                taskInfo.setOverallProgress(100.0);
-                                taskInfo.setMessage("预览完成，共发现 " + allChanges.size() + " 个变更");
-                                storageService.saveTaskInfo(taskInfo);
+                            TaskInfo previewTaskInfo = storageService.loadTaskInfo(taskId);
+                            if (previewTaskInfo != null) {
+                                previewTaskInfo.setStatus(TaskInfo.TaskStatus.PREVIEWED);
+                                previewTaskInfo.setCurrentStage("PREVIEW");
+                                previewTaskInfo.setOverallProgress(100.0);
+                                previewTaskInfo.setMessage("预览完成，共发现 " + allChanges.size() + " 个变更");
+                                previewTaskInfo.setChangeRecords(allChanges);
+                                storageService.saveTaskInfo(previewTaskInfo);
+                                storageService.saveChangeRecords(taskId, allChanges);
                             }
                         } catch (Exception e) {
                             UnifiedLogger.backendError("Pipeline", "更新任务状态失败: " + e.getMessage(), e);
@@ -377,11 +385,11 @@ public class PipelineController {
                         
                         // 更新持久化的任务记录
                         try {
-                            TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
-                            if (taskInfo != null) {
-                                taskInfo.setStatus(TaskInfo.TaskStatus.CANCELLED);
-                                taskInfo.setMessage("任务已中止");
-                                storageService.saveTaskInfo(taskInfo);
+                            TaskInfo cancelTaskInfo = storageService.loadTaskInfo(taskId);
+                            if (cancelTaskInfo != null) {
+                                cancelTaskInfo.setStatus(TaskInfo.TaskStatus.CANCELLED);
+                                cancelTaskInfo.setMessage("任务已中止");
+                                storageService.saveTaskInfo(cancelTaskInfo);
                             }
                         } catch (Exception e) {
                             UnifiedLogger.backendError("Pipeline", "更新任务状态失败: " + e.getMessage(), e);
@@ -394,11 +402,11 @@ public class PipelineController {
                     
                     // 更新持久化的任务记录
                     try {
-                        TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
-                        if (taskInfo != null) {
-                            taskInfo.setStatus(TaskInfo.TaskStatus.FAILED);
-                            taskInfo.setMessage("预览失败: " + e.getMessage());
-                            storageService.saveTaskInfo(taskInfo);
+                        TaskInfo failedTaskInfo = storageService.loadTaskInfo(taskId);
+                        if (failedTaskInfo != null) {
+                            failedTaskInfo.setStatus(TaskInfo.TaskStatus.FAILED);
+                            failedTaskInfo.setMessage("预览失败: " + e.getMessage());
+                            storageService.saveTaskInfo(failedTaskInfo);
                         }
                     } catch (Exception ex) {
                         UnifiedLogger.backendError("Pipeline", "更新任务状态失败: " + ex.getMessage(), ex);
@@ -668,6 +676,7 @@ public class PipelineController {
 
     @GetMapping("/changes")
     public ResponseEntity<ChangeRecordResponseDTO> getChanges(
+            @RequestParam(required = false) String taskId,
             @RequestParam(required = false) String searchFilter,
             @RequestParam(required = false) String statusFilter,
             @RequestParam(required = false) String operationTypeFilter,
@@ -677,6 +686,16 @@ public class PipelineController {
             @RequestParam(required = false, defaultValue = "id") String sortBy,
             @RequestParam(required = false, defaultValue = "ASC") String sortDirection) {
         try {
+            List<ChangeRecord> sourceChanges;
+            
+            if (taskId != null && !taskId.isEmpty()) {
+                sourceChanges = storageService.loadChangeRecords(taskId);
+                UnifiedLogger.backendOperation("Pipeline", "从任务加载变更记录: " + taskId + ", 数量: " + sourceChanges.size());
+            } else {
+                sourceChanges = currentChanges;
+                UnifiedLogger.backendOperation("Pipeline", "从内存加载变更记录, 数量: " + sourceChanges.size());
+            }
+            
             ChangeRecordQueryDTO queryDTO = new ChangeRecordQueryDTO();
             queryDTO.setSearchFilter(searchFilter);
             queryDTO.setStatusFilter(statusFilter);
@@ -688,7 +707,7 @@ public class PipelineController {
             queryDTO.setSortDirection(sortDirection);
 
             List<ChangeRecord> filteredChanges = new ArrayList<>();
-            for (ChangeRecord record : currentChanges) {
+            for (ChangeRecord record : sourceChanges) {
                 if (searchFilter != null && !searchFilter.isEmpty()) {
                     boolean matchesSearch = false;
                     if (record.getOriginalName() != null && record.getOriginalName().toLowerCase().contains(searchFilter.toLowerCase())) {

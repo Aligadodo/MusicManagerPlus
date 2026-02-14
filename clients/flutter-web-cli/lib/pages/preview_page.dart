@@ -12,6 +12,7 @@ import '../models/strategy_info.dart';
 import '../models/task_status.dart' as task_models;
 import '../utils/tooltip_utils.dart';
 import '../utils/theme_utils.dart';
+import '../widgets/selectable_text_widget.dart';
 
 // 导入main.dart中的taskStateProvider
 import '../main.dart' as main_app;
@@ -144,7 +145,7 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
       if (_viewMode == ViewMode.taskList) {
         _refreshTasks();
       } else if (_viewMode == ViewMode.taskDetail && _selectedTask != null) {
-        _refreshTaskDetail();
+        _refreshTaskDetailSafe();
       }
     });
   }
@@ -213,6 +214,18 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
         setState(() {
           _tasks = tasks;
         });
+        
+        // 检查是否有任务状态变为 PREVIEWED，如果有，获取变更记录
+        for (var task in tasks) {
+          if (task.status == 'PREVIEWED' && _taskId.isNotEmpty && task.taskId == _taskId) {
+            await _fetchChanges();
+            setState(() {
+              _taskState = LocalTaskState.previewCompleted;
+              _message = '预览分析完成';
+            });
+            break;
+          }
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -234,6 +247,23 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
     } catch (e) {
       if (mounted) {
         _showErrorSnackBar('刷新任务信息失败: $e');
+      }
+    }
+  }
+
+  Future<void> _refreshTaskDetailSafe() async {
+    if (_selectedTask == null) return;
+    
+    try {
+      final taskInfo = await _taskService.getTaskInfo(_selectedTask!.taskId!);
+      if (mounted) {
+        setState(() {
+          _selectedTask = taskInfo;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        print('刷新任务详情失败: $e');
       }
     }
   }
@@ -319,8 +349,13 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(message),
+          content: SelectableTextWidget(
+            text: message,
+            style: const TextStyle(color: Colors.white),
+            maxLines: 5,
+          ),
           backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
         ),
       );
     }
@@ -354,14 +389,12 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
       final result = await _pipelineService.analyzePipeline(sourceDirectories, _pipeline);
 
       if (result['success'] == true) {
+        _taskId = result['taskId'] ?? '';
         _showSuccess(result['message'] ?? '分析任务已开始');
-        await _fetchChanges();
         await _refreshTasks(); // 刷新任务列表，确保预览任务显示
         
-        setState(() {
-          _taskState = LocalTaskState.previewCompleted;
-          _message = '预览分析完成';
-        });
+        // 不在这里立即获取变更记录，而是通过自动刷新来获取
+        // 当任务状态变为 PREVIEWED 时，再获取变更记录
       } else {
         _showError(result['message'] ?? '分析失败');
         await _refreshTasks(); // 即使分析失败，也刷新任务列表
@@ -468,7 +501,11 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
     });
 
     try {
-      final response = await _apiClient.get('/api/pipeline/changes');
+      String url = '/api/pipeline/changes';
+      if (_taskId.isNotEmpty) {
+        url += '?taskId=$_taskId';
+      }
+      final response = await _apiClient.get(url);
       
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -752,6 +789,8 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
 
   String _getFriendlyStatus(String status) {
     switch (status) {
+      case 'CREATED':
+        return '已创建';
       case 'PENDING':
         return '等待中';
       case 'SCANNING':
@@ -764,8 +803,8 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
         return '已预览';
       case 'EXECUTING':
         return '执行中';
-      case 'EXECUTED':
-        return '已执行';
+      case 'COMPLETED':
+        return '已完成';
       case 'FAILED':
         return '失败';
       case 'CANCELLED':
@@ -777,6 +816,7 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
 
   Color _getStatusColor(String status) {
     switch (status) {
+      case 'CREATED':
       case 'PENDING':
         return Colors.yellow;
       case 'SCANNING':
@@ -785,7 +825,7 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
         return Colors.blue;
       case 'SCANNED':
       case 'PREVIEWED':
-      case 'EXECUTED':
+      case 'COMPLETED':
         return Colors.green;
       case 'FAILED':
         return Colors.red;

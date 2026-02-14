@@ -4,6 +4,7 @@ import 'package:filemanager_flutter/api/task_service.dart';
 import 'package:filemanager_flutter/api/api_client.dart';
 import 'package:filemanager_flutter/models/task_status.dart';
 import 'package:filemanager_flutter/widgets/task_card.dart';
+import 'package:filemanager_flutter/widgets/selectable_text_widget.dart';
 import 'package:filemanager_flutter/pages/task_detail_page.dart';
 
 class TaskListPage extends StatefulWidget {
@@ -178,8 +179,13 @@ class _TaskListPageState extends State<TaskListPage> {
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: SelectableTextWidget(
+          text: message,
+          style: const TextStyle(color: Colors.white),
+          maxLines: 5,
+        ),
         backgroundColor: Colors.red,
+        duration: const Duration(seconds: 5),
       ),
     );
   }

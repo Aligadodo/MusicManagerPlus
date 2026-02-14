@@ -106,7 +106,15 @@ class _ComposeDirectoryPanelState extends State<ComposeDirectoryPanel> {
       print('选择目录失败: $e');
       if (!_isDisposed) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: SelectableTextWidget(text: '选择目录失败: $e')),
+          SnackBar(
+            content: SelectableTextWidget(
+              text: '选择目录失败: $e',
+              style: const TextStyle(color: Colors.white),
+              maxLines: 5,
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
         );
       }
     }
@@ -153,7 +161,15 @@ class _ComposeDirectoryPanelState extends State<ComposeDirectoryPanel> {
       print('文件选择器选择目录失败: $e');
       if (!_isDisposed) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: SelectableTextWidget(text: '文件选择器选择目录失败: $e')),
+          SnackBar(
+            content: SelectableTextWidget(
+              text: '文件选择器选择目录失败: $e',
+              style: const TextStyle(color: Colors.white),
+              maxLines: 5,
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
         );
       }
     }
@@ -171,7 +187,15 @@ class _ComposeDirectoryPanelState extends State<ComposeDirectoryPanel> {
       print('添加目录失败: $e');
       if (!_isDisposed) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: SelectableTextWidget(text: '添加目录失败: $e')),
+          SnackBar(
+            content: SelectableTextWidget(
+              text: '添加目录失败: $e',
+              style: const TextStyle(color: Colors.white),
+              maxLines: 5,
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
         );
       }
     }
@@ -193,7 +217,15 @@ class _ComposeDirectoryPanelState extends State<ComposeDirectoryPanel> {
       print('清空目录失败: $e');
       if (!_isDisposed) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: SelectableTextWidget(text: '清空目录失败: $e')),
+          SnackBar(
+            content: SelectableTextWidget(
+              text: '清空目录失败: $e',
+              style: const TextStyle(color: Colors.white),
+              maxLines: 5,
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
         );
       }
     }

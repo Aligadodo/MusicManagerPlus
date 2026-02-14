@@ -30,7 +30,7 @@ class TaskStatus {
       createdAt: json['createdAt'] as int?,
       currentStage: json['currentStage'] as String?,
       status: json['status'] as String?,
-      overallProgress: json['overallProgress'] as double?,
+      overallProgress: (json['overallProgress'] as double?) ?? (json['progress'] as double?),
       message: json['message'] as String?,
       configSnapshot: json['configSnapshot'] != null
           ? TaskConfigSnapshot.fromJson(json['configSnapshot'] as Map<String, dynamic>)

@@ -9,6 +9,7 @@ import '../../models/enum_option.dart';
 import 'strategy_list_panel.dart';
 import 'strategy_config_panel.dart';
 import '../../utils/theme_utils.dart';
+import '../../widgets/selectable_text_widget.dart';
 
 class StrategyConfigPage extends ConsumerStatefulWidget {
   const StrategyConfigPage({super.key});
@@ -128,7 +129,15 @@ class _StrategyConfigPageState extends ConsumerState<StrategyConfigPage> {
         _errorMessage = '保存策略配置失败: $e';
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('保存失败: $e')),
+        SnackBar(
+          content: SelectableTextWidget(
+            text: '保存失败: $e',
+            style: const TextStyle(color: Colors.white),
+            maxLines: 5,
+          ),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
       );
     } finally {
       setState(() {

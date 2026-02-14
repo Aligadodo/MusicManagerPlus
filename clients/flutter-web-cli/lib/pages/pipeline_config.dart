@@ -234,7 +234,15 @@ class _PipelineConfigPageState extends ConsumerState<PipelineConfigPage> {
         print('重置流水线配置失败: $e');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('重置失败: $e')),
+            SnackBar(
+              content: SelectableTextWidget(
+                text: '重置失败: $e',
+                style: const TextStyle(color: Colors.white),
+                maxLines: 5,
+              ),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 5),
+            ),
           );
         }
       }
