@@ -73,11 +73,35 @@ class _SourceDirectoriesPageState extends ConsumerState<SourceDirectoriesPage> {
         if (input.files?.isNotEmpty == true) {
           final file = input.files![0];
           // 从文件路径中提取目录路径
-          final path = file.relativePath ?? '';
+          dynamic pathValue = file.relativePath;
+          String path = '';
+          
+          // 安全处理 pathValue，确保它是字符串类型
+          if (pathValue != null) {
+            if (pathValue is String) {
+              path = pathValue;
+            } else {
+              path = pathValue.toString();
+            }
+          }
+          
           if (path.isNotEmpty) {
             setState(() {
               _pathController.text = path;
             });
+          } else {
+            // 如果无法获取目录路径，尝试从文件路径中提取
+            if (file.path != null) {
+              String filePath = file.path;
+              // 移除文件名，只保留目录路径
+              int lastSeparatorIndex = filePath.lastIndexOf('/');
+              if (lastSeparatorIndex != -1) {
+                path = filePath.substring(0, lastSeparatorIndex);
+                setState(() {
+                  _pathController.text = path;
+                });
+              }
+            }
           }
         }
       });

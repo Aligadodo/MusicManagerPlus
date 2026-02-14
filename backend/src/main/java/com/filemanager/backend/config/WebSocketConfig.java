@@ -1,26 +1,29 @@
 package com.filemanager.backend.config;
 
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.socket.config.annotation.EnableWebSocket;
-import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
-import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
+import org.springframework.messaging.simp.config.MessageBrokerRegistry;
+import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
+import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
+import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
+/**
+ * WebSocket配置
+ * 支持任务进度实时推送
+ */
 @Configuration
-@EnableWebSocket
-public class WebSocketConfig implements WebSocketConfigurer {
+@EnableWebSocketMessageBroker
+public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
-    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(new com.filemanager.backend.controller.ws.TaskWebSocketHandler(), "/ws/tasks/**")
-                .setAllowedOrigins("*")
-                .withSockJS();
+    public void configureMessageBroker(MessageBrokerRegistry config) {
+        config.enableSimpleBroker("/topic");
+        config.setApplicationDestinationPrefixes("/app");
+    }
 
-        registry.addHandler(new com.filemanager.backend.controller.ws.ProgressWebSocketHandler(), "/ws/progress")
-                .setAllowedOrigins("*")
-                .withSockJS();
-
-        registry.addHandler(new com.filemanager.backend.controller.ws.FileOperationWebSocketHandler(), "/ws/files/**")
-                .setAllowedOrigins("*")
+    @Override
+    public void registerStompEndpoints(StompEndpointRegistry registry) {
+        registry.addEndpoint("/ws/tasks")
+                .setAllowedOriginPatterns("*")
                 .withSockJS();
     }
 }

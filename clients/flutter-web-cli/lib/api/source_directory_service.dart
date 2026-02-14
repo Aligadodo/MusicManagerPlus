@@ -23,12 +23,12 @@ class SourceDirectoryService {
     }
   }
 
-  Future<SourceDirectory> addSourceDirectory(SourceDirectory directory) async {
+  Future<Map<String, dynamic>> addSourceDirectory(SourceDirectory directory) async {
     try {
       final response = await _apiClient.post('/api/source-directories', body: directory.toJson());
       print('Add source directory response: ${response.statusCode}, ${response.body}');
       if (response.statusCode == 200) {
-        return SourceDirectory.fromJson(json.decode(response.body) as Map<String, dynamic>);
+        return Map<String, dynamic>.from(json.decode(response.body));
       } else {
         throw Exception('Failed to add source directory: ${response.statusCode}');
       }
