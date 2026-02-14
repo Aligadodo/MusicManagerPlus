@@ -146,8 +146,6 @@ public class MetadataScraperStrategy extends AbstractConfigurableStrategy {
 
     @Override
     public List<ChangeRecord> analyze(ChangeRecord currentRecord, 
-        List<ChangeRecord> inputRecords, 
-        List<File> rootDirs, 
         StrategyConfigDTO config, 
         ExecutionContext context) {
         

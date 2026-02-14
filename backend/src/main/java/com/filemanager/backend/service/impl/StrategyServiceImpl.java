@@ -420,7 +420,8 @@ public class StrategyServiceImpl implements StrategyService {
                 rootDirs.add(files.get(0).getParentFile());
             }
             
-            // 调用策略的 analyze 方法
+            // 设置context中的inputRecords和rootDirs
+            List<ChangeRecord> inputRecords = new ArrayList<>();
             for (File file : files) {
                 ChangeRecord record = new ChangeRecord();
                 record.setId("change-" + System.currentTimeMillis() + "-" + file.hashCode());
@@ -430,12 +431,17 @@ public class StrategyServiceImpl implements StrategyService {
                 record.setFileHandle(file);
                 record.setChanged(false);
                 record.setStatus("PENDING");
-                
+                inputRecords.add(record);
+            }
+            
+            context.setInputRecords(inputRecords);
+            context.setRootDirs(rootDirs);
+            
+            // 调用策略的 analyze 方法
+            for (ChangeRecord record : inputRecords) {
                 // 调用策略的 analyze 方法
                 List<ChangeRecord> analysisResults = strategy.analyze(
                     record,
-                    new ArrayList<>(),
-                    rootDirs,
                     convertToPluginConfig(config),
                     context
                 );
@@ -518,6 +524,9 @@ public class StrategyServiceImpl implements StrategyService {
                 rootDirs.add(files.get(0).getParentFile());
             }
             
+            // 设置context中的inputRecords和rootDirs
+            List<ChangeRecord> inputRecords = new ArrayList<>();
+            
             System.out.println("[Strategy] 开始分析阶段");
             for (File file : files) {
                 ChangeRecord record = new ChangeRecord();
@@ -529,10 +538,15 @@ public class StrategyServiceImpl implements StrategyService {
                 record.setChanged(false);
                 record.setStatus("PENDING");
                 
+                inputRecords.add(record);
+            }
+            
+            context.setInputRecords(inputRecords);
+            context.setRootDirs(rootDirs);
+            
+            for (ChangeRecord record : inputRecords) {
                 List<ChangeRecord> analysisResults = strategy.analyze(
                     record,
-                    new ArrayList<>(),
-                    rootDirs,
                     pluginConfig,
                     context
                 );

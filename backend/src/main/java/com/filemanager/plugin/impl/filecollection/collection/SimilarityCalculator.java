@@ -7,7 +7,6 @@ import java.util.regex.Pattern;
 
 public class SimilarityCalculator {
     
-    private static final Pattern SPECIAL_CHARS_PATTERN = Pattern.compile("[^a-zA-Z0-9\\u4e00-\\u9fa5]");
     private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s+");
     
     private double threshold;
@@ -386,11 +385,34 @@ public class SimilarityCalculator {
             return "";
         }
         
-        str = SPECIAL_CHARS_PATTERN.matcher(str).replaceAll(" ");
+        // 移除所有非字母、数字和中文字符
+        StringBuilder result = new StringBuilder();
+        for (int i = 0; i < str.length(); i++) {
+            char c = str.charAt(i);
+            if (Character.isLetterOrDigit(c) || isChineseCharacter(c)) {
+                result.append(c);
+            } else {
+                result.append(' ');
+            }
+        }
+        
+        str = result.toString();
         str = WHITESPACE_PATTERN.matcher(str).replaceAll(" ").trim();
         str = str.toLowerCase();
         
         return str;
+    }
+    
+    private boolean isChineseCharacter(char c) {
+        // 简单的中文范围判断
+        return (c >= 0x4e00 && c <= 0x9fa5) || 
+               (c >= 0x3400 && c <= 0x4dbf) ||
+               (c >= 0x20000 && c <= 0x2a6df) ||
+               (c >= 0x2a700 && c <= 0x2b73f) ||
+               (c >= 0x2b740 && c <= 0x2b81f) ||
+               (c >= 0x2b820 && c <= 0x2ceaf) ||
+               (c >= 0xf900 && c <= 0xfaff) ||
+               (c >= 0x3300 && c <= 0x33ff);
     }
     
     private String removeExtension(String fileName) {

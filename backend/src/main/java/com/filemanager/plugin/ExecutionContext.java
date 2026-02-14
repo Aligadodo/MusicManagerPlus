@@ -1,9 +1,13 @@
 package com.filemanager.plugin;
 
+import com.filemanager.domain.entity.ChangeRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -21,6 +25,10 @@ public class ExecutionContext {
     private long processedFiles;
     private boolean cancelled;
     private Map<String, Object> attributes = new HashMap<>();
+    
+    // 策略执行相关的上下文数据
+    private List<ChangeRecord> inputRecords = new ArrayList<>();
+    private List<File> rootDirs = new ArrayList<>();
     
     public ExecutionContext() {
         this.executionId = "exec-" + System.currentTimeMillis() + "-" + Math.random();
@@ -219,6 +227,60 @@ public class ExecutionContext {
      */
     public void setProcessedFiles(long processedFiles) {
         this.processedFiles = processedFiles;
+    }
+    
+    /**
+     * 获取输入记录列表
+     * @return 输入记录列表
+     */
+    public List<ChangeRecord> getInputRecords() {
+        return inputRecords;
+    }
+    
+    /**
+     * 设置输入记录列表
+     * @param inputRecords 输入记录列表
+     */
+    public void setInputRecords(List<ChangeRecord> inputRecords) {
+        this.inputRecords = inputRecords != null ? inputRecords : new ArrayList<>();
+    }
+    
+    /**
+     * 添加输入记录
+     * @param record 输入记录
+     */
+    public void addInputRecord(ChangeRecord record) {
+        if (inputRecords == null) {
+            inputRecords = new ArrayList<>();
+        }
+        inputRecords.add(record);
+    }
+    
+    /**
+     * 获取根目录列表
+     * @return 根目录列表
+     */
+    public List<File> getRootDirs() {
+        return rootDirs;
+    }
+    
+    /**
+     * 设置根目录列表
+     * @param rootDirs 根目录列表
+     */
+    public void setRootDirs(List<File> rootDirs) {
+        this.rootDirs = rootDirs != null ? rootDirs : new ArrayList<>();
+    }
+    
+    /**
+     * 添加根目录
+     * @param rootDir 根目录
+     */
+    public void addRootDir(File rootDir) {
+        if (rootDirs == null) {
+            rootDirs = new ArrayList<>();
+        }
+        rootDirs.add(rootDir);
     }
     
 }

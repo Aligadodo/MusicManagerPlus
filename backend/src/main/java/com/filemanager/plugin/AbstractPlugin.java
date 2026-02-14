@@ -170,10 +170,12 @@ public abstract class AbstractPlugin implements IPlugin {
 
     @Override
     public List<ChangeRecord> analyze(ChangeRecord currentRecord, 
-        List<ChangeRecord> inputRecords, 
-        List<File> rootDirs, 
         PluginConfigDTO config, 
         ExecutionContext context) {
+        
+        // 从context中获取inputRecords和rootDirs
+        List<ChangeRecord> inputRecords = context.getInputRecords();
+        List<File> rootDirs = context.getRootDirs();
         
         String filePath = currentRecord.getFilePath();
         ChangeRecord previewRecord = createPreviewRecord(filePath, config, context);

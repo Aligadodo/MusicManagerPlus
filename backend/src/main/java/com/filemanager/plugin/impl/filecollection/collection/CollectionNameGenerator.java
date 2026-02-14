@@ -162,7 +162,7 @@ public class CollectionNameGenerator {
         // 去除序号和特殊符号
         fileName = fileName.replaceAll("\\b\\d+\\b", ""); // 去除数字序号
         fileName = fileName.replaceAll("[①②③④⑤⑥⑦⑧⑨⑩]", ""); // 去除圆形序号
-        fileName = fileName.replaceAll("[\\[\\]\\(\\)\\{\\}<>", ""); // 去除括号
+        fileName = fileName.replaceAll("[\\[\\]\\(\\)\\{\\}<>]", ""); // 去除括号
         fileName = fileName.replaceAll("\\s+-", ""); // 去除分隔符
         fileName = fileName.replaceAll("\\s+_", "");
         fileName = fileName.replaceAll("\\s+\\|", "");

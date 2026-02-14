@@ -75,8 +75,6 @@ public class AdvancedRenameStrategy extends AbstractConfigurableStrategy {
 
     @Override
     public List<ChangeRecord> analyze(ChangeRecord currentRecord, 
-        List<ChangeRecord> inputRecords, 
-        List<File> rootDirs,
         StrategyConfigDTO config,
         ExecutionContext context) {
         
@@ -101,6 +99,8 @@ public class AdvancedRenameStrategy extends AbstractConfigurableStrategy {
         boolean hasNumberPrefixRule = rules.stream().anyMatch(rule -> rule.getActionType() == RenameActionType.ADD_NUMBER_PREFIX);
         
         if (hasNumberPrefixRule && isDirectory) {
+            List<ChangeRecord> inputRecords = context.getInputRecords();
+            List<File> rootDirs = context.getRootDirs();
             processNumberPrefixRule(currentRecord, inputRecords, rootDirs, rules, isCopy, pFile, pFolder, context);
             return Collections.emptyList();
         }
@@ -349,7 +349,7 @@ public class AdvancedRenameStrategy extends AbstractConfigurableStrategy {
         record.setFileHandle(sourceFile);
         
         try {
-            List<ChangeRecord> result = analyze(record, Collections.emptyList(), Collections.emptyList(), config, context);
+            List<ChangeRecord> result = analyze(record, config, context);
             if (!result.isEmpty() || record.isChanged()) {
                 execute(record, config, context);
                 record.setStatus("SUCCESS");

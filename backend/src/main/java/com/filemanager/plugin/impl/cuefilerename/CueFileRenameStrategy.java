@@ -62,8 +62,6 @@ public class CueFileRenameStrategy extends AbstractConfigurableStrategy {
 
     @Override
     public List<ChangeRecord> analyze(ChangeRecord currentRecord, 
-        List<ChangeRecord> inputRecords, 
-        List<File> rootDirs,
         StrategyConfigDTO config,
         ExecutionContext context) {
         
@@ -103,6 +101,8 @@ public class CueFileRenameStrategy extends AbstractConfigurableStrategy {
         int count = 0;
         List<String> cueNames = new ArrayList<>(targetFiles.keySet());
         cueNames.sort(String::compareToIgnoreCase);
+        
+        List<ChangeRecord> inputRecords = context.getInputRecords();
         
         for (String ky : cueNames) {
             ChangeRecord cueFileRecord = getTargetFile(cueFiles.get(ky), inputRecords);

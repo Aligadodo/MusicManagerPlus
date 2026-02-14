@@ -114,6 +114,10 @@ public class PluginServiceImpl implements PluginService {
 
         com.filemanager.plugin.ExecutionContext context = new com.filemanager.plugin.ExecutionContext(pluginId);
         
+        // 设置context中的inputRecords和rootDirs
+        context.setInputRecords(inputRecords);
+        context.setRootDirs(rootDirs);
+        
         if (preconditionGroups != null && !preconditionGroups.isEmpty()) {
             File currentFile = currentRecord.getFileHandle();
             if (!PreconditionEvaluator.evaluate(currentFile, preconditionGroups)) {
@@ -121,7 +125,7 @@ public class PluginServiceImpl implements PluginService {
             }
         }
         
-        return plugin.analyze(currentRecord, inputRecords, rootDirs, config, context);
+        return plugin.analyze(currentRecord, config, context);
     }
 
     @Override

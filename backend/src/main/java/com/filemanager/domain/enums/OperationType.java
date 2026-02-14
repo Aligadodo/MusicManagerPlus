@@ -14,5 +14,6 @@ public enum OperationType {
     CLEANUP,
     NCM_CONVERT,
     NCM_CACHE_SCAN,
-    NCM_LYRIC_DOWNLOAD
+    NCM_LYRIC_DOWNLOAD,
+    COLLECT
 }

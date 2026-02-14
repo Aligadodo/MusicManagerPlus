@@ -54,6 +54,39 @@
 - 文件系统变化
 - 关键词过滤效果
 
+### 2. 文件收集算法测试（FileCollectionAlgorithmTest）
+
+**测试用例数量**：10个
+
+**测试场景**：
+1. ✅ 相似度计算测试
+2. ✅ 相同标题不同序号识别测试
+3. ✅ 关键词提取测试
+4. ✅ 特殊符号和数字处理测试
+5. ✅ 龙音文件名标准化测试
+6. ✅ 滚石文件名标准化测试
+7. ✅ 15首精选滚石年度强打金曲文件名标准化测试
+8. ✅ 龙音文采华音版-轻舟随波系列的相似度计算测试
+9. ✅ 不同相似度阈值的影响测试
+10. ✅ 边界条件测试
+
+**核心方法覆盖**：
+- `TextSimilarityCalculator.calculateSimilarity()`：测试场景1、5、6、7、8、10
+- `TextSimilarityCalculator.isSimilar()`：测试场景8、9
+- `FilenameNormalizer.normalize()`：测试场景3、4、5、6、7
+- `hasSameTitleDifferentNumber()`：测试场景2
+- `extractCoreKeywords()`：测试场景3
+- `extractNumber()`：测试场景2
+
+**关键断言**：
+- 相似度计算准确性
+- 文件名标准化正确性
+- 特殊字符处理
+- 边界条件处理
+- 不同阈值的影响
+
+**来源**：从老架构迁移的测试用例
+
 ## 待实现测试用例
 
 ### 2. 文件清理策略（FileCleanupStrategy）

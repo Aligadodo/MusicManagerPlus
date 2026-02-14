@@ -336,12 +336,15 @@ public abstract class AbstractConfigurableStrategy implements StrategyConfigurab
 
     @Override
     public List<ChangeRecord> analyze(ChangeRecord currentRecord, 
-        List<ChangeRecord> inputRecords, 
-        List<File> rootDirs, 
         PluginConfigDTO config, 
         ExecutionContext context) {
         
         StrategyConfigDTO strategyConfig = convertToStrategyConfig(config);
+        
+        // 从context中获取inputRecords和rootDirs
+        List<ChangeRecord> inputRecords = context.getInputRecords();
+        List<File> rootDirs = context.getRootDirs();
+        
         return analyzeWithPreCheck(currentRecord, inputRecords, rootDirs, strategyConfig, context);
     }
 
@@ -376,15 +379,11 @@ public abstract class AbstractConfigurableStrategy implements StrategyConfigurab
      * 核心分析方法
      * 
      * @param currentRecord 当前记录
-     * @param inputRecords 输入记录列表 [扫描范围内的全量文件]
-     * @param rootDirs 根目录列表
      * @param config 配置对象
      * @param context 执行上下文
      * @return 变更记录列表
      */
     public abstract List<ChangeRecord> analyze(ChangeRecord currentRecord, 
-        List<ChangeRecord> inputRecords, 
-        List<File> rootDirs,
         StrategyConfigDTO config,
         ExecutionContext context);
 
@@ -416,6 +415,10 @@ public abstract class AbstractConfigurableStrategy implements StrategyConfigurab
         StrategyConfigDTO config,
         ExecutionContext context) {
         
+        // 将inputRecords和rootDirs设置到context中
+        context.setInputRecords(inputRecords);
+        context.setRootDirs(rootDirs);
+        
         // 已经变更的文件不支持二次变更
         if (currentRecord.isChanged()) {
             return Collections.emptyList();
@@ -434,7 +437,7 @@ public abstract class AbstractConfigurableStrategy implements StrategyConfigurab
             return Collections.emptyList();
         }
         
-        return analyze(currentRecord, inputRecords, rootDirs, config, context);
+        return analyze(currentRecord, config, context);
     }
 
     /**

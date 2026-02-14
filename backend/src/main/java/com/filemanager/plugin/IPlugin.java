@@ -5,7 +5,6 @@ import com.filemanager.domain.dto.PluginParameterDTO;
 import com.filemanager.domain.dto.PreconditionGroupDTO;
 import com.filemanager.domain.entity.ChangeRecord;
 
-import java.io.File;
 import java.util.List;
 
 public interface IPlugin {
@@ -21,8 +20,6 @@ public interface IPlugin {
     List<ChangeRecord> preview(List<String> filePaths, PluginConfigDTO config, ExecutionContext context);
     
     List<ChangeRecord> analyze(ChangeRecord currentRecord, 
-        List<ChangeRecord> inputRecords, 
-        List<File> rootDirs, 
         PluginConfigDTO config, 
         ExecutionContext context);
     

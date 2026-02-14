@@ -2,6 +2,7 @@ package com.filemanager.backend.service;
 
 import com.filemanager.domain.dto.StrategyConfigDTO;
 import com.filemanager.domain.entity.ChangeRecord;
+import com.filemanager.plugin.StrategyConfigurable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -104,7 +105,7 @@ public class FileCollectionStrategyTest extends StrategyTestBase {
         StrategyConfigDTO config = new StrategyConfigDTO();
         config.setConfigValues(new java.util.HashMap<>());
         config.getConfigValues().put("targetDirectory", tempDir.toString() + "/collected");
-        config.getConfigValues().put("targetType", "FOLDERS_ONLY");
+        config.getConfigValues().put("targetType", "FILES_ONLY");
         config.getConfigValues().put("similarityThreshold", "0.9");
         config.getConfigValues().put("collectionSuffix", "【合集】");
         config.getConfigValues().put("mustContainKeywords", "");
@@ -122,7 +123,7 @@ public class FileCollectionStrategyTest extends StrategyTestBase {
         
         for (ChangeRecord record : records) {
             assertChangeRecord(record, true, "PENDING");
-            assertEquals("MOVE", record.getOperationType(), "操作类型应该是MOVE");
+            assertEquals("COLLECT", record.getOperationType(), "操作类型应该是COLLECT");
         }
         
         List<ChangeRecord> executionResults = strategyService.executeStrategy("file-collection", filePaths, config);
@@ -164,7 +165,7 @@ public class FileCollectionStrategyTest extends StrategyTestBase {
         StrategyConfigDTO config = new StrategyConfigDTO();
         config.setConfigValues(new java.util.HashMap<>());
         config.getConfigValues().put("targetDirectory", tempDir.toString() + "/collected");
-        config.getConfigValues().put("targetType", "FOLDERS_ONLY");
+        config.getConfigValues().put("targetType", "FILES_ONLY");
         config.getConfigValues().put("similarityThreshold", "0.9");
         config.getConfigValues().put("collectionSuffix", "【合集】");
         config.getConfigValues().put("mustContainKeywords", "CD,系列,合集");
@@ -216,7 +217,7 @@ public class FileCollectionStrategyTest extends StrategyTestBase {
         StrategyConfigDTO config = new StrategyConfigDTO();
         config.setConfigValues(new java.util.HashMap<>());
         config.getConfigValues().put("targetDirectory", tempDir.toString() + "/collected");
-        config.getConfigValues().put("targetType", "FOLDERS_ONLY");
+        config.getConfigValues().put("targetType", "FILES_ONLY");
         config.getConfigValues().put("similarityThreshold", "0.9");
         config.getConfigValues().put("collectionSuffix", "【合集】");
         config.getConfigValues().put("mustContainKeywords", "");
@@ -269,7 +270,7 @@ public class FileCollectionStrategyTest extends StrategyTestBase {
         StrategyConfigDTO config = new StrategyConfigDTO();
         config.setConfigValues(new java.util.HashMap<>());
         config.getConfigValues().put("targetDirectory", tempDir.toString() + "/collected");
-        config.getConfigValues().put("targetType", "FOLDERS_ONLY");
+        config.getConfigValues().put("targetType", "FILES_ONLY");
         config.getConfigValues().put("similarityThreshold", "0.9");
         config.getConfigValues().put("collectionSuffix", "【合集】");
         config.getConfigValues().put("mustContainKeywords", "");
