@@ -68,6 +68,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 /**
  * FileManager Plus v21.0 (Modularized)
@@ -520,9 +522,29 @@ public class FileManagerPlusApp extends Application implements IAppController, I
 
     @Override
     public void refreshPreviewTableFilter() {
-        // 直接刷新表格过滤器，而不是调用previewView.refresh()来避免循环调用
         if (previewView != null && previewView.getTreeTableView() != null) {
-            previewView.getTreeTableView().refresh();
+            TreeTableView<ChangeRecord> table = previewView.getTreeTableView();
+            TreeItem<ChangeRecord> root = table.getRoot();
+            
+            if (root != null) {
+                root.getChildren().clear();
+                
+                List<ChangeRecord> fullList = getFullChangeList();
+                if (fullList != null && !fullList.isEmpty()) {
+                    Predicate<ChangeRecord> filter = previewView.getFilterPredicate();
+                    int displayLimit = previewView.getNumberDisplay().getValue();
+                    
+                    List<TreeItem<ChangeRecord>> filteredItems = fullList.stream()
+                            .filter(filter)
+                            .limit(displayLimit)
+                            .map(TreeItem::new)
+                            .collect(Collectors.toList());
+                    
+                    root.getChildren().addAll(filteredItems);
+                }
+                
+                table.refresh();
+            }
         }
         updateStats();
     }

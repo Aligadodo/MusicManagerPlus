@@ -208,6 +208,12 @@ public class PreviewView implements IAutoReloadAble {
         statsLabel = StyleFactory.createHeader("暂无统计信息");
 
         previewTable = new TreeTableView<>();
+        previewTable.setRoot(new TreeItem<>());
+        previewTable.setShowRoot(false);
+        previewTable.setEditable(false);
+        previewTable.setColumnResizePolicy(TreeTableView.CONSTRAINED_RESIZE_POLICY);
+        setupPreviewColumns();
+        setupPreviewRows();
         // 添加透明度效果，使用更高的透明度值
         String tableBgColor = theme.getListBgColor();
         if (tableBgColor.startsWith("#") && tableBgColor.length() == 7) {
@@ -816,6 +822,16 @@ public class PreviewView implements IAutoReloadAble {
         // 将全选按钮移动到批量操作区域
         chkSelectAll = new JFXCheckBox("全选");
         chkSelectAll.setTooltip(new Tooltip("选择所有可见行"));
+        
+        // 建立与表头复选框的绑定关系
+        if (previewTable != null && !previewTable.getColumns().isEmpty()) {
+            TreeTableColumn<ChangeRecord, ?> selectionColumn = previewTable.getColumns().get(0);
+            if (selectionColumn.getGraphic() instanceof CheckBox) {
+                CheckBox headerCheckBox = (CheckBox) selectionColumn.getGraphic();
+                headerCheckBox.selectedProperty().bindBidirectional(chkSelectAll.selectedProperty());
+            }
+        }
+        
         chkSelectAll.selectedProperty().addListener((obs, oldVal, newVal) -> {
             TreeTableView<ChangeRecord> tableView = getPreviewTable();
             if (tableView != null && tableView.getRoot() != null) {
@@ -863,13 +879,6 @@ public class PreviewView implements IAutoReloadAble {
                 "删除选中文件的目标文件",
                 "谨慎操作，删除后不可恢复"
         ));
-
-        // 表格
-        previewTable.setShowRoot(false);
-        previewTable.setColumnResizePolicy(TreeTableView.CONSTRAINED_RESIZE_POLICY);
-        // 移除硬编码样式，让StyleFactory统一管理
-        setupPreviewColumns();
-        setupPreviewRows();
 
         // 设置根路径线程配置面板的垂直增长优先级
         VBox.setVgrow(rootPathThreadConfigBox, Priority.ALWAYS);
@@ -928,7 +937,9 @@ public class PreviewView implements IAutoReloadAble {
         // 在选择列的表头添加全选复选框
         CheckBox headerCheckBox = new CheckBox();
         headerCheckBox.setStyle("-fx-padding: 0;");
-        headerCheckBox.selectedProperty().bindBidirectional(chkSelectAll.selectedProperty());
+        if (chkSelectAll != null) {
+            headerCheckBox.selectedProperty().bindBidirectional(chkSelectAll.selectedProperty());
+        }
         selectionColumn.setGraphic(headerCheckBox);
         selectionColumn.setCellFactory(column -> new TreeTableCell<ChangeRecord, Boolean>() {
             private final CheckBox checkBox = new CheckBox();
