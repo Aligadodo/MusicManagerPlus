@@ -272,6 +272,150 @@ public class OptimizedTaskExecutionService {
     }
 
     /**
+     * 重新扫描
+     */
+    public void restartScan(String taskId) {
+        logger.info("[TaskExecution] 开始重新扫描: {}", taskId);
+        
+        TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
+        if (taskInfo == null) {
+            throw new IllegalArgumentException("任务不存在: " + taskId);
+        }
+        
+        // 清空扫描数据
+        storageService.clearScanData(taskId);
+        
+        // 重置扫描阶段状态
+        TaskInfo.ScanStage scanStage = taskInfo.getStages().getScan();
+        scanStage.setStatus("PENDING");
+        scanStage.setTotalFiles(0);
+        scanStage.setTotalSize(0);
+        scanStage.setScanStartTime(0);
+        scanStage.setScanEndTime(0);
+        scanStage.setScanDuration(0);
+        
+        // 重置预览和执行阶段
+        TaskInfo.PreviewStage previewStage = taskInfo.getStages().getPreview();
+        previewStage.setStatus("PENDING");
+        previewStage.setTotalFiles(0);
+        previewStage.setProcessedFiles(0);
+        previewStage.setChangedFiles(0);
+        previewStage.setUnchangedFiles(0);
+        previewStage.setPreviewStartTime(0);
+        previewStage.setPreviewEndTime(0);
+        previewStage.setPreviewDuration(0);
+        
+        TaskInfo.ExecutionStage executionStage = taskInfo.getStages().getExecution();
+        executionStage.setStatus("PENDING");
+        executionStage.setExecutionCount(0);
+        executionStage.setTotalFiles(0);
+        executionStage.setProcessedFiles(0);
+        executionStage.setSuccessCount(0);
+        executionStage.setFailedCount(0);
+        executionStage.setSkippedCount(0);
+        executionStage.setExecutionStartTime(0);
+        executionStage.setExecutionEndTime(0);
+        executionStage.setExecutionDuration(0);
+        
+        // 重置任务状态
+        taskInfo.setCurrentStage("CREATED");
+        taskInfo.setStatus(TaskInfo.TaskStatus.CREATED);
+        taskInfo.setMessage("准备重新扫描");
+        
+        storageService.saveTaskInfo(taskInfo);
+        storageService.writeTaskLog(taskId, "[INFO] [RESTART] 准备重新扫描");
+        
+        logger.info("[TaskExecution] 重新扫描准备完成: {}", taskId);
+    }
+
+    /**
+     * 重新预览
+     */
+    public void restartPreview(String taskId) {
+        logger.info("[TaskExecution] 开始重新预览: {}", taskId);
+        
+        TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
+        if (taskInfo == null) {
+            throw new IllegalArgumentException("任务不存在: " + taskId);
+        }
+        
+        // 清空预览数据
+        storageService.clearPreviewData(taskId);
+        
+        // 重置预览阶段状态
+        TaskInfo.PreviewStage previewStage = taskInfo.getStages().getPreview();
+        previewStage.setStatus("PENDING");
+        previewStage.setTotalFiles(0);
+        previewStage.setProcessedFiles(0);
+        previewStage.setChangedFiles(0);
+        previewStage.setUnchangedFiles(0);
+        previewStage.setPreviewStartTime(0);
+        previewStage.setPreviewEndTime(0);
+        previewStage.setPreviewDuration(0);
+        
+        // 重置执行阶段
+        TaskInfo.ExecutionStage executionStage = taskInfo.getStages().getExecution();
+        executionStage.setStatus("PENDING");
+        executionStage.setExecutionCount(0);
+        executionStage.setTotalFiles(0);
+        executionStage.setProcessedFiles(0);
+        executionStage.setSuccessCount(0);
+        executionStage.setFailedCount(0);
+        executionStage.setSkippedCount(0);
+        executionStage.setExecutionStartTime(0);
+        executionStage.setExecutionEndTime(0);
+        executionStage.setExecutionDuration(0);
+        
+        // 重置任务状态
+        taskInfo.setCurrentStage("SCANNED");
+        taskInfo.setStatus(TaskInfo.TaskStatus.SCANNED);
+        taskInfo.setMessage("准备重新预览");
+        
+        storageService.saveTaskInfo(taskInfo);
+        storageService.writeTaskLog(taskId, "[INFO] [RESTART] 准备重新预览");
+        
+        logger.info("[TaskExecution] 重新预览准备完成: {}", taskId);
+    }
+
+    /**
+     * 重新执行
+     */
+    public void restartExecution(String taskId) {
+        logger.info("[TaskExecution] 开始重新执行: {}", taskId);
+        
+        TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
+        if (taskInfo == null) {
+            throw new IllegalArgumentException("任务不存在: " + taskId);
+        }
+        
+        // 清空执行数据
+        storageService.clearExecutionData(taskId);
+        
+        // 重置执行阶段状态
+        TaskInfo.ExecutionStage executionStage = taskInfo.getStages().getExecution();
+        executionStage.setStatus("PENDING");
+        executionStage.setExecutionCount(0);
+        executionStage.setTotalFiles(0);
+        executionStage.setProcessedFiles(0);
+        executionStage.setSuccessCount(0);
+        executionStage.setFailedCount(0);
+        executionStage.setSkippedCount(0);
+        executionStage.setExecutionStartTime(0);
+        executionStage.setExecutionEndTime(0);
+        executionStage.setExecutionDuration(0);
+        
+        // 重置任务状态
+        taskInfo.setCurrentStage("PREVIEWED");
+        taskInfo.setStatus(TaskInfo.TaskStatus.PREVIEWED);
+        taskInfo.setMessage("准备重新执行");
+        
+        storageService.saveTaskInfo(taskInfo);
+        storageService.writeTaskLog(taskId, "[INFO] [RESTART] 准备重新执行");
+        
+        logger.info("[TaskExecution] 重新执行准备完成: {}", taskId);
+    }
+
+    /**
      * 获取任务进度
      */
     public TaskInfo getTaskProgress(String taskId) {
@@ -412,9 +556,13 @@ public class OptimizedTaskExecutionService {
             } catch (Exception e) {
                 logger.error("[TaskExecution] 文件扫描失败: {}", taskId, e);
                 
+                TaskInfo.ScanStage scanStage = taskInfo.getStages().getScan();
+                scanStage.setScanEndTime(System.currentTimeMillis());
+                scanStage.setScanDuration(scanStage.getScanEndTime() - scanStage.getScanStartTime());
+                scanStage.setStatus("FAILED");
+                
                 taskInfo.setStatus(TaskInfo.TaskStatus.FAILED);
                 taskInfo.setMessage("扫描失败: " + e.getMessage());
-                taskInfo.getStages().getScan().setStatus("FAILED");
                 storageService.saveTaskInfo(taskInfo);
                 storageService.writeTaskLog(taskId, "[ERROR] [SCAN] 扫描失败: " + e.getMessage());
             }
@@ -490,9 +638,13 @@ public class OptimizedTaskExecutionService {
             } catch (Exception e) {
                 logger.error("[TaskExecution] 预览分析失败: {}", taskId, e);
                 
+                TaskInfo.PreviewStage previewStage = taskInfo.getStages().getPreview();
+                previewStage.setPreviewEndTime(System.currentTimeMillis());
+                previewStage.setPreviewDuration(previewStage.getPreviewEndTime() - previewStage.getPreviewStartTime());
+                previewStage.setStatus("FAILED");
+                
                 taskInfo.setStatus(TaskInfo.TaskStatus.FAILED);
                 taskInfo.setMessage("预览失败: " + e.getMessage());
-                taskInfo.getStages().getPreview().setStatus("FAILED");
                 storageService.saveTaskInfo(taskInfo);
                 storageService.writeTaskLog(taskId, "[ERROR] [PREVIEW] 预览失败: " + e.getMessage());
             }
@@ -570,9 +722,12 @@ public class OptimizedTaskExecutionService {
             } catch (Exception e) {
                 logger.error("[TaskExecution] 任务执行失败: {} - execution_{}", taskId, executionNum, e);
                 
+                executionStage.setExecutionEndTime(System.currentTimeMillis());
+                executionStage.setExecutionDuration(executionStage.getExecutionEndTime() - executionStage.getExecutionStartTime());
+                executionStage.setStatus("FAILED");
+                
                 taskInfo.setStatus(TaskInfo.TaskStatus.FAILED);
                 taskInfo.setMessage("执行失败: " + e.getMessage());
-                taskInfo.getStages().getExecution().setStatus("FAILED");
                 storageService.saveTaskInfo(taskInfo);
                 storageService.writeTaskLog(taskId, "[ERROR] [EXECUTION] 执行失败: " + e.getMessage());
             }
@@ -657,9 +812,12 @@ public class OptimizedTaskExecutionService {
             } catch (Exception e) {
                 logger.error("[TaskExecution] 选中记录执行失败: {} - execution_{}", taskId, executionNum, e);
                 
+                executionStage.setExecutionEndTime(System.currentTimeMillis());
+                executionStage.setExecutionDuration(executionStage.getExecutionEndTime() - executionStage.getExecutionStartTime());
+                executionStage.setStatus("FAILED");
+                
                 taskInfo.setStatus(TaskInfo.TaskStatus.FAILED);
                 taskInfo.setMessage("执行失败: " + e.getMessage());
-                taskInfo.getStages().getExecution().setStatus("FAILED");
                 storageService.saveTaskInfo(taskInfo);
                 storageService.writeTaskLog(taskId, "[ERROR] [EXECUTION] 执行失败: " + e.getMessage());
             }

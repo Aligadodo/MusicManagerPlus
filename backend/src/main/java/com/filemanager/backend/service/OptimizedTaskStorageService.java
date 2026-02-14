@@ -457,6 +457,69 @@ public class OptimizedTaskStorageService {
     }
 
     /**
+     * 清空扫描数据
+     */
+    public void clearScanData(String taskId) {
+        try {
+            Path scanDataPath = Paths.get(getTaskDirectory(taskId) + "/scan/data.json");
+            if (Files.exists(scanDataPath)) {
+                Files.delete(scanDataPath);
+                logger.info("[OptimizedTaskStorage] 扫描数据已清空: {}", taskId);
+            }
+            
+            Path scanStatsPath = Paths.get(getTaskDirectory(taskId) + "/scan/statistics.json");
+            if (Files.exists(scanStatsPath)) {
+                Files.delete(scanStatsPath);
+            }
+        } catch (IOException e) {
+            logger.error("[OptimizedTaskStorage] 清空扫描数据失败: {}", taskId, e);
+        }
+    }
+
+    /**
+     * 清空预览数据
+     */
+    public void clearPreviewData(String taskId) {
+        try {
+            Path previewDataPath = Paths.get(getTaskDirectory(taskId) + "/preview/data.json");
+            if (Files.exists(previewDataPath)) {
+                Files.delete(previewDataPath);
+                logger.info("[OptimizedTaskStorage] 预览数据已清空: {}", taskId);
+            }
+            
+            Path previewStatsPath = Paths.get(getTaskDirectory(taskId) + "/preview/statistics.json");
+            if (Files.exists(previewStatsPath)) {
+                Files.delete(previewStatsPath);
+            }
+        } catch (IOException e) {
+            logger.error("[OptimizedTaskStorage] 清空预览数据失败: {}", taskId, e);
+        }
+    }
+
+    /**
+     * 清空执行数据
+     */
+    public void clearExecutionData(String taskId) {
+        try {
+            Path executionDir = Paths.get(getTaskDirectory(taskId) + "/execution");
+            if (Files.exists(executionDir)) {
+                Files.walk(executionDir)
+                    .sorted((a, b) -> -a.compareTo(b))
+                    .forEach(path -> {
+                        try {
+                            Files.delete(path);
+                        } catch (IOException e) {
+                            logger.error("[OptimizedTaskStorage] 删除执行文件失败: {}", path, e);
+                        }
+                    });
+                logger.info("[OptimizedTaskStorage] 执行数据已清空: {}", taskId);
+            }
+        } catch (IOException e) {
+            logger.error("[OptimizedTaskStorage] 清空执行数据失败: {}", taskId, e);
+        }
+    }
+
+    /**
      * 获取所有任务ID
      */
     public List<String> getAllTaskIds() {

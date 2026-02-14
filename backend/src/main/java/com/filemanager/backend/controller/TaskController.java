@@ -3,6 +3,8 @@ package com.filemanager.backend.controller;
 import com.filemanager.backend.model.*;
 import com.filemanager.backend.service.OptimizedTaskExecutionService;
 import com.filemanager.backend.service.OptimizedTaskStorageService;
+import com.filemanager.backend.service.ChangeRecordService;
+import com.filemanager.backend.service.TaskOperationLogService;
 import com.filemanager.domain.dto.TaskRequestDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,12 +36,18 @@ public class TaskController {
 
     private final OptimizedTaskStorageService storageService;
     private final OptimizedTaskExecutionService executionService;
+    private final ChangeRecordService changeRecordService;
+    private final TaskOperationLogService taskOperationLogService;
 
     @Autowired
     public TaskController(OptimizedTaskStorageService storageService, 
-                         OptimizedTaskExecutionService executionService) {
+                         OptimizedTaskExecutionService executionService,
+                         ChangeRecordService changeRecordService,
+                         TaskOperationLogService taskOperationLogService) {
         this.storageService = storageService;
         this.executionService = executionService;
+        this.changeRecordService = changeRecordService;
+        this.taskOperationLogService = taskOperationLogService;
         logger.info("[TaskController] TaskController初始化成功");
     }
 
@@ -197,6 +205,8 @@ public class TaskController {
         Map<String, Object> response = new HashMap<>();
         
         try {
+            logger.info("[TaskController] 开始删除任务: {}", taskId);
+            
             boolean deleted = storageService.deleteTask(taskId);
             
             if (!deleted) {
@@ -206,6 +216,20 @@ public class TaskController {
                 error.put("message", "任务不存在");
                 response.put("error", error);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+            }
+            
+            try {
+                changeRecordService.deleteRecordsByTaskId(taskId);
+                logger.info("[TaskController] 已删除任务变更记录: {}", taskId);
+            } catch (Exception e) {
+                logger.warn("[TaskController] 删除任务变更记录失败: {}", taskId, e);
+            }
+            
+            try {
+                taskOperationLogService.deleteLogsByTaskId(taskId);
+                logger.info("[TaskController] 已删除任务操作日志: {}", taskId);
+            } catch (Exception e) {
+                logger.warn("[TaskController] 删除任务操作日志失败: {}", taskId, e);
             }
             
             Map<String, Object> data = new HashMap<>();
@@ -430,6 +454,105 @@ public class TaskController {
             Map<String, Object> error = new HashMap<>();
             error.put("code", "RETRY_FAILED");
             error.put("message", "重试启动失败");
+            error.put("details", e.getMessage());
+            response.put("error", error);
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    /**
+     * 重新扫描
+     */
+    @PostMapping("/{taskId}/restart/scan")
+    public ResponseEntity<Map<String, Object>> restartScan(@PathVariable String taskId) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            executionService.restartScan(taskId);
+            
+            TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
+            
+            response.put("success", true);
+            response.put("data", taskInfoToMap(taskInfo));
+            response.put("message", "重新扫描已开始");
+            
+            logger.info("[TaskController] 重新扫描已开始: {}", taskId);
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("[TaskController] 重新扫描启动失败: {}", taskId, e);
+            
+            response.put("success", false);
+            Map<String, Object> error = new HashMap<>();
+            error.put("code", "RESTART_SCAN_FAILED");
+            error.put("message", "重新扫描启动失败");
+            error.put("details", e.getMessage());
+            response.put("error", error);
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    /**
+     * 重新预览
+     */
+    @PostMapping("/{taskId}/restart/preview")
+    public ResponseEntity<Map<String, Object>> restartPreview(@PathVariable String taskId) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            executionService.restartPreview(taskId);
+            
+            TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
+            
+            response.put("success", true);
+            response.put("data", taskInfoToMap(taskInfo));
+            response.put("message", "重新预览已开始");
+            
+            logger.info("[TaskController] 重新预览已开始: {}", taskId);
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("[TaskController] 重新预览启动失败: {}", taskId, e);
+            
+            response.put("success", false);
+            Map<String, Object> error = new HashMap<>();
+            error.put("code", "RESTART_PREVIEW_FAILED");
+            error.put("message", "重新预览启动失败");
+            error.put("details", e.getMessage());
+            response.put("error", error);
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    /**
+     * 重新执行
+     */
+    @PostMapping("/{taskId}/restart/execution")
+    public ResponseEntity<Map<String, Object>> restartExecution(@PathVariable String taskId) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            executionService.restartExecution(taskId);
+            
+            TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
+            
+            response.put("success", true);
+            response.put("data", taskInfoToMap(taskInfo));
+            response.put("message", "重新执行已开始");
+            
+            logger.info("[TaskController] 重新执行已开始: {}", taskId);
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("[TaskController] 重新执行启动失败: {}", taskId, e);
+            
+            response.put("success", false);
+            Map<String, Object> error = new HashMap<>();
+            error.put("code", "RESTART_EXECUTION_FAILED");
+            error.put("message", "重新执行启动失败");
             error.put("details", e.getMessage());
             response.put("error", error);
             

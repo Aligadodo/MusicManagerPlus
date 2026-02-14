@@ -30,7 +30,7 @@ class TaskStatus {
       createdAt: json['createdAt'] as int?,
       currentStage: json['currentStage'] as String?,
       status: json['status'] as String?,
-      overallProgress: (json['overallProgress'] as double?) ?? (json['progress'] as double?),
+      overallProgress: (json['overallProgress'] as double?) ?? (json['progress'] as double?) ?? 0.0,
       message: json['message'] as String?,
       configSnapshot: json['configSnapshot'] != null
           ? TaskConfigSnapshot.fromJson(json['configSnapshot'] as Map<String, dynamic>)
@@ -60,6 +60,7 @@ class TaskConfigSnapshot {
   final List<SourceDirectoryConfig>? sourceDirectories;
   final String? strategyId;
   final Map<String, dynamic>? strategyConfig;
+  final Map<String, dynamic>? pipelineConfig;
   final List<RenameRule>? renameRules;
   final List<Precondition>? preconditions;
 
@@ -67,6 +68,7 @@ class TaskConfigSnapshot {
     this.sourceDirectories,
     this.strategyId,
     this.strategyConfig,
+    this.pipelineConfig,
     this.renameRules,
     this.preconditions,
   });
@@ -78,6 +80,7 @@ class TaskConfigSnapshot {
           .toList(),
       strategyId: json['strategyId'] as String?,
       strategyConfig: json['strategyConfig'] as Map<String, dynamic>?,
+      pipelineConfig: json['pipelineConfig'] as Map<String, dynamic>?,
       renameRules: (json['renameRules'] as List<dynamic>?)
           ?.map((e) => RenameRule.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -92,6 +95,7 @@ class TaskConfigSnapshot {
       'sourceDirectories': sourceDirectories?.map((e) => e.toJson()).toList(),
       'strategyId': strategyId,
       'strategyConfig': strategyConfig,
+      'pipelineConfig': pipelineConfig,
       'renameRules': renameRules?.map((e) => e.toJson()).toList(),
       'preconditions': preconditions?.map((e) => e.toJson()).toList(),
     };
@@ -194,6 +198,9 @@ class TaskStages {
   });
 
   factory TaskStages.fromJson(Map<String, dynamic> json) {
+    if (json == null) {
+      return TaskStages();
+    }
     return TaskStages(
       scan: json['scan'] != null
           ? ScanStage.fromJson(json['scan'] as Map<String, dynamic>)
@@ -232,6 +239,9 @@ class ScanStage {
   });
 
   factory ScanStage.fromJson(Map<String, dynamic> json) {
+    if (json == null) {
+      return ScanStage();
+    }
     return ScanStage(
       status: json['status'] as String?,
       scanStartTime: json['scanStartTime'] as int?,
@@ -268,6 +278,9 @@ class PreviewStage {
   });
 
   factory PreviewStage.fromJson(Map<String, dynamic> json) {
+    if (json == null) {
+      return PreviewStage();
+    }
     return PreviewStage(
       status: json['status'] as String?,
       previewStartTime: json['previewStartTime'] as int?,
@@ -308,6 +321,9 @@ class ExecutionStage {
   });
 
   factory ExecutionStage.fromJson(Map<String, dynamic> json) {
+    if (json == null) {
+      return ExecutionStage();
+    }
     return ExecutionStage(
       status: json['status'] as String?,
       executionStartTime: json['executionStartTime'] as int?,

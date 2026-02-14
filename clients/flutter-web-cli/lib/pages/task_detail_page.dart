@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:filemanager_flutter/api/task_service.dart';
 import 'package:filemanager_flutter/api/api_client.dart';
@@ -132,6 +133,60 @@ class _TaskDetailPageState extends State<TaskDetailPage>
     }
   }
 
+  Future<void> _restartScan() async {
+    final confirmed = await _showConfirmDialog('确认重新扫描', '确定要重新扫描文件吗？这将清空扫描数据。');
+    if (!confirmed) return;
+
+    try {
+      await _taskService.restartScan(widget.taskId);
+      _showSuccessSnackBar('重新扫描已开始');
+      _loadTaskInfo();
+    } catch (e) {
+      _showErrorSnackBar('重新扫描失败: $e');
+    }
+  }
+
+  Future<void> _restartPreview() async {
+    final confirmed = await _showConfirmDialog('确认重新分析', '确定要重新分析文件吗？这将清空预览数据。');
+    if (!confirmed) return;
+
+    try {
+      await _taskService.restartPreview(widget.taskId);
+      _showSuccessSnackBar('重新分析已开始');
+      _loadTaskInfo();
+    } catch (e) {
+      _showErrorSnackBar('重新分析失败: $e');
+    }
+  }
+
+  Future<void> _restartExecution() async {
+    final confirmed = await _showConfirmDialog('确认重新执行', '确定要重新执行任务吗？这将清空执行数据。');
+    if (!confirmed) return;
+
+    try {
+      await _taskService.restartExecution(widget.taskId);
+      _showSuccessSnackBar('重新执行已开始');
+      _loadTaskInfo();
+    } catch (e) {
+      _showErrorSnackBar('重新执行失败: $e');
+    }
+  }
+
+  Future<void> _deleteTask() async {
+    final confirmed = await _showConfirmDialog('确认删除', '确定要删除此任务吗？此操作不可恢复。');
+    if (!confirmed) return;
+
+    try {
+      await _taskService.deleteTask(widget.taskId);
+      _showSuccessSnackBar('任务已删除');
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      _showErrorSnackBar('删除任务失败: $e');
+    }
+  }
+
   Future<void> _cancelTask() async {
     final confirmed = await _showConfirmDialog('确认取消', '确定要取消此任务吗？');
     if (!confirmed) return;
@@ -142,6 +197,19 @@ class _TaskDetailPageState extends State<TaskDetailPage>
       _loadTaskInfo();
     } catch (e) {
       _showErrorSnackBar('取消任务失败: $e');
+    }
+  }
+
+  Future<void> _retryFailed() async {
+    final confirmed = await _showConfirmDialog('确认重试', '确定要重试失败的任务吗？');
+    if (!confirmed) return;
+
+    try {
+      await _taskService.retryFailed(widget.taskId);
+      _showSuccessSnackBar('重试已开始');
+      _loadTaskInfo();
+    } catch (e) {
+      _showErrorSnackBar('重试失败: $e');
     }
   }
 
@@ -403,6 +471,65 @@ class _TaskDetailPageState extends State<TaskDetailPage>
             icon: const Icon(Icons.play_arrow, size: 18),
             label: const Text('执行'),
           ),
+        if (_canRestartScan())
+          ElevatedButton.icon(
+            onPressed: () => _restartScan(),
+            icon: const Icon(Icons.refresh, size: 18),
+            label: const Text('重新扫描'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        if (_canRestartPreview())
+          ElevatedButton.icon(
+            onPressed: () => _restartPreview(),
+            icon: const Icon(Icons.refresh, size: 18),
+            label: const Text('重新分析'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        if (_canRestartExecution())
+          ElevatedButton.icon(
+            onPressed: () => _restartExecution(),
+            icon: const Icon(Icons.refresh, size: 18),
+            label: const Text('重新执行'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        if (_canRetry())
+          ElevatedButton.icon(
+            onPressed: _retryFailed,
+            icon: const Icon(Icons.refresh, size: 18),
+            label: const Text('重试'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        if (_canCancel())
+          ElevatedButton.icon(
+            onPressed: _cancelTask,
+            icon: const Icon(Icons.cancel, size: 18),
+            label: const Text('取消'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ElevatedButton.icon(
+          onPressed: _deleteTask,
+          icon: const Icon(Icons.delete, size: 18),
+          label: const Text('删除'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.grey,
+            foregroundColor: Colors.white,
+          ),
+        ),
       ],
     );
   }
@@ -412,19 +539,39 @@ class _TaskDetailPageState extends State<TaskDetailPage>
     return ['SCANNING', 'PREVIEWING', 'EXECUTING'].contains(status);
   }
 
+  bool _canRetry() {
+    final status = _taskInfo?.status ?? '';
+    return ['FAILED', 'COMPLETED'].contains(status);
+  }
+
   bool _canExecuteScan() {
     final status = _taskInfo?.status ?? '';
-    return ['CREATED', 'SCANNED'].contains(status);
+    return ['CREATED', 'SCANNED', 'PREVIEWED', 'COMPLETED', 'FAILED', 'CANCELLED'].contains(status);
   }
 
   bool _canExecutePreview() {
     final status = _taskInfo?.status ?? '';
-    return ['SCANNED', 'PREVIEWED'].contains(status);
+    return ['SCANNED', 'PREVIEWED', 'COMPLETED', 'FAILED'].contains(status);
   }
 
   bool _canExecuteTask() {
     final status = _taskInfo?.status ?? '';
-    return ['PREVIEWED'].contains(status);
+    return ['PREVIEWED', 'COMPLETED', 'FAILED'].contains(status);
+  }
+
+  bool _canRestartScan() {
+    final status = _taskInfo?.status ?? '';
+    return ['SCANNED', 'PREVIEWED', 'COMPLETED', 'FAILED', 'CANCELLED'].contains(status);
+  }
+
+  bool _canRestartPreview() {
+    final status = _taskInfo?.status ?? '';
+    return ['PREVIEWED', 'COMPLETED', 'FAILED'].contains(status);
+  }
+
+  bool _canRestartExecution() {
+    final status = _taskInfo?.status ?? '';
+    return ['COMPLETED', 'FAILED'].contains(status);
   }
 
   Widget _buildConfigSnapshotCard() {
@@ -449,10 +596,37 @@ class _TaskDetailPageState extends State<TaskDetailPage>
         const SizedBox(height: 8),
         _buildSourceDirectoriesList(configSnapshot.sourceDirectories),
         const SizedBox(height: 16),
-        _buildSectionTitle('策略配置'),
+        _buildSectionTitle('流水线配置'),
         const SizedBox(height: 8),
-        _buildStrategyConfig(configSnapshot.strategyId, configSnapshot.strategyConfig),
+        _buildPipelineConfig(configSnapshot.pipelineConfig),
+        const SizedBox(height: 16),
+        _buildSectionTitle('重命名规则'),
+        const SizedBox(height: 8),
+        _buildRenameRules(configSnapshot.renameRules),
+        const SizedBox(height: 16),
+        _buildSectionTitle('前置条件'),
+        const SizedBox(height: 8),
+        _buildPreconditions(configSnapshot.preconditions),
+        const SizedBox(height: 16),
+        _buildSectionTitle('完整配置JSON'),
+        const SizedBox(height: 8),
+        _buildConfigJsonViewer(),
       ],
+    );
+  }
+
+  Widget _buildConfigJsonViewer() {
+    final configSnapshot = _taskInfo?.configSnapshot;
+    if (configSnapshot == null) {
+      return const SizedBox.shrink();
+    }
+
+    final configJson = configSnapshot.toJson();
+    final formattedJson = const JsonEncoder.withIndent('  ').convert(configJson);
+
+    return _JsonViewer(
+      title: '完整配置JSON',
+      jsonData: formattedJson,
     );
   }
 
@@ -526,32 +700,68 @@ class _TaskDetailPageState extends State<TaskDetailPage>
     );
   }
 
-  Widget _buildGlobalSettings(dynamic globalSettings) {
-    if (globalSettings == null) {
-      return const Text('无全局参数配置', style: TextStyle(color: Colors.grey));
+  Widget _buildRenameRules(List<dynamic>? renameRules) {
+    if (renameRules == null || renameRules.isEmpty) {
+      return const Text('无重命名规则', style: TextStyle(color: Colors.grey));
     }
 
-    final settingsMap = globalSettings as Map<String, dynamic>;
-    return Wrap(
-      spacing: 16,
-      runSpacing: 8,
-      children: [
-        _buildSettingItem('最大线程数', settingsMap['maxThreads']?.toString() ?? 'N/A'),
-        _buildSettingItem('超时时间', '${settingsMap['timeout'] ?? 0}ms'),
-        _buildSettingItem('试运行', settingsMap['dryRun'] == true ? '是' : '否'),
-        _buildSettingItem('覆盖文件', settingsMap['overwrite'] == true ? '是' : '否'),
-        _buildSettingItem('备份', settingsMap['backup'] == true ? '是' : '否'),
-      ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: renameRules.map((rule) {
+        final ruleMap = rule as Map<String, dynamic>;
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              const Icon(Icons.rule, size: 16, color: Colors.purple),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      ruleMap['ruleName'] ?? '未命名规则',
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                    ),
+                    Text(
+                      '类型: ${ruleMap['ruleType'] ?? 'N/A'}',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 
-  Widget _buildSettingItem(String label, String value) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text('$label: ', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-        Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-      ],
+  Widget _buildPreconditions(List<dynamic>? preconditions) {
+    if (preconditions == null || preconditions.isEmpty) {
+      return const Text('无前置条件', style: TextStyle(color: Colors.grey));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: preconditions.map((condition) {
+        final conditionMap = condition as Map<String, dynamic>;
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              const Icon(Icons.check_circle_outline, size: 16, color: Colors.green),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '条件类型: ${conditionMap['conditionType'] ?? 'N/A'}',
+                  style: const TextStyle(fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -927,6 +1137,117 @@ class _CollapsibleCardState extends State<_CollapsibleCard> {
                 : const SizedBox.shrink(),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _JsonViewer extends StatefulWidget {
+  final String title;
+  final String jsonData;
+
+  const _JsonViewer({
+    Key? key,
+    required this.title,
+    required this.jsonData,
+  }) : super(key: key);
+
+  @override
+  State<_JsonViewer> createState() => _JsonViewerState();
+}
+
+class _JsonViewerState extends State<_JsonViewer> {
+  bool _isExpanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Column(
+        children: [
+          InkWell(
+            onTap: () {
+              setState(() {
+                _isExpanded = !_isExpanded;
+              });
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  const Icon(Icons.code, size: 20, color: Colors.blue),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      widget.title,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    _isExpanded ? Icons.expand_less : Icons.expand_more,
+                    color: Colors.grey,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 300),
+            child: _isExpanded
+                ? Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                _copyJsonToClipboard();
+                              },
+                              icon: const Icon(Icons.copy, size: 16),
+                              label: const Text('复制'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            widget.jsonData,
+                            style: const TextStyle(
+                              fontFamily: 'monospace',
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _copyJsonToClipboard() {
+    // TODO: 实现复制到剪贴板功能
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('已复制到剪贴板'),
+        backgroundColor: Colors.green,
       ),
     );
   }

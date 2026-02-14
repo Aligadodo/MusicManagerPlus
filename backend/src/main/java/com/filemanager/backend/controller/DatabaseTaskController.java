@@ -192,11 +192,35 @@ public class DatabaseTaskController {
         Map<String, Object> response = new HashMap<>();
         
         try {
+            logger.info("[DatabaseTaskController] 开始删除任务: {}", taskId);
+            
             boolean success = taskInfoService.deleteTask(taskId);
             
             if (success) {
+                try {
+                    changeRecordService.deleteRecordsByTaskId(taskId);
+                    logger.info("[DatabaseTaskController] 已删除任务变更记录: {}", taskId);
+                } catch (Exception e) {
+                    logger.warn("[DatabaseTaskController] 删除任务变更记录失败: {}", taskId, e);
+                }
+                
+                try {
+                    taskOperationLogService.deleteLogsByTaskId(taskId);
+                    logger.info("[DatabaseTaskController] 已删除任务操作日志: {}", taskId);
+                } catch (Exception e) {
+                    logger.warn("[DatabaseTaskController] 删除任务操作日志失败: {}", taskId, e);
+                }
+                
+                try {
+                    taskStageService.deleteStagesByTaskId(taskId);
+                    logger.info("[DatabaseTaskController] 已删除任务阶段信息: {}", taskId);
+                } catch (Exception e) {
+                    logger.warn("[DatabaseTaskController] 删除任务阶段信息失败: {}", taskId, e);
+                }
+                
                 response.put("success", true);
                 response.put("message", "任务已删除");
+                logger.info("[DatabaseTaskController] 任务删除成功: {}", taskId);
                 return ResponseEntity.ok(response);
             } else {
                 response.put("success", false);
@@ -204,7 +228,7 @@ public class DatabaseTaskController {
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
             }
         } catch (Exception e) {
-            logger.error("删除任务失败: " + taskId, e);
+            logger.error("[DatabaseTaskController] 删除任务失败: " + taskId, e);
             response.put("success", false);
             response.put("message", "删除任务失败: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);

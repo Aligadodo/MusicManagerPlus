@@ -46,8 +46,12 @@ class TaskService {
     final response = await _apiClient.get('/api/tasks/$taskId');
 
     if (response.statusCode == 200) {
-      final Map<String, dynamic> data = jsonDecode(response.body);
-      return TaskStatus.fromJson(data);
+      final Map<String, dynamic> responseData = jsonDecode(response.body);
+      if (responseData['success'] == true && responseData['data'] != null) {
+        return TaskStatus.fromJson(responseData['data'] as Map<String, dynamic>);
+      } else {
+        throw Exception('Failed to get task info: ${responseData['message'] ?? 'Unknown error'}');
+      }
     } else {
       throw Exception('Failed to get task info: ${response.statusCode}');
     }
@@ -133,6 +137,36 @@ class TaskService {
       return jsonDecode(response.body);
     } else {
       throw Exception('Failed to retry failed: ${response.statusCode}');
+    }
+  }
+
+  Future<Map<String, dynamic>> restartScan(String taskId) async {
+    final response = await _apiClient.post('/api/tasks/$taskId/restart/scan');
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to restart scan: ${response.statusCode}');
+    }
+  }
+
+  Future<Map<String, dynamic>> restartPreview(String taskId) async {
+    final response = await _apiClient.post('/api/tasks/$taskId/restart/preview');
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to restart preview: ${response.statusCode}');
+    }
+  }
+
+  Future<Map<String, dynamic>> restartExecution(String taskId) async {
+    final response = await _apiClient.post('/api/tasks/$taskId/restart/execution');
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to restart execution: ${response.statusCode}');
     }
   }
 
