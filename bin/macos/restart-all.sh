@@ -66,7 +66,7 @@ echo ""
 
 # 启动后端服务
 if [ -f "$SCRIPT_DIR/start-backend.sh" ]; then
-    open -a Terminal "$SCRIPT_DIR/start-backend.sh"
+    "$SCRIPT_DIR/start-backend.sh" > /dev/null 2>&1 &
 else
     echo "[错误] 未找到 start-backend.sh 脚本"
     echo "将在 10 秒后自动退出..."
@@ -86,7 +86,7 @@ fi
 
 # 启动前端服务
 if [ -f "$SCRIPT_DIR/start-frontend.sh" ]; then
-    open -a Terminal "$SCRIPT_DIR/start-frontend.sh"
+    "$SCRIPT_DIR/start-frontend.sh" > /dev/null 2>&1 &
 else
     echo "[错误] 未找到 start-frontend.sh 脚本"
     echo "将在 10 秒后自动退出..."

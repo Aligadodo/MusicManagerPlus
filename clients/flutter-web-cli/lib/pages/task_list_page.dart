@@ -4,6 +4,7 @@ import 'package:filemanager_flutter/api/task_service.dart';
 import 'package:filemanager_flutter/api/api_client.dart';
 import 'package:filemanager_flutter/models/task_status.dart';
 import 'package:filemanager_flutter/widgets/task_card.dart';
+import 'package:filemanager_flutter/pages/task_detail_page.dart';
 
 class TaskListPage extends StatefulWidget {
   const TaskListPage({Key? key}) : super(key: key);
@@ -164,10 +165,13 @@ class _TaskListPageState extends State<TaskListPage> {
   }
 
   void _navigateToTaskDetail(TaskStatus task) {
-    Navigator.pushNamed(
+    Navigator.push(
       context,
-      '/task-detail',
-      arguments: {'taskId': task.taskId},
+      MaterialPageRoute(
+        builder: (context) => TaskDetailPage(
+          taskId: task.taskId!,
+        ),
+      ),
     );
   }
 

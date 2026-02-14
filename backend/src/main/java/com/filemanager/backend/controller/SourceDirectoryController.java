@@ -122,12 +122,22 @@ public class SourceDirectoryController {
 
             sourceDirectories.add(new SourceDirectory(path, threadCount));
             saveSourceDirectoriesConfig();
+            
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
             result.put("message", "源目录添加成功");
+            
+            Map<String, Object> data = new HashMap<>();
+            data.put("path", path);
+            data.put("threadCount", threadCount);
+            result.put("data", data);
+            
             return ResponseEntity.ok(result);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("success", false);
+            errorResult.put("message", "添加失败: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResult);
         }
     }
 

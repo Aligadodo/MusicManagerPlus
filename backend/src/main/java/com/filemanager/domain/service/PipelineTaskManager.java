@@ -27,6 +27,10 @@ public class PipelineTaskManager {
     
     public String createTask(String taskType) {
         String taskId = "task-" + System.currentTimeMillis();
+        return createTaskWithId(taskId, taskType);
+    }
+    
+    public String createTaskWithId(String taskId, String taskType) {
         PipelineTaskStatusDTO status = new PipelineTaskStatusDTO();
         status.setTaskId(taskId);
         status.setStatus(TaskStatus.READY);

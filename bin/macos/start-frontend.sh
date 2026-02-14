@@ -40,7 +40,8 @@ echo "访问地址: http://localhost:8081"
 echo "按 Ctrl+C 停止服务"
 echo ""
 
-python3 -m http.server 8081 --directory "$SCRIPT_DIR/../../frontend" &
+cd "$SCRIPT_DIR/../../clients/flutter-web-cli"
+flutter run -d chrome --web-port=8081 &
 FRONTEND_PID=$!
 
 echo "前端服务已启动 (PID: $FRONTEND_PID)"

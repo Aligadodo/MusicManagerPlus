@@ -12,8 +12,10 @@ import com.filemanager.domain.dto.TaskRequestDTO;
 import com.filemanager.domain.dto.ChangeRecordQueryDTO;
 import com.filemanager.domain.dto.ChangeRecordResponseDTO;
 import com.filemanager.backend.logging.UnifiedLogger;
+import com.filemanager.backend.model.TaskInfo;
 import com.filemanager.backend.service.FileFilterService;
 import com.filemanager.backend.service.FileTypeFilterService;
+import com.filemanager.backend.service.OptimizedTaskStorageService;
 import com.filemanager.backend.service.PreviewLimitService;
 import com.filemanager.backend.util.FileScanner;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,6 +55,9 @@ public class PipelineController {
 
     @Autowired
     private PreviewLimitService previewLimitService;
+
+    @Autowired
+    private OptimizedTaskStorageService storageService;
 
     @javax.annotation.PostConstruct
     public void init() {
@@ -169,7 +174,31 @@ public class PipelineController {
                 return ResponseEntity.badRequest().body(result);
             }
 
-            String taskId = taskManager.createTask("preview");
+            // 创建持久化的任务记录
+            TaskRequestDTO taskRequest = new TaskRequestDTO();
+            taskRequest.setTaskName("预览任务-" + System.currentTimeMillis());
+            taskRequest.setDescription("流水线预览分析");
+            
+            // 转换源目录
+            List<TaskRequestDTO.SourceDirectoryDTO> sourceDirectoryDTOs = new ArrayList<>();
+            for (String dir : sourceDirectories) {
+                TaskRequestDTO.SourceDirectoryDTO dirDTO = new TaskRequestDTO.SourceDirectoryDTO();
+                dirDTO.setPath(dir);
+                dirDTO.setRecursive(true);
+                sourceDirectoryDTOs.add(dirDTO);
+            }
+            taskRequest.setSourceDirectories(sourceDirectoryDTOs);
+            
+            // 设置全局配置
+            TaskRequestDTO.GlobalSettingsDTO globalSettings = new TaskRequestDTO.GlobalSettingsDTO();
+            globalSettings.setDryRun(true); // 预览模式
+            taskRequest.setGlobalSettings(globalSettings);
+            
+            // 创建任务
+            String taskId = taskService.createTask(taskRequest);
+            
+            // 同时创建 PipelineTaskManager 中的任务，使用相同的任务ID
+            taskManager.createTaskWithId(taskId, "preview");
             taskManager.updateTaskStatus(taskId, TaskStatus.PREVIEWING);
             taskManager.setCurrentTaskRunning(true);
             taskManager.updateTaskStep(taskId, "初始化预览任务");
@@ -328,14 +357,52 @@ public class PipelineController {
                         taskManager.updateTaskChanges(taskId, !allChanges.isEmpty(), allChanges.size());
                         taskManager.updateTaskScanningInfo(taskId, sourceDirectories.get(0), totalFiles, totalFiles);
                         UnifiedLogger.backendOperation("Pipeline", "预览完成，共发现 " + allChanges.size() + " 个变更");
+                        
+                        // 更新持久化的任务记录
+                        try {
+                            TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
+                            if (taskInfo != null) {
+                                taskInfo.setStatus(TaskInfo.TaskStatus.PREVIEWED);
+                                taskInfo.setCurrentStage("PREVIEW");
+                                taskInfo.setOverallProgress(100.0);
+                                taskInfo.setMessage("预览完成，共发现 " + allChanges.size() + " 个变更");
+                                storageService.saveTaskInfo(taskInfo);
+                            }
+                        } catch (Exception e) {
+                            UnifiedLogger.backendError("Pipeline", "更新任务状态失败: " + e.getMessage(), e);
+                        }
                     } else {
                         taskManager.updateTaskStatus(taskId, TaskStatus.CANCELLED);
                         taskManager.updateTaskMessage(taskId, "任务已中止");
+                        
+                        // 更新持久化的任务记录
+                        try {
+                            TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
+                            if (taskInfo != null) {
+                                taskInfo.setStatus(TaskInfo.TaskStatus.CANCELLED);
+                                taskInfo.setMessage("任务已中止");
+                                storageService.saveTaskInfo(taskInfo);
+                            }
+                        } catch (Exception e) {
+                            UnifiedLogger.backendError("Pipeline", "更新任务状态失败: " + e.getMessage(), e);
+                        }
                     }
                 } catch (Exception e) {
                     UnifiedLogger.backendError("Pipeline", "预览失败: " + e.getMessage(), e);
                     taskManager.updateTaskStatus(taskId, TaskStatus.PREVIEW_FAILED);
                     taskManager.updateTaskMessage(taskId, "预览失败: " + e.getMessage());
+                    
+                    // 更新持久化的任务记录
+                    try {
+                        TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
+                        if (taskInfo != null) {
+                            taskInfo.setStatus(TaskInfo.TaskStatus.FAILED);
+                            taskInfo.setMessage("预览失败: " + e.getMessage());
+                            storageService.saveTaskInfo(taskInfo);
+                        }
+                    } catch (Exception ex) {
+                        UnifiedLogger.backendError("Pipeline", "更新任务状态失败: " + ex.getMessage(), ex);
+                    }
                 } finally {
                     taskManager.setCurrentTaskRunning(false);
                 }

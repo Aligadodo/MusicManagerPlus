@@ -22,7 +22,6 @@ class _TaskDetailPageState extends State<TaskDetailPage>
   late final TaskService _taskService;
   TaskStatus? _taskInfo;
   bool _isLoading = true;
-  int _selectedTab = 0;
   WebSocketChannel? _webSocketChannel;
   StreamSubscription? _webSocketSubscription;
   Timer? _refreshTimer;
@@ -203,83 +202,92 @@ class _TaskDetailPageState extends State<TaskDetailPage>
           ? const Center(child: CircularProgressIndicator())
           : _taskInfo == null
               ? const Center(child: Text('任务不存在'))
-              : Column(
-                  children: [
-                    _buildTaskHeader(),
-                    _buildTabBar(),
-                    Expanded(
-                      child: _buildTabContent(),
-                    ),
-                  ],
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildTaskInfoCard(),
+                      const SizedBox(height: 16),
+                      _buildConfigSnapshotCard(),
+                      const SizedBox(height: 16),
+                      _buildScanResultCard(),
+                      const SizedBox(height: 16),
+                      _buildPreviewResultCard(),
+                      const SizedBox(height: 16),
+                      _buildExecutionResultCard(),
+                    ],
+                  ),
                 ),
     );
   }
 
-  Widget _buildTaskHeader() {
+  Widget _buildTaskInfoCard() {
     final task = _taskInfo!;
     final createdAt = task.createdAt != null
         ? DateTime.fromMillisecondsSinceEpoch(task.createdAt!)
         : null;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      color: Colors.grey[100],
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              _buildStatusIcon(),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      task.taskName ?? '未命名任务',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                _buildStatusIcon(),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        task.taskName ?? '未命名任务',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      task.taskId ?? '',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
+                      const SizedBox(height: 4),
+                      Text(
+                        task.taskId ?? '',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          _buildProgressBar(),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Icon(Icons.access_time, size: 14, color: Colors.grey[600]),
-              const SizedBox(width: 4),
-              Text(
-                createdAt != null ? _formatDateTime(createdAt) : '未知时间',
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Text(
-                  task.message ?? '',
+              ],
+            ),
+            const SizedBox(height: 12),
+            _buildProgressBar(),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.access_time, size: 14, color: Colors.grey[600]),
+                const SizedBox(width: 4),
+                Text(
+                  createdAt != null ? _formatDateTime(createdAt) : '未知时间',
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          _buildActionButtons(),
-        ],
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    task.message ?? '',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _buildActionButtons(),
+          ],
+        ),
       ),
     );
   }
@@ -419,64 +427,507 @@ class _TaskDetailPageState extends State<TaskDetailPage>
     return ['PREVIEWED'].contains(status);
   }
 
-  Widget _buildTabBar() {
-    return TabBar(
-      controller: TabController(length: 4, vsync: this),
-      onTap: (index) {
-        setState(() {
-          _selectedTab = index;
-        });
-      },
-      tabs: const [
-        Tab(text: '配置'),
-        Tab(text: '扫描'),
-        Tab(text: '预览'),
-        Tab(text: '执行'),
+  Widget _buildConfigSnapshotCard() {
+    return _CollapsibleCard(
+      title: '配置快照',
+      icon: Icons.settings,
+      initiallyExpanded: false,
+      child: _buildConfigContent(),
+    );
+  }
+
+  Widget _buildConfigContent() {
+    final configSnapshot = _taskInfo?.configSnapshot;
+    if (configSnapshot == null) {
+      return const Center(child: Text('配置快照不存在'));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('源目录配置'),
+        const SizedBox(height: 8),
+        _buildSourceDirectoriesList(configSnapshot.sourceDirectories),
+        const SizedBox(height: 16),
+        _buildSectionTitle('策略配置'),
+        const SizedBox(height: 8),
+        _buildStrategyConfig(configSnapshot.strategyId, configSnapshot.strategyConfig),
       ],
     );
   }
 
-  Widget _buildTabContent() {
-    switch (_selectedTab) {
-      case 0:
-        return _buildConfigTab();
-      case 1:
-        return _buildScanTab();
-      case 2:
-        return _buildPreviewTab();
-      case 3:
-        return _buildExecutionTab();
-      default:
-        return const SizedBox.shrink();
+  Widget _buildStrategyConfig(String? strategyId, Map<String, dynamic>? strategyConfig) {
+    if (strategyId == null) {
+      return const Text('无策略配置', style: TextStyle(color: Colors.grey));
     }
-  }
 
-  Widget _buildConfigTab() {
-    return Center(
-      child: Text('配置信息 - ${_taskInfo?.configSnapshot?.toString() ?? "无"}'),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('策略ID: $strategyId',
+            style: const TextStyle(fontSize: 13)),
+        if (strategyConfig != null)
+          Text('配置参数: ${strategyConfig.length} 项',
+              style: const TextStyle(fontSize: 13)),
+      ],
     );
   }
 
-  Widget _buildScanTab() {
-    return Center(
-      child: Text('扫描结果 - ${_taskInfo?.stages?.scan?.toString() ?? "无"}'),
+  Widget _buildSourceDirectoriesList(List<dynamic>? sourceDirs) {
+    if (sourceDirs == null || sourceDirs.isEmpty) {
+      return const Text('无源目录配置', style: TextStyle(color: Colors.grey));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: sourceDirs.map((dir) {
+        final dirMap = dir as Map<String, dynamic>;
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              const Icon(Icons.folder, size: 16, color: Colors.blue),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  dirMap['path'] ?? '',
+                  style: const TextStyle(fontSize: 13),
+                ),
+              ),
+              if (dirMap['depth'] != null)
+                Text(
+                  '深度: ${dirMap['depth']}',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 
-  Widget _buildPreviewTab() {
-    return Center(
-      child: Text('预览结果 - ${_taskInfo?.stages?.preview?.toString() ?? "无"}'),
+  Widget _buildPipelineConfig(dynamic pipelineConfig) {
+    if (pipelineConfig == null) {
+      return const Text('无流水线配置', style: TextStyle(color: Colors.grey));
+    }
+
+    final pipelineMap = pipelineConfig as Map<String, dynamic>;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('流水线ID: ${pipelineMap['pipelineId'] ?? 'N/A'}',
+            style: const TextStyle(fontSize: 13)),
+        Text('名称: ${pipelineMap['name'] ?? 'N/A'}',
+            style: const TextStyle(fontSize: 13)),
+        if (pipelineMap['description'] != null)
+          Text('描述: ${pipelineMap['description']}',
+              style: const TextStyle(fontSize: 13)),
+      ],
     );
   }
 
-  Widget _buildExecutionTab() {
-    return Center(
-      child: Text('执行结果 - ${_taskInfo?.stages?.execution?.toString() ?? "无"}'),
+  Widget _buildGlobalSettings(dynamic globalSettings) {
+    if (globalSettings == null) {
+      return const Text('无全局参数配置', style: TextStyle(color: Colors.grey));
+    }
+
+    final settingsMap = globalSettings as Map<String, dynamic>;
+    return Wrap(
+      spacing: 16,
+      runSpacing: 8,
+      children: [
+        _buildSettingItem('最大线程数', settingsMap['maxThreads']?.toString() ?? 'N/A'),
+        _buildSettingItem('超时时间', '${settingsMap['timeout'] ?? 0}ms'),
+        _buildSettingItem('试运行', settingsMap['dryRun'] == true ? '是' : '否'),
+        _buildSettingItem('覆盖文件', settingsMap['overwrite'] == true ? '是' : '否'),
+        _buildSettingItem('备份', settingsMap['backup'] == true ? '是' : '否'),
+      ],
+    );
+  }
+
+  Widget _buildSettingItem(String label, String value) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text('$label: ', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+      ],
+    );
+  }
+
+  Widget _buildScanResultCard() {
+    return _CollapsibleCard(
+      title: '文件扫描结果',
+      icon: Icons.scanner,
+      initiallyExpanded: false,
+      child: _buildScanContent(),
+    );
+  }
+
+  Widget _buildScanContent() {
+    final scanStage = _taskInfo?.stages?.scan;
+    if (scanStage == null) {
+      return const Center(child: Text('扫描结果不存在'));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('统计信息'),
+        const SizedBox(height: 8),
+        _buildScanStatistics(scanStage),
+        const SizedBox(height: 16),
+        _buildSectionTitle('文件列表'),
+        const SizedBox(height: 8),
+        _buildScanFileList(scanStage),
+      ],
+    );
+  }
+
+  Widget _buildScanStatistics(dynamic scanStage) {
+    final scanMap = scanStage as Map<String, dynamic>;
+    return Wrap(
+      spacing: 16,
+      runSpacing: 8,
+      children: [
+        _buildStatItem('总文件数', scanMap['totalFiles']?.toString() ?? '0'),
+        _buildStatItem('扫描开始时间', _formatTimestamp(scanMap['scanStartTime'])),
+        _buildStatItem('扫描结束时间', _formatTimestamp(scanMap['scanEndTime'])),
+        _buildStatItem('扫描耗时', '${scanMap['scanDuration'] ?? 0}ms'),
+        _buildStatItem('状态', _formatStatus(scanMap['status'])),
+      ],
+    );
+  }
+
+  Widget _buildScanFileList(dynamic scanStage) {
+    final scanMap = scanStage as Map<String, dynamic>;
+    final status = scanMap['status'] as String?;
+
+    if (status != 'COMPLETED') {
+      return Center(
+        child: Column(
+          children: [
+            Icon(Icons.hourglass_empty, size: 48, color: Colors.grey[400]),
+            const SizedBox(height: 8),
+            Text(
+              '扫描未完成',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      height: 200,
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey[300]!),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: const Center(
+        child: Text('文件列表功能待实现'),
+      ),
+    );
+  }
+
+  Widget _buildPreviewResultCard() {
+    return _CollapsibleCard(
+      title: '预览分析结果',
+      icon: Icons.preview,
+      initiallyExpanded: false,
+      child: _buildPreviewContent(),
+    );
+  }
+
+  Widget _buildPreviewContent() {
+    final previewStage = _taskInfo?.stages?.preview;
+    if (previewStage == null) {
+      return const Center(child: Text('预览结果不存在'));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('统计信息'),
+        const SizedBox(height: 8),
+        _buildPreviewStatistics(previewStage),
+        const SizedBox(height: 16),
+        _buildSectionTitle('变更记录列表'),
+        const SizedBox(height: 8),
+        _buildPreviewRecordList(previewStage),
+      ],
+    );
+  }
+
+  Widget _buildPreviewStatistics(dynamic previewStage) {
+    final previewMap = previewStage as Map<String, dynamic>;
+    return Wrap(
+      spacing: 16,
+      runSpacing: 8,
+      children: [
+        _buildStatItem('总文件数', previewMap['totalFiles']?.toString() ?? '0'),
+        _buildStatItem('已处理文件数', previewMap['processedFiles']?.toString() ?? '0'),
+        _buildStatItem('变更文件数', previewMap['changedFiles']?.toString() ?? '0'),
+        _buildStatItem('未变更文件数', previewMap['unchangedFiles']?.toString() ?? '0'),
+        _buildStatItem('预览开始时间', _formatTimestamp(previewMap['previewStartTime'])),
+        _buildStatItem('预览结束时间', _formatTimestamp(previewMap['previewEndTime'])),
+        _buildStatItem('预览耗时', '${previewMap['previewDuration'] ?? 0}ms'),
+        _buildStatItem('状态', _formatStatus(previewMap['status'])),
+      ],
+    );
+  }
+
+  Widget _buildPreviewRecordList(dynamic previewStage) {
+    final previewMap = previewStage as Map<String, dynamic>;
+    final status = previewMap['status'] as String?;
+
+    if (status != 'COMPLETED') {
+      return Center(
+        child: Column(
+          children: [
+            Icon(Icons.hourglass_empty, size: 48, color: Colors.grey[400]),
+            const SizedBox(height: 8),
+            Text(
+              '预览未完成',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      height: 200,
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey[300]!),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: const Center(
+        child: Text('变更记录列表功能待实现'),
+      ),
+    );
+  }
+
+  Widget _buildExecutionResultCard() {
+    return _CollapsibleCard(
+      title: '执行结果',
+      icon: Icons.play_circle,
+      initiallyExpanded: false,
+      child: _buildExecutionContent(),
+    );
+  }
+
+  Widget _buildExecutionContent() {
+    final executionStage = _taskInfo?.stages?.execution;
+    if (executionStage == null) {
+      return const Center(child: Text('执行结果不存在'));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('执行历史'),
+        const SizedBox(height: 8),
+        _buildExecutionHistory(executionStage),
+        const SizedBox(height: 16),
+        _buildSectionTitle('当前执行结果'),
+        const SizedBox(height: 8),
+        _buildExecutionResultList(executionStage),
+      ],
+    );
+  }
+
+  Widget _buildExecutionHistory(dynamic executionStage) {
+    final executionMap = executionStage as Map<String, dynamic>;
+    final executionCount = executionMap['executionCount'] as int? ?? 0;
+    final currentExecution = executionMap['currentExecution'] as String?;
+
+    if (executionCount == 0) {
+      return const Center(
+        child: Text('暂无执行历史', style: TextStyle(color: Colors.grey)),
+      );
+    }
+
+    return DefaultTabController(
+      length: executionCount,
+      child: Column(
+        children: [
+          TabBar(
+            isScrollable: true,
+            tabs: List.generate(executionCount, (index) {
+              final executionNum = 'execution_${(index + 1).toString().padLeft(3, '0')}';
+              return Tab(text: '第${index + 1}次执行');
+            }),
+          ),
+          Container(
+            height: 150,
+            child: TabBarView(
+              children: List.generate(executionCount, (index) {
+                return Center(
+                  child: Text('执行历史详情待实现\n第${index + 1}次执行'),
+                );
+              }),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExecutionResultList(dynamic executionStage) {
+    final executionMap = executionStage as Map<String, dynamic>;
+    final status = executionMap['status'] as String?;
+
+    if (status != 'COMPLETED' && status != 'RUNNING') {
+      return Center(
+        child: Column(
+          children: [
+            Icon(Icons.hourglass_empty, size: 48, color: Colors.grey[400]),
+            const SizedBox(height: 8),
+            Text(
+              '执行未开始',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      height: 200,
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey[300]!),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: const Center(
+        child: Text('执行结果列表功能待实现'),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.bold,
+      ),
+    );
+  }
+
+  Widget _buildStatItem(String label, String value) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text('$label: ', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+      ],
     );
   }
 
   String _formatDateTime(DateTime dateTime) {
     return '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')} '
         '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+  }
+
+  String _formatTimestamp(dynamic timestamp) {
+    if (timestamp == null) return 'N/A';
+    final time = timestamp as int;
+    if (time == 0) return 'N/A';
+    return _formatDateTime(DateTime.fromMillisecondsSinceEpoch(time));
+  }
+
+  String _formatStatus(dynamic status) {
+    if (status == null) return 'N/A';
+    final statusStr = status as String;
+    switch (statusStr) {
+      case 'PENDING':
+        return '等待中';
+      case 'RUNNING':
+        return '运行中';
+      case 'COMPLETED':
+        return '已完成';
+      case 'FAILED':
+        return '失败';
+      case 'SKIPPED':
+        return '已跳过';
+      default:
+        return statusStr;
+    }
+  }
+}
+
+class _CollapsibleCard extends StatefulWidget {
+  final String title;
+  final IconData icon;
+  final Widget child;
+  final bool initiallyExpanded;
+
+  const _CollapsibleCard({
+    required this.title,
+    required this.icon,
+    required this.child,
+    this.initiallyExpanded = false,
+  });
+
+  @override
+  State<_CollapsibleCard> createState() => _CollapsibleCardState();
+}
+
+class _CollapsibleCardState extends State<_CollapsibleCard> {
+  late bool _isExpanded;
+
+  @override
+  void initState() {
+    super.initState();
+    _isExpanded = widget.initiallyExpanded;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Column(
+        children: [
+          InkWell(
+            onTap: () {
+              setState(() {
+                _isExpanded = !_isExpanded;
+              });
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Icon(widget.icon, size: 20, color: Colors.blue),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      widget.title,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    _isExpanded ? Icons.expand_less : Icons.expand_more,
+                    color: Colors.grey,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 300),
+            child: _isExpanded
+                ? Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: widget.child,
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
   }
 }

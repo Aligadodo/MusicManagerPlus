@@ -28,7 +28,8 @@ class SourceDirectoryService {
       final response = await _apiClient.post('/api/source-directories', body: directory.toJson());
       print('Add source directory response: ${response.statusCode}, ${response.body}');
       if (response.statusCode == 200) {
-        return Map<String, dynamic>.from(json.decode(response.body));
+        final Map<String, dynamic> result = json.decode(response.body) as Map<String, dynamic>;
+        return result;
       } else {
         throw Exception('Failed to add source directory: ${response.statusCode}');
       }
@@ -43,7 +44,8 @@ class SourceDirectoryService {
       final response = await _apiClient.delete('/api/source-directories/$path');
       print('Remove source directory response: ${response.statusCode}, ${response.body}');
       if (response.statusCode == 200) {
-        return Map<String, dynamic>.from(json.decode(response.body));
+        final Map<String, dynamic> result = json.decode(response.body) as Map<String, dynamic>;
+        return result;
       } else {
         throw Exception('Failed to remove source directory: ${response.statusCode}');
       }
@@ -58,7 +60,8 @@ class SourceDirectoryService {
       final response = await _apiClient.delete('/api/source-directories');
       print('Clear source directories response: ${response.statusCode}, ${response.body}');
       if (response.statusCode == 200) {
-        return Map<String, dynamic>.from(json.decode(response.body));
+        final Map<String, dynamic> result = json.decode(response.body) as Map<String, dynamic>;
+        return result;
       } else {
         throw Exception('Failed to clear source directories: ${response.statusCode}');
       }
@@ -75,7 +78,8 @@ class SourceDirectoryService {
       });
       print('Update thread count response: ${response.statusCode}, ${response.body}');
       if (response.statusCode == 200) {
-        return Map<String, dynamic>.from(json.decode(response.body));
+        final Map<String, dynamic> result = json.decode(response.body) as Map<String, dynamic>;
+        return result;
       } else {
         throw Exception('Failed to update thread count: ${response.statusCode}');
       }

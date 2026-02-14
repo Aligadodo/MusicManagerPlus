@@ -52,7 +52,8 @@ echo "服务地址: http://localhost:8080"
 echo "按 Ctrl+C 停止服务"
 echo ""
 
-"$JAVA_HOME/bin/java" -Xms512m -Xmx1g -jar "$SCRIPT_DIR/../../dist/backend/backend.jar" &
+cd "$SCRIPT_DIR/../../backend"
+mvn spring-boot:run &
 BACKEND_PID=$!
 
 echo "后端服务已启动 (PID: $BACKEND_PID)"

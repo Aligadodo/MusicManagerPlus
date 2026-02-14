@@ -9,10 +9,11 @@ import 'package:filemanager_flutter/pages/compose_page.dart';
 import 'package:filemanager_flutter/pages/preview_page.dart';
 import 'package:filemanager_flutter/pages/log_page.dart';
 import 'package:filemanager_flutter/pages/appearance_page.dart';
+import 'package:filemanager_flutter/pages/task_list_page.dart';
+import 'package:filemanager_flutter/pages/task_detail_page.dart';
 import 'package:filemanager_flutter/pages/global_settings_page.dart';
-import 'package:filemanager_flutter/providers/config_provider.dart';
 import 'package:filemanager_flutter/providers/theme_provider.dart';
-import 'package:filemanager_flutter/utils/ui_utils.dart';
+import 'package:filemanager_flutter/providers/config_provider.dart';
 
 
 final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());
@@ -196,18 +197,17 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
       taskNotifier.startAnalyzing();
       
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('开始预览分析')),
+        const SnackBar(content: Text('正在创建新任务...')),
       );
       
       // 切换到预览执行页面
       _tabController.animateTo(1);
       
-      // 这里不需要手动执行分析，因为预览执行页面会自动处理
-      // 我们只需要确保状态已经正确设置
+      // 预览执行页面会自动创建新任务
     } catch (e) {
       taskNotifier.error(e.toString());
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('预览分析失败: $e')),
+        SnackBar(content: Text('创建任务失败: $e')),
       );
     }
   }
@@ -224,18 +224,20 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
     }
     
     try {
+      taskNotifier.startRunning('');
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('正在执行最新任务...')),
+      );
+      
       // 切换到预览执行页面
       _tabController.animateTo(1);
       
-      // 这里不需要手动执行任务，因为预览执行页面会自动处理
-      // 我们只需要确保状态已经正确设置
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请在预览执行页面确认变更后执行')),
-      );
+      // 预览执行页面会自动执行最新任务
     } catch (e) {
       taskNotifier.error(e.toString());
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('执行失败: $e')),
+        SnackBar(content: Text('执行任务失败: $e')),
       );
     }
   }
@@ -618,7 +620,7 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
         padding: const EdgeInsets.all(10),
         child: TabBarView(
           controller: _tabController,
-          children: const [
+          children: [
             ComposePage(),
             PreviewPage(),
             LogPage(),
