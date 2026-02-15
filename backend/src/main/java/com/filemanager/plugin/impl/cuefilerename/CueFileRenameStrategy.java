@@ -1,6 +1,7 @@
 package com.filemanager.plugin.impl.cuefilerename;
 
 import com.filemanager.domain.dto.StrategyConfigDTO;
+import com.filemanager.domain.dto.EnumOptionDTO;
 import com.filemanager.domain.entity.ChangeRecord;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
 import com.filemanager.plugin.ExecutionContext;
@@ -48,10 +49,21 @@ public class CueFileRenameStrategy extends AbstractConfigurableStrategy {
 
     @Override
     protected void initConfigFields() {
-        addConfigField("mode", "修改模式", "select", "全自动修改", 
-            "修改模式", false);
+        List<EnumOptionDTO> modeOptions = new ArrayList<>();
+        modeOptions.add(createEnumOption("全自动修改", "全自动修改"));
+        modeOptions.add(createEnumOption("仅修改音频文件", "仅修改音频文件"));
+        modeOptions.add(createEnumOption("仅修改CUE文件", "仅修改CUE文件"));
+        addEnumConfigField("mode", "修改模式", "select", "全自动修改", 
+            "修改模式", false, modeOptions);
         addConfigField("fileName", "文件名前缀", "text", "album", 
             "文件名前缀", false);
+    }
+
+    private EnumOptionDTO createEnumOption(String value, String label) {
+        EnumOptionDTO option = new EnumOptionDTO();
+        option.setValue(value);
+        option.setLabel(label);
+        return option;
     }
 
     @Override

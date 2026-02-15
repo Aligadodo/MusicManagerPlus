@@ -2,8 +2,8 @@ package com.filemanager.backend.controller;
 
 import com.filemanager.backend.model.TaskConfigSnapshot;
 import com.filemanager.backend.model.TaskInfo;
-import com.filemanager.backend.service.OptimizedTaskExecutionService;
-import com.filemanager.backend.service.OptimizedTaskStorageService;
+import com.filemanager.backend.service.TaskExecutionService;
+import com.filemanager.backend.service.TaskStorageService;
 import com.filemanager.domain.dto.TaskRequestDTO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
@@ -40,10 +40,10 @@ class TaskControllerTest {
     private ObjectMapper objectMapper;
 
     @Autowired
-    private OptimizedTaskExecutionService executionService;
+    private TaskExecutionService executionService;
 
     @Autowired
-    private OptimizedTaskStorageService storageService;
+    private TaskStorageService storageService;
 
     private String testTaskId;
 
@@ -51,6 +51,14 @@ class TaskControllerTest {
     void setUp() {
         TaskRequestDTO request = new TaskRequestDTO();
         request.setTaskName("测试任务");
+        
+        // 设置源目录配置
+        TaskRequestDTO.SourceDirectoryDTO sourceDir = new TaskRequestDTO.SourceDirectoryDTO();
+        sourceDir.setPath(System.getProperty("java.io.tmpdir"));
+        sourceDir.setRecursive(true);
+        sourceDir.setDepth(4);
+        request.setSourceDirectories(Arrays.asList(sourceDir));
+        
         testTaskId = executionService.createTask(request);
     }
 

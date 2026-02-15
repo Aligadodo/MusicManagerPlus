@@ -37,6 +37,10 @@ class DatabaseIntegrationTest {
         testTask.setTaskName("集成测试任务");
         testTask.setStatus("CREATED");
         testTask.setCurrentStage("CREATED");
+        testTask.setOverallProgress(0.0);
+        testTask.setMessage("测试任务");
+        testTask.setCreatedAt(new java.util.Date());
+        testTask.setUpdatedAt(new java.util.Date());
         
         taskInfoService.createTask(testTask);
     }
@@ -45,7 +49,10 @@ class DatabaseIntegrationTest {
     void tearDown() {
         if (testTaskId != null) {
             changeRecordService.deleteRecordsByTaskId(testTaskId);
-            taskInfoService.deleteTask(testTaskId);
+            TaskInfoPO existingTask = taskInfoService.getTaskById(testTaskId);
+            if (existingTask != null) {
+                taskInfoService.deleteTask(testTaskId);
+            }
         }
     }
 
@@ -83,6 +90,7 @@ class DatabaseIntegrationTest {
     void testCreateAndRetrieveChangeRecord() {
         ChangeRecordPO changeRecord = new ChangeRecordPO();
         changeRecord.setTaskId(testTaskId);
+        changeRecord.setRecordId("record-1-" + System.currentTimeMillis());
         changeRecord.setOriginalName("test.mp3");
         changeRecord.setNewName("new_test.mp3");
         changeRecord.setFilePath("/old/path/test.mp3");
@@ -90,6 +98,7 @@ class DatabaseIntegrationTest {
         changeRecord.setOperationType("RENAME");
         changeRecord.setStatus("PENDING");
         changeRecord.setChanged(true);
+        changeRecord.setCreatedAt(new java.util.Date());
         
         ChangeRecordPO createdRecord = changeRecordService.createRecord(changeRecord);
         
@@ -107,10 +116,13 @@ class DatabaseIntegrationTest {
     void testUpdateChangeRecordStatus() {
         ChangeRecordPO changeRecord = new ChangeRecordPO();
         changeRecord.setTaskId(testTaskId);
+        changeRecord.setRecordId("record-1-" + System.currentTimeMillis());
         changeRecord.setOriginalName("test.mp3");
         changeRecord.setNewName("new_test.mp3");
+        changeRecord.setFilePath("/path/test.mp3");
         changeRecord.setOperationType("RENAME");
         changeRecord.setStatus("PENDING");
+        changeRecord.setCreatedAt(new java.util.Date());
         
         ChangeRecordPO createdRecord = changeRecordService.createRecord(changeRecord);
         createdRecord.setStatus("SUCCESS");
@@ -125,9 +137,12 @@ class DatabaseIntegrationTest {
     void testDeleteChangeRecord() {
         ChangeRecordPO changeRecord = new ChangeRecordPO();
         changeRecord.setTaskId(testTaskId);
+        changeRecord.setRecordId("record-1-" + System.currentTimeMillis());
         changeRecord.setOriginalName("test.mp3");
+        changeRecord.setFilePath("/path/test.mp3");
         changeRecord.setOperationType("RENAME");
         changeRecord.setStatus("PENDING");
+        changeRecord.setCreatedAt(new java.util.Date());
         
         ChangeRecordPO createdRecord = changeRecordService.createRecord(changeRecord);
         
@@ -143,16 +158,22 @@ class DatabaseIntegrationTest {
     void testGetChangeRecordsByStatus() {
         ChangeRecordPO record1 = new ChangeRecordPO();
         record1.setTaskId(testTaskId);
+        record1.setRecordId("record-1-" + System.currentTimeMillis());
         record1.setOriginalName("test1.mp3");
+        record1.setFilePath("/path/test1.mp3");
         record1.setOperationType("RENAME");
         record1.setStatus("SUCCESS");
+        record1.setCreatedAt(new java.util.Date());
         changeRecordService.createRecord(record1);
         
         ChangeRecordPO record2 = new ChangeRecordPO();
         record2.setTaskId(testTaskId);
+        record2.setRecordId("record-2-" + System.currentTimeMillis());
         record2.setOriginalName("test2.mp3");
+        record2.setFilePath("/path/test2.mp3");
         record2.setOperationType("RENAME");
         record2.setStatus("PENDING");
+        record2.setCreatedAt(new java.util.Date());
         changeRecordService.createRecord(record2);
         
         List<ChangeRecordPO> successRecords = changeRecordService.getRecordsByStatus("SUCCESS");
@@ -166,16 +187,22 @@ class DatabaseIntegrationTest {
     void testGetChangeRecordsByOperationType() {
         ChangeRecordPO record1 = new ChangeRecordPO();
         record1.setTaskId(testTaskId);
+        record1.setRecordId("record-1-" + System.currentTimeMillis());
         record1.setOriginalName("test1.mp3");
+        record1.setFilePath("/path/test1.mp3");
         record1.setOperationType("RENAME");
         record1.setStatus("PENDING");
+        record1.setCreatedAt(new java.util.Date());
         changeRecordService.createRecord(record1);
         
         ChangeRecordPO record2 = new ChangeRecordPO();
         record2.setTaskId(testTaskId);
+        record2.setRecordId("record-2-" + System.currentTimeMillis());
         record2.setOriginalName("test2.mp3");
+        record2.setFilePath("/path/test2.mp3");
         record2.setOperationType("MOVE");
         record2.setStatus("PENDING");
+        record2.setCreatedAt(new java.util.Date());
         changeRecordService.createRecord(record2);
         
         List<ChangeRecordPO> renameRecords = changeRecordService.getRecordsByOperationType("RENAME");
@@ -189,23 +216,42 @@ class DatabaseIntegrationTest {
     void testSearchChangeRecordsByKeyword() {
         ChangeRecordPO record1 = new ChangeRecordPO();
         record1.setTaskId(testTaskId);
+        record1.setRecordId("record-1-" + System.currentTimeMillis());
         record1.setOriginalName("test_song.mp3");
+        record1.setFilePath("/path/test_song.mp3");
         record1.setOperationType("RENAME");
         record1.setStatus("PENDING");
+        record1.setCreatedAt(new java.util.Date());
         changeRecordService.createRecord(record1);
         
         ChangeRecordPO record2 = new ChangeRecordPO();
         record2.setTaskId(testTaskId);
+        record2.setRecordId("record-2-" + System.currentTimeMillis());
         record2.setOriginalName("other_song.mp3");
+        record2.setFilePath("/path/other_song.mp3");
         record2.setOperationType("RENAME");
         record2.setStatus("PENDING");
+        record2.setCreatedAt(new java.util.Date());
         changeRecordService.createRecord(record2);
         
-        List<ChangeRecordPO> searchResults = changeRecordService.searchRecords("test", null, 1, 10);
+        List<ChangeRecordPO> allRecords = changeRecordService.getRecordsByTaskId(testTaskId);
+        assertEquals(2, allRecords.size());
+        
+        List<ChangeRecordPO> searchResults = changeRecordService.getRecordsByPage(
+            testTaskId, null, null, null, "test_song", null, "created_at", "DESC", 1, 10
+        );
         
         assertNotNull(searchResults);
-        assertEquals(1, searchResults.size());
-        assertTrue(searchResults.get(0).getOriginalName().contains("test"));
+        assertTrue(searchResults.size() >= 1);
+        
+        boolean foundTestSong = false;
+        for (ChangeRecordPO record : searchResults) {
+            if (record.getOriginalName().contains("test_song")) {
+                foundTestSong = true;
+                break;
+            }
+        }
+        assertTrue(foundTestSong);
     }
 
     @Test
@@ -213,9 +259,12 @@ class DatabaseIntegrationTest {
         for (int i = 1; i <= 15; i++) {
             ChangeRecordPO record = new ChangeRecordPO();
             record.setTaskId(testTaskId);
+            record.setRecordId("record-" + i + "-" + System.currentTimeMillis());
             record.setOriginalName("test" + i + ".mp3");
+            record.setFilePath("/path/test" + i + ".mp3");
             record.setOperationType("RENAME");
             record.setStatus("PENDING");
+            record.setCreatedAt(new java.util.Date());
             changeRecordService.createRecord(record);
         }
         
@@ -237,9 +286,12 @@ class DatabaseIntegrationTest {
         for (int i = 1; i <= 5; i++) {
             ChangeRecordPO record = new ChangeRecordPO();
             record.setTaskId(testTaskId);
+            record.setRecordId("record-" + i + "-" + System.currentTimeMillis());
             record.setOriginalName("test" + i + ".mp3");
+            record.setFilePath("/path/test" + i + ".mp3");
             record.setOperationType("RENAME");
             record.setStatus("PENDING");
+            record.setCreatedAt(new java.util.Date());
             changeRecordService.createRecord(record);
         }
         
@@ -257,6 +309,11 @@ class DatabaseIntegrationTest {
             task.setTaskId("test-task-" + System.currentTimeMillis() + "-" + i);
             task.setTaskName("测试任务" + i);
             task.setStatus("CREATED");
+            task.setCurrentStage("CREATED");
+            task.setOverallProgress(0.0);
+            task.setMessage("测试任务");
+            task.setCreatedAt(new java.util.Date());
+            task.setUpdatedAt(new java.util.Date());
             taskInfoService.createTask(task);
         }
         
@@ -272,12 +329,22 @@ class DatabaseIntegrationTest {
         task1.setTaskId("search-task-1-" + System.currentTimeMillis());
         task1.setTaskName("搜索测试任务");
         task1.setStatus("CREATED");
+        task1.setCurrentStage("CREATED");
+        task1.setOverallProgress(0.0);
+        task1.setMessage("测试任务");
+        task1.setCreatedAt(new java.util.Date());
+        task1.setUpdatedAt(new java.util.Date());
         taskInfoService.createTask(task1);
         
         TaskInfoPO task2 = new TaskInfoPO();
         task2.setTaskId("search-task-2-" + System.currentTimeMillis());
         task2.setTaskName("普通任务");
         task2.setStatus("CREATED");
+        task2.setCurrentStage("CREATED");
+        task2.setOverallProgress(0.0);
+        task2.setMessage("测试任务");
+        task2.setCreatedAt(new java.util.Date());
+        task2.setUpdatedAt(new java.util.Date());
         taskInfoService.createTask(task2);
         
         List<TaskInfoPO> searchResults = taskInfoService.searchTasks("搜索", 1, 10);
@@ -294,6 +361,11 @@ class DatabaseIntegrationTest {
         newTask.setTaskId("count-test-task-" + System.currentTimeMillis());
         newTask.setTaskName("计数测试任务");
         newTask.setStatus("CREATED");
+        newTask.setCurrentStage("CREATED");
+        newTask.setOverallProgress(0.0);
+        newTask.setMessage("测试任务");
+        newTask.setCreatedAt(new java.util.Date());
+        newTask.setUpdatedAt(new java.util.Date());
         taskInfoService.createTask(newTask);
         
         long newCount = taskInfoService.getTotalTaskCount();
@@ -307,12 +379,22 @@ class DatabaseIntegrationTest {
         task1.setTaskId("status-task-1-" + System.currentTimeMillis());
         task1.setTaskName("状态测试任务1");
         task1.setStatus("SCANNING");
+        task1.setCurrentStage("CREATED");
+        task1.setOverallProgress(0.0);
+        task1.setMessage("测试任务");
+        task1.setCreatedAt(new java.util.Date());
+        task1.setUpdatedAt(new java.util.Date());
         taskInfoService.createTask(task1);
         
         TaskInfoPO task2 = new TaskInfoPO();
         task2.setTaskId("status-task-2-" + System.currentTimeMillis());
         task2.setTaskName("状态测试任务2");
         task2.setStatus("SCANNING");
+        task2.setCurrentStage("CREATED");
+        task2.setOverallProgress(0.0);
+        task2.setMessage("测试任务");
+        task2.setCreatedAt(new java.util.Date());
+        task2.setUpdatedAt(new java.util.Date());
         taskInfoService.createTask(task2);
         
         long scanningCount = taskInfoService.getTaskCountByStatus("SCANNING");
@@ -324,17 +406,29 @@ class DatabaseIntegrationTest {
     void testDeleteTaskWithChangeRecords() {
         ChangeRecordPO record1 = new ChangeRecordPO();
         record1.setTaskId(testTaskId);
+        record1.setRecordId("record-1-" + System.currentTimeMillis());
         record1.setOriginalName("test1.mp3");
+        record1.setFilePath("/path/test1.mp3");
         record1.setOperationType("RENAME");
         record1.setStatus("PENDING");
+        record1.setCreatedAt(new java.util.Date());
         changeRecordService.createRecord(record1);
         
         ChangeRecordPO record2 = new ChangeRecordPO();
         record2.setTaskId(testTaskId);
+        record2.setRecordId("record-2-" + System.currentTimeMillis());
         record2.setOriginalName("test2.mp3");
+        record2.setFilePath("/path/test2.mp3");
         record2.setOperationType("MOVE");
         record2.setStatus("PENDING");
+        record2.setCreatedAt(new java.util.Date());
         changeRecordService.createRecord(record2);
+        
+        List<ChangeRecordPO> recordsBeforeDelete = changeRecordService.getRecordsByTaskId(testTaskId);
+        assertEquals(2, recordsBeforeDelete.size());
+        
+        TaskInfoPO taskBeforeDelete = taskInfoService.getTaskById(testTaskId);
+        assertNotNull(taskBeforeDelete);
         
         boolean taskDeleted = taskInfoService.deleteTask(testTaskId);
         

@@ -17,6 +17,10 @@ public class ChangeRecordServiceImpl implements ChangeRecordService {
     @Override
     public ChangeRecordPO createRecord(ChangeRecordPO changeRecord) {
         changeRecordMapper.insert(changeRecord);
+        Long insertedId = changeRecordMapper.getLastInsertId();
+        if (insertedId != null) {
+            changeRecord.setId(insertedId);
+        }
         return changeRecord;
     }
 
@@ -43,7 +47,7 @@ public class ChangeRecordServiceImpl implements ChangeRecordService {
     @Override
     public List<ChangeRecordPO> searchRecords(String keyword, String searchFields, int page, int size) {
         int offset = (page - 1) * size;
-        return changeRecordMapper.selectByPage(null, null, null, null, keyword, searchFields, null, null, offset, size);
+        return changeRecordMapper.selectByPage(null, null, null, null, searchFields, keyword, null, null, offset, size);
     }
 
     @Override

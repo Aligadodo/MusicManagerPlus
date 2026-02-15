@@ -1,8 +1,8 @@
 package com.filemanager.backend.controller;
 
 import com.filemanager.backend.model.*;
-import com.filemanager.backend.service.OptimizedTaskExecutionService;
-import com.filemanager.backend.service.OptimizedTaskStorageService;
+import com.filemanager.backend.service.TaskExecutionService;
+import com.filemanager.backend.service.TaskStorageService;
 import com.filemanager.backend.service.ChangeRecordService;
 import com.filemanager.backend.service.TaskOperationLogService;
 import com.filemanager.domain.dto.TaskRequestDTO;
@@ -34,14 +34,14 @@ public class TaskController {
 
     private static final Logger logger = LoggerFactory.getLogger(TaskController.class);
 
-    private final OptimizedTaskStorageService storageService;
-    private final OptimizedTaskExecutionService executionService;
+    private final TaskStorageService storageService;
+    private final TaskExecutionService executionService;
     private final ChangeRecordService changeRecordService;
     private final TaskOperationLogService taskOperationLogService;
 
     @Autowired
-    public TaskController(OptimizedTaskStorageService storageService, 
-                         OptimizedTaskExecutionService executionService,
+    public TaskController(TaskStorageService storageService, 
+                         TaskExecutionService executionService,
                          ChangeRecordService changeRecordService,
                          TaskOperationLogService taskOperationLogService) {
         this.storageService = storageService;

@@ -34,7 +34,7 @@ import java.util.stream.Collectors;
 public class TaskRegistry {
     
     @Autowired
-    private OptimizedTaskStorageService storageService;
+    private TaskStorageService storageService;
     
     @Autowired
     private TaskInfoService taskInfoService;

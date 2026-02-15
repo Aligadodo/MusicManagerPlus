@@ -135,6 +135,18 @@ public class StrategyServiceImpl implements StrategyService {
                         config.setPreconditionGroups(new ArrayList<>());
                     }
                     
+                    // 与默认配置合并，确保所有配置项都存在
+                    StrategyConfigurable strategy = strategyRegistry.getStrategy(strategyId);
+                    if (strategy != null) {
+                        StrategyConfigDTO defaultConfig = strategy.initializeDefaultConfig();
+                        Map<String, Object> mergedValues = new HashMap<>(defaultConfig.getConfigValues());
+                        // 用加载的配置覆盖默认配置
+                        if (config.getConfigValues() != null) {
+                            mergedValues.putAll(config.getConfigValues());
+                        }
+                        config.setConfigValues(mergedValues);
+                    }
+                    
                     strategyConfigs.put(strategyId, config);
                     logger.info("[Strategy] 加载策略配置: {}，配置项数量: {}，前置条件组数量: {}", 
                         strategyId, 

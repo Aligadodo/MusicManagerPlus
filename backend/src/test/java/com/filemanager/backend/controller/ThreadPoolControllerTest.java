@@ -1,24 +1,54 @@
 package com.filemanager.backend.controller;
 
+import com.filemanager.backend.config.ConfigManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
 
 public class ThreadPoolControllerTest {
 
     @InjectMocks
     private ThreadPoolController threadPoolController;
 
+    @Mock
+    private ConfigManager configManager;
+
+    private final Map<String, Object> configCache = new HashMap<>();
+
     @BeforeEach
     public void setUp() {
         MockitoAnnotations.openMocks(this);
+        
+        configCache.put(ConfigManager.KEY_PREVIEW_THREADS, 4);
+        configCache.put(ConfigManager.KEY_EXECUTION_THREADS, 8);
+        configCache.put(ConfigManager.KEY_THREAD_POOL_MODE, "GLOBAL");
+        
+        when(configManager.getConfig(eq(ConfigManager.KEY_PREVIEW_THREADS), eq(Integer.class)))
+            .thenAnswer(invocation -> (Integer) configCache.get(ConfigManager.KEY_PREVIEW_THREADS));
+        when(configManager.getConfig(eq(ConfigManager.KEY_EXECUTION_THREADS), eq(Integer.class)))
+            .thenAnswer(invocation -> (Integer) configCache.get(ConfigManager.KEY_EXECUTION_THREADS));
+        when(configManager.getConfig(eq(ConfigManager.KEY_THREAD_POOL_MODE), eq(String.class)))
+            .thenReturn("GLOBAL");
+        when(configManager.validateConfig(anyString(), any())).thenReturn(true);
+        doAnswer(invocation -> {
+            String key = invocation.getArgument(0);
+            Object value = invocation.getArgument(1);
+            configCache.put(key, value);
+            return null;
+        }).when(configManager).setConfig(anyString(), any());
     }
 
     @Test

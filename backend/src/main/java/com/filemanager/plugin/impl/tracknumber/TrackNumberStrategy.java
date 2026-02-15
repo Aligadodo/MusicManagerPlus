@@ -1,6 +1,7 @@
 package com.filemanager.plugin.impl.tracknumber;
 
 import com.filemanager.domain.dto.StrategyConfigDTO;
+import com.filemanager.domain.dto.EnumOptionDTO;
 import com.filemanager.domain.entity.ChangeRecord;
 import com.filemanager.plugin.AbstractConfigurableStrategy;
 import com.filemanager.plugin.ExecutionContext;
@@ -8,6 +9,7 @@ import com.filemanager.domain.enums.ScanTarget;
 import com.filemanager.domain.enums.ExecStatus;
 import com.filemanager.domain.enums.OperationType;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -51,14 +53,24 @@ public class TrackNumberStrategy extends AbstractConfigurableStrategy {
 
     @Override
     protected void initConfigFields() {
-        addConfigField("mode", "编号模式", "select", "default", 
-            "选择音轨编号的模式", true);
+        List<EnumOptionDTO> modeOptions = new ArrayList<>();
+        modeOptions.add(createEnumOption("default", "默认模式"));
+        modeOptions.add(createEnumOption("sequential", "顺序编号"));
+        modeOptions.add(createEnumOption("preserve", "保留原号"));
+        addEnumConfigField("mode", "编号模式", "select", "default", 
+            "选择音轨编号的模式", true, modeOptions);
+        
+        List<EnumOptionDTO> formatOptions = new ArrayList<>();
+        formatOptions.add(createEnumOption("01", "01"));
+        formatOptions.add(createEnumOption("1", "1"));
+        formatOptions.add(createEnumOption("001", "001"));
+        addEnumConfigField("numberFormat", "编号格式", "select", "01", 
+            "音轨编号的格式", false, formatOptions);
+        
         addConfigField("startNumber", "起始编号", "number", 1, 
             "音轨编号的起始数字", false);
         addConfigField("padZero", "双位补零", "boolean", true, 
             "是否使用双位补零（如01, 02）", false);
-        addConfigField("numberFormat", "编号格式", "select", "01", 
-            "音轨编号的格式", false);
         addConfigField("separator", "分隔符", "text", ". ", 
             "音轨编号与文件名之间的分隔符", false);
         addConfigField("updateMetadata", "更新元数据", "boolean", true, 
@@ -67,6 +79,13 @@ public class TrackNumberStrategy extends AbstractConfigurableStrategy {
             "是否保留原始文件", false);
         addConfigField("groupByDirectory", "按目录分组编号", "boolean", true, 
             "是否按目录分组进行编号", false);
+    }
+
+    private EnumOptionDTO createEnumOption(String value, String label) {
+        EnumOptionDTO option = new EnumOptionDTO();
+        option.setValue(value);
+        option.setLabel(label);
+        return option;
     }
 
     @Override

@@ -1,9 +1,18 @@
 package com.filemanager.backend.controller;
 
 import com.filemanager.domain.dto.ChangeRecordQueryDTO;
+import com.filemanager.domain.dto.PluginConfigDTO;
+import com.filemanager.domain.dto.PreconditionGroupDTO;
 import com.filemanager.domain.entity.ChangeRecord;
 import com.filemanager.domain.service.PluginService;
 import com.filemanager.domain.service.TaskService;
+import com.filemanager.backend.service.FileFilterService;
+import com.filemanager.backend.service.FileTypeFilterService;
+import com.filemanager.backend.service.PreviewLimitService;
+import com.filemanager.backend.service.TaskStorageService;
+import com.filemanager.backend.service.TaskRegistry;
+import com.filemanager.backend.model.TaskInfo;
+import com.filemanager.domain.dto.TaskRequestDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -13,10 +22,12 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -29,6 +40,21 @@ public class PipelineControllerTest {
     @Mock
     private TaskService taskService;
 
+    @Mock
+    private FileFilterService fileFilterService;
+
+    @Mock
+    private FileTypeFilterService fileTypeFilterService;
+
+    @Mock
+    private PreviewLimitService previewLimitService;
+
+    @Mock
+    private TaskStorageService storageService;
+
+    @Mock
+    private TaskRegistry taskRegistry;
+
     @InjectMocks
     private PipelineController pipelineController;
 
@@ -38,6 +64,16 @@ public class PipelineControllerTest {
     public void setup() {
         MockitoAnnotations.openMocks(this);
         mockMvc = MockMvcBuilders.standaloneSetup(pipelineController).build();
+        
+        when(taskService.createTask(any(TaskRequestDTO.class))).thenReturn("test-task-123");
+        when(storageService.loadTaskInfo(anyString())).thenReturn(null);
+        when(fileFilterService.isFileIncluded(any(File.class))).thenReturn(true);
+        when(fileFilterService.isFileFiltered(any(File.class))).thenReturn(false);
+        when(fileTypeFilterService.isFileIncludedByType(anyString())).thenReturn(true);
+        when(previewLimitService.isGlobalPreviewUnlimited()).thenReturn(true);
+        when(previewLimitService.isRootPathPreviewUnlimited(anyString())).thenReturn(true);
+        when(pluginService.analyzePlugin(anyString(), any(ChangeRecord.class), anyList(), anyList(), any(PluginConfigDTO.class), anyList()))
+            .thenReturn(new ArrayList<>());
     }
 
     @Test

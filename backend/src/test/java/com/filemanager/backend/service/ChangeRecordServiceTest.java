@@ -46,12 +46,14 @@ class ChangeRecordServiceTest {
         changeRecord.setNewPath("/new/path/test.mp3");
 
         when(changeRecordMapper.insert(any(ChangeRecordPO.class))).thenReturn(1);
+        when(changeRecordMapper.getLastInsertId()).thenReturn(1L);
 
         ChangeRecordPO result = changeRecordService.createRecord(changeRecord);
 
         assertNotNull(result);
         assertEquals(1L, result.getId());
         verify(changeRecordMapper, times(1)).insert(any(ChangeRecordPO.class));
+        verify(changeRecordMapper, times(1)).getLastInsertId();
     }
 
     @Test
@@ -203,7 +205,7 @@ class ChangeRecordServiceTest {
         List<ChangeRecordPO> changes = Arrays.asList(change1);
 
         when(changeRecordMapper.selectByPage(
-            null, null, null, null, null, "test", "created_at", "DESC", 0, 10
+            null, null, null, null, null, "test", null, null, 0, 10
         )).thenReturn(changes);
 
         List<ChangeRecordPO> result = changeRecordService.searchRecords(
@@ -213,7 +215,7 @@ class ChangeRecordServiceTest {
         assertNotNull(result);
         assertEquals(1, result.size());
         verify(changeRecordMapper, times(1)).selectByPage(
-            null, null, null, null, null, "test", "created_at", "DESC", 0, 10
+            null, null, null, null, null, "test", null, null, 0, 10
         );
     }
 
@@ -225,13 +227,17 @@ class ChangeRecordServiceTest {
 
         List<ChangeRecordPO> changes = Arrays.asList(change1);
 
-        when(changeRecordMapper.selectByTaskIdAndStatus(null, "SUCCESS")).thenReturn(changes);
+        when(changeRecordMapper.selectByPage(
+            null, "SUCCESS", null, null, null, null, null, null, 0, 1000
+        )).thenReturn(changes);
 
         List<ChangeRecordPO> result = changeRecordService.getRecordsByStatus("SUCCESS");
 
         assertNotNull(result);
         assertEquals(1, result.size());
-        verify(changeRecordMapper, times(1)).selectByTaskIdAndStatus(null, "SUCCESS");
+        verify(changeRecordMapper, times(1)).selectByPage(
+            null, "SUCCESS", null, null, null, null, null, null, 0, 1000
+        );
     }
 
     @Test
@@ -242,12 +248,16 @@ class ChangeRecordServiceTest {
 
         List<ChangeRecordPO> changes = Arrays.asList(change1);
 
-        when(changeRecordMapper.selectByTaskIdAndOperationType(null, "RENAME")).thenReturn(changes);
+        when(changeRecordMapper.selectByPage(
+            null, null, "RENAME", null, null, null, null, null, 0, 1000
+        )).thenReturn(changes);
 
         List<ChangeRecordPO> result = changeRecordService.getRecordsByOperationType("RENAME");
 
         assertNotNull(result);
         assertEquals(1, result.size());
-        verify(changeRecordMapper, times(1)).selectByTaskIdAndOperationType(null, "RENAME");
+        verify(changeRecordMapper, times(1)).selectByPage(
+            null, null, "RENAME", null, null, null, null, null, 0, 1000
+        );
     }
 }

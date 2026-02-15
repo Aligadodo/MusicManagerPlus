@@ -15,7 +15,7 @@ import com.filemanager.backend.logging.UnifiedLogger;
 import com.filemanager.backend.model.TaskInfo;
 import com.filemanager.backend.service.FileFilterService;
 import com.filemanager.backend.service.FileTypeFilterService;
-import com.filemanager.backend.service.OptimizedTaskStorageService;
+import com.filemanager.backend.service.TaskStorageService;
 import com.filemanager.backend.service.PreviewLimitService;
 import com.filemanager.backend.service.TaskRegistry;
 import com.filemanager.backend.util.FileScanner;
@@ -61,7 +61,7 @@ public class PipelineController {
     private PreviewLimitService previewLimitService;
 
     @Autowired
-    private OptimizedTaskStorageService storageService;
+    private TaskStorageService storageService;
 
     @javax.annotation.PostConstruct
     public void init() {

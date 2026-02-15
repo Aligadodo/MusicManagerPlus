@@ -57,8 +57,8 @@ public class ConfigManager {
 
     static {
         // 线程池配置默认值
-        DEFAULT_CONFIG.put(KEY_PREVIEW_THREADS, 10);
-        DEFAULT_CONFIG.put(KEY_EXECUTION_THREADS, 4);
+        DEFAULT_CONFIG.put(KEY_PREVIEW_THREADS, 4);
+        DEFAULT_CONFIG.put(KEY_EXECUTION_THREADS, 8);
         DEFAULT_CONFIG.put(KEY_THREAD_POOL_MODE, "GLOBAL");
 
         // 运行配置默认值

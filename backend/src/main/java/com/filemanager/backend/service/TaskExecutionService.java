@@ -20,15 +20,15 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * 优化的任务执行服务
+ * 任务执行服务
  * 支持流式处理、多阶段执行、任务事务机制
  */
 @Service
-public class OptimizedTaskExecutionService {
+public class TaskExecutionService {
 
-    private static final Logger logger = LoggerFactory.getLogger(OptimizedTaskExecutionService.class);
+    private static final Logger logger = LoggerFactory.getLogger(TaskExecutionService.class);
     
-    private final OptimizedTaskStorageService storageService;
+    private final TaskStorageService storageService;
     private final StrategyService strategyService;
     private final WebSocketMessageService webSocketService;
     private final Map<String, TaskExecution> runningTasks = new ConcurrentHashMap<>();
@@ -36,7 +36,7 @@ public class OptimizedTaskExecutionService {
     private final ExecutorService processingExecutor = Executors.newFixedThreadPool(10);
 
     @Autowired
-    public OptimizedTaskExecutionService(OptimizedTaskStorageService storageService, 
+    public TaskExecutionService(TaskStorageService storageService, 
                                          StrategyService strategyService,
                                          WebSocketMessageService webSocketService) {
         this.storageService = storageService;
@@ -490,14 +490,14 @@ public class OptimizedTaskExecutionService {
     private static class TaskExecution {
         private final String taskId;
         private final TaskInfo taskInfo;
-        private final OptimizedTaskStorageService storageService;
+        private final TaskStorageService storageService;
         private final StrategyService strategyService;
         private final WebSocketMessageService webSocketService;
         private Future<?> future;
         private volatile boolean cancelled = false;
 
         public TaskExecution(String taskId, TaskInfo taskInfo, 
-                          OptimizedTaskStorageService storageService, 
+                          TaskStorageService storageService, 
                           StrategyService strategyService,
                           WebSocketMessageService webSocketService) {
             this.taskId = taskId;

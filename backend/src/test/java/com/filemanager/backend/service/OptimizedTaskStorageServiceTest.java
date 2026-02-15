@@ -18,17 +18,17 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * OptimizedTaskStorageService测试类
+ * TaskStorageService测试类
  * 测试任务存储服务的各项功能
  */
-class OptimizedTaskStorageServiceTest {
+class TaskStorageServiceTest {
 
-    private OptimizedTaskStorageService storageService;
+    private TaskStorageService storageService;
     private String testTaskId;
 
     @BeforeEach
     void setUp() {
-        storageService = new OptimizedTaskStorageService();
+        storageService = new TaskStorageService();
         testTaskId = "test-task-" + System.currentTimeMillis();
     }
 

@@ -116,6 +116,9 @@ public class FileRenameStrategy extends AbstractConfigurableStrategy {
             ExecStatus.PENDING
         );
         
+        record.setId("change-" + System.currentTimeMillis() + "-" + file.hashCode());
+        record.setFilePath(file.getAbsolutePath());
+        
         return Collections.singletonList(record);
     }
 

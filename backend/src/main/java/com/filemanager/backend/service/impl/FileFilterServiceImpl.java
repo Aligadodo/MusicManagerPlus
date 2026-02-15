@@ -98,7 +98,12 @@ public class FileFilterServiceImpl implements FileFilterService {
                 .replaceAll("([\\\\/:\\[\\]{}()+.^$|])", "\\\\$1")
                 .replace("*", ".*")
                 .replace("?", ".");
-        return fullPath.matches(regex);
+        
+        // 支持跨平台路径分隔符
+        String normalizedPath = fullPath.replace("\\", "/");
+        String normalizedRegex = regex.replace("\\\\", "/");
+        
+        return normalizedPath.matches(normalizedRegex);
     }
 
     @Override

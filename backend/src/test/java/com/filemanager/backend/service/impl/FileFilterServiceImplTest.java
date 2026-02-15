@@ -3,10 +3,14 @@ package com.filemanager.backend.service.impl;
 import com.filemanager.backend.config.ConfigManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -19,6 +23,9 @@ class FileFilterServiceImplTest {
     @Mock
     private ConfigManager configManager;
 
+    @TempDir
+    Path tempDir;
+
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
@@ -28,8 +35,8 @@ class FileFilterServiceImplTest {
     }
 
     @Test
-    void testIsFileIncluded_WithValidFile() {
-        File file = new File("/path/to/music.mp3");
+    void testIsFileIncluded_WithValidFile() throws IOException {
+        File file = Files.createFile(tempDir.resolve("music.mp3")).toFile();
         assertTrue(fileFilterService.isFileIncluded(file));
     }
 
@@ -39,32 +46,42 @@ class FileFilterServiceImplTest {
     }
 
     @Test
-    void testIsFileFiltered_WithMatchingFilter() {
-        File file = new File("/path/to/Convert/file.mp3");
+    void testIsFileFiltered_WithMatchingFilter() throws IOException {
+        Path convertDir = tempDir.resolve("Convert");
+        Files.createDirectories(convertDir);
+        File file = Files.createFile(convertDir.resolve("file.mp3")).toFile();
         assertTrue(fileFilterService.isFileFiltered(file));
     }
 
     @Test
-    void testIsFileFiltered_WithNonMatchingFilter() {
-        File file = new File("/path/to/music/file.mp3");
+    void testIsFileFiltered_WithNonMatchingFilter() throws IOException {
+        Path musicDir = tempDir.resolve("music");
+        Files.createDirectories(musicDir);
+        File file = Files.createFile(musicDir.resolve("file.mp3")).toFile();
         assertFalse(fileFilterService.isFileFiltered(file));
     }
 
     @Test
-    void testIsFileFiltered_WithTempFile() {
-        File file = new File("/path/to/Temp/file.mp3");
+    void testIsFileFiltered_WithTempFile() throws IOException {
+        Path tempPath = tempDir.resolve("Temp");
+        Files.createDirectories(tempPath);
+        File file = Files.createFile(tempPath.resolve("file.mp3")).toFile();
         assertTrue(fileFilterService.isFileFiltered(file));
     }
 
     @Test
-    void testIsFileFiltered_WithCacheFile() {
-        File file = new File("/path/to/Cache/file.mp3");
+    void testIsFileFiltered_WithCacheFile() throws IOException {
+        Path cachePath = tempDir.resolve("Cache");
+        Files.createDirectories(cachePath);
+        File file = Files.createFile(cachePath.resolve("file.mp3")).toFile();
         assertTrue(fileFilterService.isFileFiltered(file));
     }
 
     @Test
-    void testIsFileFiltered_WithHiddenFile() {
-        File file = new File("/path/to/.hidden/file.mp3");
+    void testIsFileFiltered_WithHiddenFile() throws IOException {
+        Path hiddenDir = tempDir.resolve(".hidden");
+        Files.createDirectories(hiddenDir);
+        File file = Files.createFile(hiddenDir.resolve("file.mp3")).toFile();
         assertTrue(fileFilterService.isFileFiltered(file));
     }
 
@@ -118,20 +135,24 @@ class FileFilterServiceImplTest {
     }
 
     @Test
-    void testMatchesFilter_WithWildcard() {
-        File file = new File("/path/to/Convert/file.mp3");
+    void testMatchesFilter_WithWildcard() throws IOException {
+        Path convertDir = tempDir.resolve("Convert");
+        Files.createDirectories(convertDir);
+        File file = Files.createFile(convertDir.resolve("file.mp3")).toFile();
         assertTrue(fileFilterService.isFileFiltered(file));
     }
 
     @Test
-    void testMatchesFilter_WithQuestionMark() {
-        File file = new File("/path/to/Temp/file.mp3");
+    void testMatchesFilter_WithQuestionMark() throws IOException {
+        Path tempPath = tempDir.resolve("Temp");
+        Files.createDirectories(tempPath);
+        File file = Files.createFile(tempPath.resolve("file.mp3")).toFile();
         assertTrue(fileFilterService.isFileFiltered(file));
     }
 
     @Test
-    void testMatchesFilter_WithExactMatch() {
-        File file = new File("/path/to/Thumbs.db");
+    void testMatchesFilter_WithExactMatch() throws IOException {
+        File file = Files.createFile(tempDir.resolve("Thumbs.db")).toFile();
         assertTrue(fileFilterService.isFileFiltered(file));
     }
 }

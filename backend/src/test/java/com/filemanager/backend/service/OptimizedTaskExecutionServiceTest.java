@@ -20,25 +20,25 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 
 /**
- * OptimizedTaskExecutionService测试类
+ * TaskExecutionService测试类
  * 测试任务执行服务的各项功能
  */
-class OptimizedTaskExecutionServiceTest {
+class TaskExecutionServiceTest {
 
     @Mock
     private StrategyService strategyService;
 
-    private OptimizedTaskStorageService storageService;
-    private OptimizedTaskExecutionService executionService;
+    private TaskStorageService storageService;
+    private TaskExecutionService executionService;
     private WebSocketMessageService webSocketService;
     private String testTaskId;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        storageService = new OptimizedTaskStorageService();
+        storageService = new TaskStorageService();
         webSocketService = new WebSocketMessageService(null);
-        executionService = new OptimizedTaskExecutionService(storageService, strategyService, webSocketService);
+        executionService = new TaskExecutionService(storageService, strategyService, webSocketService);
         testTaskId = "test-task-" + System.currentTimeMillis();
     }
 

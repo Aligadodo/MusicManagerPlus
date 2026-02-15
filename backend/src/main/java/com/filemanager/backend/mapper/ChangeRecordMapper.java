@@ -64,4 +64,6 @@ public interface ChangeRecordMapper {
     int updateStatus(@Param("id") Long id, @Param("status") String status);
     
     int updateSelected(@Param("id") Long id, @Param("selected") Boolean selected);
+    
+    Long getLastInsertId();
 }

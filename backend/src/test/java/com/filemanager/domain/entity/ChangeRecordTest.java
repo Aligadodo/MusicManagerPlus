@@ -230,7 +230,7 @@ public class ChangeRecordTest {
     @Test
     public void testAllOperationTypes() {
         OperationType[] operationTypes = OperationType.values();
-        assertEquals(13, operationTypes.length);
+        assertEquals(15, operationTypes.length);
         
         for (OperationType type : operationTypes) {
             ChangeRecord record = new ChangeRecord();

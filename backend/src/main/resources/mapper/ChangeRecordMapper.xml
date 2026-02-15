@@ -189,4 +189,8 @@
         UPDATE change_record SET selected = #{selected} WHERE id = #{id}
     </update>
 
+    <select id="getLastInsertId" resultType="long">
+        SELECT last_insert_rowid()
+    </select>
+
 </mapper>

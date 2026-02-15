@@ -42,7 +42,7 @@ public class FileScanner {
             list = s.filter(p -> {
                 try {
                     File file = p.toFile();
-                    if (fileFilterService.isFileIncluded(file) && (fileTypeFilterService == null || fileTypeFilterService.isFileIncludedByType(file.getName()))) {
+                    if (file.isFile() && fileFilterService.isFileIncluded(file) && (fileTypeFilterService == null || fileTypeFilterService.isFileIncludedByType(file.getName()))) {
                         return true;
                     }
                     countIgnore.incrementAndGet();

@@ -2,8 +2,8 @@ package com.filemanager.backend.integration;
 
 import com.filemanager.backend.model.TaskConfigSnapshot;
 import com.filemanager.backend.model.TaskInfo;
-import com.filemanager.backend.service.OptimizedTaskExecutionService;
-import com.filemanager.backend.service.OptimizedTaskStorageService;
+import com.filemanager.backend.service.TaskExecutionService;
+import com.filemanager.backend.service.TaskStorageService;
 import com.filemanager.domain.dto.TaskRequestDTO;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,15 +25,15 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class TaskExecutionIntegrationTest {
 
-    private OptimizedTaskExecutionService executionService;
-    private OptimizedTaskStorageService storageService;
+    private TaskExecutionService executionService;
+    private TaskStorageService storageService;
     private String testTaskId;
     private Path testDirectory;
 
     @BeforeEach
     void setUp() throws IOException {
-        storageService = new OptimizedTaskStorageService();
-        executionService = new OptimizedTaskExecutionService(storageService, null, null);
+        storageService = new TaskStorageService();
+        executionService = new TaskExecutionService(storageService, null, null);
 
         testTaskId = "integration-test-" + System.currentTimeMillis();
 

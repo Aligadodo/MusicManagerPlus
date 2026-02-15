@@ -20,20 +20,20 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * 优化的任务文件存储服务
+ * 任务文件存储服务
  * 支持数据与统计信息分离存储、流式处理、多阶段结果展示
  */
 @Service
-public class OptimizedTaskStorageService {
+public class TaskStorageService {
 
-    private static final Logger logger = LoggerFactory.getLogger(OptimizedTaskStorageService.class);
+    private static final Logger logger = LoggerFactory.getLogger(TaskStorageService.class);
     private static final String BASE_DIR = System.getProperty("user.home") + "/.MusicManagerPlus/tasks";
 
     private final ObjectMapper objectMapper;
     private final ExecutorService writeExecutor;
     private final Map<String, BlockingQueue<String>> writeQueues = new ConcurrentHashMap<>();
 
-    public OptimizedTaskStorageService() {
+    public TaskStorageService() {
         this.objectMapper = new ObjectMapper();
         this.objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
         this.writeExecutor = Executors.newFixedThreadPool(5);
@@ -43,9 +43,9 @@ public class OptimizedTaskStorageService {
     private void initializeBaseDirectory() {
         try {
             Files.createDirectories(Paths.get(BASE_DIR));
-            logger.info("[OptimizedTaskStorage] 基础目录初始化完成: {}", BASE_DIR);
+            logger.info("[TaskStorage] 基础目录初始化完成: {}", BASE_DIR);
         } catch (IOException e) {
-            logger.error("[OptimizedTaskStorage] 基础目录初始化失败", e);
+            logger.error("[TaskStorage] 基础目录初始化失败", e);
         }
     }
 
