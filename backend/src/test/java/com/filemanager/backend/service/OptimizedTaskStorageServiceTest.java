@@ -24,11 +24,13 @@ import static org.junit.jupiter.api.Assertions.*;
 class TaskStorageServiceTest {
 
     private TaskStorageService storageService;
+    private ConfigSnapshotService configSnapshotService;
     private String testTaskId;
 
     @BeforeEach
     void setUp() {
-        storageService = new TaskStorageService();
+        configSnapshotService = new ConfigSnapshotService();
+        storageService = new TaskStorageService(configSnapshotService);
         testTaskId = "test-task-" + System.currentTimeMillis();
     }
 

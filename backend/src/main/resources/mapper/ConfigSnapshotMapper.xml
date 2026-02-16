@@ -41,7 +41,19 @@
         DELETE FROM config_snapshot WHERE snapshot_id = #{snapshotId}
     </delete>
 
+    <delete id="deleteById">
+        DELETE FROM config_snapshot WHERE snapshot_id = #{snapshotId}
+    </delete>
+
+    <delete id="deleteOldSnapshots">
+        DELETE FROM config_snapshot WHERE created_at &lt; #{cutoffDate}
+    </delete>
+
     <select id="selectBySnapshotId" resultMap="ConfigSnapshotResultMap">
+        SELECT * FROM config_snapshot WHERE snapshot_id = #{snapshotId}
+    </select>
+
+    <select id="selectById" resultMap="ConfigSnapshotResultMap">
         SELECT * FROM config_snapshot WHERE snapshot_id = #{snapshotId}
     </select>
 
@@ -53,6 +65,19 @@
         SELECT * FROM config_snapshot
         WHERE snapshot_type = #{snapshotType}
         ORDER BY created_at DESC
+    </select>
+
+    <select id="selectByType" resultMap="ConfigSnapshotResultMap">
+        SELECT * FROM config_snapshot
+        WHERE snapshot_type = #{snapshotType}
+        ORDER BY created_at DESC
+    </select>
+
+    <select id="getLatestSnapshotByType" resultMap="ConfigSnapshotResultMap">
+        SELECT * FROM config_snapshot
+        WHERE snapshot_type = #{snapshotType}
+        ORDER BY created_at DESC
+        LIMIT 1
     </select>
 
     <select id="selectByIsTemplate" resultMap="ConfigSnapshotResultMap">

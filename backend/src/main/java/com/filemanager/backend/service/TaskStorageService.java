@@ -32,11 +32,13 @@ public class TaskStorageService {
     private final ObjectMapper objectMapper;
     private final ExecutorService writeExecutor;
     private final Map<String, BlockingQueue<String>> writeQueues = new ConcurrentHashMap<>();
+    private final ConfigSnapshotService configSnapshotService;
 
-    public TaskStorageService() {
+    public TaskStorageService(ConfigSnapshotService configSnapshotService) {
         this.objectMapper = new ObjectMapper();
         this.objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
         this.writeExecutor = Executors.newFixedThreadPool(5);
+        this.configSnapshotService = configSnapshotService;
         initializeBaseDirectory();
     }
 
@@ -61,9 +63,9 @@ public class TaskStorageService {
             Files.createDirectories(taskPath.resolve("preview"));
             Files.createDirectories(taskPath.resolve("execution"));
             
-            logger.info("[OptimizedTaskStorage] 任务目录初始化完成: {}", taskId);
+            logger.info("[TaskStorage] 任务目录初始化完成: {}", taskId);
         } catch (IOException e) {
-            logger.error("[OptimizedTaskStorage] 任务目录初始化失败: {}", taskId, e);
+            logger.error("[TaskStorage] 任务目录初始化失败: {}", taskId, e);
         }
     }
 
@@ -79,11 +81,12 @@ public class TaskStorageService {
      */
     public void saveTaskInfo(TaskInfo taskInfo) {
         try {
+            taskInfo.setUpdatedAt(System.currentTimeMillis());
             String filePath = getTaskDirectory(taskInfo.getTaskId()) + "/task.json";
             objectMapper.writeValue(new File(filePath), taskInfo);
-            logger.debug("[OptimizedTaskStorage] 任务信息已保存: {}", taskInfo.getTaskId());
+            logger.debug("[TaskStorage] 任务信息已保存: {}", taskInfo.getTaskId());
         } catch (IOException e) {
-            logger.error("[OptimizedTaskStorage] 保存任务信息失败: {}", taskInfo.getTaskId(), e);
+            logger.error("[TaskStorage] 保存任务信息失败: {}", taskInfo.getTaskId(), e);
         }
     }
 
@@ -95,12 +98,22 @@ public class TaskStorageService {
             String filePath = getTaskDirectory(taskId) + "/task.json";
             File file = new File(filePath);
             if (!file.exists()) {
-                logger.warn("[OptimizedTaskStorage] 任务信息不存在: {}", taskId);
+                logger.warn("[TaskStorage] 任务信息不存在: {}", taskId);
                 return null;
             }
-            return objectMapper.readValue(file, TaskInfo.class);
+            TaskInfo taskInfo = objectMapper.readValue(file, TaskInfo.class);
+            
+            // 如果任务有配置快照ID，从数据库加载配置快照
+            if (taskInfo.getConfigSnapshotId() != null && !taskInfo.getConfigSnapshotId().isEmpty()) {
+                TaskConfigSnapshot configSnapshot = configSnapshotService.getSnapshot(taskInfo.getConfigSnapshotId());
+                if (configSnapshot != null) {
+                    taskInfo.setConfigSnapshot(configSnapshot);
+                }
+            }
+            
+            return taskInfo;
         } catch (IOException e) {
-            logger.error("[OptimizedTaskStorage] 加载任务信息失败: {}", taskId, e);
+            logger.error("[TaskStorage] 加载任务信息失败: {}", taskId, e);
             return null;
         }
     }
@@ -112,9 +125,9 @@ public class TaskStorageService {
         try {
             String filePath = getTaskDirectory(taskId) + "/config.json";
             objectMapper.writeValue(new File(filePath), configSnapshot);
-            logger.debug("[OptimizedTaskStorage] 配置快照已保存: {}", taskId);
+            logger.debug("[TaskStorage] 配置快照已保存: {}", taskId);
         } catch (IOException e) {
-            logger.error("[OptimizedTaskStorage] 保存配置快照失败: {}", taskId, e);
+            logger.error("[TaskStorage] 保存配置快照失败: {}", taskId, e);
         }
     }
 
@@ -126,12 +139,12 @@ public class TaskStorageService {
             String filePath = getTaskDirectory(taskId) + "/config.json";
             File file = new File(filePath);
             if (!file.exists()) {
-                logger.warn("[OptimizedTaskStorage] 配置快照不存在: {}", taskId);
+                logger.warn("[TaskStorage] 配置快照不存在: {}", taskId);
                 return null;
             }
             return objectMapper.readValue(file, TaskConfigSnapshot.class);
         } catch (IOException e) {
-            logger.error("[OptimizedTaskStorage] 加载配置快照失败: {}", taskId, e);
+            logger.error("[TaskStorage] 加载配置快照失败: {}", taskId, e);
             return null;
         }
     }
@@ -143,9 +156,9 @@ public class TaskStorageService {
         try {
             String filePath = getTaskDirectory(taskId) + "/scan/statistics.json";
             objectMapper.writeValue(new File(filePath), statistics);
-            logger.debug("[OptimizedTaskStorage] 扫描统计已保存: {}", taskId);
+            logger.debug("[TaskStorage] 扫描统计已保存: {}", taskId);
         } catch (IOException e) {
-            logger.error("[OptimizedTaskStorage] 保存扫描统计失败: {}", taskId, e);
+            logger.error("[TaskStorage] 保存扫描统计失败: {}", taskId, e);
         }
     }
 
@@ -161,7 +174,7 @@ public class TaskStorageService {
             }
             return objectMapper.readValue(file, TaskInfo.ScanStage.class);
         } catch (IOException e) {
-            logger.error("[OptimizedTaskStorage] 加载扫描统计失败: {}", taskId, e);
+            logger.error("[TaskStorage] 加载扫描统计失败: {}", taskId, e);
             return null;
         }
     }
@@ -173,9 +186,9 @@ public class TaskStorageService {
         try {
             String filePath = getTaskDirectory(taskId) + "/preview/statistics.json";
             objectMapper.writeValue(new File(filePath), statistics);
-            logger.debug("[OptimizedTaskStorage] 预览统计已保存: {}", taskId);
+            logger.debug("[TaskStorage] 预览统计已保存: {}", taskId);
         } catch (IOException e) {
-            logger.error("[OptimizedTaskStorage] 保存预览统计失败: {}", taskId, e);
+            logger.error("[TaskStorage] 保存预览统计失败: {}", taskId, e);
         }
     }
 
@@ -191,7 +204,7 @@ public class TaskStorageService {
             }
             return objectMapper.readValue(file, TaskInfo.PreviewStage.class);
         } catch (IOException e) {
-            logger.error("[OptimizedTaskStorage] 加载预览统计失败: {}", taskId, e);
+            logger.error("[TaskStorage] 加载预览统计失败: {}", taskId, e);
             return null;
         }
     }
@@ -203,9 +216,9 @@ public class TaskStorageService {
         try {
             String filePath = getTaskDirectory(taskId) + "/preview/changes.json";
             objectMapper.writeValue(new File(filePath), changeRecords);
-            logger.debug("[OptimizedTaskStorage] 变更记录已保存: {} - {} 条记录", taskId, changeRecords.size());
+            logger.debug("[TaskStorage] 变更记录已保存: {} - {} 条记录", taskId, changeRecords.size());
         } catch (IOException e) {
-            logger.error("[OptimizedTaskStorage] 保存变更记录失败: {}", taskId, e);
+            logger.error("[TaskStorage] 保存变更记录失败: {}", taskId, e);
         }
     }
 
@@ -217,12 +230,12 @@ public class TaskStorageService {
             String filePath = getTaskDirectory(taskId) + "/preview/changes.json";
             File file = new File(filePath);
             if (!file.exists()) {
-                logger.warn("[OptimizedTaskStorage] 变更记录不存在: {}", taskId);
+                logger.warn("[TaskStorage] 变更记录不存在: {}", taskId);
                 return new ArrayList<>();
             }
             return objectMapper.readValue(file, new TypeReference<List<ChangeRecord>>() {});
         } catch (IOException e) {
-            logger.error("[OptimizedTaskStorage] 加载变更记录失败: {}", taskId, e);
+            logger.error("[TaskStorage] 加载变更记录失败: {}", taskId, e);
             return new ArrayList<>();
         }
     }
@@ -234,9 +247,9 @@ public class TaskStorageService {
         try {
             String filePath = getTaskDirectory(taskId) + "/execution/execution_" + String.format("%03d", executionNum) + "/statistics.json";
             objectMapper.writeValue(new File(filePath), statistics);
-            logger.debug("[OptimizedTaskStorage] 执行统计已保存: {} - execution_{}", taskId, executionNum);
+            logger.debug("[TaskStorage] 执行统计已保存: {} - execution_{}", taskId, executionNum);
         } catch (IOException e) {
-            logger.error("[OptimizedTaskStorage] 保存执行统计失败: {} - execution_{}", taskId, executionNum, e);
+            logger.error("[TaskStorage] 保存执行统计失败: {} - execution_{}", taskId, executionNum, e);
         }
     }
 
@@ -252,7 +265,7 @@ public class TaskStorageService {
             }
             return objectMapper.readValue(file, TaskInfo.ExecutionStage.class);
         } catch (IOException e) {
-            logger.error("[OptimizedTaskStorage] 加载执行统计失败: {} - execution_{}", taskId, executionNum, e);
+            logger.error("[TaskStorage] 加载执行统计失败: {} - execution_{}", taskId, executionNum, e);
             return null;
         }
     }
@@ -307,9 +320,9 @@ public class TaskStorageService {
                     writer.write(record);
                     writer.newLine();
                 }
-                logger.debug("[OptimizedTaskStorage] 扫描数据写入完成: {}", taskId);
+                logger.debug("[TaskStorage] 扫描数据写入完成: {}", taskId);
             } catch (IOException | InterruptedException e) {
-                logger.error("[OptimizedTaskStorage] 扫描数据写入失败: {}", taskId, e);
+                logger.error("[TaskStorage] 扫描数据写入失败: {}", taskId, e);
             } finally {
                 writeQueues.remove(queueKey);
             }
@@ -327,9 +340,9 @@ public class TaskStorageService {
                     writer.write(record);
                     writer.newLine();
                 }
-                logger.debug("[OptimizedTaskStorage] 预览数据写入完成: {}", taskId);
+                logger.debug("[TaskStorage] 预览数据写入完成: {}", taskId);
             } catch (IOException | InterruptedException e) {
-                logger.error("[OptimizedTaskStorage] 预览数据写入失败: {}", taskId, e);
+                logger.error("[TaskStorage] 预览数据写入失败: {}", taskId, e);
             } finally {
                 writeQueues.remove(queueKey);
             }
@@ -347,9 +360,9 @@ public class TaskStorageService {
                     writer.write(record);
                     writer.newLine();
                 }
-                logger.debug("[OptimizedTaskStorage] 执行数据写入完成: {} - execution_{}", taskId, executionNum);
+                logger.debug("[TaskStorage] 执行数据写入完成: {} - execution_{}", taskId, executionNum);
             } catch (IOException | InterruptedException e) {
-                logger.error("[OptimizedTaskStorage] 执行数据写入失败: {} - execution_{}", taskId, executionNum, e);
+                logger.error("[TaskStorage] 执行数据写入失败: {} - execution_{}", taskId, executionNum, e);
             } finally {
                 writeQueues.remove(queueKey);
             }
@@ -406,7 +419,7 @@ public class TaskStorageService {
                 readCount++;
             }
         } catch (IOException e) {
-            logger.error("[OptimizedTaskStorage] 读取数据文件失败: {}", filePath, e);
+            logger.error("[TaskStorage] 读取数据文件失败: {}", filePath, e);
         }
         return records;
     }
@@ -419,7 +432,7 @@ public class TaskStorageService {
             writer.write(logMessage);
             writer.newLine();
         } catch (IOException e) {
-            logger.error("[OptimizedTaskStorage] 写入任务日志失败: {}", taskId, e);
+            logger.error("[TaskStorage] 写入任务日志失败: {}", taskId, e);
         }
     }
 
@@ -443,15 +456,15 @@ public class TaskStorageService {
                         try {
                             Files.delete(path);
                         } catch (IOException e) {
-                            logger.error("[OptimizedTaskStorage] 删除文件失败: {}", path, e);
+                            logger.error("[TaskStorage] 删除文件失败: {}", path, e);
                         }
                     });
-                logger.info("[OptimizedTaskStorage] 任务已删除: {}", taskId);
+                logger.info("[TaskStorage] 任务已删除: {}", taskId);
                 return true;
             }
             return false;
         } catch (IOException e) {
-            logger.error("[OptimizedTaskStorage] 删除任务失败: {}", taskId, e);
+            logger.error("[TaskStorage] 删除任务失败: {}", taskId, e);
             return false;
         }
     }
@@ -464,7 +477,7 @@ public class TaskStorageService {
             Path scanDataPath = Paths.get(getTaskDirectory(taskId) + "/scan/data.json");
             if (Files.exists(scanDataPath)) {
                 Files.delete(scanDataPath);
-                logger.info("[OptimizedTaskStorage] 扫描数据已清空: {}", taskId);
+                logger.info("[TaskStorage] 扫描数据已清空: {}", taskId);
             }
             
             Path scanStatsPath = Paths.get(getTaskDirectory(taskId) + "/scan/statistics.json");
@@ -472,7 +485,7 @@ public class TaskStorageService {
                 Files.delete(scanStatsPath);
             }
         } catch (IOException e) {
-            logger.error("[OptimizedTaskStorage] 清空扫描数据失败: {}", taskId, e);
+            logger.error("[TaskStorage] 清空扫描数据失败: {}", taskId, e);
         }
     }
 
@@ -484,7 +497,7 @@ public class TaskStorageService {
             Path previewDataPath = Paths.get(getTaskDirectory(taskId) + "/preview/data.json");
             if (Files.exists(previewDataPath)) {
                 Files.delete(previewDataPath);
-                logger.info("[OptimizedTaskStorage] 预览数据已清空: {}", taskId);
+                logger.info("[TaskStorage] 预览数据已清空: {}", taskId);
             }
             
             Path previewStatsPath = Paths.get(getTaskDirectory(taskId) + "/preview/statistics.json");
@@ -492,7 +505,7 @@ public class TaskStorageService {
                 Files.delete(previewStatsPath);
             }
         } catch (IOException e) {
-            logger.error("[OptimizedTaskStorage] 清空预览数据失败: {}", taskId, e);
+            logger.error("[TaskStorage] 清空预览数据失败: {}", taskId, e);
         }
     }
 
@@ -509,13 +522,13 @@ public class TaskStorageService {
                         try {
                             Files.delete(path);
                         } catch (IOException e) {
-                            logger.error("[OptimizedTaskStorage] 删除执行文件失败: {}", path, e);
+                            logger.error("[TaskStorage] 删除执行文件失败: {}", path, e);
                         }
                     });
-                logger.info("[OptimizedTaskStorage] 执行数据已清空: {}", taskId);
+                logger.info("[TaskStorage] 执行数据已清空: {}", taskId);
             }
         } catch (IOException e) {
-            logger.error("[OptimizedTaskStorage] 清空执行数据失败: {}", taskId, e);
+            logger.error("[TaskStorage] 清空执行数据失败: {}", taskId, e);
         }
     }
 
@@ -535,7 +548,7 @@ public class TaskStorageService {
                 }
             }
         } catch (Exception e) {
-            logger.error("[OptimizedTaskStorage] 获取任务ID列表失败", e);
+            logger.error("[TaskStorage] 获取任务ID列表失败", e);
         }
         return taskIds;
     }
@@ -556,7 +569,7 @@ public class TaskStorageService {
                 }
             }
         } catch (Exception e) {
-            logger.error("[OptimizedTaskStorage] 获取执行历史失败: {}", taskId, e);
+            logger.error("[TaskStorage] 获取执行历史失败: {}", taskId, e);
         }
         return executions;
     }
@@ -565,7 +578,7 @@ public class TaskStorageService {
      * 关闭服务
      */
     public void shutdown() {
-        logger.info("[OptimizedTaskStorage] 正在关闭服务...");
+        logger.info("[TaskStorage] 正在关闭服务...");
         writeExecutor.shutdown();
         try {
             if (!writeExecutor.awaitTermination(10, TimeUnit.SECONDS)) {
@@ -575,6 +588,6 @@ public class TaskStorageService {
             writeExecutor.shutdownNow();
             Thread.currentThread().interrupt();
         }
-        logger.info("[OptimizedTaskStorage] 服务已关闭");
+        logger.info("[TaskStorage] 服务已关闭");
     }
 }

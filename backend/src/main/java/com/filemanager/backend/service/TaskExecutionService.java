@@ -31,6 +31,7 @@ public class TaskExecutionService {
     private final TaskStorageService storageService;
     private final StrategyService strategyService;
     private final WebSocketMessageService webSocketService;
+    private final ConfigSnapshotService configSnapshotService;
     private final Map<String, TaskExecution> runningTasks = new ConcurrentHashMap<>();
     private final ExecutorService taskExecutor = Executors.newFixedThreadPool(5);
     private final ExecutorService processingExecutor = Executors.newFixedThreadPool(10);
@@ -38,10 +39,12 @@ public class TaskExecutionService {
     @Autowired
     public TaskExecutionService(TaskStorageService storageService, 
                                          StrategyService strategyService,
-                                         WebSocketMessageService webSocketService) {
+                                         WebSocketMessageService webSocketService,
+                                         ConfigSnapshotService configSnapshotService) {
         this.storageService = storageService;
         this.strategyService = strategyService;
         this.webSocketService = webSocketService;
+        this.configSnapshotService = configSnapshotService;
     }
 
     /**
@@ -61,11 +64,17 @@ public class TaskExecutionService {
         TaskConfigSnapshot configSnapshot = createConfigSnapshot(request);
         taskInfo.setConfigSnapshot(configSnapshot);
         
+        // 使用 ConfigSnapshotService 获取或创建快照
+        String snapshotId = configSnapshotService.getOrCreateSnapshot(configSnapshot, "TASK_CONFIG");
+        
+        // 将快照ID保存到任务信息中
+        taskInfo.setConfigSnapshotId(snapshotId);
+        
         // 保存任务信息和配置快照
         storageService.saveTaskInfo(taskInfo);
         storageService.saveConfigSnapshot(taskId, configSnapshot);
         
-        logger.info("[TaskExecution] 任务已创建: {}", taskId);
+        logger.info("[TaskExecution] 任务已创建: {}，配置快照ID: {}", taskId, snapshotId);
         return taskId;
     }
 

@@ -28,6 +28,8 @@ public class TaskInfo {
     private double overallProgress;
     @JsonProperty("message")
     private String message;
+    @JsonProperty("configSnapshotId")
+    private String configSnapshotId;
     @JsonProperty("configSnapshot")
     private TaskConfigSnapshot configSnapshot;
     @JsonProperty("stages")
@@ -110,6 +112,14 @@ public class TaskInfo {
 
     public void setMessage(String message) {
         this.message = message;
+    }
+
+    public String getConfigSnapshotId() {
+        return configSnapshotId;
+    }
+
+    public void setConfigSnapshotId(String configSnapshotId) {
+        this.configSnapshotId = configSnapshotId;
     }
 
     public TaskConfigSnapshot getConfigSnapshot() {

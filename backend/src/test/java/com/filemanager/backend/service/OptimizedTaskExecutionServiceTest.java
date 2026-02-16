@@ -31,14 +31,16 @@ class TaskExecutionServiceTest {
     private TaskStorageService storageService;
     private TaskExecutionService executionService;
     private WebSocketMessageService webSocketService;
+    private ConfigSnapshotService configSnapshotService;
     private String testTaskId;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        storageService = new TaskStorageService();
+        configSnapshotService = new ConfigSnapshotService();
+        storageService = new TaskStorageService(configSnapshotService);
         webSocketService = new WebSocketMessageService(null);
-        executionService = new TaskExecutionService(storageService, strategyService, webSocketService);
+        executionService = new TaskExecutionService(storageService, strategyService, webSocketService, configSnapshotService);
         testTaskId = "test-task-" + System.currentTimeMillis();
     }
 

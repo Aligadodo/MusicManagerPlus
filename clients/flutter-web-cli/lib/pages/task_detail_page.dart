@@ -592,6 +592,10 @@ class _TaskDetailPageState extends State<TaskDetailPage>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _buildSectionTitle('快照信息'),
+        const SizedBox(height: 8),
+        _buildSnapshotInfo(),
+        const SizedBox(height: 16),
         _buildSectionTitle('源目录配置'),
         const SizedBox(height: 8),
         _buildSourceDirectoriesList(configSnapshot.sourceDirectories),
@@ -612,6 +616,50 @@ class _TaskDetailPageState extends State<TaskDetailPage>
         const SizedBox(height: 8),
         _buildConfigJsonViewer(),
       ],
+    );
+  }
+
+  Widget _buildSnapshotInfo() {
+    final configSnapshotId = _taskInfo?.configSnapshotId;
+    if (configSnapshotId == null || configSnapshotId.isEmpty) {
+      return const Text('快照ID: 无', style: TextStyle(color: Colors.grey));
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.blue[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blue[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.fingerprint, size: 16, color: Colors.blue),
+              const SizedBox(width: 8),
+              const Text(
+                '快照ID',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.blue,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SelectableText(
+            configSnapshotId,
+            style: const TextStyle(
+              fontSize: 12,
+              fontFamily: 'monospace',
+              color: Colors.black87,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -8,6 +8,7 @@ class TaskStatus {
   final String? status;
   final double? overallProgress;
   final String? message;
+  final String? configSnapshotId;
   final TaskConfigSnapshot? configSnapshot;
   final TaskStages? stages;
 
@@ -19,6 +20,7 @@ class TaskStatus {
     this.status,
     this.overallProgress,
     this.message,
+    this.configSnapshotId,
     this.configSnapshot,
     this.stages,
   });
@@ -32,6 +34,7 @@ class TaskStatus {
       status: json['status'] as String?,
       overallProgress: (json['overallProgress'] as double?) ?? (json['progress'] as double?) ?? 0.0,
       message: json['message'] as String?,
+      configSnapshotId: json['configSnapshotId'] as String?,
       configSnapshot: json['configSnapshot'] != null
           ? TaskConfigSnapshot.fromJson(json['configSnapshot'] as Map<String, dynamic>)
           : null,
@@ -50,6 +53,7 @@ class TaskStatus {
       'status': status,
       'overallProgress': overallProgress,
       'message': message,
+      'configSnapshotId': configSnapshotId,
       'configSnapshot': configSnapshot?.toJson(),
       'stages': stages?.toJson(),
     };
