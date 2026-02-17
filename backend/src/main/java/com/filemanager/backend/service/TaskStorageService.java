@@ -1,6 +1,8 @@
 package com.filemanager.backend.service;
 
 import com.filemanager.backend.model.*;
+import com.filemanager.backend.entity.TaskInfoPO;
+import com.filemanager.backend.mapper.TaskInfoMapper;
 import com.filemanager.domain.entity.ChangeRecord;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -33,12 +35,14 @@ public class TaskStorageService {
     private final ExecutorService writeExecutor;
     private final Map<String, BlockingQueue<String>> writeQueues = new ConcurrentHashMap<>();
     private final ConfigSnapshotService configSnapshotService;
+    private final TaskInfoMapper taskInfoMapper;
 
-    public TaskStorageService(ConfigSnapshotService configSnapshotService) {
+    public TaskStorageService(ConfigSnapshotService configSnapshotService, TaskInfoMapper taskInfoMapper) {
         this.objectMapper = new ObjectMapper();
         this.objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
         this.writeExecutor = Executors.newFixedThreadPool(5);
         this.configSnapshotService = configSnapshotService;
+        this.taskInfoMapper = taskInfoMapper;
         initializeBaseDirectory();
     }
 
@@ -101,6 +105,12 @@ public class TaskStorageService {
                 logger.warn("[TaskStorage] 任务信息不存在: {}", taskId);
                 return null;
             }
+            
+            if (file.length() == 0) {
+                logger.warn("[TaskStorage] 任务信息文件为空: {}", taskId);
+                return null;
+            }
+            
             TaskInfo taskInfo = objectMapper.readValue(file, TaskInfo.class);
             
             // 如果任务有配置快照ID，从数据库加载配置快照
@@ -275,12 +285,20 @@ public class TaskStorageService {
      */
     public void writeScanData(String taskId, String jsonData) {
         String queueKey = taskId + "_scan";
-        BlockingQueue<String> queue = writeQueues.computeIfAbsent(queueKey, k -> new LinkedBlockingQueue<>(1000));
+        BlockingQueue<String> queue = writeQueues.computeIfAbsent(queueKey, k -> {
+            BlockingQueue<String> newQueue = new LinkedBlockingQueue<>(1000);
+            startScanDataWriter(taskId, queueKey, newQueue);
+            return newQueue;
+        });
         queue.offer(jsonData);
-        
-        if (!isWriterRunning(queueKey)) {
-            startScanDataWriter(taskId, queueKey, queue);
-        }
+    }
+
+    /**
+     * 标记扫描数据写入完成
+     */
+    public void finishScanDataWriting(String taskId) {
+        String queueKey = taskId + "_scan";
+        writeQueues.remove(queueKey);
     }
 
     /**
@@ -288,12 +306,20 @@ public class TaskStorageService {
      */
     public void writePreviewData(String taskId, String jsonData) {
         String queueKey = taskId + "_preview";
-        BlockingQueue<String> queue = writeQueues.computeIfAbsent(queueKey, k -> new LinkedBlockingQueue<>(1000));
+        BlockingQueue<String> queue = writeQueues.computeIfAbsent(queueKey, k -> {
+            BlockingQueue<String> newQueue = new LinkedBlockingQueue<>(1000);
+            startPreviewDataWriter(taskId, queueKey, newQueue);
+            return newQueue;
+        });
         queue.offer(jsonData);
-        
-        if (!isWriterRunning(queueKey)) {
-            startPreviewDataWriter(taskId, queueKey, queue);
-        }
+    }
+
+    /**
+     * 标记预览数据写入完成
+     */
+    public void finishPreviewDataWriting(String taskId) {
+        String queueKey = taskId + "_preview";
+        writeQueues.remove(queueKey);
     }
 
     /**
@@ -301,12 +327,20 @@ public class TaskStorageService {
      */
     public void writeExecutionData(String taskId, int executionNum, String jsonData) {
         String queueKey = taskId + "_execution_" + executionNum;
-        BlockingQueue<String> queue = writeQueues.computeIfAbsent(queueKey, k -> new LinkedBlockingQueue<>(1000));
+        BlockingQueue<String> queue = writeQueues.computeIfAbsent(queueKey, k -> {
+            BlockingQueue<String> newQueue = new LinkedBlockingQueue<>(1000);
+            startExecutionDataWriter(taskId, executionNum, queueKey, newQueue);
+            return newQueue;
+        });
         queue.offer(jsonData);
-        
-        if (!isWriterRunning(queueKey)) {
-            startExecutionDataWriter(taskId, executionNum, queueKey, queue);
-        }
+    }
+
+    /**
+     * 标记执行数据写入完成
+     */
+    public void finishExecutionDataWriting(String taskId, int executionNum) {
+        String queueKey = taskId + "_execution_" + executionNum;
+        writeQueues.remove(queueKey);
     }
 
     /**
@@ -314,11 +348,22 @@ public class TaskStorageService {
      */
     private void startScanDataWriter(String taskId, String queueKey, BlockingQueue<String> queue) {
         writeExecutor.submit(() -> {
-            try (BufferedWriter writer = Files.newBufferedWriter(Paths.get(getTaskDirectory(taskId) + "/scan/data.json"))) {
+            Path filePath = Paths.get(getTaskDirectory(taskId) + "/scan/data.json");
+            logger.info("[TaskStorage] 开始写入扫描数据: {}", filePath);
+            try (BufferedWriter writer = Files.newBufferedWriter(filePath)) {
                 String record;
-                while ((record = queue.poll(1, TimeUnit.SECONDS)) != null) {
-                    writer.write(record);
-                    writer.newLine();
+                int recordCount = 0;
+                while (true) {
+                    record = queue.poll(1, TimeUnit.SECONDS);
+                    if (record != null) {
+                        writer.write(record);
+                        writer.newLine();
+                        recordCount++;
+                    } else if (!writeQueues.containsKey(queueKey)) {
+                        // 队列已被移除，说明写入完成
+                        logger.info("[TaskStorage] 扫描数据写入完成: {}, 共 {} 条记录", taskId, recordCount);
+                        break;
+                    }
                 }
                 logger.debug("[TaskStorage] 扫描数据写入完成: {}", taskId);
             } catch (IOException | InterruptedException e) {
@@ -336,9 +381,15 @@ public class TaskStorageService {
         writeExecutor.submit(() -> {
             try (BufferedWriter writer = Files.newBufferedWriter(Paths.get(getTaskDirectory(taskId) + "/preview/data.json"))) {
                 String record;
-                while ((record = queue.poll(1, TimeUnit.SECONDS)) != null) {
-                    writer.write(record);
-                    writer.newLine();
+                while (true) {
+                    record = queue.poll(1, TimeUnit.SECONDS);
+                    if (record != null) {
+                        writer.write(record);
+                        writer.newLine();
+                    } else if (!writeQueues.containsKey(queueKey)) {
+                        // 队列已被移除，说明写入完成
+                        break;
+                    }
                 }
                 logger.debug("[TaskStorage] 预览数据写入完成: {}", taskId);
             } catch (IOException | InterruptedException e) {
@@ -356,9 +407,15 @@ public class TaskStorageService {
         writeExecutor.submit(() -> {
             try (BufferedWriter writer = Files.newBufferedWriter(Paths.get(getTaskDirectory(taskId) + "/execution/execution_" + String.format("%03d", executionNum) + "/data.json"))) {
                 String record;
-                while ((record = queue.poll(1, TimeUnit.SECONDS)) != null) {
-                    writer.write(record);
-                    writer.newLine();
+                while (true) {
+                    record = queue.poll(1, TimeUnit.SECONDS);
+                    if (record != null) {
+                        writer.write(record);
+                        writer.newLine();
+                    } else if (!writeQueues.containsKey(queueKey)) {
+                        // 队列已被移除，说明写入完成
+                        break;
+                    }
                 }
                 logger.debug("[TaskStorage] 执行数据写入完成: {} - execution_{}", taskId, executionNum);
             } catch (IOException | InterruptedException e) {
@@ -460,6 +517,7 @@ public class TaskStorageService {
                         }
                     });
                 logger.info("[TaskStorage] 任务已删除: {}", taskId);
+                taskInfoMapper.deleteByTaskId(taskId);
                 return true;
             }
             return false;
@@ -538,13 +596,10 @@ public class TaskStorageService {
     public List<String> getAllTaskIds() {
         List<String> taskIds = new ArrayList<>();
         try {
-            File baseDir = new File(BASE_DIR);
-            File[] taskDirs = baseDir.listFiles();
-            if (taskDirs != null) {
-                for (File taskDir : taskDirs) {
-                    if (taskDir.isDirectory()) {
-                        taskIds.add(taskDir.getName());
-                    }
+            List<TaskInfoPO> taskInfoList = taskInfoMapper.selectAll();
+            if (taskInfoList != null) {
+                for (TaskInfoPO taskInfo : taskInfoList) {
+                    taskIds.add(taskInfo.getTaskId());
                 }
             }
         } catch (Exception e) {

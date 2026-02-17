@@ -72,6 +72,9 @@ public class TaskController {
             logger.info("[TaskController] 任务已创建，ID: {}", taskId);
             
             TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
+            if (taskInfo == null) {
+                taskInfo = executionService.getTaskProgress(taskId);
+            }
             logger.info("[TaskController] 任务信息已加载: {}", taskInfo);
             
             response.put("success", true);
@@ -312,6 +315,9 @@ public class TaskController {
             executionService.executeScan(taskId);
             
             TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
+            if (taskInfo == null) {
+                taskInfo = executionService.getTaskProgress(taskId);
+            }
             
             response.put("success", true);
             response.put("data", taskInfoToMap(taskInfo));
@@ -345,6 +351,9 @@ public class TaskController {
             executionService.executePreview(taskId);
             
             TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
+            if (taskInfo == null) {
+                taskInfo = executionService.getTaskProgress(taskId);
+            }
             
             response.put("success", true);
             response.put("data", taskInfoToMap(taskInfo));
@@ -396,6 +405,9 @@ public class TaskController {
             }
             
             TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
+            if (taskInfo == null) {
+                taskInfo = executionService.getTaskProgress(taskId);
+            }
             
             Map<String, Object> data = new HashMap<>();
             data.put("taskId", taskId);
@@ -434,6 +446,9 @@ public class TaskController {
             executionService.retryFailed(taskId);
             
             TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
+            if (taskInfo == null) {
+                taskInfo = executionService.getTaskProgress(taskId);
+            }
             
             Map<String, Object> data = new HashMap<>();
             data.put("taskId", taskId);
@@ -472,6 +487,9 @@ public class TaskController {
             executionService.restartScan(taskId);
             
             TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
+            if (taskInfo == null) {
+                taskInfo = executionService.getTaskProgress(taskId);
+            }
             
             response.put("success", true);
             response.put("data", taskInfoToMap(taskInfo));
@@ -505,6 +523,9 @@ public class TaskController {
             executionService.restartPreview(taskId);
             
             TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
+            if (taskInfo == null) {
+                taskInfo = executionService.getTaskProgress(taskId);
+            }
             
             response.put("success", true);
             response.put("data", taskInfoToMap(taskInfo));
@@ -538,6 +559,9 @@ public class TaskController {
             executionService.restartExecution(taskId);
             
             TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
+            if (taskInfo == null) {
+                taskInfo = executionService.getTaskProgress(taskId);
+            }
             
             response.put("success", true);
             response.put("data", taskInfoToMap(taskInfo));
@@ -1082,6 +1106,7 @@ public class TaskController {
         map.put("currentStage", taskInfo.getCurrentStage());
         map.put("progress", taskInfo.getOverallProgress());
         map.put("message", taskInfo.getMessage());
+        map.put("configSnapshotId", taskInfo.getConfigSnapshotId());
         
         if (taskInfo.getStages() != null) {
             Map<String, Object> stages = new HashMap<>();

@@ -9,6 +9,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -23,24 +25,23 @@ import static org.mockito.ArgumentMatchers.*;
  * TaskExecutionService测试类
  * 测试任务执行服务的各项功能
  */
+@SpringBootTest
 class TaskExecutionServiceTest {
+
+    @Autowired
+    private TaskExecutionService executionService;
+
+    @Autowired
+    private TaskStorageService storageService;
 
     @Mock
     private StrategyService strategyService;
 
-    private TaskStorageService storageService;
-    private TaskExecutionService executionService;
-    private WebSocketMessageService webSocketService;
-    private ConfigSnapshotService configSnapshotService;
     private String testTaskId;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        configSnapshotService = new ConfigSnapshotService();
-        storageService = new TaskStorageService(configSnapshotService);
-        webSocketService = new WebSocketMessageService(null);
-        executionService = new TaskExecutionService(storageService, strategyService, webSocketService, configSnapshotService);
         testTaskId = "test-task-" + System.currentTimeMillis();
     }
 

@@ -1,11 +1,14 @@
 package com.filemanager.backend.service;
 
+import com.filemanager.backend.mapper.TaskInfoMapper;
 import com.filemanager.backend.model.TaskConfigSnapshot;
 import com.filemanager.backend.model.TaskInfo;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
 import java.io.File;
 import java.io.IOException;
@@ -16,6 +19,8 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
 
 /**
  * TaskStorageService测试类
@@ -25,18 +30,23 @@ class TaskStorageServiceTest {
 
     private TaskStorageService storageService;
     private ConfigSnapshotService configSnapshotService;
+    @Mock
+    private TaskInfoMapper taskInfoMapper;
     private String testTaskId;
 
     @BeforeEach
     void setUp() {
+        MockitoAnnotations.openMocks(this);
         configSnapshotService = new ConfigSnapshotService();
-        storageService = new TaskStorageService(configSnapshotService);
+        storageService = new TaskStorageService(configSnapshotService, taskInfoMapper);
         testTaskId = "test-task-" + System.currentTimeMillis();
     }
 
     @AfterEach
     void tearDown() {
         if (testTaskId != null) {
+            when(taskInfoMapper.selectByTaskId(anyString())).thenReturn(null);
+            when(taskInfoMapper.deleteByTaskId(anyString())).thenReturn(1);
             storageService.deleteTask(testTaskId);
         }
         storageService.shutdown();
@@ -206,6 +216,9 @@ class TaskStorageServiceTest {
 
     @Test
     void testDeleteTask() {
+        when(taskInfoMapper.selectByTaskId(anyString())).thenReturn(null);
+        when(taskInfoMapper.deleteByTaskId(anyString())).thenReturn(1);
+        
         storageService.initializeTaskDirectory(testTaskId);
 
         TaskInfo taskInfo = new TaskInfo(testTaskId);
@@ -218,10 +231,14 @@ class TaskStorageServiceTest {
 
         TaskInfo deletedTaskInfo = storageService.loadTaskInfo(testTaskId);
         assertNull(deletedTaskInfo);
+        
+        verify(taskInfoMapper, times(1)).deleteByTaskId(testTaskId);
     }
 
     @Test
     void testGetAllTaskIds() {
+        List<com.filemanager.backend.entity.TaskInfoPO> mockTaskList = new java.util.ArrayList<>();
+        
         storageService.initializeTaskDirectory(testTaskId);
 
         TaskInfo taskInfo1 = new TaskInfo(testTaskId);
@@ -232,12 +249,24 @@ class TaskStorageServiceTest {
         TaskInfo taskInfo2 = new TaskInfo(testTaskId2);
         storageService.saveTaskInfo(taskInfo2);
 
+        // 创建mock任务列表
+        com.filemanager.backend.entity.TaskInfoPO taskPO1 = new com.filemanager.backend.entity.TaskInfoPO();
+        taskPO1.setTaskId(testTaskId);
+        mockTaskList.add(taskPO1);
+        
+        com.filemanager.backend.entity.TaskInfoPO taskPO2 = new com.filemanager.backend.entity.TaskInfoPO();
+        taskPO2.setTaskId(testTaskId2);
+        mockTaskList.add(taskPO2);
+        
+        when(taskInfoMapper.selectAll()).thenReturn(mockTaskList);
+
         List<String> taskIds = storageService.getAllTaskIds();
 
         assertTrue(taskIds.size() >= 2);
         assertTrue(taskIds.contains(testTaskId));
         assertTrue(taskIds.contains(testTaskId2));
 
+        when(taskInfoMapper.deleteByTaskId(testTaskId2)).thenReturn(1);
         storageService.deleteTask(testTaskId2);
     }
 

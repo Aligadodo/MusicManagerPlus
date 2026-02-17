@@ -1,0 +1,45 @@
+spring:
+  application:
+    name: filemanager-backend-test
+  datasource:
+    driver-class-name: org.sqlite.JDBC
+    url: jdbc:sqlite:file::memory:?cache=shared
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      connection-init-sql: PRAGMA foreign_keys = ON
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.filemanager.backend.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+
+app:
+  database:
+    path: ":memory:"
+    auto-init: true
+    backup-enabled: false
+
+server:
+  port: 8080
+
+filemanager:
+  base-dir: /tmp
+  max-file-size: 104857600
+  max-request-size: 104857600
+  log:
+    directory: logs
+
+logging:
+  level:
+    com.filemanager: debug
+    com.filemanager.backend: debug
+    org.springframework: info
+    org.springframework.web: info
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"

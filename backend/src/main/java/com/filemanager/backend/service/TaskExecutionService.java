@@ -1,8 +1,14 @@
 package com.filemanager.backend.service;
 
+import com.filemanager.backend.entity.TaskInfoPO;
+import com.filemanager.backend.entity.ChangeRecordPO;
+import com.filemanager.backend.mapper.TaskInfoMapper;
+import com.filemanager.backend.mapper.ChangeRecordMapper;
 import com.filemanager.backend.model.*;
 import com.filemanager.domain.dto.TaskRequestDTO;
 import com.filemanager.domain.service.StrategyService;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +24,7 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.UUID;
 
 /**
  * 任务执行服务
@@ -32,6 +39,8 @@ public class TaskExecutionService {
     private final StrategyService strategyService;
     private final WebSocketMessageService webSocketService;
     private final ConfigSnapshotService configSnapshotService;
+    private final TaskInfoMapper taskInfoMapper;
+    private final ChangeRecordMapper changeRecordMapper;
     private final Map<String, TaskExecution> runningTasks = new ConcurrentHashMap<>();
     private final ExecutorService taskExecutor = Executors.newFixedThreadPool(5);
     private final ExecutorService processingExecutor = Executors.newFixedThreadPool(10);
@@ -40,11 +49,15 @@ public class TaskExecutionService {
     public TaskExecutionService(TaskStorageService storageService, 
                                          StrategyService strategyService,
                                          WebSocketMessageService webSocketService,
-                                         ConfigSnapshotService configSnapshotService) {
+                                         ConfigSnapshotService configSnapshotService,
+                                         TaskInfoMapper taskInfoMapper,
+                                         ChangeRecordMapper changeRecordMapper) {
         this.storageService = storageService;
         this.strategyService = strategyService;
         this.webSocketService = webSocketService;
         this.configSnapshotService = configSnapshotService;
+        this.taskInfoMapper = taskInfoMapper;
+        this.changeRecordMapper = changeRecordMapper;
     }
 
     /**
@@ -74,8 +87,53 @@ public class TaskExecutionService {
         storageService.saveTaskInfo(taskInfo);
         storageService.saveConfigSnapshot(taskId, configSnapshot);
         
+        // 保存任务信息到数据库
+        TaskInfoPO taskInfoPO = new TaskInfoPO();
+        taskInfoPO.setTaskId(taskId);
+        taskInfoPO.setTaskName(taskInfo.getTaskName());
+        taskInfoPO.setStatus(taskInfo.getStatus().name());
+        taskInfoPO.setCurrentStage(taskInfo.getCurrentStage());
+        taskInfoPO.setOverallProgress(taskInfo.getOverallProgress());
+        taskInfoPO.setMessage(taskInfo.getMessage());
+        taskInfoPO.setConfigSnapshotId(snapshotId);
+        taskInfoPO.setCreatedAt(new Date(taskInfo.getCreatedAt()));
+        taskInfoPO.setUpdatedAt(new Date(taskInfo.getUpdatedAt()));
+        taskInfoMapper.insert(taskInfoPO);
+        
         logger.info("[TaskExecution] 任务已创建: {}，配置快照ID: {}", taskId, snapshotId);
         return taskId;
+    }
+    
+    private void updateTaskInfoInDatabase(TaskInfo taskInfo) {
+        try {
+            TaskInfoPO taskInfoPO = taskInfoMapper.selectByTaskId(taskInfo.getTaskId());
+            if (taskInfoPO == null) {
+                taskInfoPO = new TaskInfoPO();
+                taskInfoPO.setTaskId(taskInfo.getTaskId());
+            }
+            
+            taskInfoPO.setTaskName(taskInfo.getTaskName());
+            taskInfoPO.setStatus(taskInfo.getStatus().name());
+            taskInfoPO.setCurrentStage(taskInfo.getCurrentStage());
+            taskInfoPO.setOverallProgress(taskInfo.getOverallProgress());
+            taskInfoPO.setMessage(taskInfo.getMessage());
+            taskInfoPO.setConfigSnapshotId(taskInfo.getConfigSnapshotId());
+            taskInfoPO.setCreatedAt(new Date(taskInfo.getCreatedAt()));
+            taskInfoPO.setUpdatedAt(new Date(taskInfo.getUpdatedAt()));
+            
+            // 如果任务已完成，设置完成时间
+            if (taskInfo.getStatus() == TaskInfo.TaskStatus.COMPLETED) {
+                taskInfoPO.setCompletedAt(new Date());
+            }
+            
+            if (taskInfoPO.getTaskId() == null || taskInfoMapper.selectByTaskId(taskInfo.getTaskId()) == null) {
+                taskInfoMapper.insert(taskInfoPO);
+            } else {
+                taskInfoMapper.update(taskInfoPO);
+            }
+        } catch (Exception e) {
+            logger.error("[TaskExecution] 更新数据库任务信息失败: {}", taskInfo.getTaskId(), e);
+        }
     }
 
     /**
@@ -89,7 +147,7 @@ public class TaskExecutionService {
             throw new IllegalArgumentException("任务不存在: " + taskId);
         }
         
-        TaskExecution execution = new TaskExecution(taskId, taskInfo, storageService, strategyService, webSocketService);
+        TaskExecution execution = new TaskExecution(taskId, taskInfo, storageService, strategyService, webSocketService, this);
         runningTasks.put(taskId, execution);
         
         Future<?> future = taskExecutor.submit(() -> {
@@ -115,12 +173,33 @@ public class TaskExecutionService {
             throw new IllegalArgumentException("任务不存在: " + taskId);
         }
         
-        // 检查扫描是否完成
-        if (!"SCANNED".equals(taskInfo.getStages().getScan().getStatus())) {
+        logger.info("[TaskExecution] 当前扫描状态: {}", taskInfo.getStages().getScan().getStatus());
+        
+        // 检查扫描是否完成，最多等待10秒
+        int maxRetries = 10;
+        for (int i = 0; i < maxRetries; i++) {
+            if ("COMPLETED".equals(taskInfo.getStages().getScan().getStatus())) {
+                logger.info("[TaskExecution] 扫描已完成，可以开始预览分析");
+                break;
+            }
+            if (i < maxRetries - 1) {
+                try {
+                    Thread.sleep(1000);
+                    taskInfo = storageService.loadTaskInfo(taskId);
+                    logger.info("[TaskExecution] 重试加载任务信息，扫描状态: {}", taskInfo.getStages().getScan().getStatus());
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new RuntimeException("等待扫描完成被中断", e);
+                }
+            }
+        }
+        
+        if (!"COMPLETED".equals(taskInfo.getStages().getScan().getStatus())) {
+            logger.error("[TaskExecution] 扫描未完成，当前状态: {}", taskInfo.getStages().getScan().getStatus());
             throw new IllegalStateException("文件扫描未完成，无法执行预览分析");
         }
         
-        TaskExecution execution = new TaskExecution(taskId, taskInfo, storageService, strategyService, webSocketService);
+        TaskExecution execution = new TaskExecution(taskId, taskInfo, storageService, strategyService, webSocketService, this);
         runningTasks.put(taskId, execution);
         
         Future<?> future = taskExecutor.submit(() -> {
@@ -146,8 +225,25 @@ public class TaskExecutionService {
             throw new IllegalArgumentException("任务不存在: " + taskId);
         }
         
-        // 检查预览是否完成
-        if (!"PREVIEWED".equals(taskInfo.getStages().getPreview().getStatus())) {
+        // 检查预览是否完成，最多等待5秒
+        int maxRetries = 5;
+        for (int i = 0; i < maxRetries; i++) {
+            if ("PREVIEWED".equals(taskInfo.getStages().getPreview().getStatus())) {
+                break;
+            }
+            if (i < maxRetries - 1) {
+                try {
+                    Thread.sleep(1000);
+                    taskInfo = storageService.loadTaskInfo(taskId);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new RuntimeException("等待预览完成被中断", e);
+                }
+            }
+        }
+        
+        if (!"PREVIEWED".equals(taskInfo.getStages().getPreview().getStatus()) && 
+            !"COMPLETED".equals(taskInfo.getStages().getPreview().getStatus())) {
             throw new IllegalStateException("预览分析未完成，无法执行任务");
         }
         
@@ -161,7 +257,7 @@ public class TaskExecutionService {
             logger.error("[TaskExecution] 创建执行目录失败: {} - execution_{}", taskId, executionNum, e);
         }
         
-        TaskExecution execution = new TaskExecution(taskId, taskInfo, storageService, strategyService, webSocketService);
+        TaskExecution execution = new TaskExecution(taskId, taskInfo, storageService, strategyService, webSocketService, this);
         runningTasks.put(taskId, execution);
         
         Future<?> future = taskExecutor.submit(() -> {
@@ -205,7 +301,7 @@ public class TaskExecutionService {
             logger.error("[TaskExecution] 创建执行目录失败: {} - execution_{}", taskId, executionNum, e);
         }
         
-        TaskExecution execution = new TaskExecution(taskId, taskInfo, storageService, strategyService, webSocketService);
+        TaskExecution execution = new TaskExecution(taskId, taskInfo, storageService, strategyService, webSocketService, this);
         runningTasks.put(taskId, execution);
         
         Future<?> future = taskExecutor.submit(() -> {
@@ -246,7 +342,7 @@ public class TaskExecutionService {
             logger.error("[TaskExecution] 创建执行目录失败: {} - execution_{}", taskId, executionNum, e);
         }
         
-        TaskExecution execution = new TaskExecution(taskId, taskInfo, storageService, strategyService, webSocketService);
+        TaskExecution execution = new TaskExecution(taskId, taskInfo, storageService, strategyService, webSocketService, this);
         runningTasks.put(taskId, execution);
         
         Future<?> future = taskExecutor.submit(() -> {
@@ -333,8 +429,12 @@ public class TaskExecutionService {
         
         storageService.saveTaskInfo(taskInfo);
         storageService.writeTaskLog(taskId, "[INFO] [RESTART] 准备重新扫描");
+        updateTaskInfoInDatabase(taskInfo);
         
-        logger.info("[TaskExecution] 重新扫描准备完成: {}", taskId);
+        // 实际启动扫描
+        executeScan(taskId);
+        
+        logger.info("[TaskExecution] 重新扫描已启动: {}", taskId);
     }
 
     /**
@@ -382,8 +482,12 @@ public class TaskExecutionService {
         
         storageService.saveTaskInfo(taskInfo);
         storageService.writeTaskLog(taskId, "[INFO] [RESTART] 准备重新预览");
+        updateTaskInfoInDatabase(taskInfo);
         
-        logger.info("[TaskExecution] 重新预览准备完成: {}", taskId);
+        // 实际启动预览
+        executePreview(taskId);
+        
+        logger.info("[TaskExecution] 重新预览已启动: {}", taskId);
     }
 
     /**
@@ -420,8 +524,12 @@ public class TaskExecutionService {
         
         storageService.saveTaskInfo(taskInfo);
         storageService.writeTaskLog(taskId, "[INFO] [RESTART] 准备重新执行");
+        updateTaskInfoInDatabase(taskInfo);
         
-        logger.info("[TaskExecution] 重新执行准备完成: {}", taskId);
+        // 实际启动执行
+        executeTask(taskId);
+        
+        logger.info("[TaskExecution] 重新执行已启动: {}", taskId);
     }
 
     /**
@@ -496,24 +604,27 @@ public class TaskExecutionService {
     /**
      * 任务执行器
      */
-    private static class TaskExecution {
+    private class TaskExecution {
         private final String taskId;
         private final TaskInfo taskInfo;
         private final TaskStorageService storageService;
         private final StrategyService strategyService;
         private final WebSocketMessageService webSocketService;
+        private final TaskExecutionService taskExecutionService;
         private Future<?> future;
         private volatile boolean cancelled = false;
 
         public TaskExecution(String taskId, TaskInfo taskInfo, 
                           TaskStorageService storageService, 
                           StrategyService strategyService,
-                          WebSocketMessageService webSocketService) {
+                          WebSocketMessageService webSocketService,
+                          TaskExecutionService taskExecutionService) {
             this.taskId = taskId;
             this.taskInfo = taskInfo;
             this.storageService = storageService;
             this.strategyService = strategyService;
             this.webSocketService = webSocketService;
+            this.taskExecutionService = taskExecutionService;
         }
 
         public void executeScan() {
@@ -530,6 +641,7 @@ public class TaskExecutionService {
             try {
                 // 扫描文件
                 List<String> filePaths = scanFiles();
+                logger.info("[TaskExecution] 扫描到 {} 个文件", filePaths.size());
                 
                 // 流式写入扫描数据
                 for (String filePath : filePaths) {
@@ -546,6 +658,27 @@ public class TaskExecutionService {
                     storageService.writeScanData(taskId, jsonData);
                 }
                 
+                logger.info("[TaskExecution] 已写入 {} 条扫描记录", filePaths.size());
+                
+                // 标记扫描数据写入完成
+                logger.info("[TaskExecution] 准备标记扫描数据写入完成");
+                storageService.finishScanDataWriting(taskId);
+                
+                // 等待数据写入器完成写入
+                logger.info("[TaskExecution] 等待数据写入器完成写入");
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                
+                // 验证文件是否存在
+                Path scanDataPath = Paths.get(storageService.getTaskDirectory(taskId) + "/scan/data.json");
+                logger.info("[TaskExecution] 扫描数据文件路径: {}, 文件存在: {}", scanDataPath, Files.exists(scanDataPath));
+                if (Files.exists(scanDataPath)) {
+                    logger.info("[TaskExecution] 扫描数据文件大小: {} bytes", Files.size(scanDataPath));
+                }
+                
                 // 更新统计信息
                 TaskInfo.ScanStage scanStage = taskInfo.getStages().getScan();
                 scanStage.setTotalFiles(filePaths.size());
@@ -559,6 +692,7 @@ public class TaskExecutionService {
                 taskInfo.setStatus(TaskInfo.TaskStatus.SCANNED);
                 storageService.saveTaskInfo(taskInfo);
                 storageService.writeTaskLog(taskId, "[INFO] [SCAN] 扫描完成，共 " + filePaths.size() + " 个文件");
+                updateTaskInfoInDatabase(taskInfo);
                 
                 logger.info("[TaskExecution] 文件扫描完成: {}", taskId);
                 
@@ -588,25 +722,46 @@ public class TaskExecutionService {
             storageService.saveTaskInfo(taskInfo);
             storageService.writeTaskLog(taskId, "[INFO] [PREVIEW] 开始预览分析");
             
+            List<ChangeRecordPO> changeRecords = new ArrayList<>();
+            
             try {
                 // 流式读取扫描数据并分析
                 Path scanDataPath = Paths.get(storageService.getTaskDirectory(taskId) + "/scan/data.json");
+                logger.info("[TaskExecution] 开始读取扫描数据: {}", scanDataPath);
+                logger.info("[TaskExecution] 文件是否存在: {}", Files.exists(scanDataPath));
+                
+                if (!Files.exists(scanDataPath)) {
+                    throw new RuntimeException("扫描数据文件不存在: " + scanDataPath);
+                }
+                
                 AtomicInteger processedCount = new AtomicInteger(0);
                 AtomicInteger changedCount = new AtomicInteger(0);
                 
                 try (BufferedReader reader = Files.newBufferedReader(scanDataPath)) {
                     String line;
+                    int lineNum = 0;
                     while ((line = reader.readLine()) != null) {
+                        lineNum++;
                         if (cancelled) break;
+                        
+                        logger.debug("[TaskExecution] 读取第 {} 行: {}", lineNum, line);
                         
                         // 解析扫描记录
                         Map<String, Object> scanRecord = parseJson(line);
                         String filePath = (String) scanRecord.get("filePath");
+                        String fileName = (String) scanRecord.get("fileName");
+                        
+                        logger.debug("[TaskExecution] 处理扫描记录: filePath={}, fileName={}, scanRecord={}", filePath, fileName, scanRecord);
+                        
+                        if (fileName == null || fileName.isEmpty()) {
+                            logger.warn("[TaskExecution] fileName为空，跳过此记录: scanRecord={}", scanRecord);
+                            continue;
+                        }
                         
                         // 执行策略分析（简化处理）
                         Map<String, Object> previewRecord = new HashMap<>();
-                        previewRecord.put("originalName", scanRecord.get("fileName"));
-                        previewRecord.put("newName", scanRecord.get("fileName"));
+                        previewRecord.put("originalName", fileName);
+                        previewRecord.put("newName", fileName);
                         previewRecord.put("filePath", filePath);
                         previewRecord.put("operationType", "NONE");
                         previewRecord.put("changed", false);
@@ -616,6 +771,20 @@ public class TaskExecutionService {
                         String jsonData = toJson(previewRecord);
                         storageService.writePreviewData(taskId, jsonData);
                         
+                        // 创建变更记录
+                        ChangeRecordPO changeRecord = new ChangeRecordPO();
+                        changeRecord.setTaskId(taskId);
+                        changeRecord.setRecordId(UUID.randomUUID().toString());
+                        changeRecord.setOriginalName(fileName);
+                        changeRecord.setNewName(fileName);
+                        changeRecord.setFilePath(filePath);
+                        changeRecord.setOperationType("NONE");
+                        changeRecord.setStatus("PREVIEWED");
+                        changeRecord.setChanged(false);
+                        changeRecord.setSelected(false);
+                        changeRecord.setCreatedAt(new Date());
+                        changeRecords.add(changeRecord);
+                        
                         processedCount.incrementAndGet();
                         
                         // 定期更新统计信息（每100条）
@@ -623,6 +792,26 @@ public class TaskExecutionService {
                             updatePreviewStatistics(processedCount.get(), changedCount.get());
                         }
                     }
+                }
+                
+                // 批量插入变更记录到数据库
+                if (!changeRecords.isEmpty()) {
+                    try {
+                        changeRecordMapper.batchInsert(changeRecords);
+                        logger.info("[TaskExecution] 已插入 {} 条变更记录到数据库", changeRecords.size());
+                    } catch (Exception e) {
+                        logger.error("[TaskExecution] 插入变更记录失败", e);
+                    }
+                }
+                
+                // 标记预览数据写入完成
+                storageService.finishPreviewDataWriting(taskId);
+                
+                // 等待数据写入器完成写入
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                 }
                 
                 // 更新最终统计信息
@@ -641,6 +830,7 @@ public class TaskExecutionService {
                 taskInfo.setStatus(TaskInfo.TaskStatus.PREVIEWED);
                 storageService.saveTaskInfo(taskInfo);
                 storageService.writeTaskLog(taskId, "[INFO] [PREVIEW] 预览完成，共 " + processedCount.get() + " 个文件");
+                updateTaskInfoInDatabase(taskInfo);
                 
                 logger.info("[TaskExecution] 预览分析完成: {}", taskId);
                 
@@ -710,6 +900,16 @@ public class TaskExecutionService {
                     }
                 }
                 
+                // 标记执行数据写入完成
+                storageService.finishExecutionDataWriting(taskId, executionNum);
+                
+                // 等待数据写入器完成写入
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                
                 // 更新最终统计信息
                 executionStage.setTotalFiles(processedCount.get());
                 executionStage.setProcessedFiles(processedCount.get());
@@ -725,6 +925,7 @@ public class TaskExecutionService {
                 taskInfo.setStatus(TaskInfo.TaskStatus.COMPLETED);
                 storageService.saveTaskInfo(taskInfo);
                 storageService.writeTaskLog(taskId, "[INFO] [EXECUTION] 执行完成: execution_" + String.format("%03d", executionNum));
+                updateTaskInfoInDatabase(taskInfo);
                 
                 logger.info("[TaskExecution] 任务执行完成: {} - execution_{}", taskId, executionNum);
                 
@@ -865,6 +1066,13 @@ public class TaskExecutionService {
 
         public void cancel() {
             this.cancelled = true;
+            
+            // 更新任务状态为已取消
+            taskInfo.setStatus(TaskInfo.TaskStatus.CANCELLED);
+            taskInfo.setMessage("任务已取消");
+            storageService.saveTaskInfo(taskInfo);
+            storageService.writeTaskLog(taskId, "[INFO] [CANCEL] 任务已取消");
+            updateTaskInfoInDatabase(taskInfo);
         }
 
         public Future<?> getFuture() {
@@ -945,9 +1153,13 @@ public class TaskExecutionService {
         }
 
         private Map<String, Object> parseJson(String json) {
-            Map<String, Object> map = new HashMap<>();
-            // 简化的JSON解析，实际应该使用Jackson
-            return map;
+            try {
+                ObjectMapper objectMapper = new ObjectMapper();
+                return objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
+            } catch (Exception e) {
+                logger.error("[TaskExecution] 解析JSON失败: {}", json, e);
+                return new HashMap<>();
+            }
         }
     }
 }

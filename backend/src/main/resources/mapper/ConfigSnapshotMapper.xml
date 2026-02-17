@@ -15,7 +15,7 @@
     </resultMap>
 
     <insert id="insert" parameterType="com.filemanager.backend.entity.ConfigSnapshotPO">
-        INSERT INTO config_snapshot (
+        INSERT OR REPLACE INTO config_snapshot (
             snapshot_id, snapshot_name, snapshot_type, config_data, description,
             is_template, created_at, updated_at, created_by
         ) VALUES (
