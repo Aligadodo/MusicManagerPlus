@@ -67,6 +67,7 @@ class TaskConfigSnapshot {
   final Map<String, dynamic>? pipelineConfig;
   final List<RenameRule>? renameRules;
   final List<Precondition>? preconditions;
+  final Map<String, dynamic>? globalSettings;
 
   TaskConfigSnapshot({
     this.sourceDirectories,
@@ -75,6 +76,7 @@ class TaskConfigSnapshot {
     this.pipelineConfig,
     this.renameRules,
     this.preconditions,
+    this.globalSettings,
   });
 
   factory TaskConfigSnapshot.fromJson(Map<String, dynamic> json) {
@@ -91,6 +93,7 @@ class TaskConfigSnapshot {
       preconditions: (json['preconditions'] as List<dynamic>?)
           ?.map((e) => Precondition.fromJson(e as Map<String, dynamic>))
           .toList(),
+      globalSettings: json['globalSettings'] as Map<String, dynamic>?,
     );
   }
 
@@ -102,6 +105,7 @@ class TaskConfigSnapshot {
       'pipelineConfig': pipelineConfig,
       'renameRules': renameRules?.map((e) => e.toJson()).toList(),
       'preconditions': preconditions?.map((e) => e.toJson()).toList(),
+      'globalSettings': globalSettings,
     };
   }
 }

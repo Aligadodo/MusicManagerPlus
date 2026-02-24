@@ -2,6 +2,7 @@
 
 # Flutter Web 启动脚本
 # 支持可配置的端口号和配置文件
+# 支持后台运行模式
 
 # 默认配置
 DEFAULT_PORT=8081
@@ -32,4 +33,25 @@ echo ""
 
 cd "$(dirname "$0")"
 
-flutter run -d chrome --web-port="$PORT"
+# 后台运行模式
+nohup flutter run -d chrome --web-port="$PORT" > flutter_web.log 2>&1 &
+PID=$!
+
+echo "Flutter Web 服务已在后台启动"
+echo "进程 ID: $PID"
+echo "日志文件: $(pwd)/flutter_web.log"
+echo ""
+echo "等待服务启动..."
+sleep 5
+
+# 检查进程是否还在运行
+if ps -p $PID > /dev/null 2>&1; then
+    echo "✓ 服务启动成功"
+    echo "访问地址: http://localhost:$PORT"
+    echo ""
+    echo "查看日志: tail -f flutter_web.log"
+    echo "停止服务: kill $PID"
+else
+    echo "✗ 服务启动失败，请查看日志文件"
+    cat flutter_web.log
+fi

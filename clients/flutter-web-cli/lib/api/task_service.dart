@@ -77,6 +77,36 @@ class TaskService {
     }
   }
 
+  Future<Map<String, dynamic>> cancelStage(String taskId, String stageType) async {
+    final response = await _apiClient.post('/api/tasks/$taskId/stage/$stageType/cancel');
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to cancel stage: ${response.statusCode}');
+    }
+  }
+
+  Future<Map<String, dynamic>> pauseTask(String taskId) async {
+    final response = await _apiClient.post('/api/tasks/$taskId/pause');
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to pause task: ${response.statusCode}');
+    }
+  }
+
+  Future<Map<String, dynamic>> resumeTask(String taskId) async {
+    final response = await _apiClient.post('/api/tasks/$taskId/resume');
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to resume task: ${response.statusCode}');
+    }
+  }
+
   Future<Map<String, dynamic>> deleteTask(String taskId) async {
     final response = await _apiClient.delete('/api/tasks/$taskId');
 
@@ -167,6 +197,36 @@ class TaskService {
       return jsonDecode(response.body);
     } else {
       throw Exception('Failed to restart execution: ${response.statusCode}');
+    }
+  }
+
+  Future<Map<String, dynamic>> rerunTask(String taskId) async {
+    final response = await _apiClient.post('/api/tasks/$taskId/rerun');
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to rerun task: ${response.statusCode}');
+    }
+  }
+
+  Future<Map<String, dynamic>> clearAllTasks() async {
+    final response = await _apiClient.delete('/api/tasks/clear');
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to clear all tasks: ${response.statusCode}');
+    }
+  }
+
+  Future<Map<String, dynamic>> clearStageData(String taskId, String stageType) async {
+    final response = await _apiClient.delete('/api/tasks/$taskId/stage/$stageType/data');
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to clear stage data: ${response.statusCode}');
     }
   }
 

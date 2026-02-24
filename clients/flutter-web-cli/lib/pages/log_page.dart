@@ -224,6 +224,62 @@ class _LogPageState extends ConsumerState<LogPage> {
     }
   }
 
+  Future<void> _deleteLogFile(String fileName) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('确认删除'),
+        content: Text('确定要删除日志文件 "$fileName" 吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    try {
+      await _logService.deleteLogFile(fileName);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: GestureDetector(
+              onDoubleTap: () => _copyToClipboard('删除成功: $fileName'),
+              child: SelectableText('删除成功: $fileName'),
+            ),
+          ),
+        );
+        
+        // 刷新日志文件列表
+        _loadLogFiles();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: GestureDetector(
+              onDoubleTap: () => _copyToClipboard('删除失败: $e'),
+              child: SelectableText('删除失败: $e'),
+            ),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -367,6 +423,16 @@ class _LogPageState extends ConsumerState<LogPage> {
                     _downloadLogFile(file.fileName);
                   },
                   tooltip: '下载',
+                ),
+              ),
+              SizedBox(
+                width: 40,
+                child: IconButton(
+                  icon: const Icon(Icons.close, size: 16, color: Colors.red),
+                  onPressed: () {
+                    _deleteLogFile(file.fileName);
+                  },
+                  tooltip: '删除',
                 ),
               ),
             ],

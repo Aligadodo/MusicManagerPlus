@@ -6,6 +6,7 @@ class TaskCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onCancel;
   final VoidCallback? onDelete;
+  final VoidCallback? onRerun;
 
   const TaskCard({
     Key? key,
@@ -13,6 +14,7 @@ class TaskCard extends StatelessWidget {
     this.onTap,
     this.onCancel,
     this.onDelete,
+    this.onRerun,
   }) : super(key: key);
 
   @override
@@ -70,70 +72,119 @@ class TaskCard extends StatelessWidget {
   Widget _buildStatusIcon() {
     IconData iconData;
     Color iconColor;
+    String statusText;
 
     switch (task.status) {
       case 'CREATED':
         iconData = Icons.folder_open;
         iconColor = Colors.blue;
+        statusText = '已创建';
         break;
       case 'SCANNING':
         iconData = Icons.scanner;
         iconColor = Colors.orange;
+        statusText = '扫描中';
         break;
       case 'SCANNED':
         iconData = Icons.check_circle_outline;
         iconColor = Colors.green;
+        statusText = '扫描完成';
         break;
       case 'PREVIEWING':
         iconData = Icons.preview;
         iconColor = Colors.orange;
+        statusText = '预览中';
         break;
       case 'PREVIEWED':
         iconData = Icons.check_circle_outline;
         iconColor = Colors.green;
+        statusText = '预览完成';
         break;
       case 'EXECUTING':
         iconData = Icons.play_circle_outline;
         iconColor = Colors.orange;
+        statusText = '执行中';
         break;
       case 'COMPLETED':
         iconData = Icons.check_circle;
         iconColor = Colors.green;
+        statusText = '已完成';
         break;
       case 'FAILED':
         iconData = Icons.error;
         iconColor = Colors.red;
+        statusText = '失败';
         break;
       case 'CANCELLED':
         iconData = Icons.cancel;
         iconColor = Colors.grey;
+        statusText = '已取消';
         break;
       default:
         iconData = Icons.help_outline;
         iconColor = Colors.grey;
+        statusText = '未知';
     }
 
-    return Icon(iconData, color: iconColor, size: 32);
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: iconColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(iconData, color: iconColor, size: 32),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          statusText,
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+            color: iconColor,
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildActionButtons(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        if (_canRerun())
+          Tooltip(
+            message: '重新运行任务',
+            child: IconButton(
+              icon: const Icon(Icons.refresh, color: Colors.green),
+              onPressed: onRerun,
+              iconSize: 20,
+            ),
+          ),
         if (_canCancel())
-          IconButton(
-            icon: const Icon(Icons.cancel_outlined),
-            onPressed: onCancel,
-            tooltip: '取消任务',
+          Tooltip(
+            message: '终止任务',
+            child: IconButton(
+              icon: const Icon(Icons.stop, color: Colors.orange),
+              onPressed: onCancel,
+              iconSize: 20,
+            ),
           ),
-        if (_canDelete())
-          IconButton(
-            icon: const Icon(Icons.delete_outline),
+        Tooltip(
+          message: '删除任务',
+          child: IconButton(
+            icon: const Icon(Icons.delete_outline, color: Colors.red),
             onPressed: onDelete,
-            tooltip: '删除任务',
+            iconSize: 20,
           ),
+        ),
       ],
     );
+  }
+
+  bool _canRerun() {
+    return ['COMPLETED', 'FAILED', 'CANCELLED'].contains(task.status);
   }
 
   bool _canCancel() {
@@ -141,7 +192,7 @@ class TaskCard extends StatelessWidget {
   }
 
   bool _canDelete() {
-    return ['CREATED', 'SCANNED', 'PREVIEWED', 'COMPLETED', 'FAILED', 'CANCELLED'].contains(task.status);
+    return true;
   }
 
   Widget _buildProgressBar() {

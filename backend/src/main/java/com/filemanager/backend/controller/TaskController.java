@@ -305,6 +305,149 @@ public class TaskController {
     }
 
     /**
+     * 取消阶段
+     */
+    @PostMapping("/{taskId}/stage/{stageType}/cancel")
+    public ResponseEntity<Map<String, Object>> cancelStage(
+            @PathVariable String taskId,
+            @PathVariable String stageType) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            logger.info("[TaskController] 开始取消阶段: taskId={}, stageType={}", taskId, stageType);
+            
+            boolean cancelled = executionService.cancelStage(taskId, stageType);
+            
+            if (!cancelled) {
+                response.put("success", false);
+                Map<String, Object> error = new HashMap<>();
+                error.put("code", "TASK_NOT_RUNNING");
+                error.put("message", "任务未在运行中");
+                response.put("error", error);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+            }
+            
+            TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
+            if (taskInfo == null) {
+                taskInfo = executionService.getTaskProgress(taskId);
+            }
+            
+            Map<String, Object> data = new HashMap<>();
+            data.put("taskId", taskId);
+            data.put("stageType", stageType);
+            data.put("cancelled", true);
+            data.put("taskInfo", taskInfoToMap(taskInfo));
+            
+            response.put("success", true);
+            response.put("data", data);
+            response.put("message", "阶段已取消");
+            
+            logger.info("[TaskController] 阶段取消成功: taskId={}, stageType={}", taskId, stageType);
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("[TaskController] 阶段取消失败: taskId={}, stageType={}", taskId, stageType, e);
+            
+            response.put("success", false);
+            Map<String, Object> error = new HashMap<>();
+            error.put("code", "CANCEL_STAGE_FAILED");
+            error.put("message", "阶段取消失败");
+            error.put("details", e.getMessage());
+            response.put("error", error);
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    /**
+     * 暂停任务
+     */
+    @PostMapping("/{taskId}/pause")
+    public ResponseEntity<Map<String, Object>> pauseTask(@PathVariable String taskId) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            boolean paused = executionService.pauseTask(taskId);
+            
+            if (!paused) {
+                response.put("success", false);
+                Map<String, Object> error = new HashMap<>();
+                error.put("code", "TASK_NOT_RUNNING");
+                error.put("message", "任务未在运行中");
+                response.put("error", error);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+            }
+            
+            Map<String, Object> data = new HashMap<>();
+            data.put("taskId", taskId);
+            data.put("paused", true);
+            
+            response.put("success", true);
+            response.put("data", data);
+            response.put("message", "任务已暂停");
+            
+            logger.info("[TaskController] 任务暂停成功: {}", taskId);
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("[TaskController] 任务暂停失败: {}", taskId, e);
+            
+            response.put("success", false);
+            Map<String, Object> error = new HashMap<>();
+            error.put("code", "PAUSE_TASK_FAILED");
+            error.put("message", "任务暂停失败");
+            error.put("details", e.getMessage());
+            response.put("error", error);
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    /**
+     * 恢复任务
+     */
+    @PostMapping("/{taskId}/resume")
+    public ResponseEntity<Map<String, Object>> resumeTask(@PathVariable String taskId) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            boolean resumed = executionService.resumeTask(taskId);
+            
+            if (!resumed) {
+                response.put("success", false);
+                Map<String, Object> error = new HashMap<>();
+                error.put("code", "TASK_NOT_PAUSED");
+                error.put("message", "任务未暂停");
+                response.put("error", error);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+            }
+            
+            Map<String, Object> data = new HashMap<>();
+            data.put("taskId", taskId);
+            data.put("resumed", true);
+            
+            response.put("success", true);
+            response.put("data", data);
+            response.put("message", "任务已恢复");
+            
+            logger.info("[TaskController] 任务恢复成功: {}", taskId);
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("[TaskController] 任务恢复失败: {}", taskId, e);
+            
+            response.put("success", false);
+            Map<String, Object> error = new HashMap<>();
+            error.put("code", "RESUME_TASK_FAILED");
+            error.put("message", "任务恢复失败");
+            error.put("details", e.getMessage());
+            response.put("error", error);
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    /**
      * 开始扫描
      */
     @PostMapping("/{taskId}/scan")
@@ -1202,5 +1345,146 @@ public class TaskController {
         map.put("failedCount", executionStage.getFailedCount());
         map.put("skippedCount", executionStage.getSkippedCount());
         return map;
+    }
+
+    /**
+     * 重新运行任务
+     */
+    @PostMapping("/{taskId}/rerun")
+    public ResponseEntity<Map<String, Object>> rerunTask(@PathVariable String taskId) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            logger.info("[TaskController] 开始重新运行任务: {}", taskId);
+            executionService.restartScan(taskId);
+            
+            TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
+            if (taskInfo == null) {
+                taskInfo = executionService.getTaskProgress(taskId);
+            }
+            
+            response.put("success", true);
+            response.put("data", taskInfoToMap(taskInfo));
+            response.put("message", "任务已重新运行");
+            
+            logger.info("[TaskController] 任务重新运行成功: {}", taskId);
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("[TaskController] 任务重新运行失败: {}", taskId, e);
+            
+            response.put("success", false);
+            Map<String, Object> error = new HashMap<>();
+            error.put("code", "RERUN_TASK_FAILED");
+            error.put("message", "任务重新运行失败");
+            error.put("details", e.getMessage());
+            response.put("error", error);
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    /**
+     * 清空所有任务
+     */
+    @DeleteMapping("/clear")
+    public ResponseEntity<Map<String, Object>> clearAllTasks() {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            logger.info("[TaskController] 开始清空所有任务");
+            
+            List<String> allTaskIds = storageService.getAllTaskIds();
+            int deletedCount = 0;
+            
+            for (String taskId : allTaskIds) {
+                try {
+                    storageService.deleteTask(taskId);
+                    changeRecordService.deleteRecordsByTaskId(taskId);
+                    taskOperationLogService.deleteLogsByTaskId(taskId);
+                    deletedCount++;
+                } catch (Exception e) {
+                    logger.warn("[TaskController] 删除任务失败: {}", taskId, e);
+                }
+            }
+            
+            Map<String, Object> data = new HashMap<>();
+            data.put("deletedCount", deletedCount);
+            
+            response.put("success", true);
+            response.put("data", data);
+            response.put("message", "所有任务已清空");
+            
+            logger.info("[TaskController] 清空所有任务成功，共删除 {} 个任务", deletedCount);
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("[TaskController] 清空所有任务失败", e);
+            
+            response.put("success", false);
+            Map<String, Object> error = new HashMap<>();
+            error.put("code", "CLEAR_ALL_TASKS_FAILED");
+            error.put("message", "清空所有任务失败");
+            error.put("details", e.getMessage());
+            response.put("error", error);
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    /**
+     * 清理阶段数据
+     */
+    @DeleteMapping("/{taskId}/stage/{stageType}/data")
+    public ResponseEntity<Map<String, Object>> clearStageData(
+            @PathVariable String taskId,
+            @PathVariable String stageType) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            logger.info("[TaskController] 开始清理阶段数据: taskId={}, stageType={}", taskId, stageType);
+            
+            switch (stageType.toUpperCase()) {
+                case "PREVIEW":
+                    changeRecordService.deleteRecordsByTaskId(taskId);
+                    logger.info("[TaskController] 已清理预览阶段数据: {}", taskId);
+                    break;
+                case "EXECUTION":
+                    changeRecordService.deleteRecordsByTaskId(taskId);
+                    logger.info("[TaskController] 已清理执行阶段数据: {}", taskId);
+                    break;
+                default:
+                    response.put("success", false);
+                    Map<String, Object> error = new HashMap<>();
+                    error.put("code", "INVALID_STAGE_TYPE");
+                    error.put("message", "无效的阶段类型: " + stageType);
+                    response.put("error", error);
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+            }
+            
+            Map<String, Object> data = new HashMap<>();
+            data.put("taskId", taskId);
+            data.put("stageType", stageType);
+            data.put("cleared", true);
+            
+            response.put("success", true);
+            response.put("data", data);
+            response.put("message", "阶段数据已清理");
+            
+            logger.info("[TaskController] 阶段数据清理成功: taskId={}, stageType={}", taskId, stageType);
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("[TaskController] 清理阶段数据失败: taskId={}, stageType={}", taskId, stageType, e);
+            
+            response.put("success", false);
+            Map<String, Object> error = new HashMap<>();
+            error.put("code", "CLEAR_STAGE_DATA_FAILED");
+            error.put("message", "清理阶段数据失败");
+            error.put("details", e.getMessage());
+            response.put("error", error);
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
     }
 }

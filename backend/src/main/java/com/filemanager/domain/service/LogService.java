@@ -12,5 +12,7 @@ public interface LogService {
 
     Map<String, Object> clearOldLogs(int days);
 
+    Map<String, Object> deleteLogFile(String fileName);
+
     String getLogDirectory();
 }

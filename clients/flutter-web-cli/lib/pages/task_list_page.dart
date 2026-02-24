@@ -23,6 +23,8 @@ class _TaskListPageState extends State<TaskListPage> {
   int _totalPages = 1;
   final ScrollController _scrollController = ScrollController();
   Timer? _refreshTimer;
+  Set<String> _selectedTaskIds = {};
+  bool _isSelectionMode = false;
 
   @override
   void initState() {
@@ -165,6 +167,69 @@ class _TaskListPageState extends State<TaskListPage> {
     }
   }
 
+  Future<void> _rerunTask(String taskId) async {
+    final confirmed = await _showConfirmDialog('确认重新运行', '确定要重新运行此任务吗？');
+    if (!confirmed) return;
+
+    try {
+      await _taskService.rerunTask(taskId);
+      _showSuccessSnackBar('任务已重新运行');
+      _refreshTasks();
+    } catch (e) {
+      _showErrorSnackBar('重新运行任务失败: $e');
+    }
+  }
+
+  void _selectAll() {
+    setState(() {
+      if (_selectedTaskIds.length == _tasks.length) {
+        _selectedTaskIds.clear();
+      } else {
+        _selectedTaskIds = _tasks.map((task) => task.taskId!).toSet();
+      }
+    });
+  }
+
+  Future<void> _batchDeleteTasks() async {
+    if (_selectedTaskIds.isEmpty) return;
+
+    final confirmed = await _showConfirmDialog(
+      '确认批量删除',
+      '确定要删除选中的 ${_selectedTaskIds.length} 个任务吗？',
+    );
+    if (!confirmed) return;
+
+    try {
+      for (final taskId in _selectedTaskIds) {
+        await _taskService.deleteTask(taskId);
+      }
+      _showSuccessSnackBar('已删除 ${_selectedTaskIds.length} 个任务');
+      setState(() {
+        _selectedTaskIds.clear();
+        _isSelectionMode = false;
+      });
+      _refreshTasks();
+    } catch (e) {
+      _showErrorSnackBar('批量删除失败: $e');
+    }
+  }
+
+  Future<void> _clearAllTasks() async {
+    final confirmed = await _showConfirmDialog(
+      '确认清空所有任务',
+      '确定要清空所有任务吗？此操作不可恢复！',
+    );
+    if (!confirmed) return;
+
+    try {
+      await _taskService.clearAllTasks();
+      _showSuccessSnackBar('所有任务已清空');
+      _refreshTasks();
+    } catch (e) {
+      _showErrorSnackBar('清空任务失败: $e');
+    }
+  }
+
   void _navigateToTaskDetail(TaskStatus task) {
     Navigator.push(
       context,
@@ -226,6 +291,35 @@ class _TaskListPageState extends State<TaskListPage> {
       appBar: AppBar(
         title: const Text('任务列表'),
         actions: [
+          if (_isSelectionMode)
+            IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () {
+                setState(() {
+                  _isSelectionMode = false;
+                  _selectedTaskIds.clear();
+                });
+              },
+              tooltip: '退出选择模式',
+            ),
+          if (_isSelectionMode)
+            TextButton.icon(
+              onPressed: _selectAll,
+              icon: const Icon(Icons.select_all),
+              label: Text(_selectedTaskIds.length == _tasks.length ? '取消全选' : '全选'),
+            ),
+          if (_isSelectionMode && _selectedTaskIds.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.delete),
+              onPressed: _batchDeleteTasks,
+              tooltip: '批量删除',
+            ),
+          if (!_isSelectionMode)
+            IconButton(
+              icon: const Icon(Icons.delete_sweep),
+              onPressed: _clearAllTasks,
+              tooltip: '清空所有任务',
+            ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.filter_list),
             onSelected: (status) {
@@ -329,11 +423,45 @@ class _TaskListPageState extends State<TaskListPage> {
           }
 
           final task = _tasks[index];
-          return TaskCard(
-            task: task,
-            onTap: () => _navigateToTaskDetail(task),
-            onCancel: () => _cancelTask(task.taskId!),
-            onDelete: () => _deleteTask(task.taskId!),
+          final isSelected = _selectedTaskIds.contains(task.taskId);
+
+          return InkWell(
+            onLongPress: () {
+              setState(() {
+                _isSelectionMode = true;
+                _selectedTaskIds.add(task.taskId!);
+              });
+            },
+            onTap: () {
+              if (_isSelectionMode) {
+                setState(() {
+                  if (isSelected) {
+                    _selectedTaskIds.remove(task.taskId);
+                  } else {
+                    _selectedTaskIds.add(task.taskId!);
+                  }
+                });
+              } else {
+                _navigateToTaskDetail(task);
+              }
+            },
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border(
+                  left: BorderSide(
+                    color: isSelected ? Colors.blue : Colors.transparent,
+                    width: 4,
+                  ),
+                ),
+              ),
+              child: TaskCard(
+                task: task,
+                onTap: () {},
+                onCancel: () => _cancelTask(task.taskId!),
+                onDelete: () => _deleteTask(task.taskId!),
+                onRerun: () => _rerunTask(task.taskId!),
+              ),
+            ),
           );
         },
       ),

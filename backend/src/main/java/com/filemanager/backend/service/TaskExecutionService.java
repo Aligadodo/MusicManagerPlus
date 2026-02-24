@@ -376,6 +376,50 @@ public class TaskExecutionService {
         return true;
     }
 
+    public boolean cancelStage(String taskId, String stageType) {
+        TaskExecution execution = runningTasks.get(taskId);
+        if (execution == null) {
+            return false;
+        }
+        
+        Future<?> future = execution.getFuture();
+        if (future != null && !future.isDone()) {
+            future.cancel(true);
+        }
+        
+        execution.cancelStage(stageType);
+        logger.info("[TaskExecution] 阶段已取消: taskId={}, stageType={}", taskId, stageType);
+        return true;
+    }
+
+    /**
+     * 暂停任务
+     */
+    public boolean pauseTask(String taskId) {
+        TaskExecution execution = runningTasks.get(taskId);
+        if (execution == null) {
+            return false;
+        }
+        
+        execution.pause();
+        logger.info("[TaskExecution] 任务已暂停: {}", taskId);
+        return true;
+    }
+
+    /**
+     * 恢复任务
+     */
+    public boolean resumeTask(String taskId) {
+        TaskExecution execution = runningTasks.get(taskId);
+        if (execution == null) {
+            return false;
+        }
+        
+        execution.resume();
+        logger.info("[TaskExecution] 任务已恢复: {}", taskId);
+        return true;
+    }
+
     /**
      * 重新扫描
      */
@@ -613,6 +657,8 @@ public class TaskExecutionService {
         private final TaskExecutionService taskExecutionService;
         private Future<?> future;
         private volatile boolean cancelled = false;
+        private volatile boolean paused = false;
+        private final Object pauseLock = new Object();
 
         public TaskExecution(String taskId, TaskInfo taskInfo, 
                           TaskStorageService storageService, 
@@ -627,6 +673,47 @@ public class TaskExecutionService {
             this.taskExecutionService = taskExecutionService;
         }
 
+        public void pause() {
+            this.paused = true;
+            
+            // 更新任务状态为已暂停
+            taskInfo.setStatus(TaskInfo.TaskStatus.CANCELLED);
+            taskInfo.setMessage("任务已暂停");
+            taskInfo.setUpdatedAt(System.currentTimeMillis());
+            storageService.saveTaskInfo(taskInfo);
+            storageService.writeTaskLog(taskId, "[INFO] [PAUSE] 任务已暂停");
+            webSocketService.sendTaskInfoUpdate(taskId, taskInfo);
+            updateTaskInfoInDatabase(taskInfo);
+        }
+
+        public void resume() {
+            this.paused = false;
+            
+            // 唤醒等待的线程
+            synchronized (pauseLock) {
+                pauseLock.notifyAll();
+            }
+            
+            // 更新任务状态为运行中
+            taskInfo.setStatus(TaskInfo.TaskStatus.SCANNING);
+            taskInfo.setMessage("任务已恢复");
+            taskInfo.setUpdatedAt(System.currentTimeMillis());
+            storageService.saveTaskInfo(taskInfo);
+            storageService.writeTaskLog(taskId, "[INFO] [RESUME] 任务已恢复");
+            webSocketService.sendTaskInfoUpdate(taskId, taskInfo);
+            updateTaskInfoInDatabase(taskInfo);
+        }
+
+        public void checkPause() throws InterruptedException {
+            if (paused) {
+                synchronized (pauseLock) {
+                    while (paused) {
+                        pauseLock.wait();
+                    }
+                }
+            }
+        }
+
         public void executeScan() {
             logger.info("[TaskExecution] 开始文件扫描: {}", taskId);
             
@@ -635,8 +722,11 @@ public class TaskExecutionService {
             taskInfo.setStatus(TaskInfo.TaskStatus.SCANNING);
             taskInfo.getStages().getScan().setStatus("RUNNING");
             taskInfo.getStages().getScan().setScanStartTime(System.currentTimeMillis());
+            taskInfo.setUpdatedAt(System.currentTimeMillis());
             storageService.saveTaskInfo(taskInfo);
             storageService.writeTaskLog(taskId, "[INFO] [SCAN] 开始扫描文件");
+            webSocketService.sendTaskInfoUpdate(taskId, taskInfo);
+            updateTaskInfoInDatabase(taskInfo);
             
             try {
                 // 扫描文件
@@ -690,8 +780,10 @@ public class TaskExecutionService {
                 // 更新任务状态
                 taskInfo.setCurrentStage("SCANNED");
                 taskInfo.setStatus(TaskInfo.TaskStatus.SCANNED);
+                taskInfo.setUpdatedAt(System.currentTimeMillis());
                 storageService.saveTaskInfo(taskInfo);
                 storageService.writeTaskLog(taskId, "[INFO] [SCAN] 扫描完成，共 " + filePaths.size() + " 个文件");
+                webSocketService.sendTaskInfoUpdate(taskId, taskInfo);
                 updateTaskInfoInDatabase(taskInfo);
                 
                 logger.info("[TaskExecution] 文件扫描完成: {}", taskId);
@@ -706,8 +798,11 @@ public class TaskExecutionService {
                 
                 taskInfo.setStatus(TaskInfo.TaskStatus.FAILED);
                 taskInfo.setMessage("扫描失败: " + e.getMessage());
+                taskInfo.setUpdatedAt(System.currentTimeMillis());
                 storageService.saveTaskInfo(taskInfo);
                 storageService.writeTaskLog(taskId, "[ERROR] [SCAN] 扫描失败: " + e.getMessage());
+                webSocketService.sendTaskInfoUpdate(taskId, taskInfo);
+                updateTaskInfoInDatabase(taskInfo);
             }
         }
 
@@ -719,8 +814,11 @@ public class TaskExecutionService {
             taskInfo.setStatus(TaskInfo.TaskStatus.PREVIEWING);
             taskInfo.getStages().getPreview().setStatus("RUNNING");
             taskInfo.getStages().getPreview().setPreviewStartTime(System.currentTimeMillis());
+            taskInfo.setUpdatedAt(System.currentTimeMillis());
             storageService.saveTaskInfo(taskInfo);
             storageService.writeTaskLog(taskId, "[INFO] [PREVIEW] 开始预览分析");
+            webSocketService.sendTaskInfoUpdate(taskId, taskInfo);
+            updateTaskInfoInDatabase(taskInfo);
             
             List<ChangeRecordPO> changeRecords = new ArrayList<>();
             
@@ -828,8 +926,10 @@ public class TaskExecutionService {
                 // 更新任务状态
                 taskInfo.setCurrentStage("PREVIEWED");
                 taskInfo.setStatus(TaskInfo.TaskStatus.PREVIEWED);
+                taskInfo.setUpdatedAt(System.currentTimeMillis());
                 storageService.saveTaskInfo(taskInfo);
                 storageService.writeTaskLog(taskId, "[INFO] [PREVIEW] 预览完成，共 " + processedCount.get() + " 个文件");
+                webSocketService.sendTaskInfoUpdate(taskId, taskInfo);
                 updateTaskInfoInDatabase(taskInfo);
                 
                 logger.info("[TaskExecution] 预览分析完成: {}", taskId);
@@ -844,8 +944,11 @@ public class TaskExecutionService {
                 
                 taskInfo.setStatus(TaskInfo.TaskStatus.FAILED);
                 taskInfo.setMessage("预览失败: " + e.getMessage());
+                taskInfo.setUpdatedAt(System.currentTimeMillis());
                 storageService.saveTaskInfo(taskInfo);
                 storageService.writeTaskLog(taskId, "[ERROR] [PREVIEW] 预览失败: " + e.getMessage());
+                webSocketService.sendTaskInfoUpdate(taskId, taskInfo);
+                updateTaskInfoInDatabase(taskInfo);
             }
         }
 
@@ -860,8 +963,11 @@ public class TaskExecutionService {
             executionStage.setExecutionCount(executionNum);
             executionStage.setCurrentExecution("execution_" + String.format("%03d", executionNum));
             executionStage.setExecutionStartTime(System.currentTimeMillis());
+            taskInfo.setUpdatedAt(System.currentTimeMillis());
             storageService.saveTaskInfo(taskInfo);
             storageService.writeTaskLog(taskId, "[INFO] [EXECUTION] 开始执行任务: execution_" + String.format("%03d", executionNum));
+            webSocketService.sendTaskInfoUpdate(taskId, taskInfo);
+            updateTaskInfoInDatabase(taskInfo);
             
             try {
                 // 流式读取预览数据并执行
@@ -923,8 +1029,10 @@ public class TaskExecutionService {
                 
                 // 更新任务状态
                 taskInfo.setStatus(TaskInfo.TaskStatus.COMPLETED);
+                taskInfo.setUpdatedAt(System.currentTimeMillis());
                 storageService.saveTaskInfo(taskInfo);
                 storageService.writeTaskLog(taskId, "[INFO] [EXECUTION] 执行完成: execution_" + String.format("%03d", executionNum));
+                webSocketService.sendTaskInfoUpdate(taskId, taskInfo);
                 updateTaskInfoInDatabase(taskInfo);
                 
                 logger.info("[TaskExecution] 任务执行完成: {} - execution_{}", taskId, executionNum);
@@ -938,8 +1046,11 @@ public class TaskExecutionService {
                 
                 taskInfo.setStatus(TaskInfo.TaskStatus.FAILED);
                 taskInfo.setMessage("执行失败: " + e.getMessage());
+                taskInfo.setUpdatedAt(System.currentTimeMillis());
                 storageService.saveTaskInfo(taskInfo);
                 storageService.writeTaskLog(taskId, "[ERROR] [EXECUTION] 执行失败: " + e.getMessage());
+                webSocketService.sendTaskInfoUpdate(taskId, taskInfo);
+                updateTaskInfoInDatabase(taskInfo);
             }
         }
 
@@ -954,8 +1065,11 @@ public class TaskExecutionService {
             executionStage.setExecutionCount(executionNum);
             executionStage.setCurrentExecution("execution_" + String.format("%03d", executionNum));
             executionStage.setExecutionStartTime(System.currentTimeMillis());
+            taskInfo.setUpdatedAt(System.currentTimeMillis());
             storageService.saveTaskInfo(taskInfo);
             storageService.writeTaskLog(taskId, "[INFO] [EXECUTION] 开始执行选中的记录: execution_" + String.format("%03d", executionNum));
+            webSocketService.sendTaskInfoUpdate(taskId, taskInfo);
+            updateTaskInfoInDatabase(taskInfo);
             
             try {
                 // 流式读取预览数据并执行选中的记录
@@ -1014,8 +1128,11 @@ public class TaskExecutionService {
                 
                 // 更新任务状态
                 taskInfo.setStatus(TaskInfo.TaskStatus.COMPLETED);
+                taskInfo.setUpdatedAt(System.currentTimeMillis());
                 storageService.saveTaskInfo(taskInfo);
                 storageService.writeTaskLog(taskId, "[INFO] [EXECUTION] 选中记录执行完成: execution_" + String.format("%03d", executionNum));
+                webSocketService.sendTaskInfoUpdate(taskId, taskInfo);
+                updateTaskInfoInDatabase(taskInfo);
                 
                 logger.info("[TaskExecution] 选中记录执行完成: {} - execution_{}", taskId, executionNum);
                 
@@ -1028,8 +1145,11 @@ public class TaskExecutionService {
                 
                 taskInfo.setStatus(TaskInfo.TaskStatus.FAILED);
                 taskInfo.setMessage("执行失败: " + e.getMessage());
+                taskInfo.setUpdatedAt(System.currentTimeMillis());
                 storageService.saveTaskInfo(taskInfo);
                 storageService.writeTaskLog(taskId, "[ERROR] [EXECUTION] 执行失败: " + e.getMessage());
+                webSocketService.sendTaskInfoUpdate(taskId, taskInfo);
+                updateTaskInfoInDatabase(taskInfo);
             }
         }
 
@@ -1070,9 +1190,64 @@ public class TaskExecutionService {
             // 更新任务状态为已取消
             taskInfo.setStatus(TaskInfo.TaskStatus.CANCELLED);
             taskInfo.setMessage("任务已取消");
+            taskInfo.setUpdatedAt(System.currentTimeMillis());
             storageService.saveTaskInfo(taskInfo);
             storageService.writeTaskLog(taskId, "[INFO] [CANCEL] 任务已取消");
+            webSocketService.sendTaskInfoUpdate(taskId, taskInfo);
             updateTaskInfoInDatabase(taskInfo);
+        }
+
+        public void cancelStage(String stageType) {
+            this.cancelled = true;
+            
+            String stageName = "";
+            switch (stageType.toUpperCase()) {
+                case "SCAN":
+                    stageName = "扫描";
+                    taskInfo.getStages().getScan().setStatus("CANCELLED");
+                    taskInfo.getStages().getScan().setScanEndTime(System.currentTimeMillis());
+                    taskInfo.getStages().getScan().setScanDuration(
+                        taskInfo.getStages().getScan().getScanEndTime() - 
+                        taskInfo.getStages().getScan().getScanStartTime()
+                    );
+                    taskInfo.setCurrentStage("SCANNED");
+                    taskInfo.setStatus(TaskInfo.TaskStatus.SCANNED);
+                    break;
+                case "PREVIEW":
+                    stageName = "预览";
+                    taskInfo.getStages().getPreview().setStatus("CANCELLED");
+                    taskInfo.getStages().getPreview().setPreviewEndTime(System.currentTimeMillis());
+                    taskInfo.getStages().getPreview().setPreviewDuration(
+                        taskInfo.getStages().getPreview().getPreviewEndTime() - 
+                        taskInfo.getStages().getPreview().getPreviewStartTime()
+                    );
+                    taskInfo.setCurrentStage("PREVIEWED");
+                    taskInfo.setStatus(TaskInfo.TaskStatus.PREVIEWED);
+                    break;
+                case "EXECUTION":
+                    stageName = "执行";
+                    taskInfo.getStages().getExecution().setStatus("CANCELLED");
+                    taskInfo.getStages().getExecution().setExecutionEndTime(System.currentTimeMillis());
+                    taskInfo.getStages().getExecution().setExecutionDuration(
+                        taskInfo.getStages().getExecution().getExecutionEndTime() - 
+                        taskInfo.getStages().getExecution().getExecutionStartTime()
+                    );
+                    taskInfo.setCurrentStage("COMPLETED");
+                    taskInfo.setStatus(TaskInfo.TaskStatus.COMPLETED);
+                    break;
+                default:
+                    logger.warn("[TaskExecution] 无效的阶段类型: {}", stageType);
+                    return;
+            }
+            
+            taskInfo.setMessage(stageName + "已终止");
+            taskInfo.setUpdatedAt(System.currentTimeMillis());
+            storageService.saveTaskInfo(taskInfo);
+            storageService.writeTaskLog(taskId, "[INFO] [CANCEL] " + stageName + "已终止");
+            webSocketService.sendTaskInfoUpdate(taskId, taskInfo);
+            updateTaskInfoInDatabase(taskInfo);
+            
+            logger.info("[TaskExecution] 阶段已终止: taskId={}, stageType={}", taskId, stageType);
         }
 
         public Future<?> getFuture() {

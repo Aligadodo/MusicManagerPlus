@@ -1,7 +1,9 @@
 package com.filemanager.backend.entity;
 
+import lombok.Data;
 import java.util.Date;
 
+@Data
 public class TaskOperationLogPO {
     private Long id;
     private String taskId;

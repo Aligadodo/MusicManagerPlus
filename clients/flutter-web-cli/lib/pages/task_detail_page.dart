@@ -79,6 +79,9 @@ class _TaskDetailPageState extends State<TaskDetailPage>
         onError: (error) {
           print('WebSocket error: $error');
         },
+        onDone: () {
+          print('WebSocket connection closed');
+        },
       );
     } catch (e) {
       print('Failed to connect WebSocket: $e');
@@ -98,6 +101,115 @@ class _TaskDetailPageState extends State<TaskDetailPage>
         if (updatedTask.taskId == widget.taskId) {
           setState(() {
             _taskInfo = updatedTask;
+          });
+        }
+      } else if (messageType == 'TASK_PROGRESS' && messageData != null) {
+        final progress = messageData['progress'] as double?;
+        final currentStage = messageData['currentStage'] as String?;
+        final msg = messageData['message'] as String?;
+        
+        if (_taskInfo != null) {
+          setState(() {
+            _taskInfo = TaskStatus(
+              taskId: _taskInfo!.taskId,
+              taskName: _taskInfo!.taskName,
+              createdAt: _taskInfo!.createdAt,
+              currentStage: currentStage ?? _taskInfo!.currentStage,
+              status: _taskInfo!.status,
+              overallProgress: progress ?? _taskInfo!.overallProgress,
+              message: msg ?? _taskInfo!.message,
+              configSnapshotId: _taskInfo!.configSnapshotId,
+              configSnapshot: _taskInfo!.configSnapshot,
+              stages: _taskInfo!.stages,
+            );
+          });
+        }
+      } else if (messageType == 'TASK_COMPLETED' && messageData != null) {
+        final msg = messageData['message'] as String?;
+        if (_taskInfo != null) {
+          setState(() {
+            _taskInfo = TaskStatus(
+              taskId: _taskInfo!.taskId,
+              taskName: _taskInfo!.taskName,
+              createdAt: _taskInfo!.createdAt,
+              currentStage: _taskInfo!.currentStage,
+              status: 'COMPLETED',
+              overallProgress: 100.0,
+              message: msg ?? _taskInfo!.message,
+              configSnapshotId: _taskInfo!.configSnapshotId,
+              configSnapshot: _taskInfo!.configSnapshot,
+              stages: _taskInfo!.stages,
+            );
+          });
+        }
+        _showSuccessSnackBar('任务已完成');
+      } else if (messageType == 'TASK_FAILED' && messageData != null) {
+        final msg = messageData['message'] as String?;
+        final error = messageData['error'] as Map<String, dynamic>?;
+        final errorMessage = error?['message'] as String?;
+        
+        if (_taskInfo != null) {
+          setState(() {
+            _taskInfo = TaskStatus(
+              taskId: _taskInfo!.taskId,
+              taskName: _taskInfo!.taskName,
+              createdAt: _taskInfo!.createdAt,
+              currentStage: _taskInfo!.currentStage,
+              status: 'FAILED',
+              overallProgress: _taskInfo!.overallProgress,
+              message: msg ?? errorMessage ?? _taskInfo!.message,
+              configSnapshotId: _taskInfo!.configSnapshotId,
+              configSnapshot: _taskInfo!.configSnapshot,
+              stages: _taskInfo!.stages,
+            );
+          });
+        }
+        _showErrorSnackBar('任务失败: ${errorMessage ?? msg ?? "未知错误"}');
+      } else if (messageType == 'TASK_CANCELLED' && messageData != null) {
+        final msg = messageData['message'] as String?;
+        
+        if (_taskInfo != null) {
+          setState(() {
+            _taskInfo = TaskStatus(
+              taskId: _taskInfo!.taskId,
+              taskName: _taskInfo!.taskName,
+              createdAt: _taskInfo!.createdAt,
+              currentStage: _taskInfo!.currentStage,
+              status: 'CANCELLED',
+              overallProgress: _taskInfo!.overallProgress,
+              message: msg ?? _taskInfo!.message,
+              configSnapshotId: _taskInfo!.configSnapshotId,
+              configSnapshot: _taskInfo!.configSnapshot,
+              stages: _taskInfo!.stages,
+            );
+          });
+        }
+        _showSuccessSnackBar('任务已取消');
+      } else if (messageType == 'STAGE_STATUS' && messageData != null) {
+        final stage = messageData['stage'] as String?;
+        final status = messageData['status'] as String?;
+        final processedCount = messageData['processedCount'] as int?;
+        final totalCount = messageData['totalCount'] as int?;
+        
+        if (stage != null && status != null && _taskInfo != null) {
+          double progress = _taskInfo!.overallProgress ?? 0.0;
+          if (processedCount != null && totalCount != null && totalCount > 0) {
+            progress = (processedCount / totalCount) * 100;
+          }
+          
+          setState(() {
+            _taskInfo = TaskStatus(
+              taskId: _taskInfo!.taskId,
+              taskName: _taskInfo!.taskName,
+              createdAt: _taskInfo!.createdAt,
+              currentStage: stage,
+              status: _taskInfo!.status,
+              overallProgress: progress,
+              message: _taskInfo!.message,
+              configSnapshotId: _taskInfo!.configSnapshotId,
+              configSnapshot: _taskInfo!.configSnapshot,
+              stages: _taskInfo!.stages,
+            );
           });
         }
       }
@@ -200,6 +312,26 @@ class _TaskDetailPageState extends State<TaskDetailPage>
     }
   }
 
+  Future<void> _pauseTask() async {
+    try {
+      await _taskService.pauseTask(widget.taskId);
+      _showSuccessSnackBar('任务已暂停');
+      _loadTaskInfo();
+    } catch (e) {
+      _showErrorSnackBar('暂停任务失败: $e');
+    }
+  }
+
+  Future<void> _resumeTask() async {
+    try {
+      await _taskService.resumeTask(widget.taskId);
+      _showSuccessSnackBar('任务已恢复');
+      _loadTaskInfo();
+    } catch (e) {
+      _showErrorSnackBar('恢复任务失败: $e');
+    }
+  }
+
   Future<void> _retryFailed() async {
     final confirmed = await _showConfirmDialog('确认重试', '确定要重试失败的任务吗？');
     if (!confirmed) return;
@@ -277,6 +409,8 @@ class _TaskDetailPageState extends State<TaskDetailPage>
                     children: [
                       _buildTaskInfoCard(),
                       const SizedBox(height: 16),
+                      _buildStageControlsCard(),
+                      const SizedBox(height: 16),
                       _buildConfigSnapshotCard(),
                       const SizedBox(height: 16),
                       _buildScanResultCard(),
@@ -304,8 +438,6 @@ class _TaskDetailPageState extends State<TaskDetailPage>
           children: [
             Row(
               children: [
-                _buildStatusIcon(),
-                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -328,11 +460,12 @@ class _TaskDetailPageState extends State<TaskDetailPage>
                     ],
                   ),
                 ),
+                _buildStatusIcon(),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             _buildProgressBar(),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Row(
               children: [
                 Icon(Icons.access_time, size: 14, color: Colors.grey[600]),
@@ -352,7 +485,7 @@ class _TaskDetailPageState extends State<TaskDetailPage>
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             _buildActionButtons(),
           ],
         ),
@@ -360,54 +493,499 @@ class _TaskDetailPageState extends State<TaskDetailPage>
     );
   }
 
+  Widget _buildStageControlsCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '阶段控制',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildScanStageControl(),
+            const SizedBox(height: 12),
+            _buildPreviewStageControl(),
+            const SizedBox(height: 12),
+            _buildExecutionStageControl(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildScanStageControl() {
+    final scanStage = _taskInfo?.stages?.scan;
+    final canRun = _canRunScanStage();
+    final canRerun = _canRerunScanStage();
+    final isRunning = scanStage?.status == 'RUNNING';
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.scanner, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  '扫描阶段',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                _buildStageStatusBadge(scanStage?.status),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              children: [
+                if (canRun && !isRunning)
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.play_arrow, size: 16),
+                    label: const Text('运行'),
+                    onPressed: () => _runScanStage(),
+                  ),
+                if (canRerun && !isRunning)
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.refresh, size: 16),
+                    label: const Text('重新运行'),
+                    onPressed: () => _rerunScanStage(),
+                  ),
+                if (isRunning)
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.stop, size: 16),
+                    label: const Text('终止'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: () => _stopScanStage(),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPreviewStageControl() {
+    final previewStage = _taskInfo?.stages?.preview;
+    final canRun = _canRunPreviewStage();
+    final canRerun = _canRerunPreviewStage();
+    final isRunning = previewStage?.status == 'RUNNING';
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.preview, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  '分析阶段',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                _buildStageStatusBadge(previewStage?.status),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              children: [
+                if (canRun && !isRunning)
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.play_arrow, size: 16),
+                    label: const Text('运行'),
+                    onPressed: () => _runPreviewStage(),
+                  ),
+                if (canRerun && !isRunning)
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.refresh, size: 16),
+                    label: const Text('重新运行'),
+                    onPressed: () => _rerunPreviewStage(),
+                  ),
+                if (isRunning)
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.stop, size: 16),
+                    label: const Text('终止'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: () => _stopPreviewStage(),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExecutionStageControl() {
+    final executionStage = _taskInfo?.stages?.execution;
+    final canRun = _canRunExecutionStage();
+    final canRerun = _canRerunExecutionStage();
+    final isRunning = executionStage?.status == 'RUNNING';
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.play_circle_outline, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  '执行阶段',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                _buildStageStatusBadge(executionStage?.status),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              children: [
+                if (canRun && !isRunning)
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.play_arrow, size: 16),
+                    label: const Text('运行'),
+                    onPressed: () => _runExecutionStage(),
+                  ),
+                if (canRerun && !isRunning)
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.refresh, size: 16),
+                    label: const Text('重新运行'),
+                    onPressed: () => _rerunExecutionStage(),
+                  ),
+                if (isRunning)
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.stop, size: 16),
+                    label: const Text('终止'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: () => _stopExecutionStage(),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStageStatusBadge(String? status) {
+    Color color;
+    String text;
+
+    switch (status) {
+      case 'PENDING':
+        color = Colors.grey;
+        text = '等待中';
+        break;
+      case 'RUNNING':
+        color = Colors.blue;
+        text = '进行中';
+        break;
+      case 'COMPLETED':
+        color = Colors.green;
+        text = '已完成';
+        break;
+      case 'FAILED':
+        color = Colors.red;
+        text = '失败';
+        break;
+      default:
+        color = Colors.grey;
+        text = status ?? '未知';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(color: Colors.white, fontSize: 12),
+      ),
+    );
+  }
+
+  bool _canRunScanStage() {
+    final status = _taskInfo?.status ?? '';
+    return ['CREATED', 'SCANNED', 'PREVIEWED', 'COMPLETED', 'FAILED', 'CANCELLED'].contains(status);
+  }
+
+  bool _canRerunScanStage() {
+    final status = _taskInfo?.status ?? '';
+    return ['SCANNED', 'PREVIEWED', 'COMPLETED', 'FAILED'].contains(status);
+  }
+
+  bool _canRunPreviewStage() {
+    final status = _taskInfo?.status ?? '';
+    return ['SCANNED', 'PREVIEWED', 'COMPLETED', 'FAILED', 'CANCELLED'].contains(status);
+  }
+
+  bool _canRerunPreviewStage() {
+    final status = _taskInfo?.status ?? '';
+    return ['PREVIEWED', 'COMPLETED', 'FAILED'].contains(status);
+  }
+
+  bool _canRunExecutionStage() {
+    final status = _taskInfo?.status ?? '';
+    return ['PREVIEWED', 'COMPLETED', 'FAILED', 'CANCELLED'].contains(status);
+  }
+
+  bool _canRerunExecutionStage() {
+    final status = _taskInfo?.status ?? '';
+    return ['COMPLETED', 'FAILED'].contains(status);
+  }
+
+  Future<void> _runScanStage() async {
+    if (!_checkDependency('SCAN')) {
+      _showErrorSnackBar('前置阶段未完成，无法执行扫描阶段');
+      return;
+    }
+
+    try {
+      await _taskService.executeScan(widget.taskId);
+      _showSuccessSnackBar('扫描已开始');
+    } catch (e) {
+      _showErrorSnackBar('启动扫描失败: $e');
+    }
+  }
+
+  Future<void> _rerunScanStage() async {
+    final confirmed = await _showConfirmDialog('确认重新运行', '重新运行扫描阶段将清空后续阶段的数据，确定继续吗？');
+    if (!confirmed) return;
+
+    try {
+      await _clearSubsequentStages('SCAN');
+      await _taskService.restartScan(widget.taskId);
+      _showSuccessSnackBar('扫描已重新开始');
+    } catch (e) {
+      _showErrorSnackBar('重新运行扫描失败: $e');
+    }
+  }
+
+  Future<void> _stopScanStage() async {
+    try {
+      await _taskService.cancelStage(widget.taskId, 'scan');
+      _showSuccessSnackBar('扫描已终止');
+    } catch (e) {
+      _showErrorSnackBar('终止扫描失败: $e');
+    }
+  }
+
+  Future<void> _runPreviewStage() async {
+    if (!_checkDependency('PREVIEW')) {
+      _showErrorSnackBar('扫描阶段未完成，无法执行分析阶段');
+      return;
+    }
+
+    try {
+      await _taskService.executePreview(widget.taskId);
+      _showSuccessSnackBar('分析已开始');
+    } catch (e) {
+      _showErrorSnackBar('启动分析失败: $e');
+    }
+  }
+
+  Future<void> _rerunPreviewStage() async {
+    final confirmed = await _showConfirmDialog('确认重新运行', '重新运行分析阶段将清空执行阶段的数据，确定继续吗？');
+    if (!confirmed) return;
+
+    try {
+      await _clearSubsequentStages('PREVIEW');
+      await _taskService.restartPreview(widget.taskId);
+      _showSuccessSnackBar('分析已重新开始');
+    } catch (e) {
+      _showErrorSnackBar('重新运行分析失败: $e');
+    }
+  }
+
+  Future<void> _stopPreviewStage() async {
+    try {
+      await _taskService.cancelStage(widget.taskId, 'preview');
+      _showSuccessSnackBar('分析已终止');
+    } catch (e) {
+      _showErrorSnackBar('终止分析失败: $e');
+    }
+  }
+
+  Future<void> _runExecutionStage() async {
+    if (!_checkDependency('EXECUTION')) {
+      _showErrorSnackBar('分析阶段未完成，无法执行执行阶段');
+      return;
+    }
+
+    try {
+      await _taskService.executeTask(widget.taskId);
+      _showSuccessSnackBar('执行已开始');
+    } catch (e) {
+      _showErrorSnackBar('启动执行失败: $e');
+    }
+  }
+
+  Future<void> _rerunExecutionStage() async {
+    final confirmed = await _showConfirmDialog('确认重新运行', '重新运行执行阶段将清空执行结果，确定继续吗？');
+    if (!confirmed) return;
+
+    try {
+      await _taskService.restartExecution(widget.taskId);
+      _showSuccessSnackBar('执行已重新开始');
+    } catch (e) {
+      _showErrorSnackBar('重新运行执行失败: $e');
+    }
+  }
+
+  Future<void> _stopExecutionStage() async {
+    try {
+      await _taskService.cancelStage(widget.taskId, 'execution');
+      _showSuccessSnackBar('执行已终止');
+    } catch (e) {
+      _showErrorSnackBar('终止执行失败: $e');
+    }
+  }
+
+  bool _checkDependency(String stageType) {
+    switch (stageType) {
+      case 'SCAN':
+        return true;
+      case 'PREVIEW':
+        final scanStage = _taskInfo?.stages?.scan;
+        return scanStage?.status == 'COMPLETED';
+      case 'EXECUTION':
+        final previewStage = _taskInfo?.stages?.preview;
+        return previewStage?.status == 'COMPLETED';
+      default:
+        return false;
+    }
+  }
+
+  Future<void> _clearSubsequentStages(String stageType) async {
+    switch (stageType) {
+      case 'SCAN':
+        await _taskService.clearStageData(widget.taskId, 'preview');
+        await _taskService.clearStageData(widget.taskId, 'execution');
+        break;
+      case 'PREVIEW':
+        await _taskService.clearStageData(widget.taskId, 'execution');
+        break;
+      case 'EXECUTION':
+        break;
+    }
+  }
+
   Widget _buildStatusIcon() {
     final status = _taskInfo!.status ?? '';
     IconData iconData;
     Color iconColor;
+    String statusText;
 
     switch (status) {
       case 'CREATED':
         iconData = Icons.folder_open;
         iconColor = Colors.blue;
+        statusText = '已创建';
         break;
       case 'SCANNING':
         iconData = Icons.scanner;
         iconColor = Colors.orange;
+        statusText = '扫描中';
         break;
       case 'SCANNED':
         iconData = Icons.check_circle_outline;
         iconColor = Colors.green;
+        statusText = '扫描完成';
         break;
       case 'PREVIEWING':
         iconData = Icons.preview;
         iconColor = Colors.orange;
+        statusText = '预览中';
         break;
       case 'PREVIEWED':
         iconData = Icons.check_circle_outline;
         iconColor = Colors.green;
+        statusText = '预览完成';
         break;
       case 'EXECUTING':
         iconData = Icons.play_circle_outline;
         iconColor = Colors.orange;
+        statusText = '执行中';
         break;
       case 'COMPLETED':
         iconData = Icons.check_circle;
         iconColor = Colors.green;
+        statusText = '已完成';
         break;
       case 'FAILED':
         iconData = Icons.error;
         iconColor = Colors.red;
+        statusText = '失败';
         break;
       case 'CANCELLED':
         iconData = Icons.cancel;
         iconColor = Colors.grey;
+        statusText = '已取消';
         break;
       default:
         iconData = Icons.help_outline;
         iconColor = Colors.grey;
+        statusText = '未知';
     }
 
-    return Icon(iconData, color: iconColor, size: 40);
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: iconColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(iconData, color: iconColor, size: 48),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          statusText,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: iconColor,
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildProgressBar() {
@@ -470,6 +1048,26 @@ class _TaskDetailPageState extends State<TaskDetailPage>
             onPressed: _executeTask,
             icon: const Icon(Icons.play_arrow, size: 18),
             label: const Text('执行'),
+          ),
+        if (_canPause())
+          ElevatedButton.icon(
+            onPressed: _pauseTask,
+            icon: const Icon(Icons.pause, size: 18),
+            label: const Text('暂停'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        if (_canResume())
+          ElevatedButton.icon(
+            onPressed: _resumeTask,
+            icon: const Icon(Icons.play_arrow, size: 18),
+            label: const Text('恢复'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+            ),
           ),
         if (_canRestartScan())
           ElevatedButton.icon(
@@ -539,6 +1137,16 @@ class _TaskDetailPageState extends State<TaskDetailPage>
     return ['SCANNING', 'PREVIEWING', 'EXECUTING'].contains(status);
   }
 
+  bool _canPause() {
+    final status = _taskInfo?.status ?? '';
+    return ['SCANNING', 'PREVIEWING', 'EXECUTING'].contains(status);
+  }
+
+  bool _canResume() {
+    final status = _taskInfo?.status ?? '';
+    return ['CANCELLED'].contains(status);
+  }
+
   bool _canRetry() {
     final status = _taskInfo?.status ?? '';
     return ['FAILED', 'COMPLETED'].contains(status);
@@ -595,6 +1203,10 @@ class _TaskDetailPageState extends State<TaskDetailPage>
         _buildSectionTitle('快照信息'),
         const SizedBox(height: 8),
         _buildSnapshotInfo(),
+        const SizedBox(height: 16),
+        _buildSectionTitle('全局设置'),
+        const SizedBox(height: 8),
+        _buildGlobalSettings(configSnapshot.globalSettings),
         const SizedBox(height: 16),
         _buildSectionTitle('源目录配置'),
         const SizedBox(height: 8),
@@ -728,6 +1340,51 @@ class _TaskDetailPageState extends State<TaskDetailPage>
     );
   }
 
+  Widget _buildGlobalSettings(Map<String, dynamic>? globalSettings) {
+    if (globalSettings == null || globalSettings.isEmpty) {
+      return const Text('无全局设置', style: TextStyle(color: Colors.grey));
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('全局设置详情', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+          const SizedBox(height: 8),
+          ...globalSettings.entries.map((entry) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 150,
+                    child: Text(
+                      '${entry.key}:',
+                      style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      entry.value?.toString() ?? 'N/A',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ],
+      ),
+    );
+  }
+
   Widget _buildPipelineConfig(dynamic pipelineConfig) {
     if (pipelineConfig == null) {
       return const Text('无流水线配置', style: TextStyle(color: Colors.grey));
@@ -844,16 +1501,45 @@ class _TaskDetailPageState extends State<TaskDetailPage>
 
   Widget _buildScanStatistics(dynamic scanStage) {
     final scanMap = scanStage as Map<String, dynamic>;
-    return Wrap(
-      spacing: 16,
-      runSpacing: 8,
-      children: [
-        _buildStatItem('总文件数', scanMap['totalFiles']?.toString() ?? '0'),
-        _buildStatItem('扫描开始时间', _formatTimestamp(scanMap['scanStartTime'])),
-        _buildStatItem('扫描结束时间', _formatTimestamp(scanMap['scanEndTime'])),
-        _buildStatItem('扫描耗时', '${scanMap['scanDuration'] ?? 0}ms'),
-        _buildStatItem('状态', _formatStatus(scanMap['status'])),
-      ],
+    final status = scanMap['status'] as String?;
+    
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.blue[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blue[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.info_outline, size: 16, color: Colors.blue[700]),
+              const SizedBox(width: 8),
+              Text(
+                '扫描状态: ${_formatStatus(status)}',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.blue[700],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 16,
+            runSpacing: 8,
+            children: [
+              _buildStatItem('总文件数', scanMap['totalFiles']?.toString() ?? '0'),
+              _buildStatItem('扫描开始时间', _formatTimestamp(scanMap['scanStartTime'])),
+              _buildStatItem('扫描结束时间', _formatTimestamp(scanMap['scanEndTime'])),
+              _buildStatItem('扫描耗时', '${scanMap['scanDuration'] ?? 0}ms'),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -919,19 +1605,48 @@ class _TaskDetailPageState extends State<TaskDetailPage>
 
   Widget _buildPreviewStatistics(dynamic previewStage) {
     final previewMap = previewStage as Map<String, dynamic>;
-    return Wrap(
-      spacing: 16,
-      runSpacing: 8,
-      children: [
-        _buildStatItem('总文件数', previewMap['totalFiles']?.toString() ?? '0'),
-        _buildStatItem('已处理文件数', previewMap['processedFiles']?.toString() ?? '0'),
-        _buildStatItem('变更文件数', previewMap['changedFiles']?.toString() ?? '0'),
-        _buildStatItem('未变更文件数', previewMap['unchangedFiles']?.toString() ?? '0'),
-        _buildStatItem('预览开始时间', _formatTimestamp(previewMap['previewStartTime'])),
-        _buildStatItem('预览结束时间', _formatTimestamp(previewMap['previewEndTime'])),
-        _buildStatItem('预览耗时', '${previewMap['previewDuration'] ?? 0}ms'),
-        _buildStatItem('状态', _formatStatus(previewMap['status'])),
-      ],
+    final status = previewMap['status'] as String?;
+    
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.orange[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.orange[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.info_outline, size: 16, color: Colors.orange[700]),
+              const SizedBox(width: 8),
+              Text(
+                '预览状态: ${_formatStatus(status)}',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.orange[700],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 16,
+            runSpacing: 8,
+            children: [
+              _buildStatItem('总文件数', previewMap['totalFiles']?.toString() ?? '0'),
+              _buildStatItem('已处理文件数', previewMap['processedFiles']?.toString() ?? '0'),
+              _buildStatItem('变更文件数', previewMap['changedFiles']?.toString() ?? '0'),
+              _buildStatItem('未变更文件数', previewMap['unchangedFiles']?.toString() ?? '0'),
+              _buildStatItem('预览开始时间', _formatTimestamp(previewMap['previewStartTime'])),
+              _buildStatItem('预览结束时间', _formatTimestamp(previewMap['previewEndTime'])),
+              _buildStatItem('预览耗时', '${previewMap['previewDuration'] ?? 0}ms'),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -1035,7 +1750,7 @@ class _TaskDetailPageState extends State<TaskDetailPage>
   Widget _buildExecutionResultList(dynamic executionStage) {
     final executionMap = executionStage as Map<String, dynamic>;
     final status = executionMap['status'] as String?;
-
+    
     if (status != 'COMPLETED' && status != 'RUNNING') {
       return Center(
         child: Column(
@@ -1052,13 +1767,44 @@ class _TaskDetailPageState extends State<TaskDetailPage>
     }
 
     return Container(
-      height: 200,
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey[300]!),
-        borderRadius: BorderRadius.circular(4),
+        color: Colors.green[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.green[200]!),
       ),
-      child: const Center(
-        child: Text('执行结果列表功能待实现'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.info_outline, size: 16, color: Colors.green[700]),
+              const SizedBox(width: 8),
+              Text(
+                '执行状态: ${_formatStatus(status)}',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.green[700],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 16,
+            runSpacing: 8,
+            children: [
+              _buildStatItem('执行次数', executionMap['executionCount']?.toString() ?? '0'),
+              _buildStatItem('已执行文件数', executionMap['executedFiles']?.toString() ?? '0'),
+              _buildStatItem('成功数', executionMap['successCount']?.toString() ?? '0'),
+              _buildStatItem('失败数', executionMap['failedCount']?.toString() ?? '0'),
+              _buildStatItem('执行开始时间', _formatTimestamp(executionMap['executionStartTime'])),
+              _buildStatItem('执行结束时间', _formatTimestamp(executionMap['executionEndTime'])),
+              _buildStatItem('执行耗时', '${executionMap['executionDuration'] ?? 0}ms'),
+            ],
+          ),
+        ],
       ),
     );
   }

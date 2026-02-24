@@ -81,3 +81,4 @@ clients/flutter-web-cli/build/web/
 clients/flutter-web-cli/.dart_tool/
 backend/data/music_manager.db
 **/music_manager.db
+backend/backend.pid

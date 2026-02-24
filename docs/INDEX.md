@@ -22,6 +22,12 @@
 - **目标读者**: 项目经理、开发人员、测试人员
 - **更新频率**: 每次迭代中持续更新
 
+#### [TASK_MANAGEMENT_OPTIMIZATION_CHECKLIST.md](iteration/TASK_MANAGEMENT_OPTIMIZATION_CHECKLIST.md)
+- **描述**: 任务管理优化迭代清单
+- **用途**: 提供任务管理优化的详细任务清单和实施计划
+- **目标读者**: 项目经理、开发人员、测试人员
+- **更新频率**: 迭代过程中持续更新
+
 ### 2. 测试管理 (testing/)
 
 测试相关的文档，包括测试计划、测试概览、测试状态和回归测试指南。
@@ -71,6 +77,30 @@
 ### 3. 设计文档 (design/)
 
 系统设计相关的文档，包括功能设计和架构设计。
+
+#### [task-management-design.md](design/task-management-design.md)
+- **描述**: 任务管理系统设计文档
+- **用途**: 描述任务管理系统的架构、组件、数据流、任务生命周期和API接口
+- **目标读者**: 开发人员、架构师
+- **更新频率**: 功能变更时更新
+
+#### [config-management-design.md](design/config-management-design.md)
+- **描述**: 配置管理系统设计文档
+- **用途**: 描述配置管理系统的架构、配置分类、存储机制和API接口
+- **目标读者**: 开发人员、架构师
+- **更新频率**: 功能变更时更新
+
+#### [data-management-design.md](design/data-management-design.md)
+- **描述**: 数据管理系统设计文档
+- **用途**: 描述数据管理系统的架构、数据库设计、数据访问层和事务管理
+- **目标读者**: 开发人员、架构师、DBA
+- **更新频率**: 数据库变更时更新
+
+#### [api-design.md](design/api-design.md)
+- **描述**: API接口设计文档
+- **用途**: 描述所有REST API接口的定义、请求格式、响应格式和错误处理
+- **目标读者**: 前端开发人员、后端开发人员
+- **更新频率**: API变更时更新
 
 #### [theme-management-design.md](design/theme-management-design.md)
 - **描述**: 主题管理设计文档

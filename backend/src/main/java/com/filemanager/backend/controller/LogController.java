@@ -132,4 +132,22 @@ public class LogController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
+
+    @DeleteMapping("/delete/{fileName}")
+    public ResponseEntity<Map<String, Object>> deleteLogFile(@PathVariable String fileName) {
+        try {
+            Map<String, Object> result = logService.deleteLogFile(fileName);
+            if ((Boolean) result.getOrDefault("success", false)) {
+                return ResponseEntity.ok(result);
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
+            }
+        } catch (Exception e) {
+            UnifiedLogger.error("LOG_CONTROLLER", "Failed to delete log file: " + fileName, e);
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", "Failed to delete log file: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
 }

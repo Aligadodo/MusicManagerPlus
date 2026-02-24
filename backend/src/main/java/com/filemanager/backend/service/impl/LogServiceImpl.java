@@ -263,6 +263,31 @@ public class LogServiceImpl implements LogService {
     }
 
     @Override
+    public Map<String, Object> deleteLogFile(String fileName) {
+        Map<String, Object> result = new HashMap<>();
+        Path logFile = Paths.get(logDirectory, fileName);
+
+        if (!Files.exists(logFile)) {
+            result.put("success", false);
+            result.put("message", "Log file not found: " + fileName);
+            return result;
+        }
+
+        try {
+            Files.delete(logFile);
+            logger.info("Deleted log file: {}", fileName);
+            result.put("success", true);
+            result.put("message", "Log file deleted successfully: " + fileName);
+        } catch (IOException e) {
+            logger.error("Failed to delete log file: {}", fileName, e);
+            result.put("success", false);
+            result.put("message", "Failed to delete log file: " + e.getMessage());
+        }
+
+        return result;
+    }
+
+    @Override
     public String getLogDirectory() {
         return logDirectory;
     }
