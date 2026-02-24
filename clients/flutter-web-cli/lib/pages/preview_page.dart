@@ -10,24 +10,14 @@ import '../models/change_record.dart';
 import '../models/source_directory.dart';
 import '../models/strategy_info.dart';
 import '../models/task_status.dart' as task_models;
-import '../utils/tooltip_utils.dart';
-import '../utils/theme_utils.dart';
+import '../models/local_task_state.dart';
 import '../widgets/selectable_text_widget.dart';
+import '../widgets/task_list_widget.dart';
+import '../widgets/task_detail_widget.dart';
+import '../widgets/preview_widget.dart';
 
 // 导入main.dart中的taskStateProvider
 import '../main.dart' as main_app;
-
-// 保留本地TaskState枚举，用于内部状态管理
-enum LocalTaskState {
-  ready,
-  previewing,
-  previewCompleted,
-  previewFailed,
-  executing,
-  executionCompleted,
-  executionFailed,
-  cancelled,
-}
 
 enum ViewMode {
   taskList,
@@ -113,6 +103,8 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
   }
 
   Future<void> _executeLatestTask() async {
+    await _loadTasks();
+    
     if (_tasks.isEmpty) {
       _showErrorSnackBar('没有可执行的任务');
       return;
@@ -172,12 +164,12 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
 
     setState(() {
       _isLoading = true;
-      _currentPage = 1;
+      _errorMessage = '';
     });
 
     try {
       final result = await _taskService.getTaskList(
-        page: _currentPage,
+        page: 1,
         size: 20,
         status: _mapStatusToApi(_statusFilter),
       );
@@ -187,15 +179,13 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
 
       setState(() {
         _tasks = tasks;
-        final total = data?['total'] as int?;
-        _totalPages = total != null ? (total / 20).ceil() : 1;
         _isLoading = false;
       });
     } catch (e) {
       setState(() {
         _isLoading = false;
+        _errorMessage = '加载任务列表失败: $e';
       });
-      _showErrorSnackBar('加载任务列表失败: $e');
     }
   }
 
@@ -203,7 +193,7 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
     try {
       final result = await _taskService.getTaskList(
         page: 1,
-        size: _tasks.length,
+        size: 20,
         status: _mapStatusToApi(_statusFilter),
       );
 
@@ -361,6 +351,55 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
     }
   }
 
+  String _getFriendlyStatus(String status) {
+    switch (status) {
+      case 'CREATED':
+        return '已创建';
+      case 'PENDING':
+        return '等待中';
+      case 'SCANNING':
+        return '扫描中';
+      case 'SCANNED':
+        return '已扫描';
+      case 'PREVIEWING':
+        return '预览中';
+      case 'PREVIEWED':
+        return '已预览';
+      case 'EXECUTING':
+        return '执行中';
+      case 'COMPLETED':
+        return '已完成';
+      case 'FAILED':
+        return '失败';
+      case 'CANCELLED':
+        return '已取消';
+      default:
+        return '未知状态';
+    }
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'CREATED':
+      case 'PENDING':
+        return Colors.yellow;
+      case 'SCANNING':
+      case 'PREVIEWING':
+      case 'EXECUTING':
+        return Colors.blue;
+      case 'SCANNED':
+      case 'PREVIEWED':
+      case 'COMPLETED':
+        return Colors.green;
+      case 'FAILED':
+        return Colors.red;
+      case 'CANCELLED':
+        return Colors.grey;
+      default:
+        return Colors.grey;
+    }
+  }
+
   Future<void> _analyzePipeline() async {
     if (!_validateConfiguration()) {
       return;
@@ -495,6 +534,99 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
     }
   }
 
+  Future<void> _rerunTask(String taskId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('确认重新运行'),
+        content: const Text('确定要重新运行此任务吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await _taskService.rerunTask(taskId);
+      _showSuccess('任务已重新运行');
+      _refreshTasks();
+    } catch (e) {
+      _showError('重新运行任务失败: $e');
+    }
+  }
+
+  Future<void> _cancelTask(String taskId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('确认终止'),
+        content: const Text('确定要终止此任务吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await _taskService.cancelTask(taskId);
+      _showSuccess('任务已终止');
+      _refreshTasks();
+    } catch (e) {
+      _showError('终止任务失败: $e');
+    }
+  }
+
+  Future<void> _deleteTask(String taskId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('确认删除'),
+        content: const Text('确定要删除此任务吗？此操作不可恢复！'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await _taskService.deleteTask(taskId);
+      _showSuccess('任务已删除');
+      _refreshTasks();
+    } catch (e) {
+      _showError('删除任务失败: $e');
+    }
+  }
+
   Future<void> _fetchChanges() async {
     setState(() {
       _isLoading = true;
@@ -544,51 +676,6 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
     }
   }
 
-  List<ChangeRecord> _getCurrentPageRecords() {
-    var records = _changeRecords;
-
-    if (_searchFilter.isNotEmpty) {
-      records = records.where((record) {
-        return (record.originalName?.toLowerCase().contains(_searchFilter.toLowerCase()) ?? false) ||
-               (record.newName?.toLowerCase().contains(_searchFilter.toLowerCase()) ?? false) ||
-               (record.filePath?.toLowerCase().contains(_searchFilter.toLowerCase()) ?? false);
-      }).toList();
-    }
-
-    if (_statusFilter != '全部') {
-      records = records.where((record) {
-        if (_statusFilter == '已修改') return record.changed == true;
-        if (_statusFilter == '未修改') return record.changed == false;
-        return true;
-      }).toList();
-    }
-
-    if (_operationTypeFilter != '全部') {
-      records = records.where((record) => record.operationType == _operationTypeFilter).toList();
-    }
-
-    if (_hideUnchanged) {
-      records = records.where((record) => record.changed == true).toList();
-    }
-
-    _totalRecords = records.length;
-    _totalPages = (_totalRecords / _pageSize).ceil();
-
-    final startIndex = (_currentPage - 1) * _pageSize;
-    final endIndex = startIndex + _pageSize;
-    
-    return records.sublist(
-      startIndex,
-      endIndex > records.length ? records.length : endIndex,
-    );
-  }
-
-  void _goToPage(int page) {
-    setState(() {
-      _currentPage = page;
-    });
-  }
-
   Widget _buildCurrentView() {
     switch (_viewMode) {
       case ViewMode.taskList:
@@ -603,1175 +690,95 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
   }
 
   Widget _buildTaskListView() {
-    return Container(
-      padding: const EdgeInsets.all(12.0),
-      child: Column(
-        children: [
-          _buildTaskListHeader(),
-          const SizedBox(height: 12),
-          Expanded(
-            child: _buildTaskList(),
-          ),
-        ],
-      ),
+    return TaskListWidget(
+      tasks: _tasks,
+      selectedTask: _selectedTask,
+      onTaskSelected: (task) {
+        setState(() {
+          _selectedTask = task;
+        });
+      },
+      onViewModeChanged: (mode) {
+        setState(() {
+          if (mode == 'taskDetail') {
+            _viewMode = ViewMode.taskDetail;
+          }
+        });
+      },
+      isLoading: _isLoading,
+      errorMessage: _errorMessage,
     );
   }
 
-  Widget _buildTaskListHeader() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          '任务列表',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            SizedBox(
-              width: 150,
-              child: DropdownButtonFormField<String>(
-                value: _statusFilter,
-                onChanged: (value) {
-                  setState(() {
-                    _statusFilter = value!;
-                    _loadTasks();
-                  });
-                },
-                items: [
-                  '全部',
-                  '等待中',
-                  '进行中',
-                  '已完成',
-                  '失败',
-                  '已取消',
-                ].map((status) => DropdownMenuItem<String>(
-                  value: status,
-                  child: Text(status),
-                )).toList(),
-                decoration: const InputDecoration(
-                  labelText: '状态筛选',
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            ElevatedButton(
-              onPressed: _loadTasks,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('刷新'),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTaskList() {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_errorMessage.isNotEmpty) {
-      return Center(
-        child: Text(
-          _errorMessage,
-          style: const TextStyle(color: Colors.red),
-        ),
-      );
-    }
-
-    if (_tasks.isEmpty) {
-      return const Center(
-        child: Text('暂无任务记录'),
-      );
-    }
-
-    return ListView.builder(
-      itemCount: _tasks.length,
-      itemBuilder: (context, index) {
-        final task = _tasks[index];
-        return _buildTaskCard(task);
+  Widget _buildTaskDetailView() {
+    return TaskDetailWidget(
+      selectedTask: _selectedTask,
+      onBack: () {
+        setState(() {
+          _viewMode = ViewMode.taskList;
+        });
       },
     );
   }
 
-  Widget _buildTaskCard(task_models.TaskStatus task) {
-    final createdAt = task.createdAt != null
-        ? DateTime.fromMillisecondsSinceEpoch(task.createdAt!)
-        : null;
-
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    task.taskName ?? '未命名任务',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                Chip(
-                  label: Text(
-                    _getFriendlyStatus(task.status ?? 'UNKNOWN'),
-                    style: TextStyle(
-                      color: _getStatusColor(task.status ?? 'UNKNOWN'),
-                    ),
-                  ),
-                  backgroundColor: _getStatusColor(task.status ?? 'UNKNOWN').withOpacity(0.1),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            if (createdAt != null)
-              Text(
-                '创建时间: ${createdAt.toString()}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
-                ),
-              ),
-            if (task.currentStage != null)
-              Text(
-                '当前阶段: ${task.currentStage}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
-                ),
-              ),
-            if (task.message != null)
-              Text(
-                '消息: ${task.message}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: () {
-                    setState(() {
-                      _selectedTask = task;
-                      _viewMode = ViewMode.taskDetail;
-                    });
-                  },
-                  child: const Text('查看详情'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _getFriendlyStatus(String status) {
-    switch (status) {
-      case 'CREATED':
-        return '已创建';
-      case 'PENDING':
-        return '等待中';
-      case 'SCANNING':
-        return '扫描中';
-      case 'SCANNED':
-        return '已扫描';
-      case 'PREVIEWING':
-        return '预览中';
-      case 'PREVIEWED':
-        return '已预览';
-      case 'EXECUTING':
-        return '执行中';
-      case 'COMPLETED':
-        return '已完成';
-      case 'FAILED':
-        return '失败';
-      case 'CANCELLED':
-        return '已取消';
-      default:
-        return '未知状态';
-    }
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'CREATED':
-      case 'PENDING':
-        return Colors.yellow;
-      case 'SCANNING':
-      case 'PREVIEWING':
-      case 'EXECUTING':
-        return Colors.blue;
-      case 'SCANNED':
-      case 'PREVIEWED':
-      case 'COMPLETED':
-        return Colors.green;
-      case 'FAILED':
-        return Colors.red;
-      case 'CANCELLED':
-        return Colors.grey;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  Widget _buildTaskDetailView() {
-    if (_selectedTask == null) {
-      return const Center(child: Text('请选择一个任务'));
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(12.0),
-      child: Column(
-        children: [
-          _buildTaskDetailHeader(),
-          const SizedBox(height: 12),
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildTaskInfoCard(),
-                  const SizedBox(height: 16),
-                  _buildConfigSnapshotCard(),
-                  const SizedBox(height: 16),
-                  _buildScanResultCard(),
-                  const SizedBox(height: 16),
-                  _buildPreviewResultCard(),
-                  const SizedBox(height: 16),
-                  _buildExecutionResultCard(),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTaskDetailHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        const Text(
-          '任务详情',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        ElevatedButton(
-          onPressed: () {
-            setState(() {
-              _viewMode = ViewMode.taskList;
-            });
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blue,
-            foregroundColor: Colors.white,
-          ),
-          child: const Text('返回任务列表'),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTaskInfoCard() {
-    if (_selectedTask == null) return Container();
-
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '任务基本信息',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                const Text('任务ID: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                Expanded(
-                  child: Text(
-                    _selectedTask!.taskId ?? 'N/A',
-                    style: const TextStyle(fontSize: 13),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Text('任务名称: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                Expanded(
-                  child: Text(
-                    _selectedTask!.taskName ?? 'N/A',
-                    style: const TextStyle(fontSize: 13),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Text('状态: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                Text(
-                  _getFriendlyStatus(_selectedTask!.status ?? 'UNKNOWN'),
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: _getStatusColor(_selectedTask!.status ?? 'UNKNOWN'),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Text('当前阶段: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                Text(
-                  _selectedTask!.currentStage ?? 'N/A',
-                  style: const TextStyle(fontSize: 13),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Text('总体进度: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                Text(
-                  '${(_selectedTask!.overallProgress ?? 0).toStringAsFixed(1)}%',
-                  style: const TextStyle(fontSize: 13),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            if (_selectedTask!.createdAt != null)
-              Row(
-                children: [
-                  const Text('创建时间: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                  Text(
-                    DateTime.fromMillisecondsSinceEpoch(_selectedTask!.createdAt!).toString(),
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                ],
-              ),
-            if (_selectedTask!.message != null)
-              const SizedBox(height: 8),
-            if (_selectedTask!.message != null)
-              Row(
-                children: [
-                  const Text('消息: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                  Expanded(
-                    child: Text(
-                      _selectedTask!.message!,
-                      style: const TextStyle(fontSize: 13),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildConfigSnapshotCard() {
-    if (_selectedTask == null || _selectedTask!.configSnapshot == null) {
-      return Card(
-        elevation: 2,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: const Text('无配置快照信息'),
-        ),
-      );
-    }
-
-    final configSnapshot = _selectedTask!.configSnapshot!;
-
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '配置快照',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _buildSourceDirectoriesList(configSnapshot.sourceDirectories),
-            const SizedBox(height: 16),
-            _buildStrategyConfig(configSnapshot.strategyId, configSnapshot.strategyConfig),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSourceDirectoriesList(List<dynamic>? sourceDirs) {
-    if (sourceDirs == null || sourceDirs.isEmpty) {
-      return const Text('无源目录配置', style: TextStyle(color: Colors.grey));
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('源目录:', style: TextStyle(fontWeight: FontWeight.w500)),
-        const SizedBox(height: 8),
-        for (var dir in sourceDirs)
-          Padding(
-            padding: const EdgeInsets.only(left: 16),
-            child: Text(
-              dir is Map<String, dynamic> ? dir['path']?.toString() ?? '未知路径' : dir.toString(),
-              style: const TextStyle(fontSize: 13),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildStrategyConfig(String? strategyId, Map<String, dynamic>? strategyConfig) {
-    if (strategyId == null) {
-      return const Text('无策略配置', style: TextStyle(color: Colors.grey));
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('策略ID: $strategyId',
-            style: const TextStyle(fontSize: 13)),
-        if (strategyConfig != null)
-          Text('配置参数: ${strategyConfig.length} 项',
-              style: const TextStyle(fontSize: 13)),
-      ],
-    );
-  }
-
-  Widget _buildScanResultCard() {
-    if (_selectedTask == null || _selectedTask!.stages?.scan == null) {
-      return Card(
-        elevation: 2,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: const Text('无扫描结果信息'),
-        ),
-      );
-    }
-
-    final scanStage = _selectedTask!.stages!.scan!;
-
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '扫描结果',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                const Text('状态: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                Text(
-                  scanStage.status ?? 'N/A',
-                  style: const TextStyle(fontSize: 13),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            if (scanStage.scanStartTime != null)
-              Row(
-                children: [
-                  const Text('开始时间: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                  Text(
-                    DateTime.fromMillisecondsSinceEpoch(scanStage.scanStartTime!).toString(),
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                ],
-              ),
-            if (scanStage.scanEndTime != null)
-              const SizedBox(height: 8),
-            if (scanStage.scanEndTime != null)
-              Row(
-                children: [
-                  const Text('结束时间: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                  Text(
-                    DateTime.fromMillisecondsSinceEpoch(scanStage.scanEndTime!).toString(),
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                ],
-              ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Text('扫描文件数: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                Text(
-                  '${scanStage.scannedFiles ?? 0}/${scanStage.totalFiles ?? 0}',
-                  style: const TextStyle(fontSize: 13),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPreviewResultCard() {
-    if (_selectedTask == null || _selectedTask!.stages?.preview == null) {
-      return Card(
-        elevation: 2,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: const Text('无预览结果信息'),
-        ),
-      );
-    }
-
-    final previewStage = _selectedTask!.stages!.preview!;
-
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '预览结果',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                const Text('状态: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                Text(
-                  previewStage.status ?? 'N/A',
-                  style: const TextStyle(fontSize: 13),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            if (previewStage.previewStartTime != null)
-              Row(
-                children: [
-                  const Text('开始时间: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                  Text(
-                    DateTime.fromMillisecondsSinceEpoch(previewStage.previewStartTime!).toString(),
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                ],
-              ),
-            if (previewStage.previewEndTime != null)
-              const SizedBox(height: 8),
-            if (previewStage.previewEndTime != null)
-              Row(
-                children: [
-                  const Text('结束时间: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                  Text(
-                    DateTime.fromMillisecondsSinceEpoch(previewStage.previewEndTime!).toString(),
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                ],
-              ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Text('分析文件数: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                Text(
-                  '${previewStage.analyzedFiles ?? 0}',
-                  style: const TextStyle(fontSize: 13),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Text('变更总数: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                Text(
-                  '${previewStage.totalChanges ?? 0}',
-                  style: const TextStyle(fontSize: 13),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildExecutionResultCard() {
-    if (_selectedTask == null || _selectedTask!.stages?.execution == null) {
-      return Card(
-        elevation: 2,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: const Text('无执行结果信息'),
-        ),
-      );
-    }
-
-    final executionStage = _selectedTask!.stages!.execution!;
-
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '执行结果',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                const Text('状态: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                Text(
-                  executionStage.status ?? 'N/A',
-                  style: const TextStyle(fontSize: 13),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            if (executionStage.executionStartTime != null)
-              Row(
-                children: [
-                  const Text('开始时间: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                  Text(
-                    DateTime.fromMillisecondsSinceEpoch(executionStage.executionStartTime!).toString(),
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                ],
-              ),
-            if (executionStage.executionEndTime != null)
-              const SizedBox(height: 8),
-            if (executionStage.executionEndTime != null)
-              Row(
-                children: [
-                  const Text('结束时间: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                  Text(
-                    DateTime.fromMillisecondsSinceEpoch(executionStage.executionEndTime!).toString(),
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                ],
-              ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Text('执行文件数: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                Text(
-                  '${executionStage.executedFiles ?? 0}',
-                  style: const TextStyle(fontSize: 13),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Text('成功数: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                Text(
-                  '${executionStage.successCount ?? 0}',
-                  style: const TextStyle(fontSize: 13, color: Colors.green),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Text('失败数: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                Text(
-                  '${executionStage.failedCount ?? 0}',
-                  style: const TextStyle(fontSize: 13, color: Colors.red),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Text('执行次数: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                Text(
-                  '${executionStage.executionCount ?? 0}',
-                  style: const TextStyle(fontSize: 13),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildPreviewView() {
-    return Container(
-      padding: const EdgeInsets.all(12.0),
-      child: Column(
-        children: [
-          _buildFilterBar(),
-          const SizedBox(height: 12),
-          Expanded(
-            child: Row(
-              children: [
-                Expanded(
-                  child: _buildPreviewTable(),
-                ),
-              ],
-            ),
-          ),
-          _buildStatusBar(),
-        ],
-      ),
+    return PreviewWidget(
+      searchFilter: _searchFilter,
+      statusFilter: _statusFilter,
+      operationTypeFilter: _operationTypeFilter,
+      hideUnchanged: _hideUnchanged,
+      isLoading: _isLoading,
+      errorMessage: _errorMessage,
+      currentPage: _currentPage,
+      totalPages: _totalPages,
+      records: _changeRecords,
+      taskState: _taskState,
+      message: _message,
+      isStatusBarExpanded: _isStatusBarExpanded,
+      currentStep: _currentStep,
+      remainingTime: _remainingTime,
+      changeCount: _changeCount,
+      scannedFiles: _scannedFiles,
+      totalFiles: _totalFiles,
+      logMessage: _logMessage,
+      onSearchFilterChanged: (value) {
+        setState(() {
+          _searchFilter = value;
+          _currentPage = 1;
+        });
+      },
+      onStatusFilterChanged: (value) {
+        setState(() {
+          _statusFilter = value;
+          _currentPage = 1;
+        });
+      },
+      onOperationTypeFilterChanged: (value) {
+        setState(() {
+          _operationTypeFilter = value;
+          _currentPage = 1;
+        });
+      },
+      onHideUnchangedChanged: (value) {
+        setState(() {
+          _hideUnchanged = value;
+          _currentPage = 1;
+        });
+      },
+      onPreview: _analyzePipeline,
+      onExecute: _executeTask,
+      onStop: _stopTask,
+      onPageChanged: (page) {
+        setState(() {
+          _currentPage = page;
+        });
+      },
+      onToggleStatusBar: () {
+        setState(() {
+          _isStatusBarExpanded = !_isStatusBarExpanded;
+        });
+      },
     );
-  }
-
-  Widget _buildFilterBar() {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                decoration: const InputDecoration(
-                  labelText: '搜索',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.search),
-                ),
-                onChanged: (value) {
-                  setState(() {
-                    _searchFilter = value;
-                    _currentPage = 1;
-                  });
-                },
-              ),
-            ),
-            const SizedBox(width: 12),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  _viewMode = ViewMode.taskList;
-                });
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('查看任务列表'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                value: _statusFilter,
-                onChanged: (value) {
-                  setState(() {
-                    _statusFilter = value!;
-                    _currentPage = 1;
-                  });
-                },
-                items: ['全部', '已修改', '未修改'].map((status) => DropdownMenuItem<String>(
-                  value: status,
-                  child: Text(status),
-                )).toList(),
-                decoration: const InputDecoration(
-                  labelText: '状态筛选',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                value: _operationTypeFilter,
-                onChanged: (value) {
-                  setState(() {
-                    _operationTypeFilter = value!;
-                    _currentPage = 1;
-                  });
-                },
-                items: ['全部', '重命名', '移动', '删除', '其他'].map((type) => DropdownMenuItem<String>(
-                  value: type,
-                  child: Text(type),
-                )).toList(),
-                decoration: const InputDecoration(
-                  labelText: '操作类型',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Row(
-                children: [
-                  Checkbox(
-                    value: _hideUnchanged,
-                    onChanged: (value) {
-                      setState(() {
-                        _hideUnchanged = value!;
-                        _currentPage = 1;
-                      });
-                    },
-                  ),
-                  const Text('隐藏未修改项'),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPreviewTable() {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_errorMessage.isNotEmpty) {
-      return Center(
-        child: Text(
-          _errorMessage,
-          style: const TextStyle(color: Colors.red),
-        ),
-      );
-    }
-
-    final currentRecords = _getCurrentPageRecords();
-
-    if (currentRecords.isEmpty) {
-      return const Center(
-        child: Text('暂无变更记录'),
-      );
-    }
-
-    return Column(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            child: DataTable(
-              columns: const [
-                DataColumn(label: Text('原文件名')),
-                DataColumn(label: Text('新文件名')),
-                DataColumn(label: Text('文件路径')),
-                DataColumn(label: Text('操作类型')),
-                DataColumn(label: Text('状态')),
-              ],
-              rows: currentRecords.map((record) {
-                return DataRow(
-                  cells: [
-                    DataCell(Text(record.originalName ?? '')),
-                    DataCell(Text(record.newName ?? '')),
-                    DataCell(Text(record.filePath ?? '')),
-                    DataCell(Text(record.operationType ?? '')),
-                    DataCell(
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: record.changed == true ? Colors.green : Colors.grey,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          record.changed == true ? '已修改' : '未修改',
-                          style: const TextStyle(color: Colors.white),
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              }).toList(),
-            ),
-          ),
-        ),
-        _buildPagination(),
-      ],
-    );
-  }
-
-  Widget _buildPagination() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        TextButton(
-          onPressed: _currentPage > 1
-              ? () => _goToPage(_currentPage - 1)
-              : null,
-          child: const Text('上一页'),
-        ),
-        Text('第 $_currentPage 页，共 $_totalPages 页'),
-        TextButton(
-          onPressed: _currentPage < _totalPages
-              ? () => _goToPage(_currentPage + 1)
-              : null,
-          child: const Text('下一页'),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatusBar() {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Text('状态: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                          Text(
-                            _getTaskStateText(),
-                            style: TextStyle(
-                              color: _getTaskStateColor(),
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (_message.isNotEmpty)
-                        Row(
-                          children: [
-                            const Text('消息: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                            Expanded(
-                              child: Text(
-                                _message,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                    ],
-                  ),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    ElevatedButton(
-                      onPressed: _taskState == LocalTaskState.ready || _taskState == LocalTaskState.previewCompleted
-                          ? _analyzePipeline
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: const Text('预览'),
-                    ),
-                    const SizedBox(height: 8),
-                    ElevatedButton(
-                      onPressed: _taskState == LocalTaskState.previewCompleted
-                          ? _executeTask
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: const Text('执行'),
-                    ),
-                    const SizedBox(height: 8),
-                    ElevatedButton(
-                      onPressed: _taskState == LocalTaskState.previewing || _taskState == LocalTaskState.executing
-                          ? _stopTask
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: const Text('停止'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            if (_isStatusBarExpanded)
-              const SizedBox(height: 12),
-            if (_isStatusBarExpanded)
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (_currentStep.isNotEmpty)
-                          Row(
-                            children: [
-                              const Text('当前步骤: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                              Expanded(
-                                child: Text(
-                                  _currentStep,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        if (_remainingTime.isNotEmpty)
-                          Row(
-                            children: [
-                              const Text('剩余时间: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                              Text(_remainingTime),
-                            ],
-                          ),
-                        if (_changeCount > 0)
-                          Row(
-                            children: [
-                              const Text('变更数量: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                              Text('$_changeCount'),
-                            ],
-                          ),
-                        if (_scannedFiles > 0)
-                          Row(
-                            children: [
-                              const Text('扫描进度: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                              Text('$_scannedFiles/$_totalFiles'),
-                            ],
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            if (_logMessage.isNotEmpty)
-              const SizedBox(height: 12),
-            if (_logMessage.isNotEmpty)
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Text('日志: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                            Expanded(
-                              child: Text(
-                                _logMessage,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            Row(
-              children: [
-                TextButton(
-                  onPressed: () {
-                    setState(() {
-                      _isStatusBarExpanded = !_isStatusBarExpanded;
-                    });
-                  },
-                  child: Text(
-                    _isStatusBarExpanded ? '收起详情' : '展开详情',
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _getTaskStateText() {
-    switch (_taskState) {
-      case LocalTaskState.ready:
-        return '就绪';
-      case LocalTaskState.previewing:
-        return '预览中';
-      case LocalTaskState.previewCompleted:
-        return '预览完成';
-      case LocalTaskState.previewFailed:
-        return '预览失败';
-      case LocalTaskState.executing:
-        return '执行中';
-      case LocalTaskState.executionCompleted:
-        return '执行完成';
-      case LocalTaskState.executionFailed:
-        return '执行失败';
-      case LocalTaskState.cancelled:
-        return '已取消';
-      default:
-        return '未知';
-    }
-  }
-
-  Color _getTaskStateColor() {
-    switch (_taskState) {
-      case LocalTaskState.ready:
-        return Colors.grey;
-      case LocalTaskState.previewing:
-      case LocalTaskState.executing:
-        return Colors.blue;
-      case LocalTaskState.previewCompleted:
-      case LocalTaskState.executionCompleted:
-        return Colors.green;
-      case LocalTaskState.previewFailed:
-      case LocalTaskState.executionFailed:
-        return Colors.red;
-      case LocalTaskState.cancelled:
-        return Colors.orange;
-      default:
-        return Colors.grey;
-    }
   }
 
   @override

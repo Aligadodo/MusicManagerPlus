@@ -2,27 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/config_service.dart';
 import '../api/api_client.dart';
-
-// 文件类型树形结构
-class FileTypeNode {
-  String id;
-  String name;
-  List<String> extensions;
-  List<FileTypeNode> children;
-  bool selected;
-  bool indeterminate;
-
-  FileTypeNode({
-    required this.id,
-    required this.name,
-    this.extensions = const [],
-    this.children = const [],
-    this.selected = false,
-    this.indeterminate = false,
-  });
-
-  bool get isLeaf => children.isEmpty;
-}
+import '../widgets/thread_pool_settings.dart';
+import '../widgets/scan_settings.dart';
+import '../widgets/filter_rules.dart';
+import '../widgets/file_type_tree.dart';
+import '../widgets/run_settings.dart';
 
 class GlobalSettingsPage extends ConsumerStatefulWidget {
   const GlobalSettingsPage({super.key});
@@ -306,584 +290,133 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
   int _selectedSection = 0;
 
   Widget _buildThreadPoolSection(ThemeData theme) {
-    return Card(
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              key: const ValueKey('preview_threads_row'),
-              children: [
-                Text('预览线程数:', style: theme.textTheme.bodyMedium),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: Slider(
-                    min: 1,
-                    max: 16,
-                    value: _previewThreads.toDouble(),
-                    onChanged: (value) {
-                      setState(() {
-                        _previewThreads = value.toInt();
-                      });
-                      _autoSaveConfig();
-                    },
-                    divisions: 15,
-                    label: '$_previewThreads',
-                    activeColor: theme.primaryColor,
-                  ),
-                ),
-                Text('$_previewThreads', style: theme.textTheme.bodyMedium),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              key: const ValueKey('execution_threads_row'),
-              children: [
-                Text('执行线程数:', style: theme.textTheme.bodyMedium),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: Slider(
-                    min: 1,
-                    max: 12,
-                    value: _executionThreads.toDouble(),
-                    onChanged: (value) {
-                      setState(() {
-                        _executionThreads = value.toInt();
-                      });
-                      _autoSaveConfig();
-                    },
-                    divisions: 11,
-                    label: '$_executionThreads',
-                    activeColor: theme.primaryColor,
-                  ),
-                ),
-                Text('$_executionThreads', style: theme.textTheme.bodyMedium),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              key: const ValueKey('thread_pool_mode_row'),
-              children: [
-                Text('线程池模式:', style: theme.textTheme.bodyMedium),
-                const SizedBox(width: 20),
-                DropdownButton<String>(
-                  value: _threadPoolMode,
-                  items: const [
-                    DropdownMenuItem(value: 'GLOBAL', child: Text('全局统一配置')),
-                    DropdownMenuItem(value: 'ROOT_PATH', child: Text('根路径独立配置')),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      _threadPoolMode = value ?? 'GLOBAL';
-                    });
-                    _autoSaveConfig();
-                  },
-                  dropdownColor: theme.colorScheme.surface,
-                  style: theme.textTheme.bodyMedium,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+    return ThreadPoolSettings(
+      previewThreads: _previewThreads,
+      executionThreads: _executionThreads,
+      threadPoolMode: _threadPoolMode,
+      onPreviewThreadsChanged: (value) {
+        setState(() {
+          _previewThreads = value;
+        });
+        _autoSaveConfig();
+      },
+      onExecutionThreadsChanged: (value) {
+        setState(() {
+          _executionThreads = value;
+        });
+        _autoSaveConfig();
+      },
+      onThreadPoolModeChanged: (value) {
+        setState(() {
+          _threadPoolMode = value;
+        });
+        _autoSaveConfig();
+      },
+      theme: theme,
     );
   }
 
   Widget _buildScanSettingsSection(ThemeData theme) {
-    return Card(
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              key: const ValueKey('scan_mode_row'),
-              children: [
-                Text('扫描模式:', style: theme.textTheme.bodyMedium),
-                const SizedBox(width: 20),
-                DropdownButton<String>(
-                  value: _recursionMode,
-                  items: const [
-                    DropdownMenuItem(value: 'ALL', child: Text('全部文件')),
-                    DropdownMenuItem(value: 'CURRENT', child: Text('当前目录')),
-                    DropdownMenuItem(value: 'SPECIFIC', child: Text('指定目录层级')),
-                    DropdownMenuItem(value: 'RANGE', child: Text('目录层级范围')),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      _recursionMode = value ?? 'ALL';
-                    });
-                    _autoSaveConfig();
-                  },
-                  dropdownColor: theme.colorScheme.surface,
-                  style: theme.textTheme.bodyMedium,
-                ),
-              ],
-            ),
-            if (_recursionMode == 'SPECIFIC')
-              Padding(
-                padding: const EdgeInsets.only(left: 120, top: 16),
-                child: Row(
-                  children: [
-                    Text('扫描层级:', style: theme.textTheme.bodyMedium),
-                    const SizedBox(width: 20),
-                    Expanded(
-                      child: Slider(
-                        min: 1,
-                        max: 10,
-                        value: _recursionDepth.toDouble(),
-                        onChanged: (value) {
-                          setState(() {
-                            _recursionDepth = value.toInt();
-                          });
-                          _autoSaveConfig();
-                        },
-                        divisions: 9,
-                        label: '$_recursionDepth',
-                        activeColor: theme.primaryColor,
-                      ),
-                    ),
-                    Text('$_recursionDepth', style: theme.textTheme.bodyMedium),
-                  ],
-                ),
-              ),
-            if (_recursionMode == 'RANGE')
-              Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(left: 120, top: 16),
-                    child: Row(
-                      key: const ValueKey('recursion_depth_row'),
-                      children: [
-                        Text('最小层级:', style: theme.textTheme.bodyMedium),
-                        const SizedBox(width: 20),
-                        Expanded(
-                          child: Slider(
-                            min: 1,
-                            max: 10,
-                            value: _minRecursionDepth.toDouble(),
-                            onChanged: (value) {
-                              setState(() {
-                                _minRecursionDepth = value.toInt();
-                              });
-                              _autoSaveConfig();
-                            },
-                            divisions: 9,
-                            label: '$_minRecursionDepth',
-                            activeColor: theme.primaryColor,
-                          ),
-                        ),
-                        Text('$_minRecursionDepth', style: theme.textTheme.bodyMedium),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 120, top: 16),
-                    child: Row(
-                      key: const ValueKey('max_recursion_depth_row'),
-                      children: [
-                        Text('最大层级:', style: theme.textTheme.bodyMedium),
-                        const SizedBox(width: 20),
-                        Expanded(
-                          child: Slider(
-                            min: _minRecursionDepth.toDouble(),
-                            max: 10,
-                            value: _maxRecursionDepth.toDouble(),
-                            onChanged: (value) {
-                              setState(() {
-                                _maxRecursionDepth = value.toInt();
-                              });
-                              _autoSaveConfig();
-                            },
-                            divisions: 10 - _minRecursionDepth,
-                            label: '$_maxRecursionDepth',
-                            activeColor: theme.primaryColor,
-                          ),
-                        ),
-                        Text('$_maxRecursionDepth', style: theme.textTheme.bodyMedium),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-          ],
-        ),
-      ),
+    return ScanSettings(
+      recursionMode: _recursionMode,
+      recursionDepth: _recursionDepth,
+      minRecursionDepth: _minRecursionDepth,
+      maxRecursionDepth: _maxRecursionDepth,
+      onRecursionModeChanged: (value) {
+        setState(() {
+          _recursionMode = value;
+        });
+        _autoSaveConfig();
+      },
+      onRecursionDepthChanged: (value) {
+        setState(() {
+          _recursionDepth = value;
+        });
+        _autoSaveConfig();
+      },
+      onMinRecursionDepthChanged: (value) {
+        setState(() {
+          _minRecursionDepth = value;
+        });
+        _autoSaveConfig();
+      },
+      onMaxRecursionDepthChanged: (value) {
+        setState(() {
+          _maxRecursionDepth = value;
+        });
+        _autoSaveConfig();
+      },
+      theme: theme,
     );
   }
 
   Widget _buildFilterRulesSection(ThemeData theme) {
-    return Card(
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              key: const ValueKey('add_filter_rule_row'),
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: TextEditingController(text: _newFilterRule),
-                    onChanged: (value) {
-                      _newFilterRule = value;
-                    },
-                    decoration: InputDecoration(
-                      labelText: '添加过滤规则',
-                      hintText: '例如：*Convert*',
-                      border: OutlineInputBorder(),
-                      labelStyle: theme.textTheme.bodyMedium,
-                      hintStyle: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                ElevatedButton(
-                  onPressed: () {
-                    if (_newFilterRule.isNotEmpty && !_scanFilterList.contains(_newFilterRule)) {
-                      setState(() {
-                        _scanFilterList.add(_newFilterRule);
-                        _newFilterRule = '';
-                      });
-                      _autoSaveConfig();
-                    }
-                  },
-                  child: const Text('添加'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            if (_scanFilterList.isNotEmpty)
-              Column(
-                children: [
-                  Text('当前过滤规则:', style: theme.textTheme.bodyMedium),
-                  const SizedBox(height: 8),
-                  Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(color: theme.dividerColor),
-                      borderRadius: BorderRadius.circular(8),
-                      color: theme.colorScheme.surfaceContainer,
-                    ),
-                    child: ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: _scanFilterList.length,
-                      itemBuilder: (context, index) {
-                        String rule = _scanFilterList[index];
-                        return Row(
-                          key: ValueKey('scan_filter_rule_row_$index'),
-                          children: [
-                            Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(rule, style: theme.textTheme.bodyMedium),
-                              ),
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.delete, color: theme.colorScheme.error),
-                              onPressed: () {
-                                setState(() {
-                                  _scanFilterList.removeAt(index);
-                                });
-                                _autoSaveConfig();
-                              },
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // 构建文件类型树形组件
-  Widget _buildFileTypeTreeSection(ThemeData theme) {
-    return Card(
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const SizedBox(),
-                Row(
-                  children: [
-                    TextButton(
-                      onPressed: () {
-                        setState(() {
-                          _selectAll(_fileTypeTree, true);
-                        });
-                      },
-                      child: const Text('全选'),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        setState(() {
-                          _selectAll(_fileTypeTree, false);
-                        });
-                      },
-                      child: const Text('取消全选'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Container(
-              height: 400,
-              decoration: BoxDecoration(
-                border: Border.all(color: theme.dividerColor),
-                borderRadius: BorderRadius.circular(8),
-                color: theme.colorScheme.surfaceContainer,
-              ),
-              child: ListView(
-                children: _fileTypeTree.children.map((category) {
-                  return _buildCategoryNode(category, theme);
-                }).toList(),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              '手动添加文件类型后缀',
-              style: theme.textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    decoration: InputDecoration(
-                      labelText: '输入文件类型后缀',
-                      hintText: '例如：mp3,flac,wav',
-                      border: OutlineInputBorder(),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      labelStyle: theme.textTheme.bodyMedium,
-                      hintStyle: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
-                    ),
-                    onChanged: (value) {
-                      _newFileType = value;
-                    },
-                  ),
-                ),
-                const SizedBox(width: 10),
-                ElevatedButton(
-                  onPressed: () {
-                    if (_newFileType.isNotEmpty) {
-                      final types = _newFileType.split(',')
-                          .map((t) => t.trim())
-                          .where((t) => t.isNotEmpty)
-                          .toList();
-                      setState(() {
-                        _customFileTypes.addAll(types);
-                        _newFileType = '';
-                      });
-                      _autoSaveConfig();
-                    }
-                  },
-                  child: const Text('添加'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            if (_customFileTypes.isNotEmpty)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '自定义文件类型:',
-                    style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: _customFileTypes.map((type) {
-                      return Chip(
-                        label: Text(type, style: theme.textTheme.bodySmall),
-                        onDeleted: () {
-                          setState(() {
-                            _customFileTypes.remove(type);
-                          });
-                          _autoSaveConfig();
-                        },
-                        deleteIcon: const Icon(Icons.close, size: 16),
-                        deleteIconColor: theme.colorScheme.error,
-                        backgroundColor: theme.colorScheme.surfaceContainer,
-                      );
-                    }).toList(),
-                  ),
-                ],
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // 构建类别节点
-  Widget _buildCategoryNode(FileTypeNode category, ThemeData theme) {
-    if (category.isLeaf) {
-      return CheckboxListTile(
-        key: ValueKey(category.id),
-        title: Text(category.name, style: theme.textTheme.bodyMedium),
-        value: category.selected,
-        onChanged: (value) {
+    return FilterRules(
+      filterList: _scanFilterList,
+      newFilterRule: _newFilterRule,
+      onNewFilterRuleChanged: (value) {
+        _newFilterRule = value;
+      },
+      onAddFilterRule: () {
+        if (_newFilterRule.isNotEmpty && !_scanFilterList.contains(_newFilterRule)) {
           setState(() {
-            _updateNodeSelection(category, value);
+            _scanFilterList.add(_newFilterRule);
+            _newFilterRule = '';
           });
           _autoSaveConfig();
-        },
-        controlAffinity: ListTileControlAffinity.leading,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-      );
-    }
-
-    return ExpansionTile(
-      key: ValueKey(category.id),
-      title: Row(
-        children: [
-          Checkbox(
-            value: category.selected,
-            tristate: category.indeterminate,
-            onChanged: (value) {
-              setState(() {
-                _updateNodeSelection(category, value);
-              });
-              _autoSaveConfig();
-            },
-          ),
-          Expanded(
-            child: Text(
-              category.name,
-              style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
-            ),
-          ),
-        ],
-      ),
-      children: category.children.map((child) {
-        if (child.isLeaf) {
-          return CheckboxListTile(
-            key: ValueKey(child.id),
-            title: Text(child.name, style: theme.textTheme.bodyMedium),
-            value: child.selected,
-            onChanged: (value) {
-              setState(() {
-                _updateNodeSelection(child, value);
-              });
-              _autoSaveConfig();
-            },
-            controlAffinity: ListTileControlAffinity.leading,
-            contentPadding: const EdgeInsets.only(left: 48),
-          );
-        } else {
-          return ExpansionTile(
-            key: ValueKey(child.id),
-            title: Row(
-              children: [
-                Checkbox(
-                  value: child.selected,
-                  tristate: child.indeterminate,
-                  onChanged: (value) {
-                    setState(() {
-                      _updateNodeSelection(child, value);
-                    });
-                    _autoSaveConfig();
-                  },
-                ),
-                Expanded(
-                  child: Text(
-                    child.name,
-                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
-                  ),
-                ),
-              ],
-            ),
-            children: child.children.map((leaf) {
-              return CheckboxListTile(
-                key: ValueKey(leaf.id),
-                title: Text(leaf.name, style: theme.textTheme.bodyMedium),
-                value: leaf.selected,
-                onChanged: (value) {
-                  setState(() {
-                    _updateNodeSelection(leaf, value);
-                  });
-                  _autoSaveConfig();
-                },
-                controlAffinity: ListTileControlAffinity.leading,
-                contentPadding: const EdgeInsets.only(left: 72),
-              );
-            }).toList(),
-          );
         }
-      }).toList(),
+      },
+      onRemoveFilterRule: (index) {
+        setState(() {
+          _scanFilterList.removeAt(index);
+        });
+        _autoSaveConfig();
+      },
+      theme: theme,
     );
   }
 
-  // 更新节点选择状态
-  void _updateNodeSelection(FileTypeNode node, bool? value) {
-    bool newValue = value ?? !node.selected;
-    _updateChildren(node, newValue);
-    _updateParentSelection(node);
-  }
-
-  // 更新子节点选择状态
-  void _updateChildren(FileTypeNode node, bool selected) {
-    node.selected = selected;
-    node.indeterminate = false;
-
-    for (var child in node.children) {
-      _updateChildren(child, selected);
-    }
-  }
-
-  // 向上更新父节点的选择状态
-  void _updateParentSelection(FileTypeNode node) {
-    final parent = _findParent(node);
-    if (parent != null) {
-      final allSelected = parent.children.every((child) => child.selected);
-      final anySelected = parent.children.any((child) => child.selected || child.indeterminate);
-
-      parent.selected = allSelected;
-      parent.indeterminate = anySelected && !allSelected;
-
-      _updateParentSelection(parent);
-    }
-  }
-
-  // 查找父节点
-  FileTypeNode? _findParent(FileTypeNode node) {
-    for (var category in _fileTypeTree.children) {
-      if (category.children.contains(node)) {
-        return category;
-      }
-      for (var child in category.children) {
-        if (child.children.contains(node)) {
-          return child;
+  Widget _buildFileTypeTreeSection(ThemeData theme) {
+    return FileTypeTree(
+      fileTypeTree: _fileTypeTree,
+      customFileTypes: _customFileTypes,
+      newFileType: _newFileType,
+      onNodeSelectionChanged: (node, value) {
+        setState(() {
+          FileTypeNode.updateNodeSelection(node, value, _fileTypeTree);
+        });
+        _autoSaveConfig();
+      },
+      onSelectAll: (node, isSelected) {
+        setState(() {
+          FileTypeNode.selectAll(node, isSelected);
+        });
+        _autoSaveConfig();
+      },
+      onNewFileTypeChanged: (value) {
+        _newFileType = value;
+      },
+      onAddCustomFileType: () {
+        if (_newFileType.isNotEmpty) {
+          final types = _newFileType.split(',')
+              .map((t) => t.trim())
+              .where((t) => t.isNotEmpty)
+              .toList();
+          setState(() {
+            _customFileTypes.addAll(types);
+            _newFileType = '';
+          });
+          _autoSaveConfig();
         }
-      }
-    }
-    return null;
-  }
-
-  // 全选/取消全选
-  void _selectAll(FileTypeNode node, bool isSelected) {
-    node.selected = isSelected;
-    node.indeterminate = false;
-    for (var child in node.children) {
-      _selectAll(child, isSelected);
-    }
+      },
+      onRemoveCustomFileType: (type) {
+        setState(() {
+          _customFileTypes.remove(type);
+        });
+        _autoSaveConfig();
+      },
+      theme: theme,
+    );
   }
 
   // 自动保存配置
@@ -935,89 +468,29 @@ class _GlobalSettingsPageState extends ConsumerState<GlobalSettingsPage> {
   }
 
   Widget _buildRunSettingsSection(ThemeData theme) {
-    return Card(
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              key: const ValueKey('auto_refresh_row'),
-              children: [
-                Checkbox(
-                  value: _autoRefresh,
-                  onChanged: (value) {
-                    setState(() {
-                      _autoRefresh = value ?? true;
-                    });
-                    _autoSaveConfig();
-                  },
-                  fillColor: MaterialStateProperty.resolveWith((states) {
-                    if (states.contains(MaterialState.selected)) {
-                      return theme.primaryColor;
-                    }
-                    return null;
-                  }),
-                ),
-                Text('自动刷新', style: theme.textTheme.bodyMedium),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              key: const ValueKey('preview_limit_row'),
-              children: [
-                Text('预览数量限制:', style: theme.textTheme.bodyMedium),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: Slider(
-                    min: 50,
-                    max: 1000,
-                    value: _previewLimit.toDouble(),
-                    onChanged: (value) {
-                      setState(() {
-                        _previewLimit = value.toInt();
-                      });
-                      _autoSaveConfig();
-                    },
-                    divisions: 19,
-                    label: '$_previewLimit',
-                    activeColor: theme.primaryColor,
-                    inactiveColor: theme.dividerColor,
-                  ),
-                ),
-                Text('$_previewLimit', style: theme.textTheme.bodyMedium),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              key: const ValueKey('execution_limit_row'),
-              children: [
-                Text('执行数量限制:', style: theme.textTheme.bodyMedium),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: Slider(
-                    min: 100,
-                    max: 5000,
-                    value: _executionLimit.toDouble(),
-                    onChanged: (value) {
-                      setState(() {
-                        _executionLimit = value.toInt();
-                      });
-                      _autoSaveConfig();
-                    },
-                    divisions: 49,
-                    label: '$_executionLimit',
-                    activeColor: theme.primaryColor,
-                    inactiveColor: theme.dividerColor,
-                  ),
-                ),
-                Text('$_executionLimit', style: theme.textTheme.bodyMedium),
-              ],
-            ),
-          ],
-        ),
-      ),
+    return RunSettings(
+      autoRefresh: _autoRefresh,
+      previewLimit: _previewLimit,
+      executionLimit: _executionLimit,
+      onAutoRefreshChanged: (value) {
+        setState(() {
+          _autoRefresh = value;
+        });
+        _autoSaveConfig();
+      },
+      onPreviewLimitChanged: (value) {
+        setState(() {
+          _previewLimit = value;
+        });
+        _autoSaveConfig();
+      },
+      onExecutionLimitChanged: (value) {
+        setState(() {
+          _executionLimit = value;
+        });
+        _autoSaveConfig();
+      },
+      theme: theme,
     );
   }
 }

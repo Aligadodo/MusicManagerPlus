@@ -9,8 +9,6 @@ import 'package:filemanager_flutter/pages/compose_page.dart';
 import 'package:filemanager_flutter/pages/preview_page.dart';
 import 'package:filemanager_flutter/pages/log_page.dart';
 import 'package:filemanager_flutter/pages/appearance_page.dart';
-import 'package:filemanager_flutter/pages/task_list_page.dart';
-import 'package:filemanager_flutter/pages/task_detail_page.dart';
 import 'package:filemanager_flutter/pages/global_settings_page.dart';
 import 'package:filemanager_flutter/providers/theme_provider.dart';
 import 'package:filemanager_flutter/providers/config_provider.dart';
