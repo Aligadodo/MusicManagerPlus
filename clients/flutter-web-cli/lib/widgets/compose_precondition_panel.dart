@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:filemanager_flutter/models/precondition.dart';
 import 'package:filemanager_flutter/models/precondition_group.dart';
 import 'package:filemanager_flutter/models/precondition_field_config.dart';
+import 'package:filemanager_flutter/models/precondition_field_configs.dart';
 import 'package:filemanager_flutter/widgets/precondition_group_item.dart';
 import 'package:filemanager_flutter/utils/theme_utils.dart';
 

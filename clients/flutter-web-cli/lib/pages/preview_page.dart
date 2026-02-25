@@ -15,9 +15,11 @@ import '../widgets/selectable_text_widget.dart';
 import '../widgets/task_list_widget.dart';
 import '../widgets/task_detail_widget.dart';
 import '../widgets/preview_widget.dart';
+import '../widgets/task_operations.dart';
+import '../widgets/data_loading_operations.dart';
 
-// 导入main.dart中的taskStateProvider
-import '../main.dart' as main_app;
+// 导入task_state中的taskStateProvider
+import '../models/task_state.dart';
 
 enum ViewMode {
   taskList,
@@ -79,20 +81,62 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
   bool _isStatusBarExpanded = false;
   bool _isLogMessageExpanded = false;
 
+  late final DataLoadingOperations _dataOperations;
+
   @override
   void initState() {
     super.initState();
+    
+    // 初始化数据加载操作
+    _dataOperations = DataLoadingOperations(
+      context: context,
+      ref: ref,
+      pipelineService: _pipelineService,
+      sourceDirectoryService: _sourceDirectoryService,
+      taskService: _taskService,
+      onSourceDirectoriesLoaded: (directories) {
+        setState(() {
+          _sourceDirectories = directories;
+        });
+      },
+      onPipelineLoaded: (pipeline) {
+        setState(() {
+          _pipeline = pipeline;
+        });
+      },
+      onTasksLoaded: (tasks) {
+        setState(() {
+          _tasks = tasks;
+        });
+      },
+      onChangesLoaded: (changes) {
+        setState(() {
+          _changeRecords = changes;
+        });
+      },
+      onLoadingChanged: (loading) {
+        setState(() {
+          _isLoading = loading;
+        });
+      },
+      onErrorMessageChanged: (error) {
+        setState(() {
+          _errorMessage = error;
+        });
+      },
+    );
+    
     _loadTasks();
     _startAutoRefresh();
     _checkGlobalTaskState();
   }
 
   void _checkGlobalTaskState() {
-    final taskState = ref.read(main_app.taskStateProvider);
+    final taskState = ref.read(taskStateProvider);
     
-    if (taskState.status == main_app.TaskStatus.analyzing) {
+    if (taskState.status == TaskStatus.analyzing) {
       _createNewTask();
-    } else if (taskState.status == main_app.TaskStatus.running) {
+    } else if (taskState.status == TaskStatus.running) {
       _executeLatestTask();
     }
   }
@@ -161,32 +205,7 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
 
   Future<void> _loadTasks() async {
     if (_isLoading) return;
-
-    setState(() {
-      _isLoading = true;
-      _errorMessage = '';
-    });
-
-    try {
-      final result = await _taskService.getTaskList(
-        page: 1,
-        size: 20,
-        status: _mapStatusToApi(_statusFilter),
-      );
-
-      final data = result['data'] as Map<String, dynamic>?;
-      final tasks = (data?['list'] as List<dynamic>?)?.map((json) => task_models.TaskStatus.fromJson(json as Map<String, dynamic>)).toList() ?? [];
-
-      setState(() {
-        _tasks = tasks;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _errorMessage = '加载任务列表失败: $e';
-      });
-    }
+    await _dataOperations.loadTasks(_statusFilter);
   }
 
   Future<void> _refreshTasks() async {
@@ -259,27 +278,7 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
   }
 
   Future<void> _loadData() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = '';
-    });
-
-    try {
-      final directories = await _sourceDirectoryService.getSourceDirectories();
-      final pipeline = await _pipelineService.getPipeline();
-
-      setState(() {
-        _sourceDirectories = directories;
-        _pipeline = pipeline;
-        _isLoading = false;
-      });
-    } catch (e) {
-      print('加载数据失败: $e');
-      setState(() {
-        _errorMessage = '加载数据失败: $e';
-        _isLoading = false;
-      });
-    }
+    await _dataOperations.loadData();
   }
 
   bool _validateConfiguration() {
@@ -410,7 +409,7 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
     }
 
     // 更新全局任务状态
-    final taskNotifier = ref.read(main_app.taskStateProvider.notifier);
+    final taskNotifier = ref.read(taskStateProvider.notifier);
     taskNotifier.startAnalyzing();
 
     setState(() {
@@ -459,7 +458,7 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
     }
 
     // 更新全局任务状态
-    final taskNotifier = ref.read(main_app.taskStateProvider.notifier);
+    final taskNotifier = ref.read(taskStateProvider.notifier);
     taskNotifier.startRunning(_taskId);
 
     setState(() {
@@ -515,8 +514,8 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
           _showSuccess(data['message'] ?? '任务已停止');
           
           // 更新全局任务状态
-          final taskNotifier = ref.read(main_app.taskStateProvider.notifier);
-          taskNotifier.stopComplete();
+          final taskNotifier = ref.read(taskStateProvider.notifier);
+          taskNotifier.stop();
           
           setState(() {
             _taskState = LocalTaskState.ready;

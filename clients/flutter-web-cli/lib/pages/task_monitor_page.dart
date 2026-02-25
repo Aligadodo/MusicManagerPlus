@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:filemanager_flutter/api/api_client.dart';
-import 'package:filemanager_flutter/api/task_service.dart';
-import 'package:filemanager_flutter/models/task_status.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
-import 'dart:convert';
+import '../api/api_client.dart';
+import '../api/task_service.dart';
+import '../models/task_status.dart';
 import '../widgets/task_list_item.dart';
-import '../widgets/change_details_dialog.dart';
+import '../widgets/task_detail_dialog.dart';
+import '../widgets/task_status_helpers.dart';
+import 'dart:convert';
+import 'package:web_socket_channel/web_socket_channel.dart';
 
 class TaskMonitorPage extends ConsumerStatefulWidget {
   const TaskMonitorPage({super.key});
@@ -128,10 +129,7 @@ class _TaskMonitorPageState extends ConsumerState<TaskMonitorPage> {
   }
 
   void _showChangeDetails(TaskStatus task) {
-    showDialog(
-      context: context,
-      builder: (context) => ChangeDetailsDialog(task: task),
-    );
+    TaskDetailDialog.show(context, task);
   }
 
   @override
@@ -183,9 +181,9 @@ class _TaskMonitorPageState extends ConsumerState<TaskMonitorPage> {
                     final task = _tasks[index];
                     return TaskListItem(
                       task: task,
-                      onViewDetails: () => _showChangeDetails(task),
-                      onExecute: task.status == TaskStatusEnum.PENDING ? () => _executeTask(task.taskId) : null,
-                      onCancel: task.status == TaskStatusEnum.RUNNING ? () => _cancelTask(task.taskId) : null,
+                      onShowDetails: () => _showChangeDetails(task),
+                      onExecute: () => _executeTask(task.taskId),
+                      onCancel: () => _cancelTask(task.taskId),
                     );
                   },
                 ),

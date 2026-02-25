@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import '../api/api_client.dart';
 import '../api/plugin_service.dart';
 import '../models/plugin_config.dart';
-import '../widgets/plugin_parameter_fields.dart';
-import '../widgets/precondition_builder.dart';
+import '../models/plugin_parameter.dart';
+import './plugin_parameter_fields.dart';
+import './precondition_builder.dart';
 
 class PluginConfigPage extends StatefulWidget {
   final String pluginId;
@@ -77,6 +78,21 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
     }
   }
 
+  bool _isParameterVisible(PluginParameter param) {
+    if (param.visibilityConditions == null || param.visibilityConditions!.isEmpty) {
+      return true;
+    }
+
+    for (final condition in param.visibilityConditions!) {
+      final dependentValue = _formValues[condition['dependentParam']];
+      if (dependentValue == condition['expectedValue']) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   void _handleParameterChange(String paramName, dynamic value, PluginParameter param) {
     setState(() {
       _formValues[paramName] = value;
@@ -108,6 +124,13 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
     }
   }
 
+  TextEditingController _getController(String paramName, String initialValue) {
+    if (!_controllers.containsKey(paramName)) {
+      _controllers[paramName] = TextEditingController(text: initialValue);
+    }
+    return _controllers[paramName]!;
+  }
+
   void _showTooltip(String title, String description) {
     showDialog(
       context: context,
@@ -122,18 +145,6 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
         ],
       ),
     );
-  }
-
-  void _onRemoveGroup(RuleConditionGroup group) {
-    setState(() {
-      _config!.preconditionGroups.remove(group);
-    });
-  }
-
-  void _onAddCondition(RuleConditionGroup group) {
-    setState(() {
-      // 状态已在 PreconditionBuilder 中更新
-    });
   }
 
   @override
@@ -215,13 +226,13 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
             const SizedBox(height: 16),
             ..._config!.parameters.map((param) => 
               PluginParameterFields.buildParameterField(
-                param,
-                _formValues[param.name],
-                _formValues,
-                _controllers,
+                param, 
+                _formValues[param.name], 
                 _listValues,
-                _handleParameterChange,
-                _showTooltip
+                (name, value) => _handleParameterChange(name, value, param),
+                _getController,
+                _showTooltip,
+                _isParameterVisible(param)
               )
             ),
             const SizedBox(height: 32),
@@ -234,12 +245,11 @@ class _PluginConfigPageState extends State<PluginConfigPage> {
               const Text('暂无前置条件')
             else
               ..._config!.preconditionGroups.asMap().entries.map((entry) =>
-                PreconditionBuilder.buildPreconditionGroup(
-                  entry.value,
-                  entry.key + 1,
-                  _onRemoveGroup,
-                  _onAddCondition
-                )
+                  PreconditionBuilder.buildPreconditionGroup(
+                    entry.value, 
+                    entry.key + 1, 
+                    () => setState(() {})
+                  )
               ),
           ],
         ),
