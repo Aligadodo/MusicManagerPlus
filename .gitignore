@@ -57,6 +57,27 @@ logs/
 backend/logs/
 backend/*.log
 
+### Database Files ###
+backend/data/*.db
+backend/data/*.db-shm
+backend/data/*.db-wal
+**/music_manager.db
+**/music_manager_plus.db
+
+### Local Configuration Files ###
+backend/config.json
+backend/pipeline_config.json
+backend/source_directories_config.json
+backend/strategy_configs.json
+bin/macos/config.json
+bin/macos/pipeline_config.json
+bin/macos/source_directories_config.json
+bin/macos/strategy_configs.json
+config.json
+pipeline_config.json
+source_directories_config.json
+strategy_configs.json
+
 ### Test Output ###
 .EchoTrash/
 .EchoTrash/**

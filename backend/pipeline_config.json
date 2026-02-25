@@ -1,1 +1,0 @@
-[{"pluginId":"file-cleanup","enabled":true,"config":{"mode":"file_duplicate","method":"pseudo_delete","trashPath":".EchoTrash","keepLargest":true,"keepEarliest":true,"keepExt":"wav","preprocessLower":true,"preprocessUpper":false,"preprocessSimplified":false,"sizeRange":"all","audioSpecial":true},"preconditionGroups":[],"pipelineId":"pipeline_1771333999575_329338097"}]
