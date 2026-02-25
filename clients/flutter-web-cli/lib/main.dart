@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:filemanager_flutter/api/api_client.dart';
 import 'package:filemanager_flutter/providers/theme_provider.dart';
-import 'package:filemanager_flutter/widgets/main_layout.dart';
+import 'package:filemanager_flutter/widgets/common/main_layout.dart';
 
 final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());
 

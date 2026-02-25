@@ -9,7 +9,7 @@ import '../../models/enum_option.dart';
 import 'strategy_list_panel.dart';
 import 'strategy_config_panel.dart';
 import '../../utils/theme_utils.dart';
-import '../../widgets/selectable_text_widget.dart';
+import '../../widgets/common/selectable_text_widget.dart';
 
 class StrategyConfigPage extends ConsumerStatefulWidget {
   const StrategyConfigPage({super.key});

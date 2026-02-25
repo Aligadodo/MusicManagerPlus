@@ -4,10 +4,10 @@ import '../../models/strategy_info.dart';
 import '../../models/strategy_config.dart';
 import '../../models/config_field.dart';
 import '../../widgets/config/config_field_builder.dart';
-import '../../widgets/precondition_config_panel.dart';
+import '../../widgets/config/precondition_config_panel.dart';
 import '../../models/precondition_group.dart';
 import '../../models/rename_rule.dart';
-import '../../widgets/rename_rule_editor.dart';
+import '../../widgets/common/rename_rule_editor.dart';
 import '../../providers/config_provider.dart';
 import '../../utils/theme_utils.dart';
 
