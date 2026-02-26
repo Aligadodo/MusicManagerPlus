@@ -123,28 +123,51 @@ class _TaskListWidgetState extends ConsumerState<TaskListWidget> {
           ),
         ),
         const Spacer(),
-        ElevatedButton(
-          onPressed: widget.onRefresh,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blue,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            minimumSize: Size.zero,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.blue.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: Colors.blue.withOpacity(0.3),
+              width: 1,
+            ),
           ),
-          child: const Text('刷新', style: TextStyle(fontSize: 12)),
+          child: InkWell(
+            onTap: widget.onRefresh,
+            borderRadius: BorderRadius.circular(8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Icon(Icons.refresh, size: 14, color: Colors.blue),
+                SizedBox(width: 4),
+                Text('刷新', style: TextStyle(fontSize: 12, color: Colors.blue)),
+              ],
+            ),
+          ),
         ),
         const SizedBox(width: 8),
-        ElevatedButton.icon(
-          onPressed: () => _clearAllTasks(context),
-          icon: const Icon(Icons.delete_sweep, size: 16),
-          label: const Text('删除全部', style: TextStyle(fontSize: 12)),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            minimumSize: Size.zero,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.red.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: Colors.red.withOpacity(0.3),
+              width: 1,
+            ),
+          ),
+          child: InkWell(
+            onTap: () => _clearAllTasks(context),
+            borderRadius: BorderRadius.circular(8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Icon(Icons.delete_sweep, size: 14, color: Colors.red),
+                SizedBox(width: 4),
+                Text('删除全部', style: TextStyle(fontSize: 12, color: Colors.red)),
+              ],
+            ),
           ),
         ),
       ],
@@ -309,28 +332,6 @@ class _TaskListWidgetState extends ConsumerState<TaskListWidget> {
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 6),
-                            // 时间标签
-                            if (createdAt != null)
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color: Colors.grey.withOpacity(0.2),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Text(
-                                  _formatDateTime(createdAt),
-                                  style: const TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                ),
-                              ),
                           ],
                         ),
                         const SizedBox(height: 4),
@@ -384,73 +385,103 @@ class _TaskListWidgetState extends ConsumerState<TaskListWidget> {
                           if (task.status == 'EXECUTING')
                             Container(
                               margin: const EdgeInsets.only(right: 4),
-                              child: TextButton(
-                                onPressed: () => _executeTask(context, task.taskId!),
-                                style: TextButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  minimumSize: Size.zero,
-                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                  backgroundColor: Colors.green.withOpacity(0.1),
-                                  foregroundColor: Colors.green,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: Colors.green.withOpacity(0.3),
+                                  width: 1,
                                 ),
-                                child: const Text('执行', style: TextStyle(fontSize: 10)),
+                              ),
+                              child: InkWell(
+                                onTap: () => _executeTask(context, task.taskId!),
+                                borderRadius: BorderRadius.circular(10),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: const [
+                                    Icon(Icons.play_arrow, size: 12, color: Colors.green),
+                                    SizedBox(width: 3),
+                                    Text('执行', style: TextStyle(fontSize: 10, color: Colors.green, fontWeight: FontWeight.w500)),
+                                  ],
+                                ),
                               ),
                             ),
                           
                           if (['COMPLETED', 'FAILED', 'CANCELLED'].contains(task.status))
                             Container(
                               margin: const EdgeInsets.only(right: 4),
-                              child: TextButton(
-                                onPressed: () => _rerunTask(context, task.taskId!),
-                                style: TextButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  minimumSize: Size.zero,
-                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                  backgroundColor: Colors.blue.withOpacity(0.1),
-                                  foregroundColor: Colors.blue,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: Colors.blue.withOpacity(0.3),
+                                  width: 1,
                                 ),
-                                child: const Text('重新运行', style: TextStyle(fontSize: 10)),
+                              ),
+                              child: InkWell(
+                                onTap: () => _rerunTask(context, task.taskId!),
+                                borderRadius: BorderRadius.circular(10),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: const [
+                                    Icon(Icons.refresh, size: 12, color: Colors.blue),
+                                    SizedBox(width: 3),
+                                    Text('重新运行', style: TextStyle(fontSize: 10, color: Colors.blue, fontWeight: FontWeight.w500)),
+                                  ],
+                                ),
                               ),
                             ),
                           
                           if (['SCANNING', 'PREVIEWING', 'EXECUTING'].contains(task.status))
                             Container(
                               margin: const EdgeInsets.only(right: 4),
-                              child: TextButton(
-                                onPressed: () => _cancelTask(context, task.taskId!),
-                                style: TextButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  minimumSize: Size.zero,
-                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                  backgroundColor: Colors.orange.withOpacity(0.1),
-                                  foregroundColor: Colors.orange,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: Colors.orange.withOpacity(0.3),
+                                  width: 1,
                                 ),
-                                child: const Text('终止', style: TextStyle(fontSize: 10)),
+                              ),
+                              child: InkWell(
+                                onTap: () => _cancelTask(context, task.taskId!),
+                                borderRadius: BorderRadius.circular(10),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: const [
+                                    Icon(Icons.stop, size: 12, color: Colors.orange),
+                                    SizedBox(width: 3),
+                                    Text('终止', style: TextStyle(fontSize: 10, color: Colors.orange, fontWeight: FontWeight.w500)),
+                                  ],
+                                ),
                               ),
                             ),
                           
-                          TextButton(
-                            onPressed: () => _deleteTask(context, task.taskId!),
-                            style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              minimumSize: Size.zero,
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              backgroundColor: Colors.red.withOpacity(0.1),
-                              foregroundColor: Colors.red,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: Colors.red.withOpacity(0.3),
+                                width: 1,
                               ),
                             ),
-                            child: const Text('删除', style: TextStyle(fontSize: 10)),
+                            child: InkWell(
+                              onTap: () => _deleteTask(context, task.taskId!),
+                              borderRadius: BorderRadius.circular(10),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: const [
+                                  Icon(Icons.delete, size: 12, color: Colors.red),
+                                  SizedBox(width: 3),
+                                  Text('删除', style: TextStyle(fontSize: 10, color: Colors.red, fontWeight: FontWeight.w500)),
+                                ],
+                              ),
+                            ),
                           ),
                         ],
                       ),
