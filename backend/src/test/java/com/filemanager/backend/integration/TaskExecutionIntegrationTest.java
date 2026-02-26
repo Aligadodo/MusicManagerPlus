@@ -93,8 +93,7 @@ class TaskExecutionIntegrationTest {
         Thread.sleep(3000);
 
         taskInfo = storageService.loadTaskInfo(taskId);
-        assertTrue(taskInfo.getStatus() == TaskInfo.TaskStatus.SCANNING || 
-                   taskInfo.getStatus() == TaskInfo.TaskStatus.SCANNED);
+        assertTrue(taskInfo.getStatus() == TaskInfo.TaskStatus.SCANNING);
 
         List<String> scanResults = storageService.readScanData(taskId, 1, 100);
         assertTrue(scanResults.size() >= 0);
@@ -122,9 +121,8 @@ class TaskExecutionIntegrationTest {
         // 验证任务状态
         TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
         assertTrue(taskInfo.getStatus() == TaskInfo.TaskStatus.CANCELLED || 
-                   taskInfo.getStatus() == TaskInfo.TaskStatus.SCANNED ||
                    taskInfo.getStatus() == TaskInfo.TaskStatus.SCANNING,
-                   "任务状态应该是CANCELLED、SCANNED或SCANNING，实际状态: " + taskInfo.getStatus());
+                   "任务状态应该是CANCELLED或SCANNING，实际状态: " + taskInfo.getStatus());
 
         storageService.deleteTask(taskId);
     }
@@ -145,7 +143,7 @@ class TaskExecutionIntegrationTest {
             assertNotNull(taskInfo.getStatus());
             assertNotNull(taskInfo.getCurrentStage());
 
-            if (taskInfo.getStatus() == TaskInfo.TaskStatus.SCANNED) {
+            if (taskInfo.getStatus() == TaskInfo.TaskStatus.SCANNING) {
                 break;
             }
         }

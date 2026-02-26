@@ -283,7 +283,7 @@ public class TaskExecutionService {
             throw new IllegalArgumentException("任务不存在: " + taskId);
         }
         
-        if (taskInfo.getStatus() != TaskInfo.TaskStatus.PREVIEWED) {
+        if (taskInfo.getStatus() != TaskInfo.TaskStatus.EXECUTING) {
             throw new IllegalStateException("任务未完成预览，无法执行选中的记录");
         }
         
@@ -520,8 +520,8 @@ public class TaskExecutionService {
         executionStage.setExecutionDuration(0);
         
         // 重置任务状态
-        taskInfo.setCurrentStage("SCANNED");
-        taskInfo.setStatus(TaskInfo.TaskStatus.SCANNED);
+        taskInfo.setCurrentStage("SCANNING");
+        taskInfo.setStatus(TaskInfo.TaskStatus.SCANNING);
         taskInfo.setMessage("准备重新预览");
         
         storageService.saveTaskInfo(taskInfo);
@@ -562,8 +562,8 @@ public class TaskExecutionService {
         executionStage.setExecutionDuration(0);
         
         // 重置任务状态
-        taskInfo.setCurrentStage("PREVIEWED");
-        taskInfo.setStatus(TaskInfo.TaskStatus.PREVIEWED);
+        taskInfo.setCurrentStage("PREVIEWING");
+        taskInfo.setStatus(TaskInfo.TaskStatus.PREVIEWING);
         taskInfo.setMessage("准备重新执行");
         
         storageService.saveTaskInfo(taskInfo);
@@ -842,8 +842,8 @@ public class TaskExecutionService {
                 storageService.saveScanStatistics(taskId, scanStage);
                 
                 // 更新任务状态
-                taskInfo.setCurrentStage("SCANNED");
-                taskInfo.setStatus(TaskInfo.TaskStatus.SCANNED);
+                taskInfo.setCurrentStage("PREVIEWING");
+                taskInfo.setStatus(TaskInfo.TaskStatus.PREVIEWING);
                 taskInfo.setUpdatedAt(System.currentTimeMillis());
                 storageService.saveTaskInfo(taskInfo);
                 storageService.writeTaskLog(taskId, "[INFO] [SCAN] 扫描完成，共 " + filePaths.size() + " 个文件");
@@ -988,8 +988,8 @@ public class TaskExecutionService {
                 storageService.savePreviewStatistics(taskId, previewStage);
                 
                 // 更新任务状态
-                taskInfo.setCurrentStage("PREVIEWED");
-                taskInfo.setStatus(TaskInfo.TaskStatus.PREVIEWED);
+                taskInfo.setCurrentStage("EXECUTING");
+                taskInfo.setStatus(TaskInfo.TaskStatus.EXECUTING);
                 taskInfo.setUpdatedAt(System.currentTimeMillis());
                 storageService.saveTaskInfo(taskInfo);
                 storageService.writeTaskLog(taskId, "[INFO] [PREVIEW] 预览完成，共 " + processedCount.get() + " 个文件");
@@ -1274,8 +1274,8 @@ public class TaskExecutionService {
                         taskInfo.getStages().getScan().getScanEndTime() - 
                         taskInfo.getStages().getScan().getScanStartTime()
                     );
-                    taskInfo.setCurrentStage("SCANNED");
-                    taskInfo.setStatus(TaskInfo.TaskStatus.SCANNED);
+                    taskInfo.setCurrentStage("SCANNING");
+                    taskInfo.setStatus(TaskInfo.TaskStatus.SCANNING);
                     break;
                 case "PREVIEW":
                     stageName = "预览";
@@ -1285,8 +1285,8 @@ public class TaskExecutionService {
                         taskInfo.getStages().getPreview().getPreviewEndTime() - 
                         taskInfo.getStages().getPreview().getPreviewStartTime()
                     );
-                    taskInfo.setCurrentStage("PREVIEWED");
-                    taskInfo.setStatus(TaskInfo.TaskStatus.PREVIEWED);
+                    taskInfo.setCurrentStage("PREVIEWING");
+                    taskInfo.setStatus(TaskInfo.TaskStatus.PREVIEWING);
                     break;
                 case "EXECUTION":
                     stageName = "执行";

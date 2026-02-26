@@ -152,9 +152,7 @@ public class TaskInfo {
     public enum TaskStatus {
         CREATED("已创建"),
         SCANNING("正在扫描"),
-        SCANNED("扫描完成"),
         PREVIEWING("正在预览"),
-        PREVIEWED("预览完成"),
         EXECUTING("正在执行"),
         COMPLETED("执行完成"),
         FAILED("执行失败"),

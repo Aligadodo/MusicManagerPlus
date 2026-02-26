@@ -465,26 +465,6 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
                 foregroundColor: Colors.white,
               ),
             ),
-            const SizedBox(width: 10),
-            ElevatedButton.icon(
-              onPressed: isRunning ? null : _runPipelineExecution,
-              icon: const Icon(Icons.play_arrow),
-              label: const Text('执行'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
-              ),
-            ),
-            const SizedBox(width: 10),
-            ElevatedButton.icon(
-              onPressed: isRunning ? _forceStop : null,
-              icon: const Icon(Icons.stop),
-              label: const Text('停止'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-              ),
-            ),
           ],
         );
       },

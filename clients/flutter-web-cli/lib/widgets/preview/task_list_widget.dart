@@ -183,7 +183,7 @@ class _TaskListWidgetState extends ConsumerState<TaskListWidget> {
                   _statusFilter = newValue!;
                 });
               },
-              items: <String>['全部', 'CREATED', 'SCANNING', 'SCANNED', 'PREVIEWING', 'PREVIEWED', 'EXECUTING', 'COMPLETED', 'FAILED', 'CANCELLED']
+              items: <String>['全部', 'CREATED', 'SCANNING', 'PREVIEWING', 'EXECUTING', 'COMPLETED', 'FAILED', 'CANCELLED']
                   .map<DropdownMenuItem<String>>((String value) {
                 return DropdownMenuItem<String>(
                   value: value,
@@ -381,7 +381,7 @@ class _TaskListWidgetState extends ConsumerState<TaskListWidget> {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (task.status == 'PREVIEWED')
+                          if (task.status == 'EXECUTING')
                             Container(
                               margin: const EdgeInsets.only(right: 4),
                               child: TextButton(
@@ -602,12 +602,8 @@ class _TaskListWidgetState extends ConsumerState<TaskListWidget> {
         return '等待中';
       case 'SCANNING':
         return '扫描中';
-      case 'SCANNED':
-        return '已扫描';
       case 'PREVIEWING':
         return '预览中';
-      case 'PREVIEWED':
-        return '已预览';
       case 'EXECUTING':
         return '执行中';
       case 'COMPLETED':
@@ -630,8 +626,6 @@ class _TaskListWidgetState extends ConsumerState<TaskListWidget> {
       case 'PREVIEWING':
       case 'EXECUTING':
         return Colors.blue;
-      case 'SCANNED':
-      case 'PREVIEWED':
       case 'COMPLETED':
         return Colors.green;
       case 'FAILED':

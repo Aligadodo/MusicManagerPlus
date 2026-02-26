@@ -99,8 +99,7 @@ class TaskExecutionServiceTest {
 
         TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
         assertNotNull(taskInfo);
-        assertTrue(taskInfo.getStatus() == TaskInfo.TaskStatus.SCANNING || 
-                   taskInfo.getStatus() == TaskInfo.TaskStatus.SCANNED);
+        assertTrue(taskInfo.getStatus() == TaskInfo.TaskStatus.SCANNING);
     }
 
     @Test

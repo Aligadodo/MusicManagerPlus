@@ -383,7 +383,7 @@ public class TaskRegistry {
         }
         
         try {
-            task.setStatus(TaskInfo.TaskStatus.SCANNED);
+            task.setStatus(TaskInfo.TaskStatus.SCANNING);
             task.setCurrentStage(fromStage);
             task.setOverallProgress(0.0);
             task.setMessage("准备重新执行");

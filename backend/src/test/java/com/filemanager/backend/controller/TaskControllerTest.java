@@ -199,7 +199,7 @@ class TaskControllerTest {
             taskInfo = storageService.loadTaskInfo(testTaskId);
             if (taskInfo != null) {
                 System.out.println("当前任务状态: " + taskInfo.getStatus());
-                if (taskInfo.getStatus() == TaskInfo.TaskStatus.SCANNED) {
+                if (taskInfo.getStatus() == TaskInfo.TaskStatus.SCANNING) {
                     scanCompleted = true;
                     break;
                 } else if (taskInfo.getStatus() == TaskInfo.TaskStatus.FAILED) {
@@ -217,12 +217,12 @@ class TaskControllerTest {
         
         // 验证任务已完成（成功或失败）
         assertTrue(taskInfo != null && 
-                   (taskInfo.getStatus() == TaskInfo.TaskStatus.SCANNED || 
+                   (taskInfo.getStatus() == TaskInfo.TaskStatus.SCANNING || 
                     taskInfo.getStatus() == TaskInfo.TaskStatus.FAILED),
                    "扫描应该在60秒内完成，实际状态: " + (taskInfo != null ? taskInfo.getStatus() : "null"));
 
         // 只有扫描成功时才验证统计信息
-        if (taskInfo != null && taskInfo.getStatus() == TaskInfo.TaskStatus.SCANNED) {
+        if (taskInfo != null && taskInfo.getStatus() == TaskInfo.TaskStatus.SCANNING) {
             mockMvc.perform(get("/api/tasks/{taskId}/scan/statistics", testTaskId))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))

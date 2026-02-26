@@ -370,9 +370,7 @@ writeExecutor.submit(() -> {
 **任务状态**：
 - `CREATED`：任务已创建
 - `SCANNING`：正在扫描文件
-- `SCANNED`：扫描完成
 - `PREVIEWING`：正在预览分析
-- `PREVIEWED`：预览完成
 - `EXECUTING`：正在执行
 - `COMPLETED`：执行完成
 - `FAILED`：执行失败

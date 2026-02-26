@@ -162,7 +162,7 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
       _viewMode = ViewMode.taskDetail;
     });
     
-    if (latestTask.status == 'PREVIEWED') {
+    if (latestTask.status == 'EXECUTING') {
       await _executeTask();
     } else {
       _showErrorSnackBar('最新任务状态为 ${latestTask.status}，无法执行');
@@ -199,9 +199,9 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
       case '等待中':
         return 'PENDING';
       case '进行中':
-        return 'SCANNING,SCANNED,PREVIEWING,EXECUTING';
+        return 'SCANNING,PREVIEWING,EXECUTING';
       case '已完成':
-        return 'SCANNED,PREVIEWED,EXECUTED';
+        return 'COMPLETED';
       case '失败':
         return 'FAILED';
       case '已取消':
@@ -239,9 +239,9 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
           }
         }
         
-        // 检查是否有任务状态变为 PREVIEWED，如果有，获取变更记录
+        // 检查是否有任务状态变为 EXECUTING，如果有，获取变更记录
         for (var task in tasks) {
-          if (task.status == 'PREVIEWED') {
+          if (task.status == 'EXECUTING') {
             // 如果是当前任务或者是最新的任务，更新状态
             if (_taskId.isEmpty || task.taskId == _taskId || task == tasks.first) {
               await _fetchChanges();

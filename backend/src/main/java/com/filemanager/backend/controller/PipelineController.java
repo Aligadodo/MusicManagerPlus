@@ -382,7 +382,7 @@ public class PipelineController {
                         try {
                             TaskInfo previewTaskInfo = storageService.loadTaskInfo(taskId);
                             if (previewTaskInfo != null) {
-                                previewTaskInfo.setStatus(TaskInfo.TaskStatus.PREVIEWED);
+                                previewTaskInfo.setStatus(TaskInfo.TaskStatus.EXECUTING);
                                 previewTaskInfo.setCurrentStage("PREVIEW");
                                 previewTaskInfo.setOverallProgress(100.0);
                                 previewTaskInfo.setMessage("预览完成，共发现 " + allChanges.size() + " 个变更");
