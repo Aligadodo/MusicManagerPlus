@@ -16,7 +16,7 @@
     </resultMap>
 
     <insert id="insert" parameterType="com.filemanager.backend.entity.TaskInfoPO">
-        INSERT INTO task_info (
+        INSERT OR REPLACE INTO task_info (
             task_id, task_name, status, current_stage, overall_progress,
             message, created_at, updated_at, completed_at, config_snapshot_id
         ) VALUES (

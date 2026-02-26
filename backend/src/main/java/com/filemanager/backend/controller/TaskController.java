@@ -135,7 +135,10 @@ public class TaskController {
             int fromIndex = (page - 1) * pageSize;
             int toIndex = Math.min(fromIndex + pageSize, total);
             
-            List<Map<String, Object>> pagedList = taskList.subList(fromIndex, toIndex);
+            List<Map<String, Object>> pagedList = new java.util.ArrayList<>();
+            if (fromIndex < total) {
+                pagedList = taskList.subList(fromIndex, toIndex);
+            }
             
             Map<String, Object> data = new HashMap<>();
             data.put("list", pagedList);
@@ -1069,11 +1072,11 @@ public class TaskController {
         Map<String, Object> response = new HashMap<>();
         
         try {
-            List<String> executionIds = storageService.getExecutionHistory(taskId);
+            List<Integer> executionNums = storageService.getExecutionHistory(taskId);
             
             List<Map<String, Object>> history = new java.util.ArrayList<>();
-            for (String executionId : executionIds) {
-                int executionNum = Integer.parseInt(executionId.replace("execution_", ""));
+            for (int executionNum : executionNums) {
+                String executionId = "execution_" + String.format("%03d", executionNum);
                 TaskInfo.ExecutionStage executionStage = storageService.loadExecutionStatistics(taskId, executionNum);
                 if (executionStage != null) {
                     Map<String, Object> item = new HashMap<>();

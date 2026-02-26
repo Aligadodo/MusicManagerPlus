@@ -30,6 +30,8 @@ app:
     path: data/music_manager_plus.db
     auto-init: true
     backup-path: data/backup
+  storage:
+    mode: database
 
 server:
   port: 8080

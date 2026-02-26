@@ -3,6 +3,7 @@ package com.filemanager.backend.service;
 import com.filemanager.backend.mapper.TaskInfoMapper;
 import com.filemanager.backend.model.TaskConfigSnapshot;
 import com.filemanager.backend.model.TaskInfo;
+import com.filemanager.backend.storage.FileSystemTaskStorage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,6 +31,7 @@ class TaskStorageServiceTest {
 
     private TaskStorageService storageService;
     private ConfigSnapshotService configSnapshotService;
+    private FileSystemTaskStorage fileSystemTaskStorage;
     @Mock
     private TaskInfoMapper taskInfoMapper;
     private String testTaskId;
@@ -38,7 +40,8 @@ class TaskStorageServiceTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         configSnapshotService = new ConfigSnapshotService();
-        storageService = new TaskStorageService(configSnapshotService, taskInfoMapper);
+        fileSystemTaskStorage = new FileSystemTaskStorage();
+        storageService = new TaskStorageService(fileSystemTaskStorage, configSnapshotService);
         testTaskId = "test-task-" + System.currentTimeMillis();
     }
 
@@ -278,11 +281,11 @@ class TaskStorageServiceTest {
             Files.createDirectories(Paths.get(storageService.getTaskDirectory(testTaskId) + "/execution/execution_001"));
             Files.createDirectories(Paths.get(storageService.getTaskDirectory(testTaskId) + "/execution/execution_002"));
 
-            List<String> history = storageService.getExecutionHistory(testTaskId);
+            List<Integer> history = storageService.getExecutionHistory(testTaskId);
 
             assertEquals(2, history.size());
-            assertTrue(history.contains("execution_001"));
-            assertTrue(history.contains("execution_002"));
+            assertTrue(history.contains(1));
+            assertTrue(history.contains(2));
         } catch (IOException e) {
             fail("创建执行目录失败: " + e.getMessage());
         }

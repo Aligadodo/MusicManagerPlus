@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -27,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * 测试完整的任务执行流程
  */
 @SpringBootTest
+@ActiveProfiles("test")
 class TaskExecutionIntegrationTest {
 
     @Autowired

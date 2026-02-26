@@ -1,6 +1,6 @@
 spring:
   application:
-    name: filemanager-backend-test
+    name: filemanager-backend-test-db
   datasource:
     driver-class-name: org.sqlite.JDBC
     url: jdbc:sqlite:file::memory:?cache=shared
@@ -25,7 +25,7 @@ app:
     auto-init: true
     backup-enabled: false
   storage:
-    mode: filesystem
+    mode: database
 
 server:
   port: 8080
