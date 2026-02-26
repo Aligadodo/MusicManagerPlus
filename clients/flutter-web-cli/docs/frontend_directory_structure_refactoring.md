@@ -11,7 +11,7 @@
 3. **维护困难**：添加新功能时容易造成文件混乱
 4. **可读性差**：代码审查和理解架构需要花费更多时间
 
-## 新的目录结构
+## 当前目录结构
 
 ```
 lib/
@@ -64,8 +64,6 @@ lib/
 │   ├── settings/                 # 设置页面
 │   │   ├── appearance_page.dart
 │   │   └── global_settings_page.dart
-│   ├── logs/                     # 日志页面
-│   │   └── log_page.dart
 │   └── strategy/                 # 策略配置页面
 │       ├── strategy_config_page.dart
 │       ├── strategy_config_panel.dart
@@ -83,29 +81,33 @@ lib/
 │   └── ui_utils.dart
 │
 ├── widgets/                      # 组件层（按功能模块分组）
-│   ├── compose/                  # 组合相关组件
-│   │   ├── compose_config_panel.dart
-│   │   ├── compose_directory_panel.dart
-│   │   ├── compose_parameter_panel.dart
-│   │   ├── compose_pipeline_panel.dart
-│   │   └── compose_precondition_panel.dart
-│   ├── preview/                  # 预览相关组件
-│   │   ├── preview_widget.dart
-│   │   ├── task_detail_widget.dart
-│   │   ├── task_detail_header.dart
-│   │   ├── task_list_widget.dart
-│   │   └── task_operations.dart
-│   ├── task/                     # 任务相关组件
-│   │   ├── task_execution_cards.dart
-│   │   ├── task_result_cards.dart
-│   │   └── task_status_helpers.dart
-│   ├── settings/                 # 设置相关组件
-│   │   ├── run_settings.dart
-│   │   ├── scan_settings.dart
-│   │   └── thread_pool_settings.dart
 │   ├── appearance/               # 外观相关组件
 │   │   ├── appearance_preset_widgets.dart
 │   │   └── appearance_settings_fields.dart
+│   ├── common/                   # 通用组件
+│   │   ├── action_builder.dart
+│   │   ├── change_record_table.dart
+│   │   ├── condition_builder.dart
+│   │   ├── data_loading_operations.dart
+│   │   ├── directory_list_item.dart
+│   │   ├── filter_rules.dart
+│   │   ├── log_content_widget.dart
+│   │   ├── log_file_list_widget.dart
+│   │   ├── main_layout.dart
+│   │   ├── preset_manager.dart
+│   │   ├── preset_operations.dart
+│   │   ├── rename_rule_card.dart
+│   │   ├── rename_rule_editor.dart
+│   │   ├── selectable_text_widget.dart
+│   │   ├── stage_result_cards.dart
+│   │   └── strategy_config_card.dart
+│   ├── compose/                  # 组合相关组件
+│   │   ├── compose_config_panel.dart
+│   │   ├── compose_directory_panel.dart
+│   │   ├── compose_global_config_panel.dart
+│   │   ├── compose_parameter_panel.dart
+│   │   ├── compose_pipeline_panel.dart
+│   │   └── compose_precondition_panel.dart
 │   ├── config/                   # 配置相关组件
 │   │   ├── config_field_builder.dart
 │   │   ├── config_snapshot_card.dart
@@ -118,23 +120,20 @@ lib/
 │   │   ├── precondition_config_panel.dart
 │   │   ├── precondition_group_item.dart
 │   │   └── precondition_item.dart
-│   └── common/                   # 通用组件
-│       ├── action_builder.dart
-│       ├── change_record_table.dart
-│       ├── condition_builder.dart
-│       ├── data_loading_operations.dart
-│       ├── directory_list_item.dart
-│       ├── filter_rules.dart
-│       ├── log_content_widget.dart
-│       ├── log_file_list_widget.dart
-│       ├── main_layout.dart
-│       ├── preset_manager.dart
-│       ├── preset_operations.dart
-│       ├── rename_rule_card.dart
-│       ├── rename_rule_editor.dart
-│       ├── selectable_text_widget.dart
-│       ├── stage_result_cards.dart
-│       └── strategy_config_card.dart
+│   ├── preview/                  # 预览相关组件
+│   │   ├── preview_widget.dart
+│   │   ├── task_detail_header.dart
+│   │   ├── task_detail_widget.dart
+│   │   ├── task_list_widget.dart
+│   │   └── task_operations.dart
+│   ├── settings/                 # 设置相关组件
+│   │   ├── run_settings.dart
+│   │   ├── scan_settings.dart
+│   │   └── thread_pool_settings.dart
+│   └── task/                     # 任务相关组件
+│       ├── task_execution_cards.dart
+│       ├── task_result_cards.dart
+│       └── task_status_helpers.dart
 │
 └── main.dart                     # 应用入口
 ```
@@ -154,9 +153,8 @@ lib/
 ### 3. 页面层 (`pages/`)
 按功能模块分组：
 - **compose/**: 组合配置页面
-- **preview/**: 预览和任务管理页面
+- **preview/**: 预览和任务管理页面（集成了日志查看功能）
 - **settings/**: 全局设置和外观设置页面
-- **logs/**: 日志查看页面
 - **strategy/**: 策略配置页面
 
 ### 4. 状态管理层 (`providers/`)
@@ -169,13 +167,13 @@ lib/
 
 ### 6. 组件层 (`widgets/`)
 按功能模块分组：
-- **compose/**: 组合配置相关的UI组件
-- **preview/**: 预览和任务相关的UI组件
-- **task/**: 任务状态和结果显示组件
-- **settings/**: 设置相关的UI组件
 - **appearance/**: 外观主题相关的UI组件
-- **config/**: 配置表单和参数相关的UI组件
 - **common/**: 通用的可重用UI组件
+- **compose/**: 组合配置相关的UI组件
+- **config/**: 配置表单和参数相关的UI组件
+- **preview/**: 预览和任务相关的UI组件
+- **settings/**: 设置相关的UI组件
+- **task/**: 任务状态和结果显示组件
 
 ## 重构优势
 
@@ -222,6 +220,29 @@ import 'package:filemanager_flutter/models/task_status.dart';
 2. 确保相对路径正确
 3. 运行构建验证无错误
 
+## 已完成的工作
+
+### 1. 目录结构优化
+- ✅ 按功能模块重新组织了页面和组件文件
+- ✅ 创建了清晰的目录层次结构
+- ✅ 统一了命名规范
+
+### 2. 代码清理
+- ✅ 删除了所有未使用的页面文件（10个）
+- ✅ 删除了所有未使用的组件文件（4个）
+- ✅ 验证了删除后的功能完整性
+
+### 3. 功能增强
+- ✅ 在任务列表页添加了"删除全部任务"操作
+- ✅ 修复了全局设置页面文件类型筛选输入框样式问题
+- ✅ 修复了过滤规则输入框样式问题
+- ✅ 确保所有输入控件都跟随主题变化
+
+### 4. 文档更新
+- ✅ 更新了前端架构分析报告
+- ✅ 更新了前端目录结构重构文档
+- ✅ 确保文档与实际代码结构一致
+
 ## 注意事项
 
 1. **保持一致性**：遵循现有的目录结构和命名规范
@@ -235,7 +256,10 @@ import 'package:filemanager_flutter/models/task_status.dart';
 2. **共享组件库**：提取更多通用组件到common目录
 3. **性能优化**：优化组件渲染和状态管理
 4. **测试覆盖**：增加单元测试和集成测试
+5. **统一任务管理**：创建统一的任务管理组件
 
 ## 总结
 
 本次目录结构重构显著改善了代码的组织性和可维护性。通过合理的目录划分和清晰的层次结构，使得代码更加易于理解和维护。新的结构为未来的功能扩展和团队协作提供了良好的基础。
+
+同时，我们还完成了一系列功能增强和bug修复，包括添加删除全部任务功能和修复样式问题，确保了应用的稳定性和用户体验。

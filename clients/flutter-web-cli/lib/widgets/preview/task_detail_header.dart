@@ -39,92 +39,135 @@ class TaskInfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 2,
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8.0),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '任务基本信息',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(4.0),
+              ),
+              child: const Text(
+                '任务基本信息',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue,
+                ),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('任务ID: ', style: TextStyle(fontWeight: FontWeight.w500)),
+                const SizedBox(
+                  width: 100,
+                  child: Text('任务ID: ', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
+                ),
                 Expanded(
                   child: Text(
                     selectedTask.taskId ?? 'N/A',
-                    style: const TextStyle(fontSize: 13),
+                    style: const TextStyle(fontSize: 14, color: Colors.black87),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('任务名称: ', style: TextStyle(fontWeight: FontWeight.w500)),
+                const SizedBox(
+                  width: 100,
+                  child: Text('任务名称: ', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
+                ),
                 Expanded(
                   child: Text(
                     selectedTask.taskName ?? '未命名任务',
-                    style: const TextStyle(fontSize: 13),
+                    style: const TextStyle(fontSize: 14, color: Colors.black87),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('状态: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                Text(
-                  _getFriendlyStatus(selectedTask.status ?? 'UNKNOWN'),
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: _getStatusColor(selectedTask.status ?? 'UNKNOWN'),
+                const SizedBox(
+                  width: 100,
+                  child: Text('状态: ', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
+                ),
+                Chip(
+                  label: Text(
+                    _getFriendlyStatus(selectedTask.status ?? 'UNKNOWN'),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: _getStatusColor(selectedTask.status ?? 'UNKNOWN'),
+                    ),
+                  ),
+                  backgroundColor: _getStatusColor(selectedTask.status ?? 'UNKNOWN').withOpacity(0.1),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.0),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('当前阶段: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                Text(
-                  selectedTask.currentStage ?? 'N/A',
-                  style: const TextStyle(fontSize: 13),
+                const SizedBox(
+                  width: 100,
+                  child: Text('当前阶段: ', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
+                ),
+                Expanded(
+                  child: Text(
+                    selectedTask.currentStage ?? 'N/A',
+                    style: const TextStyle(fontSize: 14, color: Colors.black87),
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             if (selectedTask.createdAt != null)
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('创建时间: ', style: TextStyle(fontWeight: FontWeight.w500)),
+                  const SizedBox(
+                    width: 100,
+                    child: Text('创建时间: ', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
+                  ),
                   Expanded(
                     child: Text(
                       DateTime.fromMillisecondsSinceEpoch(selectedTask.createdAt!).toString(),
-                      style: const TextStyle(fontSize: 13),
+                      style: const TextStyle(fontSize: 14, color: Colors.black87),
                     ),
                   ),
                 ],
               ),
             if (selectedTask.message != null && selectedTask.message!.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(top: 8),
+                padding: const EdgeInsets.only(top: 12),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('消息: ', style: TextStyle(fontWeight: FontWeight.w500)),
+                    const SizedBox(
+                      width: 100,
+                      child: Text('消息: ', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
+                    ),
                     Expanded(
                       child: Text(
                         selectedTask.message!,
-                        style: const TextStyle(fontSize: 13),
+                        style: const TextStyle(fontSize: 14, color: Colors.black87),
+                        textAlign: TextAlign.left,
                       ),
                     ),
                   ],

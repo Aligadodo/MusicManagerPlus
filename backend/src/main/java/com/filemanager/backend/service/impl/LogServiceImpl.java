@@ -49,12 +49,12 @@ public class LogServiceImpl implements LogService {
                      }
                  })
                  .forEach(path -> {
-                     Map<String, Object> fileInfo = new HashMap<>();
-                     fileInfo.put("fileName", path.getFileName().toString());
-                     fileInfo.put("fileSize", formatFileSize(path.toFile().length()));
-                     fileInfo.put("createTime", formatFileTime(path));
-                     logFiles.add(fileInfo);
-                 });
+                    Map<String, Object> fileInfo = new HashMap<>();
+                    fileInfo.put("fileName", path.getFileName().toString());
+                    fileInfo.put("fileSize", path.toFile().length());
+                    fileInfo.put("lastModified", formatFileTime(path));
+                    logFiles.add(fileInfo);
+                });
         } catch (IOException e) {
             logger.error("Failed to list log files", e);
         }

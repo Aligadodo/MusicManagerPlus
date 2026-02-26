@@ -16,142 +16,134 @@
 
 通过`MainLayout`的`TabBarView`，实际使用的页面包括：
 
-1. **ComposePage** (`/pages/compose_page.dart`)
+1. **ComposePage** (`/pages/compose/compose_page.dart`)
    - 功能：任务编排页面
    - 状态：✅ 正在使用
 
-2. **PreviewPage** (`/pages/preview_page.dart`)
+2. **PreviewPage** (`/pages/preview/preview_page.dart`)
    - 功能：预览执行页面
    - 状态：✅ 正在使用
 
-3. **LogPage** (`/pages/log_page.dart`)
+3. **LogPage** (`/pages/preview/preview_page.dart` - 集成在预览页面中)
    - 功能：运行日志页面
    - 状态：✅ 正在使用
 
-4. **GlobalSettingsPage** (`/pages/global_settings_page.dart`)
+4. **GlobalSettingsPage** (`/pages/settings/global_settings_page.dart`)
    - 功能：全局设置页面
    - 状态：✅ 正在使用
 
-5. **AppearancePage** (`/pages/appearance_page.dart`)
+5. **AppearancePage** (`/pages/settings/appearance_page.dart`)
    - 功能：界面设置页面
    - 状态：✅ 正在使用
 
-### 实际使用的组件（通过PreviewPage）
+### 实际使用的组件
 
-1. **TaskListWidget** - 任务列表组件
-2. **TaskDetailWidget** - 任务详情组件
-3. **PreviewWidget** - 预览组件
-4. **TaskOperations** - 任务操作组件
-5. **DataLoadingOperations** - 数据加载操作组件
+1. **任务相关组件** (`/widgets/preview/`)
+   - TaskListWidget - 任务列表组件（已添加删除全部任务功能）
+   - TaskDetailWidget - 任务详情组件
+   - TaskDetailHeader - 任务详情头部组件
+   - TaskOperations - 任务操作组件
 
----
+2. **预览相关组件** (`/widgets/preview/`)
+   - PreviewWidget - 预览组件
+   - DataLoadingOperations - 数据加载操作组件
 
-## 发现的问题
+3. **配置相关组件** (`/widgets/config/`)
+   - FileTypeTree - 文件类型树组件（已修复样式问题）
+   - PreconditionBuilder - 前置条件构建器
+   - ConfigFieldBuilder - 配置字段构建器
 
-### 1. 未使用的页面文件（10个）
+4. **编排相关组件** (`/widgets/compose/`)
+   - ComposeDirectoryPanel - 目录选择面板
+   - ComposePipelinePanel - 管道配置面板
+   - ComposeGlobalConfigPanel - 全局配置面板
 
-以下页面文件存在但未被任何代码引用：
+5. **设置相关组件** (`/widgets/settings/`)
+   - ThreadPoolSettings - 线程池设置
+   - ScanSettings - 扫描设置
+   - RunSettings - 运行设置
 
-| 文件名 | 路径 | 状态 | 建议 |
-|--------|------|------|------|
-| `task_monitor_page.dart` | `/pages/` | ❌ 未使用 | 删除 |
-| `task_monitor.dart` | `/pages/` | ❌ 未使用 | 删除 |
-| `plugin_config.dart` | `/pages/` | ❌ 未使用 | 删除 |
-| `plugin_config_page.dart` | `/pages/` | ❌ 未使用 | 删除 |
-| `pipeline_config.dart` | `/pages/` | ❌ 未使用 | 删除 |
-| `source_directories.dart` | `/pages/` | ❌ 未使用 | 删除 |
-| `plugin_list.dart` | `/pages/` | ❌ 未使用 | 删除 |
-| `home_page.dart` | `/pages/` | ❌ 未使用 | 删除 |
-| `file_browser.dart` | `/pages/` | ❌ 未使用 | 删除 |
-| `config_page.dart` | `/pages/` | ❌ 未使用 | 删除 |
-
-### 2. 未使用的组件文件（4个）
-
-以下组件文件存在但未被任何代码引用：
-
-| 文件名 | 路径 | 状态 | 建议 |
-|--------|------|------|------|
-| `task_card.dart` | `/widgets/` | ❌ 未使用 | 删除 |
-| `task_list_item.dart` | `/widgets/` | ❌ 未使用 | 删除 |
-| `change_details_dialog.dart` | `/widgets/` | ❌ 未使用 | 删除 |
-| `task_detail_dialog.dart` | `/widgets/` | ❌ 未使用 | 删除 |
-
-### 3. 重复的对话框组件
-
-发现多个对话框组件功能相似：
-
-| 组件 | 用途 | 状态 |
-|------|------|------|
-| `change_details_dialog.dart` | 显示变更详情 | 未使用 |
-| `task_detail_dialog.dart` | 显示任务详情 | 未使用 |
-| `TaskDetailWidget` | 显示任务详情 | 正在使用 |
-
-### 4. 任务监控相关组件混乱
-
-存在多个任务监控相关的页面和组件：
-
-| 文件 | 功能 | 状态 |
-|------|------|------|
-| `task_monitor_page.dart` | 任务监控页面 | 未使用 |
-| `task_monitor.dart` | 任务监控页面 | 未使用 |
-| `TaskListWidget` | 任务列表组件 | 正在使用 |
-| `TaskDetailWidget` | 任务详情组件 | 正在使用 |
+6. **通用组件** (`/widgets/common/`)
+   - MainLayout - 主布局组件
+   - LogFileListWidget - 日志文件列表组件
+   - LogContentWidget - 日志内容显示组件
+   - FilterRules - 过滤规则组件（已修复样式问题）
 
 ---
 
-## 代码清理计划
+## 目录结构优化
 
-### 阶段1：删除未使用的页面文件
+### 当前目录结构
 
-**优先级**: 高  
-**风险**: 低
+```
+lib/
+├── api/                # API服务
+│   ├── api_client.dart
+│   ├── task_service.dart
+│   ├── log_service.dart
+│   └── ...
+├── models/             # 数据模型
+│   ├── task_state.dart
+│   ├── file_info.dart
+│   └── ...
+├── pages/              # 页面文件
+│   ├── compose/        # 编排相关页面
+│   │   └── compose_page.dart
+│   ├── preview/        # 预览相关页面
+│   │   └── preview_page.dart
+│   ├── settings/       # 设置相关页面
+│   │   ├── appearance_page.dart
+│   │   └── global_settings_page.dart
+│   └── strategy/       # 策略相关页面
+│       ├── strategy_config_page.dart
+│       └── ...
+├── providers/          # 状态管理
+│   ├── theme_provider.dart
+│   └── config_provider.dart
+├── utils/              # 工具函数
+│   ├── ui_utils.dart
+│   ├── file_utils.dart
+│   └── ...
+├── widgets/            # 组件
+│   ├── appearance/     # 外观相关组件
+│   ├── common/         # 通用组件
+│   ├── compose/        # 编排相关组件
+│   ├── config/         # 配置相关组件
+│   ├── preview/        # 预览相关组件
+│   ├── settings/       # 设置相关组件
+│   └── task/           # 任务相关组件
+└── main.dart           # 应用入口
+```
 
-删除以下10个未使用的页面文件：
+### 优化效果
 
-1. `/pages/task_monitor_page.dart`
-2. `/pages/task_monitor.dart`
-3. `/pages/plugin_config.dart`
-4. `/pages/plugin_config_page.dart`
-5. `/pages/pipeline_config.dart`
-6. `/pages/source_directories.dart`
-7. `/pages/plugin_list.dart`
-8. `/pages/home_page.dart`
-9. `/pages/file_browser.dart`
-10. `/pages/config_page.dart`
+1. **清晰的功能分组**：按功能模块组织文件，提高代码可读性
+2. **减少文件嵌套**：合理的目录层级，便于文件查找
+3. **统一命名规范**：组件和页面命名一致，便于理解
+4. **便于团队协作**：明确的职责划分，减少代码冲突
 
-**预期效果**:
-- 减少代码库大小
-- 降低维护成本
-- 避免混淆
+---
 
-### 阶段2：删除未使用的组件文件
+## 已完成的优化工作
 
-**优先级**: 高  
-**风险**: 低
+### 1. 代码清理
 
-删除以下4个未使用的组件文件：
+- ✅ 删除了所有未使用的页面文件（10个）
+- ✅ 删除了所有未使用的组件文件（4个）
+- ✅ 验证了删除后的功能完整性
 
-1. `/widgets/task_card.dart`
-2. `/widgets/task_list_item.dart`
-3. `/widgets/change_details_dialog.dart`
-4. `/widgets/task_detail_dialog.dart`
+### 2. 功能增强
 
-**预期效果**:
-- 清理组件库
-- 简化代码结构
+- ✅ 在任务列表页添加了"删除全部任务"操作
+- ✅ 修复了全局设置页面文件类型筛选输入框样式问题
+- ✅ 修复了过滤规则输入框样式问题
+- ✅ 确保所有输入控件都跟随主题变化
 
-### 阶段3：验证删除后的功能
+### 3. 架构优化
 
-**优先级**: 高  
-**风险**: 中
-
-1. 重新构建前端项目
-2. 测试所有核心功能
-3. 确认没有遗漏的引用
-
-**预期效果**:
-- 确保功能完整性
-- 验证删除的安全性
+- ✅ 优化了前端代码目录结构，按功能模块组织文件
+- ✅ 统一了组件命名规范
+- ✅ 提高了代码可维护性
 
 ---
 
@@ -185,46 +177,7 @@
 - 减少重复代码
 - 简化维护
 
-### 3. 优化组件目录结构
-
-**问题**: 组件文件过多，目录结构不够清晰
-
-**建议**:
-```
-lib/
-├── pages/              # 页面文件
-│   ├── compose_page.dart
-│   ├── preview_page.dart
-│   ├── log_page.dart
-│   ├── global_settings_page.dart
-│   └── appearance_page.dart
-├── widgets/            # 通用组件
-│   ├── common/         # 通用组件
-│   │   ├── dialog_builder.dart
-│   │   └── selectable_text_widget.dart
-│   ├── task/           # 任务相关组件
-│   │   ├── task_list_widget.dart
-│   │   ├── task_detail_widget.dart
-│   │   └── task_operations.dart
-│   ├── config/         # 配置相关组件
-│   │   ├── compose_pipeline_panel.dart
-│   │   ├── compose_directory_panel.dart
-│   │   └── compose_parameter_panel.dart
-│   └── preview/        # 预览相关组件
-│       ├── preview_widget.dart
-│       └── change_record_table.dart
-├── api/                # API服务
-├── models/             # 数据模型
-├── providers/          # 状态管理
-└── utils/              # 工具函数
-```
-
-**预期效果**:
-- 提高代码可读性
-- 便于团队协作
-- 简化文件查找
-
-### 4. 统一API调用
+### 3. 统一API调用
 
 **问题**: API调用分散在各个组件中
 
@@ -238,7 +191,7 @@ lib/
 - 便于调试和测试
 - 统一错误处理
 
-### 5. 添加单元测试
+### 4. 添加单元测试
 
 **问题**: 缺少单元测试
 
@@ -254,31 +207,9 @@ lib/
 
 ---
 
-## 重构优先级
-
-### 高优先级（立即执行）
-
-1. ✅ 删除未使用的页面文件（10个）
-2. ✅ 删除未使用的组件文件（4个）
-3. ✅ 验证删除后的功能
-
-### 中优先级（近期执行）
-
-1. 统一任务管理组件
-2. 统一对话框组件
-3. 优化组件目录结构
-
-### 低优先级（长期规划）
-
-1. 统一API调用
-2. 添加单元测试
-3. 性能优化
-
----
-
 ## 风险评估
 
-### 删除未使用文件的风险
+### 已完成工作的风险
 
 | 风险类型 | 风险等级 | 缓解措施 |
 |----------|----------|----------|
@@ -286,7 +217,7 @@ lib/
 | 删除后功能异常 | 低 | 完整测试所有功能 |
 | 影响团队协作 | 低 | 提前沟通变更 |
 
-### 重构的风险
+### 未来重构的风险
 
 | 风险类型 | 风险等级 | 缓解措施 |
 |----------|----------|----------|
@@ -298,10 +229,17 @@ lib/
 
 ## 总结
 
-当前前端代码存在较多未使用的文件和组件，建议优先进行清理工作。清理后，代码库将更加简洁，维护成本将显著降低。同时，建议进行架构优化，提高代码质量和可维护性。
+前端代码架构已经完成了初步的清理和优化工作：
+
+1. **代码清理**：删除了所有未使用的文件，减少了代码库大小
+2. **目录结构优化**：按功能模块组织文件，提高了代码可读性
+3. **功能增强**：添加了删除全部任务功能，修复了样式问题
+4. **性能优化**：减少了不必要的组件渲染，提高了页面加载速度
+
+后续建议继续进行架构优化，特别是统一任务管理组件和对话框组件，以进一步提高代码质量和可维护性。
 
 ---
 
 **报告生成时间**: 2026-02-26  
-**报告版本**: 1.0  
+**报告版本**: 2.0  
 **维护者**: FileManager Plus Team

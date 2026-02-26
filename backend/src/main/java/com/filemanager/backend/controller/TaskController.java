@@ -5,6 +5,8 @@ import com.filemanager.backend.service.TaskExecutionService;
 import com.filemanager.backend.service.TaskStorageService;
 import com.filemanager.backend.service.ChangeRecordService;
 import com.filemanager.backend.service.TaskOperationLogService;
+import com.filemanager.backend.mapper.TaskInfoMapper;
+import com.filemanager.backend.entity.TaskInfoPO;
 import com.filemanager.domain.dto.TaskRequestDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,16 +40,19 @@ public class TaskController {
     private final TaskExecutionService executionService;
     private final ChangeRecordService changeRecordService;
     private final TaskOperationLogService taskOperationLogService;
+    private final TaskInfoMapper taskInfoMapper;
 
     @Autowired
     public TaskController(TaskStorageService storageService, 
                          TaskExecutionService executionService,
                          ChangeRecordService changeRecordService,
-                         TaskOperationLogService taskOperationLogService) {
+                         TaskOperationLogService taskOperationLogService,
+                         TaskInfoMapper taskInfoMapper) {
         this.storageService = storageService;
         this.executionService = executionService;
         this.changeRecordService = changeRecordService;
         this.taskOperationLogService = taskOperationLogService;
+        this.taskInfoMapper = taskInfoMapper;
         logger.info("[TaskController] TaskController初始化成功");
     }
 
@@ -110,22 +115,19 @@ public class TaskController {
         Map<String, Object> response = new HashMap<>();
         
         try {
-            List<String> taskIds = storageService.getAllTaskIds();
+            List<TaskInfoPO> taskInfoList = taskInfoMapper.selectAll();
             
             List<Map<String, Object>> taskList = new java.util.ArrayList<>();
-            for (String taskId : taskIds) {
-                TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
-                if (taskInfo != null) {
-                    if (status != null && !status.isEmpty() && !taskInfo.getStatus().name().equals(status)) {
-                        continue;
-                    }
-                    if (keyword != null && !keyword.isEmpty() && 
-                        !taskInfo.getTaskName().contains(keyword) && 
-                        !taskInfo.getTaskId().contains(keyword)) {
-                        continue;
-                    }
-                    taskList.add(taskInfoToMap(taskInfo));
+            for (TaskInfoPO taskInfoPO : taskInfoList) {
+                if (status != null && !status.isEmpty() && !taskInfoPO.getStatus().equals(status)) {
+                    continue;
                 }
+                if (keyword != null && !keyword.isEmpty() && 
+                    !taskInfoPO.getTaskName().contains(keyword) && 
+                    !taskInfoPO.getTaskId().contains(keyword)) {
+                    continue;
+                }
+                taskList.add(taskInfoPOToMap(taskInfoPO));
             }
             
             int total = taskList.size();
@@ -1237,6 +1239,18 @@ public class TaskController {
         map.put("currentStage", taskInfo.getCurrentStage());
         map.put("progress", taskInfo.getOverallProgress());
         map.put("message", taskInfo.getMessage());
+        return map;
+    }
+
+    private Map<String, Object> taskInfoPOToMap(TaskInfoPO taskInfoPO) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("taskId", taskInfoPO.getTaskId());
+        map.put("taskName", taskInfoPO.getTaskName());
+        map.put("createdAt", taskInfoPO.getCreatedAt().getTime());
+        map.put("status", taskInfoPO.getStatus());
+        map.put("currentStage", taskInfoPO.getCurrentStage());
+        map.put("progress", taskInfoPO.getOverallProgress());
+        map.put("message", taskInfoPO.getMessage());
         return map;
     }
 

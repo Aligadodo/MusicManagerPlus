@@ -5,7 +5,7 @@ import '../../api/task_service.dart';
 import '../../models/task_status.dart' as task_models;
 import '../common/selectable_text_widget.dart';
 
-class TaskListWidget extends ConsumerWidget {
+class TaskListWidget extends ConsumerStatefulWidget {
   final List<task_models.TaskStatus> tasks;
   final task_models.TaskStatus? selectedTask;
   final Function(task_models.TaskStatus?) onTaskSelected;
@@ -26,18 +26,89 @@ class TaskListWidget extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
-      padding: const EdgeInsets.all(12.0),
-      child: Column(
-        children: [
-          _buildTaskListHeader(context),
-          const SizedBox(height: 12),
-          Expanded(
-            child: _buildTaskList(context),
+  ConsumerState<TaskListWidget> createState() => _TaskListWidgetState();
+}
+
+class _TaskListWidgetState extends ConsumerState<TaskListWidget> {
+  String _searchKeyword = '';
+  String _statusFilter = '全部';
+  DateTimeRange? _dateRange;
+
+  List<task_models.TaskStatus> get _filteredTasks {
+    return widget.tasks.where((task) {
+      // 搜索筛选
+      if (_searchKeyword.isNotEmpty) {
+        final keyword = _searchKeyword.toLowerCase();
+        final taskName = (task.taskName ?? '').toLowerCase();
+        final taskId = (task.taskId ?? '').toLowerCase();
+        if (!taskName.contains(keyword) && !taskId.contains(keyword)) {
+          return false;
+        }
+      }
+
+      // 状态筛选
+      if (_statusFilter != '全部' && task.status != _statusFilter) {
+        return false;
+      }
+
+      // 日期范围筛选
+      if (_dateRange != null && task.createdAt != null) {
+        final taskDate = DateTime.fromMillisecondsSinceEpoch(task.createdAt!);
+        if (taskDate.isBefore(_dateRange!.start) || taskDate.isAfter(_dateRange!.end)) {
+          return false;
+        }
+      }
+
+      return true;
+    }).toList();
+  }
+
+  void _showDateRangePicker() async {
+    final DateTime now = DateTime.now();
+    final DateTime initialStart = now.subtract(const Duration(days: 7));
+    final DateTime initialEnd = now;
+
+    final DateTimeRange? picked = await showDateRangePicker(
+      context: context,
+      initialDateRange: DateTimeRange(start: initialStart, end: initialEnd),
+      firstDate: now.subtract(const Duration(days: 365)),
+      lastDate: now.add(const Duration(days: 365)),
+    );
+
+    if (picked != null) {
+      setState(() {
+        _dateRange = picked;
+      });
+    }
+  }
+
+  void _resetFilters() {
+    setState(() {
+      _searchKeyword = '';
+      _statusFilter = '全部';
+      _dateRange = null;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer(
+      builder: (context, ref, child) {
+        return Container(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            children: [
+              _buildTaskListHeader(context),
+              const SizedBox(height: 12),
+              _buildSearchFilterSection(context),
+              const SizedBox(height: 12),
+              Expanded(
+                child: _buildTaskList(context),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -56,7 +127,7 @@ class TaskListWidget extends ConsumerWidget {
         Row(
           children: [
             ElevatedButton(
-              onPressed: onRefresh,
+              onPressed: widget.onRefresh,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
                 foregroundColor: Colors.white,
@@ -79,30 +150,107 @@ class TaskListWidget extends ConsumerWidget {
     );
   }
 
+  Widget _buildSearchFilterSection(BuildContext context) {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '搜索与筛选',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    decoration: const InputDecoration(
+                      labelText: '搜索关键词',
+                      prefixIcon: Icon(Icons.search),
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (value) {
+                      setState(() {
+                        _searchKeyword = value;
+                      });
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                DropdownButton<String>(
+                  value: _statusFilter,
+                  hint: const Text('状态'),
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      _statusFilter = newValue!;
+                    });
+                  },
+                  items: <String>['全部', 'CREATED', 'SCANNING', 'SCANNED', 'PREVIEWING', 'PREVIEWED', 'EXECUTING', 'COMPLETED', 'FAILED', 'CANCELLED']
+                      .map<DropdownMenuItem<String>>((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(_getFriendlyStatus(value)),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  onPressed: _showDateRangePicker,
+                  icon: const Icon(Icons.calendar_today, size: 18),
+                  label: const Text('日期范围'),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: _resetFilters,
+                  child: const Text('重置'),
+                ),
+              ],
+            ),
+            if (_dateRange != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Text(
+                  '日期范围: ${_dateRange!.start.toString().split(' ')[0]} - ${_dateRange!.end.toString().split(' ')[0]}',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildTaskList(BuildContext context) {
-    if (isLoading) {
+    if (widget.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (errorMessage.isNotEmpty) {
+    if (widget.errorMessage.isNotEmpty) {
       return Center(
         child: Text(
-          errorMessage,
+          widget.errorMessage,
           style: const TextStyle(color: Colors.red),
         ),
       );
     }
 
-    if (tasks.isEmpty) {
+    final filteredTasks = _filteredTasks;
+    if (filteredTasks.isEmpty) {
       return const Center(
         child: Text('暂无任务记录'),
       );
     }
 
     return ListView.builder(
-      itemCount: tasks.length,
+      itemCount: filteredTasks.length,
       itemBuilder: (context, index) {
-        final task = tasks[index];
+        final task = filteredTasks[index];
         return _buildTaskCard(context, task);
       },
     );
@@ -194,8 +342,8 @@ class TaskListWidget extends ConsumerWidget {
                 ),
                 TextButton(
                   onPressed: () {
-                    onTaskSelected(task);
-                    onViewModeChanged('taskDetail');
+                    widget.onTaskSelected(task);
+                    widget.onViewModeChanged('taskDetail');
                   },
                   child: const Text('查看详情'),
                 ),
@@ -208,6 +356,9 @@ class TaskListWidget extends ConsumerWidget {
   }
 
   String _getFriendlyStatus(String status) {
+    if (status == '全部') {
+      return '全部';
+    }
     switch (status) {
       case 'CREATED':
         return '已创建';
@@ -395,8 +546,8 @@ class TaskListWidget extends ConsumerWidget {
       final taskService = TaskService(ApiClient());
       await taskService.clearAllTasks();
       _showSuccess(context, '全部任务已删除');
-      if (onRefresh != null) {
-        onRefresh!();
+      if (widget.onRefresh != null) {
+        widget.onRefresh!();
       }
     } catch (e) {
       _showError(context, '删除全部任务失败: $e');

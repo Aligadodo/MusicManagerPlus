@@ -9,7 +9,7 @@ spring:
       allow-credentials: false
   datasource:
     driver-class-name: org.sqlite.JDBC
-    url: jdbc:sqlite:${app.database.path:data/music_manager.db}
+    url: jdbc:sqlite:${app.database.path:data/music_manager_plus.db}
     hikari:
       maximum-pool-size: 10
       minimum-idle: 5
@@ -27,9 +27,8 @@ mybatis:
 
 app:
   database:
-    path: data/music_manager.db
+    path: data/music_manager_plus.db
     auto-init: true
-    backup-enabled: true
     backup-path: data/backup
 
 server:

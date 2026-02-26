@@ -18,6 +18,7 @@ import com.filemanager.backend.service.FileTypeFilterService;
 import com.filemanager.backend.service.TaskStorageService;
 import com.filemanager.backend.service.PreviewLimitService;
 import com.filemanager.backend.service.TaskRegistry;
+import com.filemanager.backend.service.TaskExecutionService;
 import com.filemanager.backend.util.FileScanner;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -47,6 +48,9 @@ public class PipelineController {
 
     @Autowired
     private TaskService taskService;
+
+    @Autowired
+    private TaskExecutionService taskExecutionService;
 
     @Autowired
     private TaskRegistry taskRegistry;
@@ -154,14 +158,17 @@ public class PipelineController {
             currentChanges.clear();
 
             List<String> sourceDirectories = (List<String>) request.get("sourceDirectories");
-            List<Map<String, Object>> pipeline = (List<Map<String, Object>>) request.get("pipeline");
-
+            // 源目录不能为空
             if (sourceDirectories == null || sourceDirectories.isEmpty()) {
                 Map<String, Object> result = new HashMap<>();
                 result.put("success", false);
                 result.put("message", "源目录不能为空");
                 return ResponseEntity.badRequest().body(result);
             }
+            // 使其成为实际上的最终变量，以便在lambda表达式中使用
+            final List<String> finalSourceDirectories = sourceDirectories;
+            
+            List<Map<String, Object>> pipeline = (List<Map<String, Object>>) request.get("pipeline");
 
             if (pipeline == null || pipeline.isEmpty()) {
                 Map<String, Object> result = new HashMap<>();
@@ -191,7 +198,7 @@ public class PipelineController {
             taskRequest.setGlobalSettings(globalSettings);
             
             // 创建任务
-            String taskId = taskService.createTask(taskRequest);
+            String taskId = taskExecutionService.createTask(taskRequest);
             
             // 注册任务到 TaskRegistry
             TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
@@ -213,15 +220,15 @@ public class PipelineController {
             CompletableFuture.runAsync(() -> {
                 try {
                     UnifiedLogger.backendOperation("Pipeline", "开始预览分析，任务ID: " + taskId);
-                    UnifiedLogger.backendOperation("Pipeline", "源目录: " + sourceDirectories);
+                    UnifiedLogger.backendOperation("Pipeline", "源目录: " + finalSourceDirectories);
                     UnifiedLogger.backendOperation("Pipeline", "流水线节点数量: " + pipeline.size());
 
                     taskManager.updateTaskStep(taskId, "输出流水线配置信息");
                     StringBuilder configSummary = new StringBuilder();
                     configSummary.append("=== 流水线配置信息 ===\n");
-                    configSummary.append("源目录数量: ").append(sourceDirectories.size()).append("\n");
-                    for (int i = 0; i < sourceDirectories.size(); i++) {
-                        configSummary.append("  目录").append(i + 1).append(": ").append(sourceDirectories.get(i)).append("\n");
+                    configSummary.append("源目录数量: ").append(finalSourceDirectories.size()).append("\n");
+                    for (int i = 0; i < finalSourceDirectories.size(); i++) {
+                        configSummary.append("  目录").append(i + 1).append(": ").append(finalSourceDirectories.get(i)).append("\n");
                     }
                     configSummary.append("流水线节点数量: ").append(pipeline.size()).append("\n");
                     
@@ -261,7 +268,7 @@ public class PipelineController {
                     
                     FileScanner fileScanner = new FileScanner(fileFilterService, fileTypeFilterService, isTaskRunning, previewThreads);
                     
-                    for (String directory : sourceDirectories) {
+                    for (String directory : finalSourceDirectories) {
                         File dir = new File(directory);
                         if (dir.exists() && dir.isDirectory()) {
                             int dirLimitValue = previewLimitService.isRootPathPreviewUnlimited(directory) ?
@@ -280,10 +287,11 @@ public class PipelineController {
                     }
                     
                     int totalFiles = allFilePaths.size();
-                    taskManager.updateTaskScanningInfo(taskId, sourceDirectories.get(0), 0, totalFiles);
+                    String firstDirectory = finalSourceDirectories.isEmpty() ? "" : finalSourceDirectories.get(0);
+                    taskManager.updateTaskScanningInfo(taskId, firstDirectory, 0, totalFiles);
                     
                     List<File> rootDirs = new ArrayList<>();
-                    for (String directory : sourceDirectories) {
+                    for (String directory : finalSourceDirectories) {
                         rootDirs.add(new File(directory));
                     }
                     
@@ -314,7 +322,8 @@ public class PipelineController {
                         
                         processed++;
                         taskManager.updateTaskProgress(taskId, processed, totalFiles);
-                        taskManager.updateTaskScanningInfo(taskId, sourceDirectories.get(0), processed, totalFiles);
+                        String scanningDirectory = finalSourceDirectories.isEmpty() ? "" : finalSourceDirectories.get(0);
+                        taskManager.updateTaskScanningInfo(taskId, scanningDirectory, processed, totalFiles);
                         
                         for (Map<String, Object> pluginConfig : pipeline) {
                             if (!taskManager.isTaskRunning()) {
@@ -361,7 +370,8 @@ public class PipelineController {
                         taskManager.updateTaskStatus(taskId, TaskStatus.PREVIEW_COMPLETED);
                         taskManager.updateTaskMessage(taskId, "预览完成，共发现 " + allChanges.size() + " 个变更");
                         taskManager.updateTaskChanges(taskId, !allChanges.isEmpty(), allChanges.size());
-                        taskManager.updateTaskScanningInfo(taskId, sourceDirectories.get(0), totalFiles, totalFiles);
+                        String completionDirectory = finalSourceDirectories.isEmpty() ? "" : finalSourceDirectories.get(0);
+                        taskManager.updateTaskScanningInfo(taskId, completionDirectory, totalFiles, totalFiles);
                         UnifiedLogger.backendOperation("Pipeline", "预览完成，共发现 " + allChanges.size() + " 个变更");
                         
                         // 更新持久化的任务记录
@@ -477,7 +487,7 @@ public class PipelineController {
             }
             taskRequest.setSourceDirectories(sourceDirDTOs);
 
-            String taskServiceId = taskService.createTask(taskRequest);
+            String taskServiceId = taskExecutionService.createTask(taskRequest);
 
             CompletableFuture.runAsync(() -> {
                 try {

@@ -4,6 +4,7 @@ import 'package:filemanager_flutter/api/api_client.dart';
 import 'package:filemanager_flutter/api/source_directory_service.dart';
 import 'package:filemanager_flutter/api/strategy_service.dart';
 import 'package:filemanager_flutter/api/pipeline_service.dart';
+import 'package:filemanager_flutter/api/config_service.dart';
 import 'package:filemanager_flutter/models/source_directory.dart';
 import 'package:filemanager_flutter/models/strategy_info.dart';
 import 'package:filemanager_flutter/models/strategy_config.dart';
@@ -12,6 +13,7 @@ import 'package:filemanager_flutter/pages/preview/preview_page.dart';
 import 'package:filemanager_flutter/widgets/compose/compose_directory_panel.dart';
 import 'package:filemanager_flutter/widgets/compose/compose_pipeline_panel.dart';
 import 'package:filemanager_flutter/widgets/compose/compose_config_panel.dart';
+import 'package:filemanager_flutter/widgets/compose/compose_global_config_panel.dart';
 import 'package:filemanager_flutter/widgets/common/selectable_text_widget.dart';
 import 'package:filemanager_flutter/utils/theme_utils.dart';
 
@@ -27,6 +29,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
   late SourceDirectoryService _sourceDirectoryService;
   late StrategyService _strategyService;
   late PipelineService _pipelineService;
+  late ConfigService _configService;
 
   List<SourceDirectory> _sourceDirectories = [];
   List<StrategyInfo> _pipelineStrategies = [];
@@ -34,6 +37,8 @@ class _ComposePageState extends ConsumerState<ComposePage> {
   StrategyInfo? _selectedStrategy;
   StrategyConfig? _strategyConfig;
   List<PreconditionGroup> _preconditionGroups = [];
+  Map<String, dynamic> _globalSettings = {};
+  bool _showGlobalConfig = false;
 
   bool _isLoading = false;
   String _errorMessage = '';
@@ -46,6 +51,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
     _sourceDirectoryService = SourceDirectoryService(_apiClient);
     _strategyService = StrategyService(_apiClient);
     _pipelineService = PipelineService(_apiClient);
+    _configService = ConfigService(_apiClient);
     _isDisposed = false;
     _loadData();
   }
@@ -82,10 +88,16 @@ class _ComposePageState extends ConsumerState<ComposePage> {
       print('流水线配置加载完成，数量: ${pipeline.length}');
       if (_isDisposed) return;
 
+      print('正在加载全局设置...');
+      final config = await _configService.getConfig();
+      print('全局设置加载完成');
+      if (_isDisposed) return;
+
       setState(() {
         _sourceDirectories = sources;
         _availableStrategies = strategies;
         _pipelineStrategies = pipeline;
+        _globalSettings = config;
         _isLoading = false;
       });
       
@@ -104,6 +116,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
   Future<void> _loadStrategyConfig(StrategyInfo strategy) async {
     setState(() {
       _selectedStrategy = strategy;
+      _showGlobalConfig = false;
     });
 
     try {
@@ -124,6 +137,22 @@ class _ComposePageState extends ConsumerState<ComposePage> {
         ),
       );
     }
+  }
+
+  void _toggleGlobalConfig() {
+    setState(() {
+      _showGlobalConfig = !_showGlobalConfig;
+      if (_showGlobalConfig) {
+        _selectedStrategy = null;
+        _strategyConfig = null;
+      }
+    });
+  }
+
+  void _updateGlobalSettings(Map<String, dynamic> settings) {
+    setState(() {
+      _globalSettings = settings;
+    });
   }
 
   @override
@@ -274,24 +303,85 @@ class _ComposePageState extends ConsumerState<ComposePage> {
   }
 
   Widget _buildRightPanel() {
-    return ComposeConfigPanel(
-      strategyInfo: _selectedStrategy,
-      strategyConfig: _strategyConfig,
-      preconditionGroups: _preconditionGroups,
-      onConfigChanged: (config) {
-        if (!_isDisposed) {
-          setState(() {
-            _strategyConfig = config;
-          });
-        }
-      },
-      onPreconditionGroupsChanged: (groups) {
-        if (!_isDisposed) {
-          setState(() {
-            _preconditionGroups = groups;
-          });
-        }
-      },
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: ThemeUtils.getCardDecoration(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                '配置选项',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              Row(
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        _showGlobalConfig = false;
+                      });
+                    },
+                    icon: const Icon(Icons.settings, size: 16),
+                    label: const Text('步骤配置'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: !_showGlobalConfig ? Colors.blue : Colors.grey,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      textStyle: const TextStyle(fontSize: 12),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: _toggleGlobalConfig,
+                    icon: const Icon(Icons.settings_applications, size: 16),
+                    label: const Text('全局设置'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _showGlobalConfig ? Colors.blue : Colors.grey,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      textStyle: const TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: _showGlobalConfig
+                ? ComposeGlobalConfigPanel(
+                    globalSettings: _globalSettings,
+                    onGlobalSettingsChanged: _updateGlobalSettings,
+                  )
+                : ComposeConfigPanel(
+                    strategyInfo: _selectedStrategy,
+                    strategyConfig: _strategyConfig,
+                    preconditionGroups: _preconditionGroups,
+                    onConfigChanged: (config) {
+                      if (!_isDisposed) {
+                        setState(() {
+                          _strategyConfig = config;
+                        });
+                      }
+                    },
+                    onPreconditionGroupsChanged: (groups) {
+                      if (!_isDisposed) {
+                        setState(() {
+                          _preconditionGroups = groups;
+                        });
+                      }
+                    },
+                  ),
+          ),
+        ],
+      ),
     );
   }
 }

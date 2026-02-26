@@ -37,15 +37,30 @@ class FilterRules extends StatelessWidget {
                     decoration: InputDecoration(
                       labelText: '添加过滤规则',
                       hintText: '例如：*Convert*',
-                      border: const OutlineInputBorder(),
+                      border: OutlineInputBorder(
+                        borderSide: BorderSide(color: theme.dividerColor),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(color: theme.primaryColor, width: 2),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       labelStyle: theme.textTheme.bodyMedium,
                       hintStyle: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
+                      fillColor: theme.colorScheme.surface,
+                      filled: true,
                     ),
+                    style: theme.textTheme.bodyMedium,
                   ),
                 ),
                 const SizedBox(width: 10),
                 ElevatedButton(
                   onPressed: onAddFilterRule,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.primaryColor,
+                    foregroundColor: theme.colorScheme.onPrimary,
+                  ),
                   child: const Text('添加'),
                 ),
               ],

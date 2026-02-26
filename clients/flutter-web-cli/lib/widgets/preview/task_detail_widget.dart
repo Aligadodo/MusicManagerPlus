@@ -29,6 +29,7 @@ class TaskDetailWidget extends ConsumerWidget {
           const SizedBox(height: 12),
           Expanded(
             child: SingleChildScrollView(
+              padding: const EdgeInsets.only(bottom: 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
