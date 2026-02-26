@@ -11,6 +11,7 @@ import com.filemanager.backend.service.FileTypeFilterService;
 import com.filemanager.backend.service.PreviewLimitService;
 import com.filemanager.backend.service.TaskStorageService;
 import com.filemanager.backend.service.TaskRegistry;
+import com.filemanager.backend.service.TaskExecutionService;
 import com.filemanager.backend.model.TaskInfo;
 import com.filemanager.domain.dto.TaskRequestDTO;
 import org.junit.jupiter.api.BeforeEach;
@@ -55,6 +56,9 @@ public class PipelineControllerTest {
     @Mock
     private TaskRegistry taskRegistry;
 
+    @Mock
+    private TaskExecutionService taskExecutionService;
+
     @InjectMocks
     private PipelineController pipelineController;
 
@@ -66,6 +70,7 @@ public class PipelineControllerTest {
         mockMvc = MockMvcBuilders.standaloneSetup(pipelineController).build();
         
         when(taskService.createTask(any(TaskRequestDTO.class))).thenReturn("test-task-123");
+        when(taskExecutionService.createTask(any(TaskRequestDTO.class))).thenReturn("test-task-123");
         when(storageService.loadTaskInfo(anyString())).thenReturn(null);
         when(fileFilterService.isFileIncluded(any(File.class))).thenReturn(true);
         when(fileFilterService.isFileFiltered(any(File.class))).thenReturn(false);
@@ -73,6 +78,10 @@ public class PipelineControllerTest {
         when(previewLimitService.isGlobalPreviewUnlimited()).thenReturn(true);
         when(previewLimitService.isRootPathPreviewUnlimited(anyString())).thenReturn(true);
         when(pluginService.analyzePlugin(anyString(), any(ChangeRecord.class), anyList(), anyList(), any(PluginConfigDTO.class), anyList()))
+            .thenReturn(new ArrayList<>());
+        when(pluginService.executePlugin(anyString(), anyList(), any(PluginConfigDTO.class), anyList()))
+            .thenReturn(new ArrayList<>());
+        when(pluginService.executePlugin(anyString(), anyList(), any(PluginConfigDTO.class)))
             .thenReturn(new ArrayList<>());
     }
 

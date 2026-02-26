@@ -575,6 +575,70 @@ public class TaskExecutionService {
         
         logger.info("[TaskExecution] 重新执行已启动: {}", taskId);
     }
+    
+    /**
+     * 重新运行任务（从扫描开始）
+     */
+    public void rerunTask(String taskId) {
+        logger.info("[TaskExecution] 开始重新运行任务: {}", taskId);
+        
+        TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
+        if (taskInfo == null) {
+            throw new IllegalArgumentException("任务不存在: " + taskId);
+        }
+        
+        // 清空所有阶段数据
+        storageService.clearScanData(taskId);
+        storageService.clearPreviewData(taskId);
+        storageService.clearExecutionData(taskId);
+        
+        // 重置扫描阶段状态
+        TaskInfo.ScanStage scanStage = taskInfo.getStages().getScan();
+        scanStage.setStatus("PENDING");
+        scanStage.setTotalFiles(0);
+        scanStage.setTotalSize(0);
+        scanStage.setScanStartTime(0);
+        scanStage.setScanEndTime(0);
+        scanStage.setScanDuration(0);
+        
+        // 重置预览阶段状态
+        TaskInfo.PreviewStage previewStage = taskInfo.getStages().getPreview();
+        previewStage.setStatus("PENDING");
+        previewStage.setTotalFiles(0);
+        previewStage.setProcessedFiles(0);
+        previewStage.setChangedFiles(0);
+        previewStage.setUnchangedFiles(0);
+        previewStage.setPreviewStartTime(0);
+        previewStage.setPreviewEndTime(0);
+        previewStage.setPreviewDuration(0);
+        
+        // 重置执行阶段状态
+        TaskInfo.ExecutionStage executionStage = taskInfo.getStages().getExecution();
+        executionStage.setStatus("PENDING");
+        executionStage.setExecutionCount(0);
+        executionStage.setTotalFiles(0);
+        executionStage.setProcessedFiles(0);
+        executionStage.setSuccessCount(0);
+        executionStage.setFailedCount(0);
+        executionStage.setSkippedCount(0);
+        executionStage.setExecutionStartTime(0);
+        executionStage.setExecutionEndTime(0);
+        executionStage.setExecutionDuration(0);
+        
+        // 重置任务状态
+        taskInfo.setCurrentStage("CREATED");
+        taskInfo.setStatus(TaskInfo.TaskStatus.CREATED);
+        taskInfo.setMessage("准备重新运行任务");
+        
+        storageService.saveTaskInfo(taskInfo);
+        storageService.writeTaskLog(taskId, "[INFO] [RERUN] 准备重新运行任务");
+        updateTaskInfoInDatabase(taskInfo);
+        
+        // 实际启动扫描
+        executeScan(taskId);
+        
+        logger.info("[TaskExecution] 重新运行任务已启动: {}", taskId);
+    }
 
     /**
      * 获取任务进度

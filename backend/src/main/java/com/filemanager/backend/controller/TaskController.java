@@ -778,6 +778,42 @@ public class TaskController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
+    
+    /**
+     * 重新运行任务（从扫描开始）
+     */
+    @PostMapping("/{taskId}/rerun")
+    public ResponseEntity<Map<String, Object>> rerunTask(@PathVariable String taskId) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            executionService.rerunTask(taskId);
+            
+            TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
+            if (taskInfo == null) {
+                taskInfo = executionService.getTaskProgress(taskId);
+            }
+            
+            response.put("success", true);
+            response.put("data", taskInfoToMap(taskInfo));
+            response.put("message", "重新运行已开始");
+            
+            logger.info("[TaskController] 重新运行已开始: {}", taskId);
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("[TaskController] 重新运行启动失败: {}", taskId, e);
+            
+            response.put("success", false);
+            Map<String, Object> error = new HashMap<>();
+            error.put("code", "RERUN_TASK_FAILED");
+            error.put("message", "重新运行启动失败");
+            error.put("details", e.getMessage());
+            response.put("error", error);
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
 
     /**
      * 获取扫描统计信息
@@ -1411,42 +1447,7 @@ public class TaskController {
         return map;
     }
 
-    /**
-     * 重新运行任务
-     */
-    @PostMapping("/{taskId}/rerun")
-    public ResponseEntity<Map<String, Object>> rerunTask(@PathVariable String taskId) {
-        Map<String, Object> response = new HashMap<>();
-        
-        try {
-            logger.info("[TaskController] 开始重新运行任务: {}", taskId);
-            executionService.restartScan(taskId);
-            
-            TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
-            if (taskInfo == null) {
-                taskInfo = executionService.getTaskProgress(taskId);
-            }
-            
-            response.put("success", true);
-            response.put("data", taskInfoToMap(taskInfo));
-            response.put("message", "任务已重新运行");
-            
-            logger.info("[TaskController] 任务重新运行成功: {}", taskId);
-            return ResponseEntity.ok(response);
-            
-        } catch (Exception e) {
-            logger.error("[TaskController] 任务重新运行失败: {}", taskId, e);
-            
-            response.put("success", false);
-            Map<String, Object> error = new HashMap<>();
-            error.put("code", "RERUN_TASK_FAILED");
-            error.put("message", "任务重新运行失败");
-            error.put("details", e.getMessage());
-            response.put("error", error);
-            
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-        }
-    }
+
 
     /**
      * 清空所有任务
