@@ -241,13 +241,17 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
         
         // 检查是否有任务状态变为 PREVIEWED，如果有，获取变更记录
         for (var task in tasks) {
-          if (task.status == 'PREVIEWED' && _taskId.isNotEmpty && task.taskId == _taskId) {
-            await _fetchChanges();
-            setState(() {
-              _taskState = LocalTaskState.previewCompleted;
-              _message = '预览分析完成';
-            });
-            break;
+          if (task.status == 'PREVIEWED') {
+            // 如果是当前任务或者是最新的任务，更新状态
+            if (_taskId.isEmpty || task.taskId == _taskId || task == tasks.first) {
+              await _fetchChanges();
+              setState(() {
+                _taskState = LocalTaskState.previewCompleted;
+                _message = '预览分析完成';
+                _taskId = task.taskId!;
+              });
+              break;
+            }
           }
         }
       }

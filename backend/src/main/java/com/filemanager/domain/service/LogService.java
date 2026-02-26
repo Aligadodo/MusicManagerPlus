@@ -14,5 +14,7 @@ public interface LogService {
 
     Map<String, Object> deleteLogFile(String fileName);
 
+    Map<String, Object> clearAllLogs();
+
     String getLogDirectory();
 }

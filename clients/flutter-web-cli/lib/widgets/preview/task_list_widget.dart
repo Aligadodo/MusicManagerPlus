@@ -113,38 +113,39 @@ class _TaskListWidgetState extends ConsumerState<TaskListWidget> {
   }
 
   Widget _buildTaskListHeader(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
       children: [
         const Text(
           '任务列表',
           style: TextStyle(
-            fontSize: 18,
+            fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            ElevatedButton(
-              onPressed: widget.onRefresh,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('刷新'),
-            ),
-            const SizedBox(width: 8),
-            ElevatedButton.icon(
-              onPressed: () => _clearAllTasks(context),
-              icon: const Icon(Icons.delete_sweep, size: 18),
-              label: const Text('删除全部'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-              ),
-            ),
-          ],
+        const Spacer(),
+        ElevatedButton(
+          onPressed: widget.onRefresh,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blue,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          child: const Text('刷新', style: TextStyle(fontSize: 12)),
+        ),
+        const SizedBox(width: 8),
+        ElevatedButton.icon(
+          onPressed: () => _clearAllTasks(context),
+          icon: const Icon(Icons.delete_sweep, size: 16),
+          label: const Text('删除全部', style: TextStyle(fontSize: 12)),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
         ),
       ],
     );
@@ -152,73 +153,59 @@ class _TaskListWidgetState extends ConsumerState<TaskListWidget> {
 
   Widget _buildSearchFilterSection(BuildContext context) {
     return Card(
-      elevation: 2,
+      elevation: 1,
       child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        padding: const EdgeInsets.all(8.0),
+        child: Row(
           children: [
-            const Text(
-              '搜索与筛选',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
+            Expanded(
+              child: TextField(
+                decoration: const InputDecoration(
+                  labelText: '搜索',
+                  prefixIcon: Icon(Icons.search, size: 18),
+                  border: OutlineInputBorder(),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  isDense: true,
+                ),
+                onChanged: (value) {
+                  setState(() {
+                    _searchKeyword = value;
+                  });
+                },
               ),
             ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    decoration: const InputDecoration(
-                      labelText: '搜索关键词',
-                      prefixIcon: Icon(Icons.search),
-                      border: OutlineInputBorder(),
-                    ),
-                    onChanged: (value) {
-                      setState(() {
-                        _searchKeyword = value;
-                      });
-                    },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                DropdownButton<String>(
-                  value: _statusFilter,
-                  hint: const Text('状态'),
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      _statusFilter = newValue!;
-                    });
-                  },
-                  items: <String>['全部', 'CREATED', 'SCANNING', 'SCANNED', 'PREVIEWING', 'PREVIEWED', 'EXECUTING', 'COMPLETED', 'FAILED', 'CANCELLED']
-                      .map<DropdownMenuItem<String>>((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(_getFriendlyStatus(value)),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  onPressed: _showDateRangePicker,
-                  icon: const Icon(Icons.calendar_today, size: 18),
-                  label: const Text('日期范围'),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: _resetFilters,
-                  child: const Text('重置'),
-                ),
-              ],
+            const SizedBox(width: 8),
+            DropdownButton<String>(
+              value: _statusFilter,
+              hint: const Text('状态', style: TextStyle(fontSize: 12)),
+              onChanged: (String? newValue) {
+                setState(() {
+                  _statusFilter = newValue!;
+                });
+              },
+              items: <String>['全部', 'CREATED', 'SCANNING', 'SCANNED', 'PREVIEWING', 'PREVIEWED', 'EXECUTING', 'COMPLETED', 'FAILED', 'CANCELLED']
+                  .map<DropdownMenuItem<String>>((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(_getFriendlyStatus(value), style: const TextStyle(fontSize: 12)),
+                );
+              }).toList(),
+            ),
+            const SizedBox(width: 4),
+            IconButton(
+              onPressed: _showDateRangePicker,
+              icon: const Icon(Icons.calendar_today, size: 18),
+              tooltip: '日期范围',
+              padding: const EdgeInsets.all(4),
+              constraints: const BoxConstraints(),
             ),
             if (_dateRange != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8.0),
-                child: Text(
-                  '日期范围: ${_dateRange!.start.toString().split(' ')[0]} - ${_dateRange!.end.toString().split(' ')[0]}',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
+              IconButton(
+                onPressed: _resetFilters,
+                icon: const Icon(Icons.clear, size: 18),
+                tooltip: '重置',
+                padding: const EdgeInsets.all(4),
+                constraints: const BoxConstraints(),
               ),
           ],
         ),
@@ -262,97 +249,332 @@ class _TaskListWidgetState extends ConsumerState<TaskListWidget> {
         : null;
 
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 6),
+      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 0),
       elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    task.taskName ?? '未命名任务',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: InkWell(
+        onTap: () {
+          widget.onTaskSelected(task);
+          widget.onViewModeChanged('taskDetail');
+        },
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 任务标题和状态
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      task.taskName ?? '未命名任务',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
                     ),
-                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-                Chip(
-                  label: Text(
-                    _getFriendlyStatus(task.status ?? 'UNKNOWN'),
-                    style: TextStyle(
-                      color: _getStatusColor(task.status ?? 'UNKNOWN'),
+                  const SizedBox(width: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _getStatusColor(task.status ?? 'UNKNOWN').withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: _getStatusColor(task.status ?? 'UNKNOWN').withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      _getFriendlyStatus(task.status ?? 'UNKNOWN'),
+                      style: TextStyle(
+                        color: _getStatusColor(task.status ?? 'UNKNOWN'),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
-                  backgroundColor: _getStatusColor(task.status ?? 'UNKNOWN').withOpacity(0.1),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            if (createdAt != null)
-              Text(
-                '创建时间: ${createdAt.toString()}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
-                ),
+                ],
               ),
-            if (task.currentStage != null)
-              Text(
-                '当前阶段: ${task.currentStage}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
-                ),
+              
+              const SizedBox(height: 8),
+              
+              // 任务基本信息
+              Row(
+                children: [
+                  if (createdAt != null)
+                    Container(
+                      margin: const EdgeInsets.only(right: 12),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.access_time, size: 14, color: Colors.grey),
+                          const SizedBox(width: 4),
+                          Text(
+                            _formatDateTime(createdAt),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  
+                  if (task.currentStage != null)
+                    Container(
+                      margin: const EdgeInsets.only(right: 12),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.layers, size: 14, color: Colors.grey),
+                          const SizedBox(width: 4),
+                          Text(
+                            task.currentStage!,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  
+                  if (task.overallProgress != null && task.overallProgress! > 0)
+                    Container(
+                      margin: const EdgeInsets.only(right: 12),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.percent, size: 14, color: Colors.grey),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${(task.overallProgress! * 100).round()}%',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
               ),
-            if (task.message != null)
-              Text(
-                '消息: ${task.message}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
-                ),
-                overflow: TextOverflow.ellipsis,
+              
+              const SizedBox(height: 8),
+              
+              // 任务详情信息
+              Row(
+                children: [
+                  if (task.stages?.scan?.totalFiles != null && task.stages!.scan!.totalFiles! > 0)
+                    Container(
+                      margin: const EdgeInsets.only(right: 16),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.folder_open, size: 14, color: Colors.blue),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${task.stages!.scan!.totalFiles} 文件',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.blue,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  
+                  if (task.stages?.preview?.totalChanges != null && task.stages!.preview!.totalChanges! > 0)
+                    Container(
+                      margin: const EdgeInsets.only(right: 16),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.change_history, size: 14, color: Colors.purple),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${task.stages!.preview!.totalChanges} 变更',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.purple,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  
+                  if (task.stages?.execution?.successCount != null && task.stages!.execution!.successCount! > 0)
+                    Container(
+                      margin: const EdgeInsets.only(right: 16),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.check_circle, size: 14, color: Colors.green),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${task.stages!.execution!.successCount} 成功',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.green,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  
+                  if (task.stages?.execution?.failedCount != null && task.stages!.execution!.failedCount! > 0)
+                    Container(
+                      margin: const EdgeInsets.only(right: 16),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error, size: 14, color: Colors.red),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${task.stages!.execution!.failedCount} 失败',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.red,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
               ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                if (['COMPLETED', 'FAILED', 'CANCELLED'].contains(task.status))
-                  IconButton(
-                    icon: const Icon(Icons.refresh, color: Colors.green, size: 20),
-                    onPressed: () => _rerunTask(context, task.taskId!),
-                    tooltip: '重新运行',
+              
+              if (task.message != null && task.message!.isNotEmpty)
+                const SizedBox(height: 8),
+              
+              if (task.message != null && task.message!.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(6),
                   ),
-                if (['SCANNING', 'PREVIEWING', 'EXECUTING'].contains(task.status))
-                  IconButton(
-                    icon: const Icon(Icons.stop, color: Colors.orange, size: 20),
-                    onPressed: () => _cancelTask(context, task.taskId!),
-                    tooltip: '终止',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline, size: 14, color: Colors.grey),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          task.message!,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade700,
+                            fontStyle: FontStyle.italic,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 2,
+                        ),
+                      ),
+                    ],
                   ),
-                IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red, size: 20),
-                  onPressed: () => _deleteTask(context, task.taskId!),
-                  tooltip: '删除',
                 ),
-                TextButton(
-                  onPressed: () {
-                    widget.onTaskSelected(task);
-                    widget.onViewModeChanged('taskDetail');
-                  },
-                  child: const Text('查看详情'),
-                ),
-              ],
-            ),
-          ],
+              
+              const SizedBox(height: 10),
+              
+              // 操作按钮
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  if (task.status == 'PREVIEWED')
+                    Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      child: TextButton(
+                        onPressed: () => _executeTask(context, task.taskId!),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          backgroundColor: Colors.green.withOpacity(0.1),
+                          foregroundColor: Colors.green,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                        child: const Text('执行', style: TextStyle(fontSize: 12)),
+                      ),
+                    ),
+                  
+                  if (['COMPLETED', 'FAILED', 'CANCELLED'].contains(task.status))
+                    Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      child: TextButton(
+                        onPressed: () => _rerunTask(context, task.taskId!),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          backgroundColor: Colors.blue.withOpacity(0.1),
+                          foregroundColor: Colors.blue,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                        child: const Text('重新运行', style: TextStyle(fontSize: 12)),
+                      ),
+                    ),
+                  
+                  if (['SCANNING', 'PREVIEWING', 'EXECUTING'].contains(task.status))
+                    Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      child: TextButton(
+                        onPressed: () => _cancelTask(context, task.taskId!),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          backgroundColor: Colors.orange.withOpacity(0.1),
+                          foregroundColor: Colors.orange,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                        ),
+                        child: const Text('终止', style: TextStyle(fontSize: 12)),
+                      ),
+                    ),
+                  
+                  TextButton(
+                    onPressed: () => _deleteTask(context, task.taskId!),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      backgroundColor: Colors.red.withOpacity(0.1),
+                      foregroundColor: Colors.red,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                    child: const Text('删除', style: TextStyle(fontSize: 12)),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  String _formatDateTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+    
+    if (difference.inMinutes < 1) {
+      return '刚刚';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes}分钟前';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours}小时前';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays}天前';
+    } else {
+      return '${dateTime.month}/${dateTime.day}';
+    }
   }
 
   String _getFriendlyStatus(String status) {
@@ -404,6 +626,38 @@ class _TaskListWidgetState extends ConsumerState<TaskListWidget> {
         return Colors.grey;
       default:
         return Colors.grey;
+    }
+  }
+
+
+
+  Future<void> _executeTask(BuildContext context, String taskId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('确认执行'),
+        content: const Text('确定要执行此任务吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final taskService = TaskService(ApiClient());
+      await taskService.executeTask(taskId);
+      _showSuccess(context, '任务已开始执行');
+    } catch (e) {
+      _showError(context, '执行任务失败: $e');
     }
   }
 

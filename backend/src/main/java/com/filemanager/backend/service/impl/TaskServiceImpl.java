@@ -135,6 +135,13 @@ public class TaskServiceImpl implements TaskService {
         return false;
     }
 
+    @Override
+    public int clearAllTasks() {
+        int count = tasks.size();
+        tasks.clear();
+        return count;
+    }
+
     private static class TaskExecution {
         private final String taskId;
         private final TaskRequestDTO request;

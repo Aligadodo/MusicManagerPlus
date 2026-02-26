@@ -41,7 +41,7 @@ echo "按 Ctrl+C 停止服务"
 echo ""
 
 cd "$SCRIPT_DIR/../../clients/flutter-web-cli"
-flutter run -d chrome --web-port=8081 &
+FLUTTER_WEB_RENDERER=html flutter run -d chrome --web-port=8081 &
 FRONTEND_PID=$!
 
 echo "前端服务已启动 (PID: $FRONTEND_PID)"

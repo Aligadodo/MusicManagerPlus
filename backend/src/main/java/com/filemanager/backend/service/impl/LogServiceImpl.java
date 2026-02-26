@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -282,6 +283,63 @@ public class LogServiceImpl implements LogService {
             logger.error("Failed to delete log file: {}", fileName, e);
             result.put("success", false);
             result.put("message", "Failed to delete log file: " + e.getMessage());
+        }
+
+        return result;
+    }
+
+    @Override
+    public Map<String, Object> clearAllLogs() {
+        Map<String, Object> result = new HashMap<>();
+        Path logDir = Paths.get(logDirectory);
+
+        if (!Files.exists(logDir)) {
+            result.put("success", false);
+            result.put("message", "Log directory does not exist");
+            return result;
+        }
+
+        try {
+            int deletedCount = 0;
+            AtomicInteger skippedCount = new AtomicInteger(0);
+
+            try (Stream<Path> paths = Files.list(logDir)) {
+                List<Path> toDelete = paths.filter(Files::isRegularFile)
+                        .filter(path -> {
+                            String fileName = path.getFileName().toString().toLowerCase();
+                            return fileName.endsWith(".log") || fileName.endsWith(".txt");
+                        })
+                        .filter(path -> {
+                            // 跳过最新的不带时间或序号尾缀的日志文件
+                            String fileName = path.getFileName().toString();
+                            // 检查文件名是否带有时间或序号尾缀
+                            // 假设时间尾缀格式为yyyy-MM-dd或类似格式
+                            // 假设序号尾缀格式为-数字
+                            if (fileName.matches("^[^-]+\\.(log|txt)$")) {
+                                // 不带时间或序号尾缀的文件，跳过
+                                skippedCount.incrementAndGet();
+                                logger.info("Skipped active log file: {}", fileName);
+                                return false;
+                            }
+                            return true;
+                        })
+                        .collect(Collectors.toList());
+
+                for (Path path : toDelete) {
+                    Files.delete(path);
+                    deletedCount++;
+                    logger.info("Deleted log file: {}", path.getFileName());
+                }
+            }
+
+            result.put("success", true);
+            result.put("message", "Deleted " + deletedCount + " log files, skipped " + skippedCount.get() + " active log files");
+            result.put("deletedCount", deletedCount);
+            result.put("skippedCount", skippedCount.get());
+        } catch (IOException e) {
+            logger.error("Failed to clear all logs", e);
+            result.put("success", false);
+            result.put("message", "Failed to clear all logs: " + e.getMessage());
         }
 
         return result;

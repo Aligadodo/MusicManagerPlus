@@ -95,4 +95,18 @@ class LogService {
       throw Exception('删除日志文件失败: $e');
     }
   }
+
+  Future<Map<String, dynamic>> clearAllLogs() async {
+    try {
+      final response = await _apiClient.delete('/api/logs/clear-all');
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data as Map<String, dynamic>;
+      } else {
+        throw Exception('删除全部日志失败: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('删除全部日志失败: $e');
+    }
+  }
 }

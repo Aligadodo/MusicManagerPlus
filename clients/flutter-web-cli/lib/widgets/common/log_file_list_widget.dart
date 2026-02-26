@@ -36,6 +36,7 @@ class LogFileListWidget extends StatelessWidget {
   final Function(String) onDownload;
   final Function(String) onDelete;
   final Function(String) onCopyToClipboard;
+  final Function()? onClearAll;
 
   const LogFileListWidget({
     super.key,
@@ -50,6 +51,7 @@ class LogFileListWidget extends StatelessWidget {
     required this.onDownload,
     required this.onDelete,
     required this.onCopyToClipboard,
+    this.onClearAll,
   });
 
   String _formatFileSize(int bytes) {
@@ -94,6 +96,12 @@ class LogFileListWidget extends StatelessWidget {
                 ),
                 tooltip: autoRefreshEnabled ? '自动刷新已开启' : '自动刷新已关闭',
               ),
+              if (onClearAll != null && logFiles.isNotEmpty)
+                IconButton(
+                  onPressed: onClearAll,
+                  icon: const Icon(Icons.delete_sweep, size: 16, color: Colors.red),
+                  tooltip: '删除全部',
+                ),
             ],
           ),
         ),

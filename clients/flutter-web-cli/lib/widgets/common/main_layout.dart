@@ -61,10 +61,10 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
         const SnackBar(content: Text('正在创建新任务...')),
       );
       
-      // 切换到预览执行页面
+      // 切换到任务列表页面
       _tabController.animateTo(1);
       
-      // 预览执行页面会自动创建新任务
+      // 任务列表页面会自动创建新任务
     } catch (e) {
       taskNotifier.error(e.toString());
       ScaffoldMessenger.of(context).showSnackBar(
@@ -99,10 +99,10 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
         const SnackBar(content: Text('正在执行最新任务...')),
       );
       
-      // 切换到预览执行页面
+      // 切换到任务列表页面
       _tabController.animateTo(1);
       
-      // 预览执行页面会自动执行最新任务
+      // 任务列表页面会自动执行最新任务
     } catch (e) {
       taskNotifier.error(e.toString());
       ScaffoldMessenger.of(context).showSnackBar(
@@ -174,7 +174,7 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
     try {
       taskNotifier.stop();
       
-      // 切换到预览执行页面
+      // 切换到任务列表页面
       _tabController.animateTo(1);
       
       // 停止流水线任务
@@ -511,7 +511,7 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
         controller: _tabController,
         tabs: const [
           Tab(text: '任务编排'),
-          Tab(text: '预览执行'),
+          Tab(text: '任务列表'),
           Tab(text: '运行日志'),
           Tab(text: '全局设置'),
           Tab(text: '界面设置'),

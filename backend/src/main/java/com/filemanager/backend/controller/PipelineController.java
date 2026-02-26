@@ -28,6 +28,8 @@ import org.springframework.web.bind.annotation.*;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -179,7 +181,9 @@ public class PipelineController {
 
             // 创建持久化的任务记录
             TaskRequestDTO taskRequest = new TaskRequestDTO();
-            taskRequest.setTaskName("预览任务-" + System.currentTimeMillis());
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            String timestamp = sdf.format(new Date());
+            taskRequest.setTaskName("预览任务-" + timestamp);
             taskRequest.setDescription("流水线预览分析");
             
             // 转换源目录

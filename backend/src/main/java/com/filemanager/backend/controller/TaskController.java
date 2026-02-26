@@ -212,6 +212,49 @@ public class TaskController {
         try {
             logger.info("[TaskController] 开始删除任务: {}", taskId);
             
+            // 检查任务状态，不允许删除正在运行中的任务
+            TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
+            if (taskInfo == null) {
+                // 尝试从数据库加载任务信息
+                TaskInfoPO taskInfoPO = null;
+                try {
+                    taskInfoPO = taskInfoMapper.selectByTaskId(taskId);
+                } catch (Exception e) {
+                    logger.warn("[TaskController] 从数据库加载任务信息失败: {}", taskId, e);
+                }
+                
+                if (taskInfoPO == null) {
+                    response.put("success", false);
+                    Map<String, Object> error = new HashMap<>();
+                    error.put("code", "TASK_NOT_FOUND");
+                    error.put("message", "任务不存在");
+                    response.put("error", error);
+                    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+                }
+                
+                // 检查数据库中的任务状态
+                String status = taskInfoPO.getStatus();
+                if ("SCANNING".equals(status) || "PREVIEWING".equals(status) || "EXECUTING".equals(status)) {
+                    response.put("success", false);
+                    Map<String, Object> error = new HashMap<>();
+                    error.put("code", "TASK_RUNNING");
+                    error.put("message", "任务正在运行中，无法删除");
+                    response.put("error", error);
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+                }
+            } else {
+                // 检查内存中的任务状态
+                TaskInfo.TaskStatus status = taskInfo.getStatus();
+                if (status == TaskInfo.TaskStatus.SCANNING || status == TaskInfo.TaskStatus.PREVIEWING || status == TaskInfo.TaskStatus.EXECUTING) {
+                    response.put("success", false);
+                    Map<String, Object> error = new HashMap<>();
+                    error.put("code", "TASK_RUNNING");
+                    error.put("message", "任务正在运行中，无法删除");
+                    response.put("error", error);
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+                }
+            }
+            
             boolean deleted = storageService.deleteTask(taskId);
             
             if (!deleted) {
@@ -235,6 +278,13 @@ public class TaskController {
                 logger.info("[TaskController] 已删除任务操作日志: {}", taskId);
             } catch (Exception e) {
                 logger.warn("[TaskController] 删除任务操作日志失败: {}", taskId, e);
+            }
+            
+            try {
+                taskInfoMapper.deleteByTaskId(taskId);
+                logger.info("[TaskController] 已删除数据库中的任务记录: {}", taskId);
+            } catch (Exception e) {
+                logger.warn("[TaskController] 删除数据库中的任务记录失败: {}", taskId, e);
             }
             
             Map<String, Object> data = new HashMap<>();
@@ -1410,12 +1460,50 @@ public class TaskController {
             
             List<String> allTaskIds = storageService.getAllTaskIds();
             int deletedCount = 0;
+            int skippedCount = 0;
             
             for (String taskId : allTaskIds) {
                 try {
+                    // 检查任务状态，跳过正在运行中的任务
+                    boolean isRunning = false;
+                    
+                    // 尝试从内存加载任务信息
+                    TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
+                    if (taskInfo != null) {
+                        TaskInfo.TaskStatus status = taskInfo.getStatus();
+                        if (status == TaskInfo.TaskStatus.SCANNING || status == TaskInfo.TaskStatus.PREVIEWING || status == TaskInfo.TaskStatus.EXECUTING) {
+                            isRunning = true;
+                        }
+                    } else {
+                        // 尝试从数据库加载任务信息
+                        try {
+                            TaskInfoPO taskInfoPO = taskInfoMapper.selectByTaskId(taskId);
+                            if (taskInfoPO != null) {
+                                String status = taskInfoPO.getStatus();
+                                if ("SCANNING".equals(status) || "PREVIEWING".equals(status) || "EXECUTING".equals(status)) {
+                                    isRunning = true;
+                                }
+                            }
+                        } catch (Exception e) {
+                            logger.warn("[TaskController] 从数据库加载任务信息失败: {}", taskId, e);
+                        }
+                    }
+                    
+                    if (isRunning) {
+                        logger.warn("[TaskController] 跳过正在运行中的任务: {}", taskId);
+                        skippedCount++;
+                        continue;
+                    }
+                    
                     storageService.deleteTask(taskId);
                     changeRecordService.deleteRecordsByTaskId(taskId);
                     taskOperationLogService.deleteLogsByTaskId(taskId);
+                    try {
+                        taskInfoMapper.deleteByTaskId(taskId);
+                        logger.info("[TaskController] 已删除数据库中的任务记录: {}", taskId);
+                    } catch (Exception e) {
+                        logger.warn("[TaskController] 删除数据库中的任务记录失败: {}", taskId, e);
+                    }
                     deletedCount++;
                 } catch (Exception e) {
                     logger.warn("[TaskController] 删除任务失败: {}", taskId, e);
@@ -1424,12 +1512,13 @@ public class TaskController {
             
             Map<String, Object> data = new HashMap<>();
             data.put("deletedCount", deletedCount);
+            data.put("skippedCount", skippedCount);
             
             response.put("success", true);
             response.put("data", data);
-            response.put("message", "所有任务已清空");
+            response.put("message", "所有非运行中任务已清空");
             
-            logger.info("[TaskController] 清空所有任务成功，共删除 {} 个任务", deletedCount);
+            logger.info("[TaskController] 清空所有任务成功，共删除 {} 个任务，跳过 {} 个正在运行中的任务", deletedCount, skippedCount);
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {

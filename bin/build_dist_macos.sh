@@ -91,7 +91,7 @@ fi
 echo "[4/7] 构建前端应用..."
 export PATH="$FLUTTER_SDK/bin:$PATH"
 cd "$PROJECT_ROOT/clients/flutter-web-cli"
-flutter build web --release
+FLUTTER_WEB_RENDERER=html flutter build web --release
 if [ $? -ne 0 ]; then
     echo "[错误] Flutter 构建失败！"
     cd "$PROJECT_ROOT"

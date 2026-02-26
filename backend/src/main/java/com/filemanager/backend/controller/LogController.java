@@ -150,4 +150,22 @@ public class LogController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
+
+    @DeleteMapping("/clear-all")
+    public ResponseEntity<Map<String, Object>> clearAllLogs() {
+        try {
+            Map<String, Object> result = logService.clearAllLogs();
+            if ((Boolean) result.getOrDefault("success", false)) {
+                return ResponseEntity.ok(result);
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
+            }
+        } catch (Exception e) {
+            UnifiedLogger.error("LOG_CONTROLLER", "Failed to clear all logs", e);
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", "Failed to clear all logs: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
 }

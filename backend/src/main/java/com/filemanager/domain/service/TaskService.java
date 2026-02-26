@@ -65,4 +65,10 @@ public interface TaskService {
      * @return 是否有任务正在运行
      */
     boolean isTaskRunning();
+
+    /**
+     * 删除全部任务
+     * @return 删除的任务数量
+     */
+    int clearAllTasks();
 }
