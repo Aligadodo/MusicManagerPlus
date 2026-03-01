@@ -12,6 +12,9 @@ echo "==========================================="
 # 获取脚本所在目录
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+# 项目根目录
+PROJECT_ROOT="$( cd "$SCRIPT_DIR/../.." && pwd )"
+
 # --- 1. 停止已运行的前端服务 ---
 echo "[1/2] 停止已运行的前端服务..."
 
@@ -40,8 +43,7 @@ echo "访问地址: http://localhost:8081"
 echo "按 Ctrl+C 停止服务"
 echo ""
 
-cd "$SCRIPT_DIR/../../clients/flutter-web-cli"
-FLUTTER_WEB_RENDERER=html flutter run -d chrome --web-port=8081 &
+python3 -m http.server 8081 --directory "$PROJECT_ROOT/frontend" &
 FRONTEND_PID=$!
 
 echo "前端服务已启动 (PID: $FRONTEND_PID)"

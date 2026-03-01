@@ -65,11 +65,25 @@ public class DatabaseTaskStorage implements ITaskStorage {
     public void initializeTaskDirectory(String taskId) {
         try {
             Path taskPath = Paths.get(getTaskDirectory(taskId));
-            Files.createDirectories(taskPath);
             
-            Files.createDirectories(taskPath.resolve("scan"));
-            Files.createDirectories(taskPath.resolve("preview"));
-            Files.createDirectories(taskPath.resolve("execution"));
+            if (!Files.exists(taskPath)) {
+                Files.createDirectories(taskPath);
+            }
+            
+            Path scanPath = taskPath.resolve("scan");
+            if (!Files.exists(scanPath)) {
+                Files.createDirectories(scanPath);
+            }
+            
+            Path previewPath = taskPath.resolve("preview");
+            if (!Files.exists(previewPath)) {
+                Files.createDirectories(previewPath);
+            }
+            
+            Path executionPath = taskPath.resolve("execution");
+            if (!Files.exists(executionPath)) {
+                Files.createDirectories(executionPath);
+            }
             
             logger.info("[DatabaseStorage] 任务目录初始化完成: {}", taskId);
         } catch (IOException e) {

@@ -303,15 +303,13 @@ class PreviewWidget extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     ElevatedButton(
-                      onPressed: taskState == LocalTaskState.ready || taskState == LocalTaskState.previewCompleted
-                          ? onPreview
-                          : null,
+                      onPressed: onPreview,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                       ),
-                      child: const Text('创建预览任务'),
+                      child: const Text('创建任务'),
                     ),
                   ],
                 ),

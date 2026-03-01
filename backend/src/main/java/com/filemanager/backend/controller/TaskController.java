@@ -5,8 +5,10 @@ import com.filemanager.backend.service.TaskExecutionService;
 import com.filemanager.backend.service.TaskStorageService;
 import com.filemanager.backend.service.ChangeRecordService;
 import com.filemanager.backend.service.TaskOperationLogService;
+import com.filemanager.backend.service.TaskExecutionLogService;
 import com.filemanager.backend.mapper.TaskInfoMapper;
 import com.filemanager.backend.entity.TaskInfoPO;
+import com.filemanager.backend.entity.TaskExecutionLog;
 import com.filemanager.domain.dto.TaskRequestDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +26,7 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
 
 /**
  * 任务管理API控制器
@@ -40,6 +43,7 @@ public class TaskController {
     private final TaskExecutionService executionService;
     private final ChangeRecordService changeRecordService;
     private final TaskOperationLogService taskOperationLogService;
+    private final TaskExecutionLogService taskExecutionLogService;
     private final TaskInfoMapper taskInfoMapper;
 
     @Autowired
@@ -47,11 +51,13 @@ public class TaskController {
                          TaskExecutionService executionService,
                          ChangeRecordService changeRecordService,
                          TaskOperationLogService taskOperationLogService,
+                         TaskExecutionLogService taskExecutionLogService,
                          TaskInfoMapper taskInfoMapper) {
         this.storageService = storageService;
         this.executionService = executionService;
         this.changeRecordService = changeRecordService;
         this.taskOperationLogService = taskOperationLogService;
+        this.taskExecutionLogService = taskExecutionLogService;
         this.taskInfoMapper = taskInfoMapper;
         logger.info("[TaskController] TaskController初始化成功");
     }
@@ -1326,7 +1332,7 @@ public class TaskController {
         map.put("createdAt", taskInfo.getCreatedAt());
         map.put("status", taskInfo.getStatus().name());
         map.put("currentStage", taskInfo.getCurrentStage());
-        map.put("progress", taskInfo.getOverallProgress());
+        map.put("overallProgress", taskInfo.getOverallProgress());
         map.put("message", taskInfo.getMessage());
         return map;
     }
@@ -1338,8 +1344,16 @@ public class TaskController {
         map.put("createdAt", taskInfoPO.getCreatedAt().getTime());
         map.put("status", taskInfoPO.getStatus());
         map.put("currentStage", taskInfoPO.getCurrentStage());
-        map.put("progress", taskInfoPO.getOverallProgress());
+        map.put("overallProgress", taskInfoPO.getOverallProgress());
         map.put("message", taskInfoPO.getMessage());
+        
+        // 添加空的stages字段，避免前端解析错误
+        Map<String, Object> stages = new HashMap<>();
+        stages.put("scan", new HashMap<>());
+        stages.put("preview", new HashMap<>());
+        stages.put("execution", new HashMap<>());
+        map.put("stages", stages);
+        
         return map;
     }
 
@@ -1350,7 +1364,7 @@ public class TaskController {
         map.put("createdAt", taskInfo.getCreatedAt());
         map.put("status", taskInfo.getStatus().name());
         map.put("currentStage", taskInfo.getCurrentStage());
-        map.put("progress", taskInfo.getOverallProgress());
+        map.put("overallProgress", taskInfo.getOverallProgress());
         map.put("message", taskInfo.getMessage());
         map.put("configSnapshotId", taskInfo.getConfigSnapshotId());
         
@@ -1540,6 +1554,79 @@ public class TaskController {
     }
 
     /**
+     * 终止所有运行中的任务
+     */
+    @PostMapping("/cancel-all")
+    public ResponseEntity<Map<String, Object>> cancelAllTasks() {
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            logger.info("[TaskController] 开始终止所有运行中的任务");
+
+            List<TaskInfoPO> allTasks = taskInfoMapper.selectAll();
+            int cancelledCount = 0;
+            int skippedCount = 0;
+
+            for (TaskInfoPO taskInfoPO : allTasks) {
+                String taskId = taskInfoPO.getTaskId();
+                String status = taskInfoPO.getStatus();
+
+                if (!"SCANNING".equals(status) && !"PREVIEWING".equals(status) && !"EXECUTING".equals(status)) {
+                    skippedCount++;
+                    continue;
+                }
+
+                boolean cancelled = executionService.cancelTask(taskId);
+
+                if (!cancelled) {
+                    TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
+                    if (taskInfo != null) {
+                        taskInfo.setStatus(TaskInfo.TaskStatus.CANCELLED);
+                        taskInfo.setMessage("任务已终止");
+                        storageService.saveTaskInfo(taskInfo);
+                        taskInfoMapper.updateStatus(taskId, "CANCELLED");
+                        taskInfoMapper.updateMessage(taskId, "任务已终止");
+                        logger.info("[TaskController] 已更新数据库中的任务状态为CANCELLED: {}", taskId);
+                        cancelledCount++;
+                    } else {
+                        taskInfoPO.setStatus("CANCELLED");
+                        taskInfoPO.setMessage("任务已终止");
+                        taskInfoMapper.update(taskInfoPO);
+                        logger.info("[TaskController] 已直接更新数据库中的任务状态为CANCELLED: {}", taskId);
+                        cancelledCount++;
+                    }
+                } else {
+                    logger.info("[TaskController] 已终止运行中的任务: {}", taskId);
+                    cancelledCount++;
+                }
+            }
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("cancelledCount", cancelledCount);
+            data.put("skippedCount", skippedCount);
+
+            response.put("success", true);
+            response.put("data", data);
+            response.put("message", "已终止 " + cancelledCount + " 个运行中的任务");
+
+            logger.info("[TaskController] 终止所有任务完成，共终止 {} 个任务，跳过 {} 个非运行中任务", cancelledCount, skippedCount);
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            logger.error("[TaskController] 终止所有任务失败", e);
+
+            response.put("success", false);
+            Map<String, Object> error = new HashMap<>();
+            error.put("code", "CANCEL_ALL_TASKS_FAILED");
+            error.put("message", "终止所有任务失败");
+            error.put("details", e.getMessage());
+            response.put("error", error);
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    /**
      * 清理阶段数据
      */
     @DeleteMapping("/{taskId}/stage/{stageType}/data")
@@ -1591,6 +1678,122 @@ public class TaskController {
             error.put("details", e.getMessage());
             response.put("error", error);
             
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    /**
+     * 获取任务执行日志
+     */
+    @GetMapping("/{taskId}/execution-logs")
+    public ResponseEntity<Map<String, Object>> getExecutionLogs(
+            @PathVariable String taskId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "50") int pageSize,
+            @RequestParam(required = false) String logLevel,
+            @RequestParam(required = false) String logType) {
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            List<TaskExecutionLog> logs;
+            int total;
+
+            if (logLevel != null && !logLevel.isEmpty()) {
+                logs = taskExecutionLogService.getLogsByLevel(taskId, logLevel, page, pageSize);
+                total = taskExecutionLogService.getLogCount(taskId);
+            } else if (logType != null && !logType.isEmpty()) {
+                logs = taskExecutionLogService.getLogsByType(taskId, logType, page, pageSize);
+                total = taskExecutionLogService.getLogCount(taskId);
+            } else {
+                logs = taskExecutionLogService.getLogs(taskId, page, pageSize);
+                total = taskExecutionLogService.getLogCount(taskId);
+            }
+
+            List<Map<String, Object>> logList = new ArrayList<>();
+            for (TaskExecutionLog log : logs) {
+                Map<String, Object> logMap = new HashMap<>();
+                logMap.put("id", log.getId());
+                logMap.put("taskId", log.getTaskId());
+                logMap.put("timestamp", log.getTimestamp());
+                logMap.put("logLevel", log.getLogLevel());
+                logMap.put("logType", log.getLogType());
+                logMap.put("message", log.getMessage());
+                logMap.put("details", log.getDetails());
+                logMap.put("createdAt", log.getCreatedAt() != null ? log.getCreatedAt().getTime() : null);
+                logList.add(logMap);
+            }
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("list", logList);
+            data.put("total", total);
+            data.put("page", page);
+            data.put("pageSize", pageSize);
+            data.put("totalPages", (int) Math.ceil((double) total / pageSize));
+
+            response.put("success", true);
+            response.put("data", data);
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            logger.error("[TaskController] 获取任务日志失败: taskId={}", taskId, e);
+
+            response.put("success", false);
+            Map<String, Object> error = new HashMap<>();
+            error.put("code", "GET_LOGS_FAILED");
+            error.put("message", "获取任务日志失败");
+            error.put("details", e.getMessage());
+            response.put("error", error);
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    /**
+     * 获取新增日志（用于实时更新）
+     */
+    @GetMapping("/{taskId}/execution-logs/new")
+    public ResponseEntity<Map<String, Object>> getNewLogs(
+            @PathVariable String taskId,
+            @RequestParam Long since) {
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            List<TaskExecutionLog> logs = taskExecutionLogService.getNewLogs(taskId, since);
+
+            List<Map<String, Object>> logList = new ArrayList<>();
+            for (TaskExecutionLog log : logs) {
+                Map<String, Object> logMap = new HashMap<>();
+                logMap.put("id", log.getId());
+                logMap.put("taskId", log.getTaskId());
+                logMap.put("timestamp", log.getTimestamp());
+                logMap.put("logLevel", log.getLogLevel());
+                logMap.put("logType", log.getLogType());
+                logMap.put("message", log.getMessage());
+                logMap.put("details", log.getDetails());
+                logMap.put("createdAt", log.getCreatedAt() != null ? log.getCreatedAt().getTime() : null);
+                logList.add(logMap);
+            }
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("list", logList);
+            data.put("count", logList.size());
+
+            response.put("success", true);
+            response.put("data", data);
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            logger.error("[TaskController] 获取新增日志失败: taskId={}", taskId, e);
+
+            response.put("success", false);
+            Map<String, Object> error = new HashMap<>();
+            error.put("code", "GET_NEW_LOGS_FAILED");
+            error.put("message", "获取新增日志失败");
+            error.put("details", e.getMessage());
+            response.put("error", error);
+
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }

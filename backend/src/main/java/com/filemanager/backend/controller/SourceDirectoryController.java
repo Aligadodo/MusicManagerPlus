@@ -37,51 +37,45 @@ public class SourceDirectoryController {
         }
     }
 
-    private final List<SourceDirectory> sourceDirectories = new ArrayList<>();
-    
     @Autowired
     private ConfigManager configManager;
 
-    @javax.annotation.PostConstruct
-    public void init() {
-        System.out.println("[SourceDirectory] 初始化配置加载");
-        loadSourceDirectoriesConfig();
-    }
-
-    private void loadSourceDirectoriesConfig() {
+    /**
+     * 从 ConfigManager 加载源目录配置
+     */
+    private List<SourceDirectory> loadSourceDirectoriesFromConfig() {
+        List<SourceDirectory> directories = new ArrayList<>();
         try {
             List<Map<String, Object>> configList = configManager.getConfig("sourceDirectories", List.class);
             if (configList != null) {
-                System.out.println("[SourceDirectory] 找到配置，开始加载源目录");
-                sourceDirectories.clear();
                 for (Map<String, Object> config : configList) {
                     String path = (String) config.get("path");
                     int threadCount = (Integer) config.getOrDefault("threadCount", 4);
-                    sourceDirectories.add(new SourceDirectory(path, threadCount));
+                    if (path != null && !path.isEmpty()) {
+                        directories.add(new SourceDirectory(path, threadCount));
+                    }
                 }
-                System.out.println("[SourceDirectory] 配置加载成功，源目录数量: " + sourceDirectories.size());
-            } else {
-                System.out.println("[SourceDirectory] 配置不存在，使用默认空配置");
-                sourceDirectories.clear();
             }
         } catch (Exception e) {
-            System.err.println("[SourceDirectory] 配置加载失败: " + e.getMessage());
-            e.printStackTrace();
-            sourceDirectories.clear();
+            System.err.println("[SourceDirectory] 从配置加载失败: " + e.getMessage());
         }
+        return directories;
     }
 
-    private void saveSourceDirectoriesConfig() {
+    /**
+     * 保存源目录配置到 ConfigManager
+     */
+    private void saveSourceDirectoriesToConfig(List<SourceDirectory> directories) {
         try {
             List<Map<String, Object>> configList = new ArrayList<>();
-            for (SourceDirectory dir : sourceDirectories) {
+            for (SourceDirectory dir : directories) {
                 Map<String, Object> config = new HashMap<>();
                 config.put("path", dir.getPath());
                 config.put("threadCount", dir.getThreadCount());
                 configList.add(config);
             }
             configManager.setConfig("sourceDirectories", configList);
-            System.out.println("[SourceDirectory] 配置保存成功，源目录数量: " + sourceDirectories.size());
+            System.out.println("[SourceDirectory] 配置保存成功，源目录数量: " + directories.size());
         } catch (Exception e) {
             System.err.println("[SourceDirectory] 配置保存失败: " + e.getMessage());
             e.printStackTrace();
@@ -91,8 +85,11 @@ public class SourceDirectoryController {
     @GetMapping
     public ResponseEntity<List<Map<String, Object>>> getSourceDirectories() {
         try {
+            // 每次请求时从 ConfigManager 动态加载
+            List<SourceDirectory> directories = loadSourceDirectoriesFromConfig();
+
             List<Map<String, Object>> result = new ArrayList<>();
-            for (SourceDirectory dir : sourceDirectories) {
+            for (SourceDirectory dir : directories) {
                 Map<String, Object> dirMap = new HashMap<>();
                 dirMap.put("path", dir.getPath());
                 dirMap.put("threadCount", dir.getThreadCount());
@@ -110,8 +107,11 @@ public class SourceDirectoryController {
             String path = (String) request.get("path");
             int threadCount = (Integer) request.getOrDefault("threadCount", 4);
 
+            // 从配置加载当前列表
+            List<SourceDirectory> directories = loadSourceDirectoriesFromConfig();
+
             // 检查路径是否已存在
-            for (SourceDirectory dir : sourceDirectories) {
+            for (SourceDirectory dir : directories) {
                 if (dir.getPath().equals(path)) {
                     Map<String, Object> errorResult = new HashMap<>();
                     errorResult.put("success", false);
@@ -120,18 +120,18 @@ public class SourceDirectoryController {
                 }
             }
 
-            sourceDirectories.add(new SourceDirectory(path, threadCount));
-            saveSourceDirectoriesConfig();
-            
+            directories.add(new SourceDirectory(path, threadCount));
+            saveSourceDirectoriesToConfig(directories);
+
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
             result.put("message", "源目录添加成功");
-            
+
             Map<String, Object> data = new HashMap<>();
             data.put("path", path);
             data.put("threadCount", threadCount);
             result.put("data", data);
-            
+
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             Map<String, Object> errorResult = new HashMap<>();
@@ -144,14 +144,17 @@ public class SourceDirectoryController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Map<String, Object>> removeSourceDirectory(@PathVariable String id) {
         try {
-            boolean removed = sourceDirectories.removeIf(dir -> dir.getPath().equals(id));
+            // 从配置加载当前列表
+            List<SourceDirectory> directories = loadSourceDirectoriesFromConfig();
+
+            boolean removed = directories.removeIf(dir -> dir.getPath().equals(id));
             if (!removed) {
                 Map<String, Object> errorResult = new HashMap<>();
                 errorResult.put("success", false);
                 errorResult.put("message", "源目录不存在");
                 return ResponseEntity.badRequest().body(errorResult);
             }
-            saveSourceDirectoriesConfig();
+            saveSourceDirectoriesToConfig(directories);
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
             result.put("message", "源目录移除成功");
@@ -164,8 +167,7 @@ public class SourceDirectoryController {
     @DeleteMapping
     public ResponseEntity<Map<String, Object>> clearSourceDirectories() {
         try {
-            sourceDirectories.clear();
-            saveSourceDirectoriesConfig();
+            saveSourceDirectoriesToConfig(new ArrayList<>());
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
             result.put("message", "源目录清空成功");
@@ -194,10 +196,13 @@ public class SourceDirectoryController {
                 return ResponseEntity.badRequest().body(errorResult);
             }
 
-            for (SourceDirectory dir : sourceDirectories) {
+            // 从配置加载当前列表
+            List<SourceDirectory> directories = loadSourceDirectoriesFromConfig();
+
+            for (SourceDirectory dir : directories) {
                 if (dir.getPath().equals(id)) {
                     dir.setThreadCount(threadCount);
-                    saveSourceDirectoriesConfig();
+                    saveSourceDirectoriesToConfig(directories);
                     Map<String, Object> result = new HashMap<>();
                     result.put("success", true);
                     result.put("message", "线程数更新成功");

@@ -19,7 +19,24 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class ConfigManager {
 
-    private static final String CONFIG_FILE_PATH = "config.json";
+    private static final String CONFIG_FILE_NAME = "config.json";
+    private static String CONFIG_FILE_PATH;
+    
+    static {
+        // 获取项目根目录（backend目录的父目录）
+        String backendDir = System.getProperty("user.dir");
+        File backendDirFile = new File(backendDir);
+        
+        // 如果当前目录是backend目录，则使用父目录作为项目根目录
+        if (backendDirFile.getName().equals("backend")) {
+            CONFIG_FILE_PATH = new File(backendDirFile.getParent(), CONFIG_FILE_NAME).getAbsolutePath();
+        } else {
+            // 否则使用当前目录下的config.json
+            CONFIG_FILE_PATH = new File(backendDir, CONFIG_FILE_NAME).getAbsolutePath();
+        }
+        
+        System.out.println("[ConfigManager] 配置文件路径: " + CONFIG_FILE_PATH);
+    }
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     // 配置缓存

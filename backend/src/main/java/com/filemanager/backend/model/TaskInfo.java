@@ -36,6 +36,8 @@ public class TaskInfo {
     private TaskStages stages;
     @JsonProperty("changeRecords")
     private List<ChangeRecord> changeRecords;
+    @JsonProperty("autoExecute")
+    private Boolean autoExecute;
 
     public TaskInfo() {
     }
@@ -144,6 +146,14 @@ public class TaskInfo {
 
     public void setChangeRecords(List<ChangeRecord> changeRecords) {
         this.changeRecords = changeRecords;
+    }
+
+    public Boolean getAutoExecute() {
+        return autoExecute;
+    }
+
+    public void setAutoExecute(Boolean autoExecute) {
+        this.autoExecute = autoExecute;
     }
 
     /**

@@ -19,6 +19,7 @@ import com.filemanager.backend.service.TaskStorageService;
 import com.filemanager.backend.service.PreviewLimitService;
 import com.filemanager.backend.service.TaskRegistry;
 import com.filemanager.backend.service.TaskExecutionService;
+import com.filemanager.backend.service.TaskExecutionLogService;
 import com.filemanager.backend.util.FileScanner;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -68,6 +69,9 @@ public class PipelineController {
 
     @Autowired
     private TaskStorageService storageService;
+
+    @Autowired
+    private TaskExecutionLogService taskExecutionLogService;
 
     @javax.annotation.PostConstruct
     public void init() {
@@ -201,6 +205,10 @@ public class PipelineController {
             globalSettings.setDryRun(true); // 预览模式
             taskRequest.setGlobalSettings(globalSettings);
             
+            // 设置自动执行参数
+            Boolean autoExecute = (Boolean) request.get("autoExecute");
+            taskRequest.setAutoExecute(autoExecute != null ? autoExecute : false);
+            
             // 创建任务
             String taskId = taskExecutionService.createTask(taskRequest);
             
@@ -220,12 +228,18 @@ public class PipelineController {
             taskManager.setCurrentTaskRunning(true);
             taskManager.updateTaskStep(taskId, "初始化预览任务");
             taskManager.updateTaskMessage(taskId, "开始分析流水线...");
+            
+            taskExecutionLogService.info(taskId, "SYSTEM", "预览任务已创建，任务ID: " + taskId);
 
             CompletableFuture.runAsync(() -> {
                 try {
                     UnifiedLogger.backendOperation("Pipeline", "开始预览分析，任务ID: " + taskId);
                     UnifiedLogger.backendOperation("Pipeline", "源目录: " + finalSourceDirectories);
                     UnifiedLogger.backendOperation("Pipeline", "流水线节点数量: " + pipeline.size());
+                    
+                    taskExecutionLogService.info(taskId, "PREVIEW", "开始预览分析");
+                    taskExecutionLogService.info(taskId, "PREVIEW", "源目录: " + finalSourceDirectories);
+                    taskExecutionLogService.info(taskId, "PREVIEW", "流水线节点数量: " + pipeline.size());
 
                     taskManager.updateTaskStep(taskId, "输出流水线配置信息");
                     StringBuilder configSummary = new StringBuilder();
@@ -258,6 +272,7 @@ public class PipelineController {
 
                     taskManager.updateTaskStep(taskId, "扫描文件");
                     taskManager.updateTaskMessage(taskId, "正在扫描文件...");
+                    taskExecutionLogService.info(taskId, "SCAN", "开始扫描文件");
                     
                     List<String> allFilePaths = new ArrayList<>();
                     int previewThreads = 10;
@@ -287,12 +302,14 @@ public class PipelineController {
                                 allFilePaths.add(file.getAbsolutePath());
                             }
                             UnifiedLogger.backendOperation("Pipeline", "目录 " + directory + " 包含 " + files.size() + " 个文件");
+                            taskExecutionLogService.info(taskId, "SCAN", "扫描目录 " + directory + " 完成，找到 " + files.size() + " 个文件");
                         }
                     }
                     
                     int totalFiles = allFilePaths.size();
                     String firstDirectory = finalSourceDirectories.isEmpty() ? "" : finalSourceDirectories.get(0);
                     taskManager.updateTaskScanningInfo(taskId, firstDirectory, 0, totalFiles);
+                    taskExecutionLogService.info(taskId, "SCAN", "文件扫描完成，共找到 " + totalFiles + " 个文件");
                     
                     List<File> rootDirs = new ArrayList<>();
                     for (String directory : finalSourceDirectories) {
@@ -377,6 +394,7 @@ public class PipelineController {
                         String completionDirectory = finalSourceDirectories.isEmpty() ? "" : finalSourceDirectories.get(0);
                         taskManager.updateTaskScanningInfo(taskId, completionDirectory, totalFiles, totalFiles);
                         UnifiedLogger.backendOperation("Pipeline", "预览完成，共发现 " + allChanges.size() + " 个变更");
+                        taskExecutionLogService.info(taskId, "PREVIEW", "预览完成，共发现 " + allChanges.size() + " 个变更");
                         
                         // 更新持久化的任务记录
                         try {
@@ -396,6 +414,7 @@ public class PipelineController {
                     } else {
                         taskManager.updateTaskStatus(taskId, TaskStatus.CANCELLED);
                         taskManager.updateTaskMessage(taskId, "任务已中止");
+                        taskExecutionLogService.warn(taskId, "SYSTEM", "任务已中止");
                         
                         // 更新持久化的任务记录
                         try {
@@ -413,6 +432,7 @@ public class PipelineController {
                     UnifiedLogger.backendError("Pipeline", "预览失败: " + e.getMessage(), e);
                     taskManager.updateTaskStatus(taskId, TaskStatus.PREVIEW_FAILED);
                     taskManager.updateTaskMessage(taskId, "预览失败: " + e.getMessage());
+                    taskExecutionLogService.error(taskId, "PREVIEW", "预览失败: " + e.getMessage(), e);
                     
                     // 更新持久化的任务记录
                     try {

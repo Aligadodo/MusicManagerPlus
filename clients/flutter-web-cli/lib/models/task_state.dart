@@ -15,6 +15,7 @@ class TaskState {
   final String? message;
   final int progress;
   final String? errorMessage;
+  final bool? autoExecute;
 
   TaskState({
     required this.status,
@@ -22,6 +23,7 @@ class TaskState {
     this.message,
     this.progress = 0,
     this.errorMessage,
+    this.autoExecute,
   });
 
   TaskState copyWith({
@@ -30,6 +32,7 @@ class TaskState {
     String? message,
     int? progress,
     String? errorMessage,
+    bool? autoExecute,
   }) {
     return TaskState(
       status: status ?? this.status,
@@ -37,6 +40,7 @@ class TaskState {
       message: message ?? this.message,
       progress: progress ?? this.progress,
       errorMessage: errorMessage ?? this.errorMessage,
+      autoExecute: autoExecute ?? this.autoExecute,
     );
   }
 }
@@ -93,6 +97,10 @@ class TaskNotifier extends StateNotifier<TaskState> {
 
   void reset() {
     state = TaskState(status: TaskStatus.idle, message: '就绪');
+  }
+
+  void updateAutoExecute(bool autoExecute) {
+    state = state.copyWith(autoExecute: autoExecute);
   }
 }
 

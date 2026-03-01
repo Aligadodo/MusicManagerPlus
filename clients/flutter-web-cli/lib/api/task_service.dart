@@ -220,6 +220,16 @@ class TaskService {
     }
   }
 
+  Future<Map<String, dynamic>> cancelAllTasks() async {
+    final response = await _apiClient.post('/api/tasks/cancel-all');
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to cancel all tasks: ${response.statusCode}');
+    }
+  }
+
   Future<Map<String, dynamic>> clearStageData(String taskId, String stageType) async {
     final response = await _apiClient.delete('/api/tasks/$taskId/stage/$stageType/data');
 

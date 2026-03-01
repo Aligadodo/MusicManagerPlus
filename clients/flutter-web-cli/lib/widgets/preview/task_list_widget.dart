@@ -4,6 +4,7 @@ import '../../api/api_client.dart';
 import '../../api/task_service.dart';
 import '../../models/task_status.dart' as task_models;
 import '../common/selectable_text_widget.dart';
+import '../common/task_stage_indicator.dart';
 
 class TaskListWidget extends ConsumerStatefulWidget {
   final List<task_models.TaskStatus> tasks;
@@ -150,6 +151,30 @@ class _TaskListWidgetState extends ConsumerState<TaskListWidget> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
+            color: Colors.orange.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: Colors.orange.withOpacity(0.3),
+              width: 1,
+            ),
+          ),
+          child: InkWell(
+            onTap: () => _cancelAllTasks(context),
+            borderRadius: BorderRadius.circular(8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Icon(Icons.stop_circle, size: 14, color: Colors.orange),
+                SizedBox(width: 4),
+                Text('终止全部', style: TextStyle(fontSize: 12, color: Colors.orange)),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
             color: Colors.red.withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
@@ -241,17 +266,14 @@ class _TaskListWidgetState extends ConsumerState<TaskListWidget> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (widget.errorMessage.isNotEmpty) {
-      return Center(
-        child: Text(
-          widget.errorMessage,
-          style: const TextStyle(color: Colors.red),
-        ),
-      );
-    }
+    // 不再因为全局错误消息而阻止任务列表显示
+    // 单个任务的错误应该在任务卡片内部显示
+    // 错误消息现在通过SnackBar显示，不影响任务列表
 
     final filteredTasks = _filteredTasks;
     if (filteredTasks.isEmpty) {
+      // 任务列表为空时显示提示信息，不显示错误信息
+      // 错误信息已通过SnackBar显示，避免重复显示
       return const Center(
         child: Text('暂无任务记录'),
       );
@@ -363,7 +385,7 @@ class _TaskListWidgetState extends ConsumerState<TaskListWidget> {
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
-                                  '${(task.overallProgress! * 100).round()}%',
+                                  '${task.overallProgress!.round()}%',
                                   style: const TextStyle(
                                     fontSize: 9,
                                     color: Colors.green,
@@ -375,123 +397,26 @@ class _TaskListWidgetState extends ConsumerState<TaskListWidget> {
                       ],
                     ),
                   ),
-                  // 右上角操作按钮
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (task.status == 'EXECUTING')
-                            Container(
-                              margin: const EdgeInsets.only(right: 4),
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: Colors.green.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: Colors.green.withOpacity(0.3),
-                                  width: 1,
-                                ),
-                              ),
-                              child: InkWell(
-                                onTap: () => _executeTask(context, task.taskId!),
-                                borderRadius: BorderRadius.circular(10),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: const [
-                                    Icon(Icons.play_arrow, size: 12, color: Colors.green),
-                                    SizedBox(width: 3),
-                                    Text('执行', style: TextStyle(fontSize: 10, color: Colors.green, fontWeight: FontWeight.w500)),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          
-                          if (['COMPLETED', 'FAILED', 'CANCELLED'].contains(task.status))
-                            Container(
-                              margin: const EdgeInsets.only(right: 4),
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: Colors.blue.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: Colors.blue.withOpacity(0.3),
-                                  width: 1,
-                                ),
-                              ),
-                              child: InkWell(
-                                onTap: () => _rerunTask(context, task.taskId!),
-                                borderRadius: BorderRadius.circular(10),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: const [
-                                    Icon(Icons.refresh, size: 12, color: Colors.blue),
-                                    SizedBox(width: 3),
-                                    Text('重新运行', style: TextStyle(fontSize: 10, color: Colors.blue, fontWeight: FontWeight.w500)),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          
-                          if (['SCANNING', 'PREVIEWING', 'EXECUTING'].contains(task.status))
-                            Container(
-                              margin: const EdgeInsets.only(right: 4),
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: Colors.orange.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: Colors.orange.withOpacity(0.3),
-                                  width: 1,
-                                ),
-                              ),
-                              child: InkWell(
-                                onTap: () => _cancelTask(context, task.taskId!),
-                                borderRadius: BorderRadius.circular(10),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: const [
-                                    Icon(Icons.stop, size: 12, color: Colors.orange),
-                                    SizedBox(width: 3),
-                                    Text('终止', style: TextStyle(fontSize: 10, color: Colors.orange, fontWeight: FontWeight.w500)),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: Colors.red.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: Colors.red.withOpacity(0.3),
-                                width: 1,
-                              ),
-                            ),
-                            child: InkWell(
-                              onTap: () => _deleteTask(context, task.taskId!),
-                              borderRadius: BorderRadius.circular(10),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: const [
-                                  Icon(Icons.delete, size: 12, color: Colors.red),
-                                  SizedBox(width: 3),
-                                  Text('删除', style: TextStyle(fontSize: 10, color: Colors.red, fontWeight: FontWeight.w500)),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
                 ],
               ),
-              
+
               const SizedBox(height: 8),
-              
+
+              // 阶段指示器
+              Row(
+                children: [
+                  TaskStageIndicator(
+                    task: task,
+                    showLabels: true,
+                  ),
+                  const Spacer(),
+                  // 阶段操作按钮
+                  _buildStageActionButtons(context, task),
+                ],
+              ),
+
+              const SizedBox(height: 8),
+
               // 任务详情信息
               Row(
                 children: [
@@ -603,6 +528,196 @@ class _TaskListWidgetState extends ConsumerState<TaskListWidget> {
         ),
       ),
     );
+  }
+
+  /// 构建阶段操作按钮
+  Widget _buildStageActionButtons(BuildContext context, task_models.TaskStatus task) {
+    final status = task.status ?? 'CREATED';
+
+    List<Widget> buttons = [];
+
+    switch (status) {
+      case 'CREATED':
+        // 已创建：显示开始扫描按钮
+        buttons.add(_buildActionButton(
+          context: context,
+          icon: Icons.play_arrow,
+          label: '开始扫描',
+          color: Colors.blue,
+          onTap: () => _startScan(context, task.taskId!),
+        ));
+        break;
+
+      case 'SCANNING':
+        // 扫描中：显示终止按钮
+        buttons.add(_buildActionButton(
+          context: context,
+          icon: Icons.stop,
+          label: '终止',
+          color: Colors.orange,
+          onTap: () => _cancelTask(context, task.taskId!),
+        ));
+        break;
+
+      case 'SCANNED':
+        // 已扫描：显示开始预览按钮
+        buttons.add(_buildActionButton(
+          context: context,
+          icon: Icons.preview,
+          label: '开始预览',
+          color: Colors.purple,
+          onTap: () => _startPreview(context, task.taskId!),
+        ));
+        break;
+
+      case 'PREVIEWING':
+        // 预览中：显示终止按钮
+        buttons.add(_buildActionButton(
+          context: context,
+          icon: Icons.stop,
+          label: '终止',
+          color: Colors.orange,
+          onTap: () => _cancelTask(context, task.taskId!),
+        ));
+        break;
+
+      case 'PREVIEWED':
+        // 已预览：显示开始执行按钮
+        buttons.add(_buildActionButton(
+          context: context,
+          icon: Icons.play_circle,
+          label: '开始执行',
+          color: Colors.green,
+          onTap: () => _executeTask(context, task.taskId!),
+        ));
+        break;
+
+      case 'EXECUTING':
+        // 执行中：显示终止按钮
+        buttons.add(_buildActionButton(
+          context: context,
+          icon: Icons.stop,
+          label: '终止',
+          color: Colors.orange,
+          onTap: () => _cancelTask(context, task.taskId!),
+        ));
+        break;
+
+      case 'COMPLETED':
+        // 已完成：显示重新执行按钮
+        buttons.add(_buildActionButton(
+          context: context,
+          icon: Icons.refresh,
+          label: '重新执行',
+          color: Colors.blue,
+          onTap: () => _rerunTask(context, task.taskId!),
+        ));
+        break;
+
+      case 'FAILED':
+        // 失败：显示重试按钮
+        buttons.add(_buildActionButton(
+          context: context,
+          icon: Icons.refresh,
+          label: '重试',
+          color: Colors.blue,
+          onTap: () => _rerunTask(context, task.taskId!),
+        ));
+        break;
+
+      case 'CANCELLED':
+        // 已取消：显示重新运行按钮
+        buttons.add(_buildActionButton(
+          context: context,
+          icon: Icons.replay,
+          label: '重新运行',
+          color: Colors.blue,
+          onTap: () => _rerunTask(context, task.taskId!),
+        ));
+        break;
+    }
+
+    // 始终显示删除按钮
+    buttons.add(_buildActionButton(
+      context: context,
+      icon: Icons.delete,
+      label: '删除',
+      color: Colors.red,
+      onTap: () => _deleteTask(context, task.taskId!),
+    ));
+
+    if (buttons.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: buttons.map((button) => Padding(
+        padding: const EdgeInsets.only(left: 4),
+        child: button,
+      )).toList(),
+    );
+  }
+
+  Widget _buildActionButton({
+    required BuildContext context,
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: color.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 12, color: color),
+            const SizedBox(width: 3),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                color: color,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _startScan(BuildContext context, String taskId) async {
+    try {
+      final taskService = TaskService(ApiClient());
+      await taskService.restartScan(taskId);
+      _showSuccess(context, '扫描已开始');
+      widget.onRefresh?.call();
+    } catch (e) {
+      _showError(context, '开始扫描失败: $e');
+    }
+  }
+
+  Future<void> _startPreview(BuildContext context, String taskId) async {
+    try {
+      final taskService = TaskService(ApiClient());
+      await taskService.restartPreview(taskId);
+      _showSuccess(context, '预览已开始');
+      widget.onRefresh?.call();
+    } catch (e) {
+      _showError(context, '开始预览失败: $e');
+    }
   }
 
   String _formatDateTime(DateTime dateTime) {
@@ -809,6 +924,43 @@ class _TaskListWidgetState extends ConsumerState<TaskListWidget> {
         backgroundColor: Colors.green,
       ),
     );
+  }
+
+  Future<void> _cancelAllTasks(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('确认终止'),
+        content: const Text('确定要终止全部运行中的任务吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.orange,
+            ),
+            child: const Text('终止全部'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final taskService = TaskService(ApiClient());
+      final result = await taskService.cancelAllTasks();
+      final cancelledCount = result['data']?['cancelledCount'] ?? 0;
+      _showSuccess(context, '已终止 $cancelledCount 个运行中的任务');
+      if (widget.onRefresh != null) {
+        widget.onRefresh!();
+      }
+    } catch (e) {
+      _showError(context, '终止全部任务失败: $e');
+    }
   }
 
   Future<void> _clearAllTasks(BuildContext context) async {

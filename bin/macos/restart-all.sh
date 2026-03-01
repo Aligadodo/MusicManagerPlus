@@ -12,8 +12,11 @@ echo "==========================================="
 # 获取脚本所在目录
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+# 项目根目录 (bin/macos 的上级目录的上级目录)
+PROJECT_ROOT="$( cd "$SCRIPT_DIR/../.." && pwd )"
+
 # --- 1. 停止服务 ---
-echo "[1/3] 停止现有服务..."
+echo "[1/4] 停止现有服务..."
 if [ -f "$SCRIPT_DIR/stop-all.sh" ]; then
     "$SCRIPT_DIR/stop-all.sh"
 else
@@ -37,7 +40,7 @@ else
 fi
 
 # --- 2. 检查停止结果 ---
-echo "[2/3] 检查服务停止状态..."
+echo "[2/4] 检查服务停止状态..."
 
 # 等待 2 秒让服务完全停止
 sleep 2
@@ -56,8 +59,35 @@ else
     echo "[成功] 前端服务已停止"
 fi
 
-# --- 3. 启动服务 ---
-echo "[3/3] 启动服务..."
+# --- 3. 同步前端构建输出 ---
+echo "[3/4] 同步前端构建输出..."
+
+FRONTEND_BUILD_DIR="$PROJECT_ROOT/clients/flutter-web-cli/build/web"
+FRONTEND_DEPLOY_DIR="$PROJECT_ROOT/frontend"
+
+if [ -d "$FRONTEND_BUILD_DIR" ] && [ -f "$FRONTEND_BUILD_DIR/main.dart.js" ]; then
+    # 检查构建输出是否比部署目录新
+    BUILD_TIME=$(stat -f %m "$FRONTEND_BUILD_DIR/main.dart.js" 2>/dev/null || stat -c %Y "$FRONTEND_BUILD_DIR/main.dart.js" 2>/dev/null)
+    DEPLOY_TIME=0
+    if [ -f "$FRONTEND_DEPLOY_DIR/main.dart.js" ]; then
+        DEPLOY_TIME=$(stat -f %m "$FRONTEND_DEPLOY_DIR/main.dart.js" 2>/dev/null || stat -c %Y "$FRONTEND_DEPLOY_DIR/main.dart.js" 2>/dev/null)
+    fi
+    
+    if [ "$BUILD_TIME" -gt "$DEPLOY_TIME" ]; then
+        echo "发现新的前端构建输出，正在同步..."
+        rm -rf "$FRONTEND_DEPLOY_DIR"/*
+        cp -r "$FRONTEND_BUILD_DIR"/* "$FRONTEND_DEPLOY_DIR/"
+        echo "[成功] 前端构建输出已同步"
+    else
+        echo "[跳过] 前端构建输出已是最新"
+    fi
+else
+    echo "[警告] 未找到前端构建输出，跳过同步步骤"
+    echo "        请运行: cd clients/flutter-web-cli && flutter build web --release"
+fi
+
+# --- 4. 启动服务 ---
+echo "[4/4] 启动服务..."
 echo "正在启动 FileManager Plus 服务..."
 echo "服务地址: http://localhost:8080"
 echo "访问地址: http://localhost:8081"

@@ -12,6 +12,9 @@ echo "==========================================="
 # 获取脚本所在目录
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+# 项目根目录
+PROJECT_ROOT="$( cd "$SCRIPT_DIR/../.." && pwd )"
+
 # 设置JDK路径（优先使用JDK 21，兼容JDK 8）
 JDK21_PATH="/Library/Java/JavaVirtualMachines/openjdk-21.jdk/Contents/Home"
 JDK8_PATH="/Library/Java/JavaVirtualMachines/zulu-8.jdk/Contents/Home"
@@ -21,7 +24,7 @@ if [ -f "$JDK21_PATH/bin/java" ]; then
 elif [ -f "$JDK8_PATH/bin/java" ]; then
     JAVA_HOME="$JDK8_PATH"
 else
-    JAVA_HOME="$SCRIPT_DIR/../../jdk"
+    JAVA_HOME="$PROJECT_ROOT/jdk"
 fi
 
 # --- 1. 停止后端服务 ---
@@ -60,7 +63,7 @@ echo "服务地址: http://localhost:8080"
 echo "按 Ctrl+C 停止服务"
 echo ""
 
-"$JAVA_HOME/bin/java" -Xms512m -Xmx1g -jar "$SCRIPT_DIR/../../dist/backend/backend.jar" &
+"$JAVA_HOME/bin/java" -Xms512m -Xmx1g -jar "$PROJECT_ROOT/backend/target/backend-1.0.0.jar" &
 BACKEND_PID=$!
 
 echo "后端服务已启动 (PID: $BACKEND_PID)"

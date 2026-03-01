@@ -12,6 +12,7 @@ public class TaskRequestDTO {
     private List<SourceDirectoryDTO> sourceDirectories;
     private String pipelineId;
     private GlobalSettingsDTO globalSettings;
+    private Boolean autoExecute;
 
     public TaskRequestDTO() {
     }
@@ -54,6 +55,14 @@ public class TaskRequestDTO {
 
     public void setGlobalSettings(GlobalSettingsDTO globalSettings) {
         this.globalSettings = globalSettings;
+    }
+
+    public Boolean getAutoExecute() {
+        return autoExecute;
+    }
+
+    public void setAutoExecute(Boolean autoExecute) {
+        this.autoExecute = autoExecute;
     }
 
     /**

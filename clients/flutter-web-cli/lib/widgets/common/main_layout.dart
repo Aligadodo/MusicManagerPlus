@@ -436,12 +436,16 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
             Checkbox(
               value: _autoRun,
               onChanged: (value) {
+                final newValue = value ?? false;
                 setState(() {
-                  _autoRun = value ?? false;
+                  _autoRun = newValue;
                 });
+                // 更新全局任务状态中的autoExecute值
+                final taskNotifier = ref.read(taskStateProvider.notifier);
+                taskNotifier.updateAutoExecute(newValue);
               },
             ),
-            const Text('预览成功立即运行'),
+            const Text('自动执行'),
           ],
         ),
       ],
@@ -451,15 +455,12 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
   Widget _buildActionButtons() {
     return Consumer(
       builder: (context, ref, child) {
-        final taskState = ref.watch(taskStateProvider);
-        final isRunning = taskState.status == TaskStatus.running || taskState.status == TaskStatus.analyzing;
-        
         return Row(
           children: [
             ElevatedButton.icon(
-              onPressed: isRunning ? null : _runPipelineAnalysis,
-              icon: const Icon(Icons.visibility),
-              label: const Text('预览'),
+              onPressed: _runPipelineAnalysis,
+              icon: const Icon(Icons.add_task),
+              label: const Text('创建任务'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
                 foregroundColor: Colors.white,

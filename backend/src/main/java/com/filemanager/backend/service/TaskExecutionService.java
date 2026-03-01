@@ -72,6 +72,7 @@ public class TaskExecutionService {
         // 创建任务信息
         TaskInfo taskInfo = new TaskInfo(taskId);
         taskInfo.setTaskName(request.getTaskName() != null ? request.getTaskName() : "未命名任务");
+        taskInfo.setAutoExecute(request.getAutoExecute() != null ? request.getAutoExecute() : false);
         
         // 创建配置快照
         TaskConfigSnapshot configSnapshot = createConfigSnapshot(request);
@@ -362,18 +363,57 @@ public class TaskExecutionService {
      */
     public boolean cancelTask(String taskId) {
         TaskExecution execution = runningTasks.get(taskId);
-        if (execution == null) {
+        if (execution != null) {
+            // 任务正在运行中，取消任务
+            Future<?> future = execution.getFuture();
+            if (future != null && !future.isDone()) {
+                future.cancel(true);
+            }
+            
+            execution.cancel();
+            logger.info("[TaskExecution] 运行中的任务已取消: {}", taskId);
+            return true;
+        }
+        
+        // 任务不在runningTasks中，检查任务状态
+        TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
+        if (taskInfo == null) {
+            logger.warn("[TaskExecution] 任务不存在，无法取消: {}", taskId);
             return false;
         }
         
-        Future<?> future = execution.getFuture();
-        if (future != null && !future.isDone()) {
-            future.cancel(true);
+        // 如果任务状态为运行中，但不在runningTasks中，说明任务可能已经卡住或状态不一致
+        // 更新任务状态为已取消
+        TaskInfo.TaskStatus status = taskInfo.getStatus();
+        if (status == TaskInfo.TaskStatus.SCANNING || 
+            status == TaskInfo.TaskStatus.PREVIEWING || 
+            status == TaskInfo.TaskStatus.EXECUTING) {
+            
+            logger.info("[TaskExecution] 任务不在运行中但状态为运行中，更新状态为已取消: {}", taskId);
+            
+            // 更新任务状态
+            taskInfo.setStatus(TaskInfo.TaskStatus.CANCELLED);
+            taskInfo.setMessage("任务已取消");
+            taskInfo.setUpdatedAt(System.currentTimeMillis());
+            
+            // 更新当前阶段状态
+            String currentStage = taskInfo.getCurrentStage();
+            if ("SCANNING".equals(currentStage)) {
+                taskInfo.getStages().getScan().setStatus("CANCELLED");
+            } else if ("PREVIEWING".equals(currentStage)) {
+                taskInfo.getStages().getPreview().setStatus("CANCELLED");
+            } else if ("EXECUTING".equals(currentStage)) {
+                taskInfo.getStages().getExecution().setStatus("CANCELLED");
+            }
+            
+            storageService.saveTaskInfo(taskInfo);
+            updateTaskInfoInDatabase(taskInfo);
+            
+            return true;
         }
         
-        execution.cancel();
-        logger.info("[TaskExecution] 任务已取消: {}", taskId);
-        return true;
+        logger.warn("[TaskExecution] 任务未在运行中，无法取消: {}, 当前状态: {}", taskId, status);
+        return false;
     }
 
     public boolean cancelStage(String taskId, String stageType) {
@@ -850,6 +890,12 @@ public class TaskExecutionService {
                 webSocketService.sendTaskInfoUpdate(taskId, taskInfo);
                 updateTaskInfoInDatabase(taskInfo);
                 
+                // 检查是否需要自动执行预览
+                if (taskInfo.getAutoExecute() != null && taskInfo.getAutoExecute()) {
+                    logger.info("[TaskExecution] 自动执行预览分析: {}", taskId);
+                    TaskExecutionService.this.executePreview(taskId);
+                }
+                
                 logger.info("[TaskExecution] 文件扫描完成: {}", taskId);
                 
             } catch (Exception e) {
@@ -995,6 +1041,12 @@ public class TaskExecutionService {
                 storageService.writeTaskLog(taskId, "[INFO] [PREVIEW] 预览完成，共 " + processedCount.get() + " 个文件");
                 webSocketService.sendTaskInfoUpdate(taskId, taskInfo);
                 updateTaskInfoInDatabase(taskInfo);
+                
+                // 检查是否需要自动执行任务
+                if (taskInfo.getAutoExecute() != null && taskInfo.getAutoExecute()) {
+                    logger.info("[TaskExecution] 自动执行任务: {}", taskId);
+                    TaskExecutionService.this.executeTask(taskId);
+                }
                 
                 logger.info("[TaskExecution] 预览分析完成: {}", taskId);
                 

@@ -135,11 +135,15 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
 
   void _checkGlobalTaskState() {
     final taskState = ref.read(taskStateProvider);
+    final taskNotifier = ref.read(taskStateProvider.notifier);
     
     if (taskState.status == TaskStatus.analyzing) {
       _createNewTask();
     } else if (taskState.status == TaskStatus.running) {
       _executeLatestTask();
+    } else if (taskState.status == TaskStatus.error) {
+      // 如果状态是错误，重置状态
+      taskNotifier.reset();
     }
   }
 
@@ -230,15 +234,17 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
       if (mounted) {
         setState(() {
           _tasks = tasks;
+          // 清空全局错误消息，确保单个任务失败不影响列表显示
+          _errorMessage = '';
         });
-        
+
         // 为运行中的任务建立WebSocket连接
         for (final task in tasks) {
           if (['SCANNING', 'PREVIEWING', 'EXECUTING'].contains(task.status)) {
             _connectToTaskWebSocket(task.taskId!);
           }
         }
-        
+
         // 检查是否有任务状态变为 EXECUTING，如果有，获取变更记录
         for (var task in tasks) {
           if (task.status == 'EXECUTING') {
@@ -257,6 +263,8 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
       }
     } catch (e) {
       if (mounted) {
+        // 只在控制台输出错误，不显示在UI上，避免影响任务列表显示
+        print('刷新任务列表失败: $e');
         _showErrorSnackBar('刷新任务列表失败: $e');
       }
     }
@@ -365,6 +373,13 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
       return false;
     }
 
+    for (final dir in _sourceDirectories) {
+      if (dir.path.isEmpty || dir.path.trim().isEmpty) {
+        _showError('源目录路径不能为空');
+        return false;
+      }
+    }
+
     if (_pipeline.isEmpty) {
       _showError('请先配置插件流水线');
       return false;
@@ -374,16 +389,25 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
   }
 
   bool _validatePipelineParameters() {
+    if (_pipeline.isEmpty) {
+      _showError('流水线配置无效');
+      return false;
+    }
+
     for (int i = 0; i < _pipeline.length; i++) {
       final strategy = _pipeline[i];
       
+      if (strategy.configFields == null || strategy.configFields!.isEmpty) {
+        continue;
+      }
+      
       for (final field in strategy.configFields!) {
-        if (field.required && (field.defaultValue == null || field.defaultValue!.isEmpty)) {
+        if (field.required && (field.defaultValue == null || field.defaultValue!.trim().isEmpty)) {
           _showError('策略 "${strategy.name}" 的参数 "${field.label}" 是必填项，请配置');
           return false;
         }
       }
-        }
+    }
 
     return true;
   }
@@ -478,16 +502,19 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
   }
 
   Future<void> _analyzePipeline() async {
+    final taskNotifier = ref.read(taskStateProvider.notifier);
+    
     if (!_validateConfiguration()) {
+      taskNotifier.reset();
       return;
     }
 
     if (!_validatePipelineParameters()) {
+      taskNotifier.reset();
       return;
     }
 
     // 更新全局任务状态
-    final taskNotifier = ref.read(taskStateProvider.notifier);
     taskNotifier.startAnalyzing();
 
     setState(() {
@@ -502,7 +529,9 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
 
     try {
       final sourceDirectories = _sourceDirectories.map((d) => d.path).toList();
-      final result = await _pipelineService.analyzePipeline(sourceDirectories, _pipeline);
+      // 从MainLayout获取_autoRun值
+      final autoExecute = ref.read(taskStateProvider).autoExecute ?? false;
+      final result = await _pipelineService.analyzePipeline(sourceDirectories, _pipeline, autoExecute: autoExecute);
 
       if (result['success'] == true) {
         _taskId = result['taskId'] ?? '';
@@ -512,31 +541,37 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
         // 不在这里立即获取变更记录，而是通过自动刷新来获取
         // 当任务状态变为 PREVIEWED 时，再获取变更记录
       } else {
+        // 只显示SnackBar错误，不设置全局错误消息，避免影响任务列表显示
         _showError(result['message'] ?? '分析失败');
         await _refreshTasks(); // 即使分析失败，也刷新任务列表
+        taskNotifier.error(result['message'] ?? '分析失败');
         setState(() {
           _taskState = LocalTaskState.previewFailed;
-          _errorMessage = result['message'] ?? '分析失败';
+          // 不设置_errorMessage，避免影响任务列表显示
         });
       }
     } catch (e) {
       print('分析流水线失败: $e');
+      // 只显示SnackBar错误，不设置全局错误消息，避免影响任务列表显示
       _showError('分析流水线失败: $e');
       await _refreshTasks(); // 即使发生异常，也刷新任务列表
+      taskNotifier.error('分析流水线失败: $e');
       setState(() {
         _taskState = LocalTaskState.previewFailed;
-        _errorMessage = '分析流水线失败: $e';
+        // 不设置_errorMessage，避免影响任务列表显示
       });
     }
   }
 
   Future<void> _executeTask() async {
+    final taskNotifier = ref.read(taskStateProvider.notifier);
+    
     if (!_validateConfiguration()) {
+      taskNotifier.reset();
       return;
     }
 
     // 更新全局任务状态
-    final taskNotifier = ref.read(taskStateProvider.notifier);
     taskNotifier.startRunning(_taskId);
 
     setState(() {
@@ -562,18 +597,22 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
           _message = '执行完成';
         });
       } else {
+        // 只显示SnackBar错误，不设置全局错误消息，避免影响任务列表显示
         _showError(result['message'] ?? '执行失败');
+        taskNotifier.error(result['message'] ?? '执行失败');
         setState(() {
           _taskState = LocalTaskState.executionFailed;
-          _errorMessage = result['message'] ?? '执行失败';
+          // 不设置_errorMessage，避免影响任务列表显示
         });
       }
     } catch (e) {
       print('执行流水线失败: $e');
+      // 只显示SnackBar错误，不设置全局错误消息，避免影响任务列表显示
       _showError('执行流水线失败: $e');
+      taskNotifier.error('执行流水线失败: $e');
       setState(() {
         _taskState = LocalTaskState.executionFailed;
-        _errorMessage = '执行流水线失败: $e';
+        // 不设置_errorMessage，避免影响任务列表显示
       });
     }
   }

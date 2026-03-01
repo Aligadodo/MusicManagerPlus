@@ -3,11 +3,29 @@ import '../../models/task_status.dart' as task_models;
 
 class TaskDetailHeader extends StatelessWidget {
   final Function() onBack;
+  final task_models.TaskStatus? selectedTask;
+  final Function(String)? onRestartScan;
+  final Function(String)? onRestartPreview;
+  final Function(String)? onRestartExecution;
+  final Function(String)? onRerunTask;
+  final Function(String)? onCancelTask;
 
-  const TaskDetailHeader({super.key, required this.onBack});
+  const TaskDetailHeader({
+    super.key,
+    required this.onBack,
+    this.selectedTask,
+    this.onRestartScan,
+    this.onRestartPreview,
+    this.onRestartExecution,
+    this.onRerunTask,
+    this.onCancelTask,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final status = selectedTask?.status ?? 'UNKNOWN';
+    final currentStage = selectedTask?.currentStage ?? 'UNKNOWN';
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -18,13 +36,97 @@ class TaskDetailHeader extends StatelessWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
-        ElevatedButton(
-          onPressed: onBack,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blue,
-            foregroundColor: Colors.white,
-          ),
-          child: const Text('返回任务列表'),
+        Row(
+          children: [
+            // 重新扫描按钮
+            if (onRestartScan != null && (status == 'SCANNED' || status == 'PREVIEWED' || status == 'COMPLETED' || status == 'FAILED' || status == 'CANCELLED'))
+              Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: ElevatedButton.icon(
+                  onPressed: () => onRestartScan!(selectedTask!.taskId!),
+                  icon: const Icon(Icons.refresh, size: 16),
+                  label: const Text('重新扫描'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                ),
+              ),
+
+            // 重新预览按钮
+            if (onRestartPreview != null && (status == 'PREVIEWED' || status == 'COMPLETED' || status == 'FAILED' || status == 'CANCELLED'))
+              Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: ElevatedButton.icon(
+                  onPressed: () => onRestartPreview!(selectedTask!.taskId!),
+                  icon: const Icon(Icons.preview, size: 16),
+                  label: const Text('重新预览'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.purple,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                ),
+              ),
+
+            // 重新执行按钮
+            if (onRestartExecution != null && (status == 'COMPLETED' || status == 'FAILED' || status == 'CANCELLED'))
+              Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: ElevatedButton.icon(
+                  onPressed: () => onRestartExecution!(selectedTask!.taskId!),
+                  icon: const Icon(Icons.play_arrow, size: 16),
+                  label: const Text('重新执行'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                ),
+              ),
+
+            // 重新运行按钮
+            if (onRerunTask != null && (status == 'FAILED' || status == 'CANCELLED'))
+              Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: ElevatedButton.icon(
+                  onPressed: () => onRerunTask!(selectedTask!.taskId!),
+                  icon: const Icon(Icons.replay, size: 16),
+                  label: const Text('重新运行'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                ),
+              ),
+
+            // 终止任务按钮
+            if (onCancelTask != null && (status == 'SCANNING' || status == 'PREVIEWING' || status == 'EXECUTING'))
+              Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: ElevatedButton.icon(
+                  onPressed: () => onCancelTask!(selectedTask!.taskId!),
+                  icon: const Icon(Icons.stop, size: 16),
+                  label: const Text('终止'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                ),
+              ),
+
+            ElevatedButton(
+              onPressed: onBack,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('返回任务列表'),
+            ),
+          ],
         ),
       ],
     );

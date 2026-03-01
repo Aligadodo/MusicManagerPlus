@@ -134,3 +134,20 @@ CREATE INDEX IF NOT EXISTS idx_config_template_is_default ON config_template(is_
 CREATE INDEX IF NOT EXISTS idx_config_template_usage_count ON config_template(usage_count);
 
 CREATE INDEX IF NOT EXISTS idx_system_config_category ON system_config(category);
+
+-- 任务执行日志表
+CREATE TABLE IF NOT EXISTS task_execution_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_id VARCHAR(64) NOT NULL,
+    timestamp BIGINT NOT NULL,
+    log_level VARCHAR(16) NOT NULL,
+    log_type VARCHAR(32) NOT NULL,
+    message TEXT NOT NULL,
+    details TEXT,
+    created_at DATETIME NOT NULL,
+    FOREIGN KEY (task_id) REFERENCES task_info(task_id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_task_execution_log_task_time ON task_execution_log(task_id, timestamp);
+CREATE INDEX IF NOT EXISTS idx_task_execution_log_task_level ON task_execution_log(task_id, log_level);
+CREATE INDEX IF NOT EXISTS idx_task_execution_log_task_type ON task_execution_log(task_id, log_type);

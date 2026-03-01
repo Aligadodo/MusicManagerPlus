@@ -192,7 +192,7 @@ class PipelineService {
     }
   }
 
-  Future<Map<String, dynamic>> analyzePipeline(List<String> sourceDirectories, List<StrategyInfo> pipeline) async {
+  Future<Map<String, dynamic>> analyzePipeline(List<String> sourceDirectories, List<StrategyInfo> pipeline, {bool autoExecute = false}) async {
     try {
       // 转换为后端期望的数据结构
       final pipelineData = pipeline.map((s) {
@@ -214,6 +214,7 @@ class PipelineService {
       final response = await _apiClient.post('/api/pipeline/analyze', body: {
         'sourceDirectories': sourceDirectories,
         'pipeline': pipelineData,
+        'autoExecute': autoExecute,
       });
       print('Analyze pipeline response: ${response.statusCode}, ${response.body}');
       if (response.statusCode == 200) {
