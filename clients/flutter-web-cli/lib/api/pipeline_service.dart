@@ -192,7 +192,12 @@ class PipelineService {
     }
   }
 
-  Future<Map<String, dynamic>> analyzePipeline(List<String> sourceDirectories, List<StrategyInfo> pipeline, {bool autoExecute = false}) async {
+  Future<Map<String, dynamic>> analyzePipeline(
+    List<String> sourceDirectories, 
+    List<StrategyInfo> pipeline, 
+    {bool autoExecute = false, 
+     Map<String, dynamic>? globalSettings}
+  ) async {
     try {
       // 转换为后端期望的数据结构
       final pipelineData = pipeline.map((s) {
@@ -211,11 +216,27 @@ class PipelineService {
         return map;
       }).toList();
       
-      final response = await _apiClient.post('/api/pipeline/analyze', body: {
+      final body = <String, dynamic>{
         'sourceDirectories': sourceDirectories,
         'pipeline': pipelineData,
         'autoExecute': autoExecute,
-      });
+      };
+      
+      // 添加全局设置
+      if (globalSettings != null) {
+        body['globalSettings'] = {
+          'previewThreads': globalSettings['previewThreads'],
+          'executionThreads': globalSettings['executionThreads'],
+          'threadPoolMode': globalSettings['threadPoolMode'],
+          'minRecursionDepth': globalSettings['minRecursionDepth'],
+          'maxRecursionDepth': globalSettings['maxRecursionDepth'],
+          'previewLimit': globalSettings['previewLimit'],
+          'executionLimit': globalSettings['executionLimit'],
+          'autoRefresh': globalSettings['autoRefresh'],
+        };
+      }
+      
+      final response = await _apiClient.post('/api/pipeline/analyze', body: body);
       print('Analyze pipeline response: ${response.statusCode}, ${response.body}');
       if (response.statusCode == 200) {
         return Map<String, dynamic>.from(json.decode(response.body));

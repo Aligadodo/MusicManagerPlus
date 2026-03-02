@@ -212,6 +212,15 @@ public class TaskConfigSnapshot {
         private String backupPath;
         private int retryCount;
         private long retryInterval;
+        private int previewThreads;
+        private int executionThreads;
+        private String threadPoolMode;
+        private int minRecursionDepth;
+        private int maxRecursionDepth;
+        private int previewLimit;
+        private int executionLimit;
+        private boolean autoRefresh;
+        private boolean autoExecute;
 
         public GlobalSettings() {
             this.maxThreads = 10;
@@ -221,6 +230,15 @@ public class TaskConfigSnapshot {
             this.backup = false;
             this.retryCount = 3;
             this.retryInterval = 1000L;
+            this.previewThreads = 10;
+            this.executionThreads = 4;
+            this.threadPoolMode = "GLOBAL";
+            this.minRecursionDepth = 1;
+            this.maxRecursionDepth = 3;
+            this.previewLimit = 200;
+            this.executionLimit = 1000;
+            this.autoRefresh = true;
+            this.autoExecute = false;
         }
 
         public int getMaxThreads() {
@@ -285,6 +303,78 @@ public class TaskConfigSnapshot {
 
         public void setRetryInterval(long retryInterval) {
             this.retryInterval = retryInterval;
+        }
+
+        public int getPreviewThreads() {
+            return previewThreads;
+        }
+
+        public void setPreviewThreads(int previewThreads) {
+            this.previewThreads = previewThreads;
+        }
+
+        public int getExecutionThreads() {
+            return executionThreads;
+        }
+
+        public void setExecutionThreads(int executionThreads) {
+            this.executionThreads = executionThreads;
+        }
+
+        public String getThreadPoolMode() {
+            return threadPoolMode;
+        }
+
+        public void setThreadPoolMode(String threadPoolMode) {
+            this.threadPoolMode = threadPoolMode;
+        }
+
+        public int getMinRecursionDepth() {
+            return minRecursionDepth;
+        }
+
+        public void setMinRecursionDepth(int minRecursionDepth) {
+            this.minRecursionDepth = minRecursionDepth;
+        }
+
+        public int getMaxRecursionDepth() {
+            return maxRecursionDepth;
+        }
+
+        public void setMaxRecursionDepth(int maxRecursionDepth) {
+            this.maxRecursionDepth = maxRecursionDepth;
+        }
+
+        public int getPreviewLimit() {
+            return previewLimit;
+        }
+
+        public void setPreviewLimit(int previewLimit) {
+            this.previewLimit = previewLimit;
+        }
+
+        public int getExecutionLimit() {
+            return executionLimit;
+        }
+
+        public void setExecutionLimit(int executionLimit) {
+            this.executionLimit = executionLimit;
+        }
+
+        public boolean isAutoRefresh() {
+            return autoRefresh;
+        }
+
+        public void setAutoRefresh(boolean autoRefresh) {
+            this.autoRefresh = autoRefresh;
+        }
+
+        public boolean isAutoExecute() {
+            return autoExecute;
+        }
+
+        public void setAutoExecute(boolean autoExecute) {
+            this.autoExecute = autoExecute;
         }
     }
 }

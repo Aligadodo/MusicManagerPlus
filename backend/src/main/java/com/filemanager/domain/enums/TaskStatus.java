@@ -10,6 +10,16 @@ public enum TaskStatus {
     READY("准备就绪"),
     
     /**
+     * 扫描中 - 正在扫描文件
+     */
+    SCANNING("扫描中"),
+    
+    /**
+     * 扫描完成 - 文件扫描已完成
+     */
+    SCAN_COMPLETED("扫描完成"),
+    
+    /**
      * 预览中 - 正在进行预览分析
      */
     PREVIEWING("预览中"),
@@ -55,7 +65,7 @@ public enum TaskStatus {
     }
     
     public boolean isCompleted() {
-        return this == PREVIEW_COMPLETED || this == EXECUTION_COMPLETED;
+        return this == SCAN_COMPLETED || this == PREVIEW_COMPLETED || this == EXECUTION_COMPLETED;
     }
     
     public boolean isFailed() {
@@ -63,12 +73,16 @@ public enum TaskStatus {
     }
     
     public boolean isRunning() {
-        return this == PREVIEWING || this == EXECUTING;
+        return this == SCANNING || this == PREVIEWING || this == EXECUTING;
     }
     
     public boolean canTransitionTo(TaskStatus target) {
         switch (this) {
             case READY:
+                return target == SCANNING || target == CANCELLED;
+            case SCANNING:
+                return target == SCAN_COMPLETED || target == PREVIEWING || target == CANCELLED;
+            case SCAN_COMPLETED:
                 return target == PREVIEWING || target == CANCELLED;
             case PREVIEWING:
                 return target == PREVIEW_COMPLETED || target == PREVIEW_FAILED || target == CANCELLED;
@@ -83,7 +97,7 @@ public enum TaskStatus {
             case EXECUTION_FAILED:
                 return target == PREVIEWING || target == CANCELLED;
             case CANCELLED:
-                return target == PREVIEWING;
+                return target == SCANNING || target == PREVIEWING;
             default:
                 return false;
         }

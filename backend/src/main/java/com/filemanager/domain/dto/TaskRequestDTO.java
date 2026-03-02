@@ -131,6 +131,14 @@ public class TaskRequestDTO {
         private String backupPath;
         private Integer retryCount;
         private Long retryInterval;
+        private Integer previewThreads;
+        private Integer executionThreads;
+        private String threadPoolMode;
+        private Integer minRecursionDepth;
+        private Integer maxRecursionDepth;
+        private Integer previewLimit;
+        private Integer executionLimit;
+        private Boolean autoRefresh;
 
         public GlobalSettingsDTO() {
         }
@@ -197,6 +205,70 @@ public class TaskRequestDTO {
 
         public void setRetryInterval(Long retryInterval) {
             this.retryInterval = retryInterval;
+        }
+
+        public Integer getPreviewThreads() {
+            return previewThreads;
+        }
+
+        public void setPreviewThreads(Integer previewThreads) {
+            this.previewThreads = previewThreads;
+        }
+
+        public Integer getExecutionThreads() {
+            return executionThreads;
+        }
+
+        public void setExecutionThreads(Integer executionThreads) {
+            this.executionThreads = executionThreads;
+        }
+
+        public String getThreadPoolMode() {
+            return threadPoolMode;
+        }
+
+        public void setThreadPoolMode(String threadPoolMode) {
+            this.threadPoolMode = threadPoolMode;
+        }
+
+        public Integer getMinRecursionDepth() {
+            return minRecursionDepth;
+        }
+
+        public void setMinRecursionDepth(Integer minRecursionDepth) {
+            this.minRecursionDepth = minRecursionDepth;
+        }
+
+        public Integer getMaxRecursionDepth() {
+            return maxRecursionDepth;
+        }
+
+        public void setMaxRecursionDepth(Integer maxRecursionDepth) {
+            this.maxRecursionDepth = maxRecursionDepth;
+        }
+
+        public Integer getPreviewLimit() {
+            return previewLimit;
+        }
+
+        public void setPreviewLimit(Integer previewLimit) {
+            this.previewLimit = previewLimit;
+        }
+
+        public Integer getExecutionLimit() {
+            return executionLimit;
+        }
+
+        public void setExecutionLimit(Integer executionLimit) {
+            this.executionLimit = executionLimit;
+        }
+
+        public Boolean getAutoRefresh() {
+            return autoRefresh;
+        }
+
+        public void setAutoRefresh(Boolean autoRefresh) {
+            this.autoRefresh = autoRefresh;
         }
     }
 }

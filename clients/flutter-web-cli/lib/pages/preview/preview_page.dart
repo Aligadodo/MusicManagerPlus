@@ -18,6 +18,7 @@ import '../../widgets/preview/task_detail_widget.dart';
 import '../../widgets/preview/preview_widget.dart';
 import '../../widgets/preview/task_operations.dart';
 import '../../widgets/common/data_loading_operations.dart';
+import '../../providers/config_provider.dart';
 
 // 导入task_state中的taskStateProvider
 import '../../models/task_state.dart';
@@ -531,7 +532,15 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
       final sourceDirectories = _sourceDirectories.map((d) => d.path).toList();
       // 从MainLayout获取_autoRun值
       final autoExecute = ref.read(taskStateProvider).autoExecute ?? false;
-      final result = await _pipelineService.analyzePipeline(sourceDirectories, _pipeline, autoExecute: autoExecute);
+      // 获取全局设置
+      final config = ref.read(configProvider);
+      final globalSettings = config.globalSettings;
+      final result = await _pipelineService.analyzePipeline(
+        sourceDirectories, 
+        _pipeline, 
+        autoExecute: autoExecute,
+        globalSettings: globalSettings,
+      );
 
       if (result['success'] == true) {
         _taskId = result['taskId'] ?? '';

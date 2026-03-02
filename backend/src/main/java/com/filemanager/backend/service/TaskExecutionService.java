@@ -743,7 +743,35 @@ public class TaskExecutionService {
             if (dto.getRetryInterval() != null) {
                 globalSettings.setRetryInterval(dto.getRetryInterval());
             }
+            if (dto.getPreviewThreads() != null) {
+                globalSettings.setPreviewThreads(dto.getPreviewThreads());
+            }
+            if (dto.getExecutionThreads() != null) {
+                globalSettings.setExecutionThreads(dto.getExecutionThreads());
+            }
+            if (dto.getThreadPoolMode() != null) {
+                globalSettings.setThreadPoolMode(dto.getThreadPoolMode());
+            }
+            if (dto.getMinRecursionDepth() != null) {
+                globalSettings.setMinRecursionDepth(dto.getMinRecursionDepth());
+            }
+            if (dto.getMaxRecursionDepth() != null) {
+                globalSettings.setMaxRecursionDepth(dto.getMaxRecursionDepth());
+            }
+            if (dto.getPreviewLimit() != null) {
+                globalSettings.setPreviewLimit(dto.getPreviewLimit());
+            }
+            if (dto.getExecutionLimit() != null) {
+                globalSettings.setExecutionLimit(dto.getExecutionLimit());
+            }
+            if (dto.getAutoRefresh() != null) {
+                globalSettings.setAutoRefresh(dto.getAutoRefresh());
+            }
         }
+        
+        // 设置自动执行参数
+        globalSettings.setAutoExecute(request.getAutoExecute() != null ? request.getAutoExecute() : false);
+        
         configSnapshot.setGlobalSettings(globalSettings);
         
         return configSnapshot;

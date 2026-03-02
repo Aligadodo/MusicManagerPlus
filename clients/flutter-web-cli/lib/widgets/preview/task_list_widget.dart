@@ -748,8 +748,12 @@ class _TaskListWidgetState extends ConsumerState<TaskListWidget> {
         return '等待中';
       case 'SCANNING':
         return '扫描中';
+      case 'SCANNED':
+        return '扫描完成';
       case 'PREVIEWING':
         return '预览中';
+      case 'PREVIEWED':
+        return '预览完成';
       case 'EXECUTING':
         return '执行中';
       case 'COMPLETED':
@@ -772,6 +776,9 @@ class _TaskListWidgetState extends ConsumerState<TaskListWidget> {
       case 'PREVIEWING':
       case 'EXECUTING':
         return Colors.blue;
+      case 'SCANNED':
+      case 'PREVIEWED':
+        return Colors.cyan;
       case 'COMPLETED':
         return Colors.green;
       case 'FAILED':

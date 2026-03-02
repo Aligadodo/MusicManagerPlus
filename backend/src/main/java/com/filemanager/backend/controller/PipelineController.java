@@ -203,6 +203,35 @@ public class PipelineController {
             // 设置全局配置
             TaskRequestDTO.GlobalSettingsDTO globalSettings = new TaskRequestDTO.GlobalSettingsDTO();
             globalSettings.setDryRun(true); // 预览模式
+            
+            // 从请求中读取全局设置
+            Map<String, Object> globalSettingsMap = (Map<String, Object>) request.get("globalSettings");
+            if (globalSettingsMap != null) {
+                if (globalSettingsMap.get("previewThreads") != null) {
+                    globalSettings.setPreviewThreads((Integer) globalSettingsMap.get("previewThreads"));
+                }
+                if (globalSettingsMap.get("executionThreads") != null) {
+                    globalSettings.setExecutionThreads((Integer) globalSettingsMap.get("executionThreads"));
+                }
+                if (globalSettingsMap.get("threadPoolMode") != null) {
+                    globalSettings.setThreadPoolMode((String) globalSettingsMap.get("threadPoolMode"));
+                }
+                if (globalSettingsMap.get("minRecursionDepth") != null) {
+                    globalSettings.setMinRecursionDepth((Integer) globalSettingsMap.get("minRecursionDepth"));
+                }
+                if (globalSettingsMap.get("maxRecursionDepth") != null) {
+                    globalSettings.setMaxRecursionDepth((Integer) globalSettingsMap.get("maxRecursionDepth"));
+                }
+                if (globalSettingsMap.get("previewLimit") != null) {
+                    globalSettings.setPreviewLimit((Integer) globalSettingsMap.get("previewLimit"));
+                }
+                if (globalSettingsMap.get("executionLimit") != null) {
+                    globalSettings.setExecutionLimit((Integer) globalSettingsMap.get("executionLimit"));
+                }
+                if (globalSettingsMap.get("autoRefresh") != null) {
+                    globalSettings.setAutoRefresh((Boolean) globalSettingsMap.get("autoRefresh"));
+                }
+            }
             taskRequest.setGlobalSettings(globalSettings);
             
             // 设置自动执行参数
@@ -216,10 +245,26 @@ public class PipelineController {
             TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
             if (taskInfo != null) {
                 taskRegistry.registerTask(taskInfo);
-                taskInfo.setStatus(TaskInfo.TaskStatus.PREVIEWING);
-                taskInfo.setCurrentStage("PREVIEW");
-                taskInfo.setMessage("正在预览分析...");
-                taskRegistry.updateTaskStatus(taskId, TaskInfo.TaskStatus.PREVIEWING);
+                // 如果不是自动执行，任务状态保持为 CREATED
+                if (!taskRequest.getAutoExecute()) {
+                    taskInfo.setStatus(TaskInfo.TaskStatus.CREATED);
+                    taskInfo.setCurrentStage("CREATED");
+                    taskInfo.setMessage("任务已创建，等待手动执行");
+                    taskRegistry.updateTaskStatus(taskId, TaskInfo.TaskStatus.CREATED);
+                    storageService.saveTaskInfo(taskInfo);
+                    
+                    Map<String, Object> result = new HashMap<>();
+                    result.put("success", true);
+                    result.put("taskId", taskId);
+                    result.put("message", "任务已创建，等待手动执行");
+                    result.put("autoExecute", false);
+                    return ResponseEntity.ok(result);
+                }
+                // 自动执行模式
+                taskInfo.setStatus(TaskInfo.TaskStatus.SCANNING);
+                taskInfo.setCurrentStage("SCANNING");
+                taskInfo.setMessage("正在扫描文件...");
+                taskRegistry.updateTaskStatus(taskId, TaskInfo.TaskStatus.SCANNING);
             }
             
             // 同时创建 PipelineTaskManager 中的任务，使用相同的任务ID
@@ -388,28 +433,50 @@ public class PipelineController {
                     currentChanges.addAll(allChanges);
                     
                     if (taskManager.isTaskRunning()) {
-                        taskManager.updateTaskStatus(taskId, TaskStatus.PREVIEW_COMPLETED);
-                        taskManager.updateTaskMessage(taskId, "预览完成，共发现 " + allChanges.size() + " 个变更");
-                        taskManager.updateTaskChanges(taskId, !allChanges.isEmpty(), allChanges.size());
-                        String completionDirectory = finalSourceDirectories.isEmpty() ? "" : finalSourceDirectories.get(0);
-                        taskManager.updateTaskScanningInfo(taskId, completionDirectory, totalFiles, totalFiles);
-                        UnifiedLogger.backendOperation("Pipeline", "预览完成，共发现 " + allChanges.size() + " 个变更");
-                        taskExecutionLogService.info(taskId, "PREVIEW", "预览完成，共发现 " + allChanges.size() + " 个变更");
-                        
-                        // 更新持久化的任务记录
-                        try {
-                            TaskInfo previewTaskInfo = storageService.loadTaskInfo(taskId);
-                            if (previewTaskInfo != null) {
-                                previewTaskInfo.setStatus(TaskInfo.TaskStatus.EXECUTING);
-                                previewTaskInfo.setCurrentStage("PREVIEW");
-                                previewTaskInfo.setOverallProgress(100.0);
-                                previewTaskInfo.setMessage("预览完成，共发现 " + allChanges.size() + " 个变更");
-                                previewTaskInfo.setChangeRecords(allChanges);
-                                storageService.saveTaskInfo(previewTaskInfo);
-                                storageService.saveChangeRecords(taskId, allChanges);
+                        // 检查是否扫描到0个文件
+                        if (totalFiles == 0) {
+                            taskManager.updateTaskStatus(taskId, TaskStatus.SCAN_COMPLETED);
+                            taskManager.updateTaskMessage(taskId, "扫描完成，未找到任何文件");
+                            UnifiedLogger.backendOperation("Pipeline", "扫描完成，未找到任何文件");
+                            taskExecutionLogService.info(taskId, "SCAN", "扫描完成，未找到任何文件");
+                            
+                            // 更新持久化的任务记录
+                            try {
+                                TaskInfo scanTaskInfo = storageService.loadTaskInfo(taskId);
+                                if (scanTaskInfo != null) {
+                                    scanTaskInfo.setStatus(TaskInfo.TaskStatus.SCANNED);
+                                    scanTaskInfo.setCurrentStage("SCANNED");
+                                    scanTaskInfo.setOverallProgress(100.0);
+                                    scanTaskInfo.setMessage("扫描完成，未找到任何文件");
+                                    storageService.saveTaskInfo(scanTaskInfo);
+                                }
+                            } catch (Exception e) {
+                                UnifiedLogger.backendError("Pipeline", "更新任务状态失败: " + e.getMessage(), e);
                             }
-                        } catch (Exception e) {
-                            UnifiedLogger.backendError("Pipeline", "更新任务状态失败: " + e.getMessage(), e);
+                        } else {
+                            taskManager.updateTaskStatus(taskId, TaskStatus.PREVIEW_COMPLETED);
+                            taskManager.updateTaskMessage(taskId, "预览完成，共发现 " + allChanges.size() + " 个变更");
+                            taskManager.updateTaskChanges(taskId, !allChanges.isEmpty(), allChanges.size());
+                            String completionDirectory = finalSourceDirectories.isEmpty() ? "" : finalSourceDirectories.get(0);
+                            taskManager.updateTaskScanningInfo(taskId, completionDirectory, totalFiles, totalFiles);
+                            UnifiedLogger.backendOperation("Pipeline", "预览完成，共发现 " + allChanges.size() + " 个变更");
+                            taskExecutionLogService.info(taskId, "PREVIEW", "预览完成，共发现 " + allChanges.size() + " 个变更");
+                            
+                            // 更新持久化的任务记录 - 状态改为 PREVIEWED
+                            try {
+                                TaskInfo previewTaskInfo = storageService.loadTaskInfo(taskId);
+                                if (previewTaskInfo != null) {
+                                    previewTaskInfo.setStatus(TaskInfo.TaskStatus.PREVIEWED);
+                                    previewTaskInfo.setCurrentStage("PREVIEWED");
+                                    previewTaskInfo.setOverallProgress(100.0);
+                                    previewTaskInfo.setMessage("预览完成，共发现 " + allChanges.size() + " 个变更");
+                                    previewTaskInfo.setChangeRecords(allChanges);
+                                    storageService.saveTaskInfo(previewTaskInfo);
+                                    storageService.saveChangeRecords(taskId, allChanges);
+                                }
+                            } catch (Exception e) {
+                                UnifiedLogger.backendError("Pipeline", "更新任务状态失败: " + e.getMessage(), e);
+                            }
                         }
                     } else {
                         taskManager.updateTaskStatus(taskId, TaskStatus.CANCELLED);
