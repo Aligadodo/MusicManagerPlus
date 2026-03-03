@@ -36,6 +36,30 @@
 - `COMPLETED`：执行完成
 - `FAILED`：执行失败
 - `CANCELLED`：已取消
+- `SKIP`：跳过执行（无数据）
+
+#### 2.1.4 阶段状态
+
+##### 扫描阶段状态
+- `PENDING`：等待扫描
+- `RUNNING`：正在扫描
+- `COMPLETED`：扫描完成
+- `FAILED`：扫描失败
+- `SKIP`：跳过扫描（无源目录）
+
+##### 预览阶段状态
+- `PENDING`：等待预览
+- `RUNNING`：正在预览
+- `COMPLETED`：预览完成
+- `FAILED`：预览失败
+- `SKIP`：跳过预览（扫描到0个文件）
+
+##### 执行阶段状态
+- `PENDING`：等待执行
+- `RUNNING`：正在执行
+- `COMPLETED`：执行完成
+- `FAILED`：执行失败
+- `SKIP`：跳过执行（扫描到0个文件）
 
 ### 2.2 数据模型
 
@@ -303,6 +327,14 @@ POST   /api/tasks/{id}/preview-results/{recordId}/retry  # 重试单条记录
 GET    /api/tasks/{id}/execution-results    # 获取执行结果
 GET    /api/tasks/{id}/execution-results/{recordId}  # 获取单条执行结果
 POST   /api/tasks/{id}/execution-results/retry-failed  # 重试失败记录
+DELETE /api/tasks/{id}/execution-logs    # 删除任务执行日志
+```
+
+### 4.4 任务进度API
+
+```
+GET    /api/tasks/{id}/progress       # 获取任务进度
+WebSocket /ws/tasks/{id}/progress    # 实时进度推送
 ```
 
 ### 4.4 任务进度API
