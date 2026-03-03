@@ -77,6 +77,30 @@ CANCELLED  FAILED      FAILED      FAILED       FAILED      FAILED
 | COMPLETED | 任务执行完成 | 重新执行、删除 |
 | FAILED | 任务执行失败 | 重试、删除 |
 | CANCELLED | 任务已取消 | 重新执行、删除 |
+| SKIP | 跳过执行（无数据） | 重新执行、删除 |
+
+### 阶段状态说明
+
+#### 扫描阶段状态
+- **PENDING**: 等待扫描
+- **RUNNING**: 正在扫描
+- **COMPLETED**: 扫描完成
+- **FAILED**: 扫描失败
+- **SKIP**: 跳过扫描（无源目录）
+
+#### 预览阶段状态
+- **PENDING**: 等待预览
+- **RUNNING**: 正在预览
+- **COMPLETED**: 预览完成
+- **FAILED**: 预览失败
+- **SKIP**: 跳过预览（扫描到0个文件）
+
+#### 执行阶段状态
+- **PENDING**: 等待执行
+- **RUNNING**: 正在执行
+- **COMPLETED**: 执行完成
+- **FAILED**: 执行失败
+- **SKIP**: 跳过执行（扫描到0个文件）
 
 ## 任务执行流程
 
@@ -178,12 +202,13 @@ public class TaskStages {
 
 ```java
 public class ScanStage {
-    private String status;             // 状态: PENDING, RUNNING, COMPLETED, FAILED
+    private String status;             // 状态: PENDING, RUNNING, COMPLETED, FAILED, SKIP
     private int totalFiles;           // 总文件数
-    private long totalSize;            // 总大小
-    private long scanStartTime;        // 扫描开始时间
-    private long scanEndTime;          // 扫描结束时间
-    private long scanDuration;         // 扫描持续时间
+    private Long totalSize;            // 总大小（Long类型，可为null）
+    private Long scanStartTime;        // 扫描开始时间（Long类型，可为null）
+    private Long scanEndTime;          // 扫描结束时间（Long类型，可为null）
+    private Long scanDuration;         // 扫描持续时间（Long类型，可为null）
+    private Map<String, Integer> fileTypeStats; // 文件类型统计
 }
 ```
 
@@ -191,14 +216,14 @@ public class ScanStage {
 
 ```java
 public class PreviewStage {
-    private String status;             // 状态: PENDING, RUNNING, COMPLETED, FAILED
+    private String status;             // 状态: PENDING, RUNNING, COMPLETED, FAILED, SKIP
     private int totalFiles;           // 总文件数
     private int processedFiles;        // 已处理文件数
     private int changedFiles;         // 变更文件数
     private int unchangedFiles;       // 未变更文件数
-    private long previewStartTime;     // 预览开始时间
-    private long previewEndTime;       // 预览结束时间
-    private long previewDuration;      // 预览持续时间
+    private Long previewStartTime;     // 预览开始时间（Long类型，可为null）
+    private Long previewEndTime;       // 预览结束时间（Long类型，可为null）
+    private Long previewDuration;      // 预览持续时间（Long类型，可为null）
 }
 ```
 
@@ -206,16 +231,16 @@ public class PreviewStage {
 
 ```java
 public class ExecutionStage {
-    private String status;             // 状态: PENDING, RUNNING, COMPLETED, FAILED
+    private String status;             // 状态: PENDING, RUNNING, COMPLETED, FAILED, SKIP
     private int executionCount;       // 执行次数
     private int totalFiles;           // 总文件数
     private int processedFiles;        // 已处理文件数
     private int successCount;         // 成功数
     private int failedCount;          // 失败数
     private int skippedCount;         // 跳过数
-    private long executionStartTime;   // 执行开始时间
-    private long executionEndTime;     // 执行结束时间
-    private long executionDuration;    // 执行持续时间
+    private Long executionStartTime;   // 执行开始时间（Long类型，可为null）
+    private Long executionEndTime;     // 执行结束时间（Long类型，可为null）
+    private Long executionDuration;    // 执行持续时间（Long类型，可为null）
 }
 ```
 
