@@ -23,7 +23,7 @@ import java.util.concurrent.*;
 public class FileSystemTaskStorage implements ITaskStorage {
 
     private static final Logger logger = LoggerFactory.getLogger(FileSystemTaskStorage.class);
-    private static final String BASE_DIR = System.getProperty("user.home") + "/.MusicManagerPlus/tasks";
+    private static final String BASE_DIR = System.getProperty("user.dir") + "/data/tasks";
 
     private final ObjectMapper objectMapper;
     private final ExecutorService writeExecutor;

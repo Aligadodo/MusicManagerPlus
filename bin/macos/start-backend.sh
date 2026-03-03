@@ -55,6 +55,9 @@ echo "服务地址: http://localhost:8080"
 echo "按 Ctrl+C 停止服务"
 echo ""
 
+# 切换到项目根目录，确保数据库路径正确
+cd "$PROJECT_ROOT"
+
 "$JAVA_HOME/bin/java" -Xms512m -Xmx1g -jar "$PROJECT_ROOT/backend/target/backend-1.0.0.jar" &
 BACKEND_PID=$!
 

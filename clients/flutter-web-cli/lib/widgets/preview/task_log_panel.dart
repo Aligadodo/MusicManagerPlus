@@ -69,7 +69,7 @@ class _TaskLogPanelState extends State<TaskLogPanel> {
         });
 
         if (_autoScroll) {
-          _scrollToBottom();
+          _scrollToTop();
         }
       } else {
         setState(() {
@@ -107,7 +107,7 @@ class _TaskLogPanelState extends State<TaskLogPanel> {
           });
 
           if (_autoScroll) {
-            _scrollToBottom();
+            _scrollToTop();
           }
         }
       }
@@ -116,11 +116,11 @@ class _TaskLogPanelState extends State<TaskLogPanel> {
     }
   }
 
-  void _scrollToBottom() {
+  void _scrollToTop() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
+          0.0,
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
@@ -213,6 +213,32 @@ class _TaskLogPanelState extends State<TaskLogPanel> {
     );
   }
 
+  Future<void> _deleteLogs() async {
+    try {
+      final apiClient = ApiClient();
+      final response = await apiClient.delete('/api/tasks/${widget.taskId}/execution-logs');
+      final responseData = jsonDecode(response.body) as Map<String, dynamic>;
+      
+      if (responseData['success'] == true) {
+        setState(() {
+          _logs.clear();
+          _lastTimestamp = 0;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('日志删除成功')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('删除失败: ${responseData['error']?['message'] ?? '未知错误'}')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('删除日志失败: $e')),
+      );
+    }
+  }
+
   Widget _buildToolbar() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -253,6 +279,11 @@ class _TaskLogPanelState extends State<TaskLogPanel> {
             icon: const Icon(Icons.refresh),
             onPressed: _loadLogs,
             tooltip: '刷新',
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete, color: Colors.red),
+            onPressed: _deleteLogs,
+            tooltip: '删除日志',
           ),
         ],
       ),

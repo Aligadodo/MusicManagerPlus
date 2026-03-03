@@ -1408,6 +1408,7 @@ public class TaskController {
             TaskConfigSnapshot.GlobalSettings globalSettings = configSnapshot.getGlobalSettings();
             if (globalSettings != null) {
                 Map<String, Object> settingsMap = new HashMap<>();
+                // 基础设置
                 settingsMap.put("maxThreads", globalSettings.getMaxThreads());
                 settingsMap.put("timeout", globalSettings.getTimeout());
                 settingsMap.put("dryRun", globalSettings.isDryRun());
@@ -1416,6 +1417,16 @@ public class TaskController {
                 settingsMap.put("backupPath", globalSettings.getBackupPath());
                 settingsMap.put("retryCount", globalSettings.getRetryCount());
                 settingsMap.put("retryInterval", globalSettings.getRetryInterval());
+                // 扩展设置
+                settingsMap.put("previewThreads", globalSettings.getPreviewThreads());
+                settingsMap.put("executionThreads", globalSettings.getExecutionThreads());
+                settingsMap.put("threadPoolMode", globalSettings.getThreadPoolMode());
+                settingsMap.put("minRecursionDepth", globalSettings.getMinRecursionDepth());
+                settingsMap.put("maxRecursionDepth", globalSettings.getMaxRecursionDepth());
+                settingsMap.put("previewLimit", globalSettings.getPreviewLimit());
+                settingsMap.put("executionLimit", globalSettings.getExecutionLimit());
+                settingsMap.put("autoRefresh", globalSettings.isAutoRefresh());
+                settingsMap.put("autoExecute", globalSettings.isAutoExecute());
                 configMap.put("globalSettings", settingsMap);
             }
             
@@ -1622,6 +1633,37 @@ public class TaskController {
             error.put("details", e.getMessage());
             response.put("error", error);
 
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    /**
+     * 删除执行日志
+     */
+    @DeleteMapping("/{taskId}/execution-logs")
+    public ResponseEntity<Map<String, Object>> deleteExecutionLogs(@PathVariable String taskId) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            taskExecutionLogService.deleteLogs(taskId);
+            
+            Map<String, Object> data = new HashMap<>();
+            data.put("message", "执行日志删除成功");
+            response.put("success", true);
+            response.put("data", data);
+            
+            logger.info("[TaskController] 执行日志删除成功: {}", taskId);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("[TaskController] 删除执行日志失败: {}", taskId, e);
+            
+            response.put("success", false);
+            Map<String, Object> error = new HashMap<>();
+            error.put("code", "DELETE_EXECUTION_LOGS_FAILED");
+            error.put("message", "删除执行日志失败");
+            error.put("details", e.getMessage());
+            response.put("error", error);
+            
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
