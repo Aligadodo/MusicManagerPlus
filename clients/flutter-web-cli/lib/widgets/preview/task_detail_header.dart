@@ -39,11 +39,13 @@ class TaskDetailHeader extends StatelessWidget {
         Row(
           children: [
             // 重新扫描按钮
-            if (onRestartScan != null && (status == 'SCANNED' || status == 'PREVIEWED' || status == 'COMPLETED' || status == 'FAILED' || status == 'CANCELLED'))
+            if (onRestartScan != null)
               Padding(
                 padding: const EdgeInsets.only(right: 8.0),
                 child: ElevatedButton.icon(
-                  onPressed: () => onRestartScan!(selectedTask!.taskId!),
+                  onPressed: (status == 'SCANNED' || status == 'PREVIEWED' || status == 'COMPLETED' || status == 'FAILED' || status == 'CANCELLED')
+                      ? () => onRestartScan!(selectedTask!.taskId!)
+                      : null,
                   icon: const Icon(Icons.refresh, size: 16),
                   label: const Text('重新扫描'),
                   style: ElevatedButton.styleFrom(
@@ -55,11 +57,13 @@ class TaskDetailHeader extends StatelessWidget {
               ),
 
             // 重新预览按钮
-            if (onRestartPreview != null && (status == 'PREVIEWED' || status == 'COMPLETED' || status == 'FAILED' || status == 'CANCELLED'))
+            if (onRestartPreview != null)
               Padding(
                 padding: const EdgeInsets.only(right: 8.0),
                 child: ElevatedButton.icon(
-                  onPressed: () => onRestartPreview!(selectedTask!.taskId!),
+                  onPressed: (status == 'PREVIEWED' || status == 'COMPLETED' || status == 'FAILED' || status == 'CANCELLED')
+                      ? () => onRestartPreview!(selectedTask!.taskId!)
+                      : null,
                   icon: const Icon(Icons.preview, size: 16),
                   label: const Text('重新预览'),
                   style: ElevatedButton.styleFrom(
@@ -71,11 +75,13 @@ class TaskDetailHeader extends StatelessWidget {
               ),
 
             // 重新执行按钮
-            if (onRestartExecution != null && (status == 'COMPLETED' || status == 'FAILED' || status == 'CANCELLED'))
+            if (onRestartExecution != null)
               Padding(
                 padding: const EdgeInsets.only(right: 8.0),
                 child: ElevatedButton.icon(
-                  onPressed: () => onRestartExecution!(selectedTask!.taskId!),
+                  onPressed: (status == 'COMPLETED' || status == 'FAILED' || status == 'CANCELLED')
+                      ? () => onRestartExecution!(selectedTask!.taskId!)
+                      : null,
                   icon: const Icon(Icons.play_arrow, size: 16),
                   label: const Text('重新执行'),
                   style: ElevatedButton.styleFrom(
@@ -87,11 +93,13 @@ class TaskDetailHeader extends StatelessWidget {
               ),
 
             // 重新运行按钮
-            if (onRerunTask != null && (status == 'FAILED' || status == 'CANCELLED'))
+            if (onRerunTask != null)
               Padding(
                 padding: const EdgeInsets.only(right: 8.0),
                 child: ElevatedButton.icon(
-                  onPressed: () => onRerunTask!(selectedTask!.taskId!),
+                  onPressed: (status == 'FAILED' || status == 'CANCELLED')
+                      ? () => onRerunTask!(selectedTask!.taskId!)
+                      : null,
                   icon: const Icon(Icons.replay, size: 16),
                   label: const Text('重新运行'),
                   style: ElevatedButton.styleFrom(
@@ -103,11 +111,13 @@ class TaskDetailHeader extends StatelessWidget {
               ),
 
             // 终止任务按钮
-            if (onCancelTask != null && (status == 'SCANNING' || status == 'PREVIEWING' || status == 'EXECUTING'))
+            if (onCancelTask != null)
               Padding(
                 padding: const EdgeInsets.only(right: 8.0),
                 child: ElevatedButton.icon(
-                  onPressed: () => onCancelTask!(selectedTask!.taskId!),
+                  onPressed: (status == 'SCANNING' || status == 'PREVIEWING' || status == 'EXECUTING')
+                      ? () => onCancelTask!(selectedTask!.taskId!)
+                      : null,
                   icon: const Icon(Icons.stop, size: 16),
                   label: const Text('终止'),
                   style: ElevatedButton.styleFrom(

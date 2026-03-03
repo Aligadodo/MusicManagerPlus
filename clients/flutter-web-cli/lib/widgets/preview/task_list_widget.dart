@@ -299,232 +299,192 @@ class _TaskListWidgetState extends ConsumerState<TaskListWidget> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
       ),
-      child: InkWell(
-        onTap: () {
-          widget.onTaskSelected(task);
-          widget.onViewModeChanged('taskDetail');
-        },
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 任务标题、状态和时间信息
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // 左侧区域：任务基本信息 (30%)
+            Expanded(
+              flex: 3,
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTap: () {
+                  widget.onTaskSelected(task);
+                  widget.onViewModeChanged('taskDetail');
+                },
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // 任务名称
+                    Text(
+                      task.taskName ?? '未命名任务',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                    const SizedBox(height: 6),
+                    // 状态标签行
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
                       children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                task.taskName ?? '未命名任务',
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.black87,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
+                        // 任务状态
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: _getStatusColor(task.status ?? 'UNKNOWN').withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: _getStatusColor(task.status ?? 'UNKNOWN').withOpacity(0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: Text(
+                            _getFriendlyStatus(task.status ?? 'UNKNOWN'),
+                            style: TextStyle(
+                              color: _getStatusColor(task.status ?? 'UNKNOWN'),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        // 当前阶段
+                        if (task.currentStage != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              task.currentStage!,
+                              style: const TextStyle(
+                                fontSize: 9,
+                                color: Colors.blue,
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            // 任务状态标签
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: _getStatusColor(task.status ?? 'UNKNOWN').withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: _getStatusColor(task.status ?? 'UNKNOWN').withOpacity(0.3),
-                                  width: 1,
-                                ),
-                              ),
-                              child: Text(
-                                _getFriendlyStatus(task.status ?? 'UNKNOWN'),
-                                style: TextStyle(
-                                  color: _getStatusColor(task.status ?? 'UNKNOWN'),
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                          ),
+                        // 进度
+                        if (task.overallProgress != null && task.overallProgress! > 0)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '${task.overallProgress!.round()}%',
+                              style: const TextStyle(
+                                fontSize: 9,
+                                color: Colors.green,
                               ),
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        // 其他信息标签
-                        Row(
-                          children: [
-                            if (task.currentStage != null)
-                              Container(
-                                margin: const EdgeInsets.only(right: 6),
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  task.currentStage!,
-                                  style: const TextStyle(
-                                    fontSize: 9,
-                                    color: Colors.blue,
-                                  ),
-                                ),
-                              ),
-                            if (task.overallProgress != null && task.overallProgress! > 0)
-                              Container(
-                                margin: const EdgeInsets.only(right: 6),
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  '${task.overallProgress!.round()}%',
-                                  style: const TextStyle(
-                                    fontSize: 9,
-                                    color: Colors.green,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
+                          ),
                       ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 6),
+                    // 统计信息行
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 4,
+                      children: [
+                        if (task.stages?.scan?.totalFiles != null && task.stages!.scan!.totalFiles! > 0)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.folder_open, size: 11, color: Colors.blue),
+                              const SizedBox(width: 2),
+                              Text(
+                                '${task.stages!.scan!.totalFiles}',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.blue,
+                                ),
+                              ),
+                            ],
+                          ),
+                        if (task.stages?.preview?.totalChanges != null && task.stages!.preview!.totalChanges! > 0)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.change_history, size: 11, color: Colors.purple),
+                              const SizedBox(width: 2),
+                              Text(
+                                '${task.stages!.preview!.totalChanges}',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.purple,
+                                ),
+                              ),
+                            ],
+                          ),
+                        if (task.stages?.execution?.successCount != null && task.stages!.execution!.successCount! > 0)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.check_circle, size: 11, color: Colors.green),
+                              const SizedBox(width: 2),
+                              Text(
+                                '${task.stages!.execution!.successCount}',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.green,
+                                ),
+                              ),
+                            ],
+                          ),
+                        if (task.stages?.execution?.failedCount != null && task.stages!.execution!.failedCount! > 0)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.error, size: 11, color: Colors.red),
+                              const SizedBox(width: 2),
+                              Text(
+                                '${task.stages!.execution!.failedCount}',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.red,
+                                ),
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
+            ),
 
-              const SizedBox(height: 8),
-
-              // 阶段指示器
-              Row(
-                children: [
-                  TaskStageIndicator(
+            // 中间区域：阶段指示器 (35%)
+            Expanded(
+              flex: 4,
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTap: () {
+                  widget.onTaskSelected(task);
+                  widget.onViewModeChanged('taskDetail');
+                },
+                child: Center(
+                  child: TaskStageIndicator(
                     task: task,
-                    showLabels: true,
-                  ),
-                  const Spacer(),
-                  // 阶段操作按钮
-                  _buildStageActionButtons(context, task),
-                ],
-              ),
-
-              const SizedBox(height: 8),
-
-              // 任务详情信息
-              Row(
-                children: [
-                  if (task.stages?.scan?.totalFiles != null && task.stages!.scan!.totalFiles! > 0)
-                    Container(
-                      margin: const EdgeInsets.only(right: 12),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.folder_open, size: 12, color: Colors.blue),
-                          const SizedBox(width: 3),
-                          Text(
-                            '${task.stages!.scan!.totalFiles} 文件',
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: Colors.blue,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  
-                  if (task.stages?.preview?.totalChanges != null && task.stages!.preview!.totalChanges! > 0)
-                    Container(
-                      margin: const EdgeInsets.only(right: 12),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.change_history, size: 12, color: Colors.purple),
-                          const SizedBox(width: 3),
-                          Text(
-                            '${task.stages!.preview!.totalChanges} 变更',
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: Colors.purple,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  
-                  if (task.stages?.execution?.successCount != null && task.stages!.execution!.successCount! > 0)
-                    Container(
-                      margin: const EdgeInsets.only(right: 12),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.check_circle, size: 12, color: Colors.green),
-                          const SizedBox(width: 3),
-                          Text(
-                            '${task.stages!.execution!.successCount} 成功',
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: Colors.green,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  
-                  if (task.stages?.execution?.failedCount != null && task.stages!.execution!.failedCount! > 0)
-                    Container(
-                      margin: const EdgeInsets.only(right: 12),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.error, size: 12, color: Colors.red),
-                          const SizedBox(width: 3),
-                          Text(
-                            '${task.stages!.execution!.failedCount} 失败',
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: Colors.red,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-              
-              if (task.message != null && task.message!.isNotEmpty)
-                const SizedBox(height: 6),
-              
-              if (task.message != null && task.message!.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.info_outline, size: 12, color: Colors.grey),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          task.message!,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey.shade700,
-                            fontStyle: FontStyle.italic,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 2,
-                        ),
-                      ),
-                    ],
+                    showLabels: false,
                   ),
                 ),
-            ],
-          ),
+              ),
+            ),
+
+            // 右侧区域：操作按钮 (25%)
+            Expanded(
+              flex: 3,
+              child: _buildStageActionButtons(context, task),
+            ),
+          ],
         ),
       ),
     );
@@ -666,33 +626,36 @@ class _TaskListWidgetState extends ConsumerState<TaskListWidget> {
     required Color color,
     required VoidCallback onTap,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: color.withOpacity(0.3),
-          width: 1,
-        ),
-      ),
+    return Material(
+      color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(10),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 12, color: color),
-            const SizedBox(width: 3),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                color: color,
-                fontWeight: FontWeight.w500,
-              ),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: color.withOpacity(0.3),
+              width: 1,
             ),
-          ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 12, color: color),
+              const SizedBox(width: 3),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: color,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

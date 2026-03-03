@@ -41,23 +41,26 @@ public class TaskExecutionService {
     private final ConfigSnapshotService configSnapshotService;
     private final TaskInfoMapper taskInfoMapper;
     private final ChangeRecordMapper changeRecordMapper;
+    private final TaskExecutionLogService taskExecutionLogService;
     private final Map<String, TaskExecution> runningTasks = new ConcurrentHashMap<>();
     private final ExecutorService taskExecutor = Executors.newFixedThreadPool(5);
     private final ExecutorService processingExecutor = Executors.newFixedThreadPool(10);
 
     @Autowired
-    public TaskExecutionService(TaskStorageService storageService, 
+    public TaskExecutionService(TaskStorageService storageService,
                                          StrategyService strategyService,
                                          WebSocketMessageService webSocketService,
                                          ConfigSnapshotService configSnapshotService,
                                          TaskInfoMapper taskInfoMapper,
-                                         ChangeRecordMapper changeRecordMapper) {
+                                         ChangeRecordMapper changeRecordMapper,
+                                         TaskExecutionLogService taskExecutionLogService) {
         this.storageService = storageService;
         this.strategyService = strategyService;
         this.webSocketService = webSocketService;
         this.configSnapshotService = configSnapshotService;
         this.taskInfoMapper = taskInfoMapper;
         this.changeRecordMapper = changeRecordMapper;
+        this.taskExecutionLogService = taskExecutionLogService;
     }
 
     /**
@@ -142,25 +145,31 @@ public class TaskExecutionService {
      */
     public void executeScan(String taskId) {
         logger.info("[TaskExecution] 开始执行文件扫描: {}", taskId);
-        
+        taskExecutionLogService.info(taskId, "SCAN", "开始执行文件扫描");
+
         TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
         if (taskInfo == null) {
+            taskExecutionLogService.error(taskId, "SCAN", "任务不存在: " + taskId);
             throw new IllegalArgumentException("任务不存在: " + taskId);
         }
-        
+
         TaskExecution execution = new TaskExecution(taskId, taskInfo, storageService, strategyService, webSocketService, this);
         runningTasks.put(taskId, execution);
-        
+
         Future<?> future = taskExecutor.submit(() -> {
             try {
                 execution.executeScan();
+            } catch (Exception e) {
+                taskExecutionLogService.error(taskId, "SCAN", "文件扫描执行失败: " + e.getMessage(), e);
+                throw e;
             } finally {
                 runningTasks.remove(taskId);
             }
         });
-        
+
         execution.setFuture(future);
         logger.info("[TaskExecution] 文件扫描已提交: {}", taskId);
+        taskExecutionLogService.info(taskId, "SCAN", "文件扫描任务已提交执行");
     }
 
     /**
@@ -168,19 +177,23 @@ public class TaskExecutionService {
      */
     public void executePreview(String taskId) {
         logger.info("[TaskExecution] 开始执行预览分析: {}", taskId);
-        
+        taskExecutionLogService.info(taskId, "PREVIEW", "开始执行预览分析");
+
         TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
         if (taskInfo == null) {
+            taskExecutionLogService.error(taskId, "PREVIEW", "任务不存在: " + taskId);
             throw new IllegalArgumentException("任务不存在: " + taskId);
         }
-        
+
         logger.info("[TaskExecution] 当前扫描状态: {}", taskInfo.getStages().getScan().getStatus());
-        
+        taskExecutionLogService.info(taskId, "PREVIEW", "当前扫描状态: " + taskInfo.getStages().getScan().getStatus());
+
         // 检查扫描是否完成，最多等待10秒
         int maxRetries = 10;
         for (int i = 0; i < maxRetries; i++) {
             if ("COMPLETED".equals(taskInfo.getStages().getScan().getStatus())) {
                 logger.info("[TaskExecution] 扫描已完成，可以开始预览分析");
+                taskExecutionLogService.info(taskId, "PREVIEW", "扫描已完成，开始预览分析");
                 break;
             }
             if (i < maxRetries - 1) {
@@ -190,29 +203,35 @@ public class TaskExecutionService {
                     logger.info("[TaskExecution] 重试加载任务信息，扫描状态: {}", taskInfo.getStages().getScan().getStatus());
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
+                    taskExecutionLogService.error(taskId, "PREVIEW", "等待扫描完成被中断");
                     throw new RuntimeException("等待扫描完成被中断", e);
                 }
             }
         }
-        
+
         if (!"COMPLETED".equals(taskInfo.getStages().getScan().getStatus())) {
             logger.error("[TaskExecution] 扫描未完成，当前状态: {}", taskInfo.getStages().getScan().getStatus());
+            taskExecutionLogService.error(taskId, "PREVIEW", "扫描未完成，无法执行预览分析");
             throw new IllegalStateException("文件扫描未完成，无法执行预览分析");
         }
-        
+
         TaskExecution execution = new TaskExecution(taskId, taskInfo, storageService, strategyService, webSocketService, this);
         runningTasks.put(taskId, execution);
-        
+
         Future<?> future = taskExecutor.submit(() -> {
             try {
                 execution.executePreview();
+            } catch (Exception e) {
+                taskExecutionLogService.error(taskId, "PREVIEW", "预览分析执行失败: " + e.getMessage(), e);
+                throw e;
             } finally {
                 runningTasks.remove(taskId);
             }
         });
-        
+
         execution.setFuture(future);
         logger.info("[TaskExecution] 预览分析已提交: {}", taskId);
+        taskExecutionLogService.info(taskId, "PREVIEW", "预览分析任务已提交执行");
     }
 
     /**
@@ -220,16 +239,19 @@ public class TaskExecutionService {
      */
     public void executeTask(String taskId) {
         logger.info("[TaskExecution] 开始执行任务: {}", taskId);
-        
+        taskExecutionLogService.info(taskId, "EXECUTION", "开始执行任务");
+
         TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
         if (taskInfo == null) {
+            taskExecutionLogService.error(taskId, "EXECUTION", "任务不存在: " + taskId);
             throw new IllegalArgumentException("任务不存在: " + taskId);
         }
-        
+
         // 检查预览是否完成，最多等待5秒
         int maxRetries = 5;
         for (int i = 0; i < maxRetries; i++) {
             if ("PREVIEWED".equals(taskInfo.getStages().getPreview().getStatus())) {
+                taskExecutionLogService.info(taskId, "EXECUTION", "预览已完成，开始执行任务");
                 break;
             }
             if (i < maxRetries - 1) {
@@ -238,39 +260,47 @@ public class TaskExecutionService {
                     taskInfo = storageService.loadTaskInfo(taskId);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
+                    taskExecutionLogService.error(taskId, "EXECUTION", "等待预览完成被中断");
                     throw new RuntimeException("等待预览完成被中断", e);
                 }
             }
         }
-        
-        if (!"PREVIEWED".equals(taskInfo.getStages().getPreview().getStatus()) && 
+
+        if (!"PREVIEWED".equals(taskInfo.getStages().getPreview().getStatus()) &&
             !"COMPLETED".equals(taskInfo.getStages().getPreview().getStatus())) {
+            taskExecutionLogService.error(taskId, "EXECUTION", "预览分析未完成，无法执行任务");
             throw new IllegalStateException("预览分析未完成，无法执行任务");
         }
-        
+
         // 获取执行次数
         int executionNum = taskInfo.getStages().getExecution().getExecutionCount() + 1;
-        
+        taskExecutionLogService.info(taskId, "EXECUTION", "第 " + executionNum + " 次执行");
+
         // 创建执行目录
         try {
             Files.createDirectories(Paths.get(storageService.getTaskDirectory(taskId) + "/execution/execution_" + String.format("%03d", executionNum)));
         } catch (IOException e) {
             logger.error("[TaskExecution] 创建执行目录失败: {} - execution_{}", taskId, executionNum, e);
+            taskExecutionLogService.error(taskId, "EXECUTION", "创建执行目录失败: " + e.getMessage(), e);
         }
-        
+
         TaskExecution execution = new TaskExecution(taskId, taskInfo, storageService, strategyService, webSocketService, this);
         runningTasks.put(taskId, execution);
-        
+
         Future<?> future = taskExecutor.submit(() -> {
             try {
                 execution.execute(executionNum);
+            } catch (Exception e) {
+                taskExecutionLogService.error(taskId, "EXECUTION", "任务执行失败: " + e.getMessage(), e);
+                throw e;
             } finally {
                 runningTasks.remove(taskId);
             }
         });
-        
+
         execution.setFuture(future);
         logger.info("[TaskExecution] 任务执行已提交: {} - execution_{}", taskId, executionNum);
+        taskExecutionLogService.info(taskId, "EXECUTION", "任务执行已提交，第 " + executionNum + " 次");
     }
 
     /**
@@ -396,6 +426,12 @@ public class TaskExecutionService {
             taskInfo.setMessage("任务已取消");
             taskInfo.setUpdatedAt(System.currentTimeMillis());
             
+            // 确保 stages 已初始化
+            if (taskInfo.getStages() == null) {
+                taskInfo.setStages(new TaskInfo.TaskStages());
+                logger.info("[TaskExecution] 初始化任务阶段: {}", taskId);
+            }
+            
             // 更新当前阶段状态
             String currentStage = taskInfo.getCurrentStage();
             if ("SCANNING".equals(currentStage)) {
@@ -471,6 +507,24 @@ public class TaskExecutionService {
             throw new IllegalArgumentException("任务不存在: " + taskId);
         }
         
+        // 确保 configSnapshot 已加载
+        if (taskInfo.getConfigSnapshot() == null && taskInfo.getConfigSnapshotId() != null) {
+            TaskConfigSnapshot configSnapshot = storageService.loadConfigSnapshot(taskInfo.getConfigSnapshotId());
+            taskInfo.setConfigSnapshot(configSnapshot);
+            logger.info("[TaskExecution] 重新加载配置快照: {}", taskInfo.getConfigSnapshotId());
+        }
+        
+        // 检查配置快照是否有效
+        if (taskInfo.getConfigSnapshot() == null) {
+            throw new IllegalStateException("任务配置快照不存在，无法重新扫描: " + taskId);
+        }
+        
+        // 确保 stages 已初始化
+        if (taskInfo.getStages() == null) {
+            taskInfo.setStages(new TaskInfo.TaskStages());
+            logger.info("[TaskExecution] 初始化任务阶段: {}", taskId);
+        }
+        
         // 清空扫描数据
         storageService.clearScanData(taskId);
         
@@ -478,10 +532,10 @@ public class TaskExecutionService {
         TaskInfo.ScanStage scanStage = taskInfo.getStages().getScan();
         scanStage.setStatus("PENDING");
         scanStage.setTotalFiles(0);
-        scanStage.setTotalSize(0);
-        scanStage.setScanStartTime(0);
-        scanStage.setScanEndTime(0);
-        scanStage.setScanDuration(0);
+        scanStage.setTotalSize(0L);
+        scanStage.setScanStartTime(null);
+        scanStage.setScanEndTime(null);
+        scanStage.setScanDuration(null);
         
         // 重置预览和执行阶段
         TaskInfo.PreviewStage previewStage = taskInfo.getStages().getPreview();
@@ -490,9 +544,9 @@ public class TaskExecutionService {
         previewStage.setProcessedFiles(0);
         previewStage.setChangedFiles(0);
         previewStage.setUnchangedFiles(0);
-        previewStage.setPreviewStartTime(0);
-        previewStage.setPreviewEndTime(0);
-        previewStage.setPreviewDuration(0);
+        previewStage.setPreviewStartTime(null);
+        previewStage.setPreviewEndTime(null);
+        previewStage.setPreviewDuration(null);
         
         TaskInfo.ExecutionStage executionStage = taskInfo.getStages().getExecution();
         executionStage.setStatus("PENDING");
@@ -502,9 +556,9 @@ public class TaskExecutionService {
         executionStage.setSuccessCount(0);
         executionStage.setFailedCount(0);
         executionStage.setSkippedCount(0);
-        executionStage.setExecutionStartTime(0);
-        executionStage.setExecutionEndTime(0);
-        executionStage.setExecutionDuration(0);
+        executionStage.setExecutionStartTime(null);
+        executionStage.setExecutionEndTime(null);
+        executionStage.setExecutionDuration(null);
         
         // 重置任务状态
         taskInfo.setCurrentStage("CREATED");
@@ -532,8 +586,36 @@ public class TaskExecutionService {
             throw new IllegalArgumentException("任务不存在: " + taskId);
         }
         
+        // 确保 configSnapshot 已加载
+        if (taskInfo.getConfigSnapshot() == null && taskInfo.getConfigSnapshotId() != null) {
+            TaskConfigSnapshot configSnapshot = storageService.loadConfigSnapshot(taskInfo.getConfigSnapshotId());
+            taskInfo.setConfigSnapshot(configSnapshot);
+            logger.info("[TaskExecution] 重新加载配置快照: {}", taskInfo.getConfigSnapshotId());
+        }
+        
+        // 检查配置快照是否有效
+        if (taskInfo.getConfigSnapshot() == null) {
+            throw new IllegalStateException("任务配置快照不存在，无法重新预览: " + taskId);
+        }
+        
+        // 确保 stages 已初始化
+        if (taskInfo.getStages() == null) {
+            taskInfo.setStages(new TaskInfo.TaskStages());
+            logger.info("[TaskExecution] 初始化任务阶段: {}", taskId);
+        }
+        
         // 清空预览数据
         storageService.clearPreviewData(taskId);
+        
+        // 重置扫描阶段状态
+        TaskInfo.ScanStage scanStage = taskInfo.getStages().getScan();
+        scanStage.setStatus("PENDING");
+        scanStage.setTotalFiles(0);
+        scanStage.setTotalSize(0L);
+        scanStage.setScanStartTime(0L);
+        scanStage.setScanEndTime(0L);
+        scanStage.setScanDuration(0L);
+        scanStage.setFileTypeStats(new java.util.HashMap<>());
         
         // 重置预览阶段状态
         TaskInfo.PreviewStage previewStage = taskInfo.getStages().getPreview();
@@ -542,9 +624,9 @@ public class TaskExecutionService {
         previewStage.setProcessedFiles(0);
         previewStage.setChangedFiles(0);
         previewStage.setUnchangedFiles(0);
-        previewStage.setPreviewStartTime(0);
-        previewStage.setPreviewEndTime(0);
-        previewStage.setPreviewDuration(0);
+        previewStage.setPreviewStartTime(null);
+        previewStage.setPreviewEndTime(null);
+        previewStage.setPreviewDuration(null);
         
         // 重置执行阶段
         TaskInfo.ExecutionStage executionStage = taskInfo.getStages().getExecution();
@@ -555,9 +637,9 @@ public class TaskExecutionService {
         executionStage.setSuccessCount(0);
         executionStage.setFailedCount(0);
         executionStage.setSkippedCount(0);
-        executionStage.setExecutionStartTime(0);
-        executionStage.setExecutionEndTime(0);
-        executionStage.setExecutionDuration(0);
+        executionStage.setExecutionStartTime(null);
+        executionStage.setExecutionEndTime(null);
+        executionStage.setExecutionDuration(null);
         
         // 重置任务状态
         taskInfo.setCurrentStage("SCANNING");
@@ -568,10 +650,10 @@ public class TaskExecutionService {
         storageService.writeTaskLog(taskId, "[INFO] [RESTART] 准备重新预览");
         updateTaskInfoInDatabase(taskInfo);
         
-        // 实际启动预览
-        executePreview(taskId);
+        // 启动扫描流程，扫描完成后会自动执行预览
+        executeScan(taskId);
         
-        logger.info("[TaskExecution] 重新预览已启动: {}", taskId);
+        logger.info("[TaskExecution] 重新预览已启动（从扫描开始）: {}", taskId);
     }
 
     /**
@@ -585,8 +667,48 @@ public class TaskExecutionService {
             throw new IllegalArgumentException("任务不存在: " + taskId);
         }
         
-        // 清空执行数据
+        // 确保 configSnapshot 已加载
+        if (taskInfo.getConfigSnapshot() == null && taskInfo.getConfigSnapshotId() != null) {
+            TaskConfigSnapshot configSnapshot = storageService.loadConfigSnapshot(taskInfo.getConfigSnapshotId());
+            taskInfo.setConfigSnapshot(configSnapshot);
+            logger.info("[TaskExecution] 重新加载配置快照: {}", taskInfo.getConfigSnapshotId());
+        }
+        
+        // 检查配置快照是否有效
+        if (taskInfo.getConfigSnapshot() == null) {
+            throw new IllegalStateException("任务配置快照不存在，无法重新执行: " + taskId);
+        }
+        
+        // 确保 stages 已初始化
+        if (taskInfo.getStages() == null) {
+            taskInfo.setStages(new TaskInfo.TaskStages());
+            logger.info("[TaskExecution] 初始化任务阶段: {}", taskId);
+        }
+        
+        // 清空预览和执行数据
+        storageService.clearPreviewData(taskId);
         storageService.clearExecutionData(taskId);
+        
+        // 重置扫描阶段状态
+        TaskInfo.ScanStage scanStage = taskInfo.getStages().getScan();
+        scanStage.setStatus("PENDING");
+        scanStage.setTotalFiles(0);
+        scanStage.setTotalSize(0L);
+        scanStage.setScanStartTime(null);
+        scanStage.setScanEndTime(null);
+        scanStage.setScanDuration(null);
+        scanStage.setFileTypeStats(new java.util.HashMap<>());
+        
+        // 重置预览阶段状态
+        TaskInfo.PreviewStage previewStage = taskInfo.getStages().getPreview();
+        previewStage.setStatus("PENDING");
+        previewStage.setTotalFiles(0);
+        previewStage.setProcessedFiles(0);
+        previewStage.setChangedFiles(0);
+        previewStage.setUnchangedFiles(0);
+        previewStage.setPreviewStartTime(null);
+        previewStage.setPreviewEndTime(null);
+        previewStage.setPreviewDuration(null);
         
         // 重置执行阶段状态
         TaskInfo.ExecutionStage executionStage = taskInfo.getStages().getExecution();
@@ -597,23 +719,23 @@ public class TaskExecutionService {
         executionStage.setSuccessCount(0);
         executionStage.setFailedCount(0);
         executionStage.setSkippedCount(0);
-        executionStage.setExecutionStartTime(0);
-        executionStage.setExecutionEndTime(0);
-        executionStage.setExecutionDuration(0);
+        executionStage.setExecutionStartTime(null);
+        executionStage.setExecutionEndTime(null);
+        executionStage.setExecutionDuration(null);
         
         // 重置任务状态
-        taskInfo.setCurrentStage("PREVIEWING");
-        taskInfo.setStatus(TaskInfo.TaskStatus.PREVIEWING);
+        taskInfo.setCurrentStage("SCANNING");
+        taskInfo.setStatus(TaskInfo.TaskStatus.SCANNING);
         taskInfo.setMessage("准备重新执行");
         
         storageService.saveTaskInfo(taskInfo);
         storageService.writeTaskLog(taskId, "[INFO] [RESTART] 准备重新执行");
         updateTaskInfoInDatabase(taskInfo);
         
-        // 实际启动执行
-        executeTask(taskId);
+        // 启动扫描流程，扫描完成后会自动执行预览，预览完成后会自动执行
+        executeScan(taskId);
         
-        logger.info("[TaskExecution] 重新执行已启动: {}", taskId);
+        logger.info("[TaskExecution] 重新执行已启动（从扫描开始）: {}", taskId);
     }
     
     /**
@@ -627,6 +749,24 @@ public class TaskExecutionService {
             throw new IllegalArgumentException("任务不存在: " + taskId);
         }
         
+        // 确保 configSnapshot 已加载
+        if (taskInfo.getConfigSnapshot() == null && taskInfo.getConfigSnapshotId() != null) {
+            TaskConfigSnapshot configSnapshot = storageService.loadConfigSnapshot(taskInfo.getConfigSnapshotId());
+            taskInfo.setConfigSnapshot(configSnapshot);
+            logger.info("[TaskExecution] 重新加载配置快照: {}", taskInfo.getConfigSnapshotId());
+        }
+        
+        // 检查配置快照是否有效
+        if (taskInfo.getConfigSnapshot() == null) {
+            throw new IllegalStateException("任务配置快照不存在，无法重新运行: " + taskId);
+        }
+        
+        // 确保 stages 已初始化
+        if (taskInfo.getStages() == null) {
+            taskInfo.setStages(new TaskInfo.TaskStages());
+            logger.info("[TaskExecution] 初始化任务阶段: {}", taskId);
+        }
+        
         // 清空所有阶段数据
         storageService.clearScanData(taskId);
         storageService.clearPreviewData(taskId);
@@ -636,10 +776,10 @@ public class TaskExecutionService {
         TaskInfo.ScanStage scanStage = taskInfo.getStages().getScan();
         scanStage.setStatus("PENDING");
         scanStage.setTotalFiles(0);
-        scanStage.setTotalSize(0);
-        scanStage.setScanStartTime(0);
-        scanStage.setScanEndTime(0);
-        scanStage.setScanDuration(0);
+        scanStage.setTotalSize(0L);
+        scanStage.setScanStartTime(0L);
+        scanStage.setScanEndTime(0L);
+        scanStage.setScanDuration(0L);
         
         // 重置预览阶段状态
         TaskInfo.PreviewStage previewStage = taskInfo.getStages().getPreview();
@@ -648,9 +788,9 @@ public class TaskExecutionService {
         previewStage.setProcessedFiles(0);
         previewStage.setChangedFiles(0);
         previewStage.setUnchangedFiles(0);
-        previewStage.setPreviewStartTime(0);
-        previewStage.setPreviewEndTime(0);
-        previewStage.setPreviewDuration(0);
+        previewStage.setPreviewStartTime(0L);
+        previewStage.setPreviewEndTime(0L);
+        previewStage.setPreviewDuration(0L);
         
         // 重置执行阶段状态
         TaskInfo.ExecutionStage executionStage = taskInfo.getStages().getExecution();
@@ -661,9 +801,9 @@ public class TaskExecutionService {
         executionStage.setSuccessCount(0);
         executionStage.setFailedCount(0);
         executionStage.setSkippedCount(0);
-        executionStage.setExecutionStartTime(0);
-        executionStage.setExecutionEndTime(0);
-        executionStage.setExecutionDuration(0);
+        executionStage.setExecutionStartTime(0L);
+        executionStage.setExecutionEndTime(0L);
+        executionStage.setExecutionDuration(0L);
         
         // 重置任务状态
         taskInfo.setCurrentStage("CREATED");
@@ -848,6 +988,7 @@ public class TaskExecutionService {
 
         public void executeScan() {
             logger.info("[TaskExecution] 开始文件扫描: {}", taskId);
+            taskExecutionLogService.info(taskId, "SCAN", "=== 开始文件扫描任务 ===");
             
             // 更新任务状态
             taskInfo.setCurrentStage("SCANNING");
@@ -862,12 +1003,19 @@ public class TaskExecutionService {
             
             try {
                 // 扫描文件
+                taskExecutionLogService.info(taskId, "SCAN", "正在扫描文件系统...");
                 List<String> filePaths = scanFiles();
                 logger.info("[TaskExecution] 扫描到 {} 个文件", filePaths.size());
+                taskExecutionLogService.info(taskId, "SCAN", "扫描完成，共发现 " + filePaths.size() + " 个文件");
                 
                 // 流式写入扫描数据
+                taskExecutionLogService.info(taskId, "SCAN", "开始写入扫描数据...");
+                int writtenCount = 0;
                 for (String filePath : filePaths) {
-                    if (cancelled) break;
+                    if (cancelled) {
+                        taskExecutionLogService.warn(taskId, "SCAN", "扫描数据写入被取消");
+                        break;
+                    }
                     
                     File file = new File(filePath);
                     Map<String, Object> scanRecord = new HashMap<>();
@@ -878,9 +1026,16 @@ public class TaskExecutionService {
                     
                     String jsonData = toJson(scanRecord);
                     storageService.writeScanData(taskId, jsonData);
+                    writtenCount++;
+                    
+                    // 每写入500个文件记录一次进度
+                    if (writtenCount % 500 == 0) {
+                        taskExecutionLogService.info(taskId, "SCAN", "写入进度: " + writtenCount + "/" + filePaths.size() + " 个文件");
+                    }
                 }
                 
-                logger.info("[TaskExecution] 已写入 {} 条扫描记录", filePaths.size());
+                logger.info("[TaskExecution] 已写入 {} 条扫描记录", writtenCount);
+                taskExecutionLogService.info(taskId, "SCAN", "扫描数据写入完成，共写入 " + writtenCount + " 条记录");
                 
                 // 标记扫描数据写入完成
                 logger.info("[TaskExecution] 准备标记扫描数据写入完成");
@@ -898,7 +1053,9 @@ public class TaskExecutionService {
                 Path scanDataPath = Paths.get(storageService.getTaskDirectory(taskId) + "/scan/data.json");
                 logger.info("[TaskExecution] 扫描数据文件路径: {}, 文件存在: {}", scanDataPath, Files.exists(scanDataPath));
                 if (Files.exists(scanDataPath)) {
-                    logger.info("[TaskExecution] 扫描数据文件大小: {} bytes", Files.size(scanDataPath));
+                    long fileSize = Files.size(scanDataPath);
+                    logger.info("[TaskExecution] 扫描数据文件大小: {} bytes", fileSize);
+                    taskExecutionLogService.info(taskId, "SCAN", "扫描数据文件已生成，大小: " + (fileSize / 1024) + " KB");
                 }
                 
                 // 更新统计信息
@@ -910,17 +1067,38 @@ public class TaskExecutionService {
                 storageService.saveScanStatistics(taskId, scanStage);
                 
                 // 更新任务状态
-                taskInfo.setCurrentStage("PREVIEWING");
-                taskInfo.setStatus(TaskInfo.TaskStatus.PREVIEWING);
+                if (filePaths.size() == 0) {
+                    // 扫描到0个文件，任务完成
+                    taskInfo.setCurrentStage("COMPLETED");
+                    taskInfo.setStatus(TaskInfo.TaskStatus.COMPLETED);
+                    taskInfo.setMessage("扫描完成，未发现任何文件");
+                    
+                    // 标记预览和执行阶段为 SKIP
+                    taskInfo.getStages().getPreview().setStatus("SKIP");
+                    taskInfo.getStages().getPreview().setPreviewStartTime(null);
+                    taskInfo.getStages().getPreview().setPreviewEndTime(null);
+                    
+                    taskInfo.getStages().getExecution().setStatus("SKIP");
+                    taskInfo.getStages().getExecution().setExecutionStartTime(null);
+                    taskInfo.getStages().getExecution().setExecutionEndTime(null);
+                } else {
+                    // 扫描到文件，进入预览阶段
+                    taskInfo.setCurrentStage("PREVIEWING");
+                    taskInfo.setStatus(TaskInfo.TaskStatus.PREVIEWING);
+                }
                 taskInfo.setUpdatedAt(System.currentTimeMillis());
                 storageService.saveTaskInfo(taskInfo);
                 storageService.writeTaskLog(taskId, "[INFO] [SCAN] 扫描完成，共 " + filePaths.size() + " 个文件");
                 webSocketService.sendTaskInfoUpdate(taskId, taskInfo);
                 updateTaskInfoInDatabase(taskInfo);
                 
+                taskExecutionLogService.info(taskId, "SCAN", "=== 文件扫描阶段完成 ===");
+                taskExecutionLogService.info(taskId, "SCAN", "扫描统计: 总文件数=" + filePaths.size() + ", 耗时=" + scanStage.getScanDuration() + "ms");
+                
                 // 检查是否需要自动执行预览
-                if (taskInfo.getAutoExecute() != null && taskInfo.getAutoExecute()) {
+                if (filePaths.size() > 0 && taskInfo.getAutoExecute() != null && taskInfo.getAutoExecute()) {
                     logger.info("[TaskExecution] 自动执行预览分析: {}", taskId);
+                    taskExecutionLogService.info(taskId, "SCAN", "自动执行预览分析");
                     TaskExecutionService.this.executePreview(taskId);
                 }
                 
@@ -928,6 +1106,7 @@ public class TaskExecutionService {
                 
             } catch (Exception e) {
                 logger.error("[TaskExecution] 文件扫描失败: {}", taskId, e);
+                taskExecutionLogService.error(taskId, "SCAN", "文件扫描失败: " + e.getMessage(), e);
                 
                 TaskInfo.ScanStage scanStage = taskInfo.getStages().getScan();
                 scanStage.setScanEndTime(System.currentTimeMillis());
@@ -946,6 +1125,7 @@ public class TaskExecutionService {
 
         public void executePreview() {
             logger.info("[TaskExecution] 开始预览分析: {}", taskId);
+            taskExecutionLogService.info(taskId, "PREVIEW", "=== 开始预览分析任务 ===");
             
             // 更新任务状态
             taskInfo.setCurrentStage("PREVIEWING");
@@ -964,30 +1144,42 @@ public class TaskExecutionService {
                 // 流式读取扫描数据并分析
                 Path scanDataPath = Paths.get(storageService.getTaskDirectory(taskId) + "/scan/data.json");
                 logger.info("[TaskExecution] 开始读取扫描数据: {}", scanDataPath);
-                logger.info("[TaskExecution] 文件是否存在: {}", Files.exists(scanDataPath));
+                taskExecutionLogService.info(taskId, "PREVIEW", "开始读取扫描数据文件...");
                 
                 if (!Files.exists(scanDataPath)) {
+                    taskExecutionLogService.error(taskId, "PREVIEW", "扫描数据文件不存在: " + scanDataPath);
                     throw new RuntimeException("扫描数据文件不存在: " + scanDataPath);
                 }
                 
+                long fileSize = Files.size(scanDataPath);
+                taskExecutionLogService.info(taskId, "PREVIEW", "扫描数据文件大小: " + (fileSize / 1024) + " KB");
+                
                 AtomicInteger processedCount = new AtomicInteger(0);
                 AtomicInteger changedCount = new AtomicInteger(0);
+                int totalLines = 0;
+                
+                // 先统计总行数
+                try (BufferedReader countReader = Files.newBufferedReader(scanDataPath)) {
+                    while (countReader.readLine() != null) {
+                        totalLines++;
+                    }
+                }
+                taskExecutionLogService.info(taskId, "PREVIEW", "扫描数据共 " + totalLines + " 条记录待处理");
                 
                 try (BufferedReader reader = Files.newBufferedReader(scanDataPath)) {
                     String line;
                     int lineNum = 0;
                     while ((line = reader.readLine()) != null) {
                         lineNum++;
-                        if (cancelled) break;
-                        
-                        logger.debug("[TaskExecution] 读取第 {} 行: {}", lineNum, line);
+                        if (cancelled) {
+                            taskExecutionLogService.warn(taskId, "PREVIEW", "预览分析被取消，已处理 " + processedCount.get() + " 条记录");
+                            break;
+                        }
                         
                         // 解析扫描记录
                         Map<String, Object> scanRecord = parseJson(line);
                         String filePath = (String) scanRecord.get("filePath");
                         String fileName = (String) scanRecord.get("fileName");
-                        
-                        logger.debug("[TaskExecution] 处理扫描记录: filePath={}, fileName={}, scanRecord={}", filePath, fileName, scanRecord);
                         
                         if (fileName == null || fileName.isEmpty()) {
                             logger.warn("[TaskExecution] fileName为空，跳过此记录: scanRecord={}", scanRecord);
@@ -1027,16 +1219,25 @@ public class TaskExecutionService {
                         if (processedCount.get() % 100 == 0) {
                             updatePreviewStatistics(processedCount.get(), changedCount.get());
                         }
+                        
+                        // 每500条记录一次进度日志
+                        if (processedCount.get() % 500 == 0) {
+                            taskExecutionLogService.info(taskId, "PREVIEW", "处理进度: " + processedCount.get() + "/" + totalLines + " 条记录 (" + (processedCount.get() * 100 / totalLines) + "%)");
+                        }
                     }
                 }
+                
+                taskExecutionLogService.info(taskId, "PREVIEW", "预览分析完成，共处理 " + processedCount.get() + " 条记录");
                 
                 // 批量插入变更记录到数据库
                 if (!changeRecords.isEmpty()) {
                     try {
                         changeRecordMapper.batchInsert(changeRecords);
                         logger.info("[TaskExecution] 已插入 {} 条变更记录到数据库", changeRecords.size());
+                        taskExecutionLogService.info(taskId, "PREVIEW", "已保存 " + changeRecords.size() + " 条变更记录到数据库");
                     } catch (Exception e) {
                         logger.error("[TaskExecution] 插入变更记录失败", e);
+                        taskExecutionLogService.error(taskId, "PREVIEW", "保存变更记录失败: " + e.getMessage());
                     }
                 }
                 
@@ -1070,9 +1271,13 @@ public class TaskExecutionService {
                 webSocketService.sendTaskInfoUpdate(taskId, taskInfo);
                 updateTaskInfoInDatabase(taskInfo);
                 
+                taskExecutionLogService.info(taskId, "PREVIEW", "=== 预览分析阶段完成 ===");
+                taskExecutionLogService.info(taskId, "PREVIEW", "预览统计: 总文件=" + processedCount.get() + ", 变更=" + changedCount.get() + ", 未变更=" + (processedCount.get() - changedCount.get()) + ", 耗时=" + previewStage.getPreviewDuration() + "ms");
+                
                 // 检查是否需要自动执行任务
                 if (taskInfo.getAutoExecute() != null && taskInfo.getAutoExecute()) {
                     logger.info("[TaskExecution] 自动执行任务: {}", taskId);
+                    taskExecutionLogService.info(taskId, "PREVIEW", "自动执行任务");
                     TaskExecutionService.this.executeTask(taskId);
                 }
                 
@@ -1080,6 +1285,7 @@ public class TaskExecutionService {
                 
             } catch (Exception e) {
                 logger.error("[TaskExecution] 预览分析失败: {}", taskId, e);
+                taskExecutionLogService.error(taskId, "PREVIEW", "预览分析失败: " + e.getMessage(), e);
                 
                 TaskInfo.PreviewStage previewStage = taskInfo.getStages().getPreview();
                 previewStage.setPreviewEndTime(System.currentTimeMillis());
@@ -1098,6 +1304,7 @@ public class TaskExecutionService {
 
         public void execute(int executionNum) {
             logger.info("[TaskExecution] 开始执行任务: {} - execution_{}", taskId, executionNum);
+            taskExecutionLogService.info(taskId, "EXECUTION", "=== 开始执行任务 (第 " + executionNum + " 次) ===");
             
             // 更新任务状态
             taskInfo.setCurrentStage("EXECUTING");
@@ -1116,6 +1323,17 @@ public class TaskExecutionService {
             try {
                 // 流式读取预览数据并执行
                 Path previewDataPath = Paths.get(storageService.getTaskDirectory(taskId) + "/preview/data.json");
+                taskExecutionLogService.info(taskId, "EXECUTION", "开始读取预览数据...");
+                
+                // 统计总行数
+                int totalLines = 0;
+                try (BufferedReader countReader = Files.newBufferedReader(previewDataPath)) {
+                    while (countReader.readLine() != null) {
+                        totalLines++;
+                    }
+                }
+                taskExecutionLogService.info(taskId, "EXECUTION", "预览数据共 " + totalLines + " 条记录待执行");
+                
                 AtomicInteger processedCount = new AtomicInteger(0);
                 AtomicInteger successCount = new AtomicInteger(0);
                 AtomicInteger failedCount = new AtomicInteger(0);
@@ -1124,7 +1342,10 @@ public class TaskExecutionService {
                 try (BufferedReader reader = Files.newBufferedReader(previewDataPath)) {
                     String line;
                     while ((line = reader.readLine()) != null) {
-                        if (cancelled) break;
+                        if (cancelled) {
+                            taskExecutionLogService.warn(taskId, "EXECUTION", "任务执行被取消，已处理 " + processedCount.get() + " 条记录");
+                            break;
+                        }
                         
                         // 解析预览记录
                         Map<String, Object> previewRecord = parseJson(line);
@@ -1147,8 +1368,15 @@ public class TaskExecutionService {
                         if (processedCount.get() % 100 == 0) {
                             updateExecutionStatistics(executionNum, processedCount.get(), successCount.get(), failedCount.get(), skippedCount.get());
                         }
+                        
+                        // 每500条记录一次进度日志
+                        if (processedCount.get() % 500 == 0) {
+                            taskExecutionLogService.info(taskId, "EXECUTION", "执行进度: " + processedCount.get() + "/" + totalLines + " 条记录 (" + (processedCount.get() * 100 / totalLines) + "%)");
+                        }
                     }
                 }
+                
+                taskExecutionLogService.info(taskId, "EXECUTION", "执行完成，共处理 " + processedCount.get() + " 条记录");
                 
                 // 标记执行数据写入完成
                 storageService.finishExecutionDataWriting(taskId, executionNum);
@@ -1179,10 +1407,14 @@ public class TaskExecutionService {
                 webSocketService.sendTaskInfoUpdate(taskId, taskInfo);
                 updateTaskInfoInDatabase(taskInfo);
                 
+                taskExecutionLogService.info(taskId, "EXECUTION", "=== 任务执行阶段完成 ===");
+                taskExecutionLogService.info(taskId, "EXECUTION", "执行统计: 总文件=" + processedCount.get() + ", 成功=" + successCount.get() + ", 失败=" + failedCount.get() + ", 跳过=" + skippedCount.get() + ", 耗时=" + executionStage.getExecutionDuration() + "ms");
+                
                 logger.info("[TaskExecution] 任务执行完成: {} - execution_{}", taskId, executionNum);
                 
             } catch (Exception e) {
                 logger.error("[TaskExecution] 任务执行失败: {} - execution_{}", taskId, executionNum, e);
+                taskExecutionLogService.error(taskId, "EXECUTION", "任务执行失败: " + e.getMessage(), e);
                 
                 executionStage.setExecutionEndTime(System.currentTimeMillis());
                 executionStage.setExecutionDuration(executionStage.getExecutionEndTime() - executionStage.getExecutionStartTime());
@@ -1406,30 +1638,57 @@ public class TaskExecutionService {
             List<String> filePaths = new ArrayList<>();
             TaskConfigSnapshot configSnapshot = taskInfo.getConfigSnapshot();
             
-            for (TaskConfigSnapshot.SourceDirectoryConfig dirConfig : configSnapshot.getSourceDirectories()) {
+            List<TaskConfigSnapshot.SourceDirectoryConfig> sourceDirs = configSnapshot.getSourceDirectories();
+            taskExecutionLogService.info(taskId, "SCAN", "开始扫描 " + sourceDirs.size() + " 个源目录");
+            
+            for (int i = 0; i < sourceDirs.size(); i++) {
+                TaskConfigSnapshot.SourceDirectoryConfig dirConfig = sourceDirs.get(i);
+                taskExecutionLogService.info(taskId, "SCAN", "开始扫描目录 [" + (i + 1) + "/" + sourceDirs.size() + "]: " + dirConfig.getPath());
                 scanDirectory(dirConfig.getPath(), dirConfig.isRecursive(), dirConfig.getDepth(), filePaths);
+                taskExecutionLogService.info(taskId, "SCAN", "完成扫描目录 [" + (i + 1) + "/" + sourceDirs.size() + "]: " + dirConfig.getPath() + ", 当前已发现 " + filePaths.size() + " 个文件");
             }
             
+            taskExecutionLogService.info(taskId, "SCAN", "扫描完成，共发现 " + filePaths.size() + " 个文件");
             return filePaths;
         }
 
         private void scanDirectory(String path, boolean recursive, int depth, List<String> filePaths) {
             File dir = new File(path);
             if (!dir.exists() || !dir.isDirectory()) {
+                taskExecutionLogService.warn(taskId, "SCAN", "目录不存在或不是有效目录: " + path);
                 return;
             }
             
             File[] files = dir.listFiles();
             if (files == null) {
+                taskExecutionLogService.warn(taskId, "SCAN", "无法读取目录内容: " + path);
                 return;
             }
             
+            int fileCount = 0;
+            int dirCount = 0;
             for (File file : files) {
+                if (cancelled) {
+                    taskExecutionLogService.info(taskId, "SCAN", "扫描被取消，已处理 " + filePaths.size() + " 个文件");
+                    break;
+                }
+                
                 if (file.isDirectory() && recursive && depth > 0) {
                     scanDirectory(file.getAbsolutePath(), recursive, depth - 1, filePaths);
+                    dirCount++;
                 } else if (file.isFile()) {
                     filePaths.add(file.getAbsolutePath());
+                    fileCount++;
+                    
+                    // 每扫描100个文件记录一次进度
+                    if (filePaths.size() % 100 == 0) {
+                        taskExecutionLogService.info(taskId, "SCAN", "扫描进度: 已发现 " + filePaths.size() + " 个文件");
+                    }
                 }
+            }
+            
+            if (fileCount > 0 || dirCount > 0) {
+                taskExecutionLogService.debug(taskId, "SCAN", "目录扫描详情: " + path + " - 文件: " + fileCount + ", 子目录: " + dirCount);
             }
         }
 

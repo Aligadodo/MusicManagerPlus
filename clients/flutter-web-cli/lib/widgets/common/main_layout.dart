@@ -61,12 +61,23 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
         const SnackBar(content: Text('正在创建新任务...')),
       );
       
-      // 切换到任务列表页面
+      final taskId = await _createTask();
+      if (taskId == null) {
+        throw Exception('创建任务失败：无法获取任务ID');
+      }
+      
+      taskNotifier.startRunning(taskId);
+      
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('任务已创建: $taskId')),
+      );
+      
       _tabController.animateTo(1);
       
-      // 任务列表页面会自动创建新任务
     } catch (e) {
       taskNotifier.error(e.toString());
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: SelectableTextWidget(
@@ -123,18 +134,26 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
     try {
       final apiClient = ref.read(apiClientProvider);
       final response = await apiClient.post(
-        '/tasks',
+        '/api/tasks',
         body: {
-          'strategyId': 'default',
-          'filePaths': [],
           'taskName': '文件管理任务',
           'description': '通过前端创建的任务',
+          'autoExecute': false,
         },
       );
       
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map;
-        return data['taskId'] as String?;
+        final success = data['success'] as bool?;
+        if (success == true) {
+          final taskData = data['data'] as Map?;
+          return taskData?['taskId'] as String?;
+        } else {
+          final error = data['error'] as Map?;
+          final message = error?['message'] as String? ?? '未知错误';
+          print('创建任务失败: $message');
+          return null;
+        }
       }
       return null;
     } catch (e) {
@@ -147,7 +166,7 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
     try {
       final apiClient = ref.read(apiClientProvider);
       final response = await apiClient.post(
-        '/tasks/$taskId/execute',
+        '/api/tasks/$taskId/execute',
         body: {},
       );
       
@@ -179,7 +198,7 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
       
       // 停止流水线任务
       final apiClient = ref.read(apiClientProvider);
-      await apiClient.post('/pipeline/stop', body: {});
+      await apiClient.post('/api/pipeline/stop', body: {});
       
       await Future.delayed(const Duration(seconds: 1));
       

@@ -226,10 +226,10 @@ public class TaskInfo {
     public static class ScanStage {
         private String status;
         private int totalFiles;
-        private long totalSize;
-        private long scanStartTime;
-        private long scanEndTime;
-        private long scanDuration;
+        private Long totalSize;
+        private Long scanStartTime;
+        private Long scanEndTime;
+        private Long scanDuration;
         private Map<String, Integer> fileTypeStats;
 
         public ScanStage() {
@@ -253,35 +253,35 @@ public class TaskInfo {
             this.totalFiles = totalFiles;
         }
 
-        public long getTotalSize() {
+        public Long getTotalSize() {
             return totalSize;
         }
 
-        public void setTotalSize(long totalSize) {
+        public void setTotalSize(Long totalSize) {
             this.totalSize = totalSize;
         }
 
-        public long getScanStartTime() {
+        public Long getScanStartTime() {
             return scanStartTime;
         }
 
-        public void setScanStartTime(long scanStartTime) {
+        public void setScanStartTime(Long scanStartTime) {
             this.scanStartTime = scanStartTime;
         }
 
-        public long getScanEndTime() {
+        public Long getScanEndTime() {
             return scanEndTime;
         }
 
-        public void setScanEndTime(long scanEndTime) {
+        public void setScanEndTime(Long scanEndTime) {
             this.scanEndTime = scanEndTime;
         }
 
-        public long getScanDuration() {
+        public Long getScanDuration() {
             return scanDuration;
         }
 
-        public void setScanDuration(long scanDuration) {
+        public void setScanDuration(Long scanDuration) {
             this.scanDuration = scanDuration;
         }
 
@@ -303,9 +303,9 @@ public class TaskInfo {
         private int processedFiles;
         private int changedFiles;
         private int unchangedFiles;
-        private long previewStartTime;
-        private long previewEndTime;
-        private long previewDuration;
+        private Long previewStartTime;
+        private Long previewEndTime;
+        private Long previewDuration;
         private Map<String, Integer> operationStats;
 
         public PreviewStage() {
@@ -353,27 +353,27 @@ public class TaskInfo {
             this.unchangedFiles = unchangedFiles;
         }
 
-        public long getPreviewStartTime() {
+        public Long getPreviewStartTime() {
             return previewStartTime;
         }
 
-        public void setPreviewStartTime(long previewStartTime) {
+        public void setPreviewStartTime(Long previewStartTime) {
             this.previewStartTime = previewStartTime;
         }
 
-        public long getPreviewEndTime() {
+        public Long getPreviewEndTime() {
             return previewEndTime;
         }
 
-        public void setPreviewEndTime(long previewEndTime) {
+        public void setPreviewEndTime(Long previewEndTime) {
             this.previewEndTime = previewEndTime;
         }
 
-        public long getPreviewDuration() {
+        public Long getPreviewDuration() {
             return previewDuration;
         }
 
-        public void setPreviewDuration(long previewDuration) {
+        public void setPreviewDuration(Long previewDuration) {
             this.previewDuration = previewDuration;
         }
 
@@ -398,9 +398,9 @@ public class TaskInfo {
         private int successCount;
         private int failedCount;
         private int skippedCount;
-        private long executionStartTime;
-        private long executionEndTime;
-        private long executionDuration;
+        private Long executionStartTime;
+        private Long executionEndTime;
+        private Long executionDuration;
         private Map<String, OperationStats> operationStats;
 
         public ExecutionStage() {
@@ -472,27 +472,27 @@ public class TaskInfo {
             this.skippedCount = skippedCount;
         }
 
-        public long getExecutionStartTime() {
+        public Long getExecutionStartTime() {
             return executionStartTime;
         }
 
-        public void setExecutionStartTime(long executionStartTime) {
+        public void setExecutionStartTime(Long executionStartTime) {
             this.executionStartTime = executionStartTime;
         }
 
-        public long getExecutionEndTime() {
+        public Long getExecutionEndTime() {
             return executionEndTime;
         }
 
-        public void setExecutionEndTime(long executionEndTime) {
+        public void setExecutionEndTime(Long executionEndTime) {
             this.executionEndTime = executionEndTime;
         }
 
-        public long getExecutionDuration() {
+        public Long getExecutionDuration() {
             return executionDuration;
         }
 
-        public void setExecutionDuration(long executionDuration) {
+        public void setExecutionDuration(Long executionDuration) {
             this.executionDuration = executionDuration;
         }
 

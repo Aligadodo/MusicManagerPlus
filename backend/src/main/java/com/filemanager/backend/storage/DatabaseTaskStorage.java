@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 public class DatabaseTaskStorage implements ITaskStorage {
 
     private static final Logger logger = LoggerFactory.getLogger(DatabaseTaskStorage.class);
-    private static final String BASE_DIR = System.getProperty("user.home") + "/.MusicManagerPlus/tasks";
+    private static final String BASE_DIR = System.getProperty("user.dir") + "/data/tasks";
 
     private final ObjectMapper objectMapper;
     private final ExecutorService writeExecutor;
@@ -609,6 +609,33 @@ public class DatabaseTaskStorage implements ITaskStorage {
         if (po.getUpdatedAt() != null) {
             taskInfo.setUpdatedAt(po.getUpdatedAt().getTime());
         }
+        
+        // 初始化 stages 并从数据库加载实际数据
+        TaskInfo.TaskStages stages = new TaskInfo.TaskStages();
+        
+        // 加载扫描阶段数据
+        TaskInfo.ScanStage scanStage = loadScanStatistics(po.getTaskId());
+        if (scanStage != null) {
+            stages.setScan(scanStage);
+        }
+        
+        // 加载预览阶段数据
+        TaskInfo.PreviewStage previewStage = loadPreviewStatistics(po.getTaskId());
+        if (previewStage != null) {
+            stages.setPreview(previewStage);
+        }
+        
+        // 加载执行阶段数据（尝试加载最新的执行阶段）
+        TaskInfo.ExecutionStage executionStage = null;
+        for (int i = 1; i <= 10; i++) {
+            executionStage = loadExecutionStatistics(po.getTaskId(), i);
+            if (executionStage != null) {
+                stages.setExecution(executionStage);
+                break;
+            }
+        }
+        
+        taskInfo.setStages(stages);
         
         return taskInfo;
     }

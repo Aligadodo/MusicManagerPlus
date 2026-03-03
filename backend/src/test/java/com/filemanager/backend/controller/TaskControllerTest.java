@@ -264,16 +264,72 @@ class TaskControllerTest {
 
     @Test
     void testGetExecutionStatistics() throws Exception {
-        mockMvc.perform(get("/api/tasks/{taskId}/execution/1/statistics", testTaskId))
+        mockMvc.perform(get("/api/tasks/{taskId}/execution/statistics", testTaskId))
                 .andExpect(status().isNotFound());
     }
 
     @Test
-    void testGetTaskLogs() throws Exception {
-        mockMvc.perform(get("/api/tasks/{taskId}/logs", testTaskId))
+    void testRestartScan() throws Exception {
+        // 先执行一次扫描
+        executionService.executeScan(testTaskId);
+        
+        // 等待扫描完成
+        Thread.sleep(2000);
+        
+        // 测试重新扫描
+        mockMvc.perform(post("/api/tasks/{taskId}/restart/scan", testTaskId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.list").isArray());
+                .andExpect(jsonPath("$.message").value("重新扫描已开始"));
+    }
+
+    @Test
+    void testRestartPreview() throws Exception {
+        // 先执行扫描和预览
+        executionService.executeScan(testTaskId);
+        Thread.sleep(2000);
+        executionService.executePreview(testTaskId);
+        Thread.sleep(2000);
+        
+        // 测试重新预览
+        mockMvc.perform(post("/api/tasks/{taskId}/restart/preview", testTaskId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("重新预览已开始"));
+    }
+
+    @Test
+    void testRestartExecution() throws Exception {
+        // 先执行扫描、预览和执行
+        executionService.executeScan(testTaskId);
+        Thread.sleep(2000);
+        executionService.executePreview(testTaskId);
+        Thread.sleep(2000);
+        executionService.executeTask(testTaskId);
+        Thread.sleep(2000);
+        
+        // 测试重新执行
+        mockMvc.perform(post("/api/tasks/{taskId}/restart/execution", testTaskId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("重新执行已开始"));
+    }
+
+    @Test
+    void testRerunTask() throws Exception {
+        // 先执行一个完整的任务
+        executionService.executeScan(testTaskId);
+        Thread.sleep(2000);
+        executionService.executePreview(testTaskId);
+        Thread.sleep(2000);
+        executionService.executeTask(testTaskId);
+        Thread.sleep(2000);
+        
+        // 测试重新运行
+        mockMvc.perform(post("/api/tasks/{taskId}/rerun", testTaskId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.message").value("重新运行已开始"));
     }
 
     @Test
@@ -295,3 +351,4 @@ class TaskControllerTest {
                 .andExpect(status().isInternalServerError());
     }
 }
+
