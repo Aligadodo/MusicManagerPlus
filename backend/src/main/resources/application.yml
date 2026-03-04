@@ -45,24 +45,16 @@ filemanager:
   log:
     directory: logs
 
+# 日志配置已迁移到 logback-spring.xml
+# 仅保留日志级别控制
 logging:
   level:
-    com.filemanager: debug
-    com.filemanager.backend: debug
-    org.springframework: debug
-    org.springframework.web: debug
-  file:
-    name: logs/filemanager.log
-    max-size: 50MB
-    max-history: 30
-  logback:
-    rollingpolicy:
-      max-file-size: 50MB
-      max-history: 30
-      file-name-pattern: logs/filemanager_%d{yyyy-MM-dd}.%i.log
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    root: INFO
+    com.filemanager: DEBUG
+    com.filemanager.backend: DEBUG
+    org.springframework: INFO
+    org.springframework.web: INFO
+    org.mybatis: INFO
 
 security:
   jwt:
@@ -74,4 +66,3 @@ management:
     web:
       exposure:
         include: health,info,metrics
-

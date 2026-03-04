@@ -232,11 +232,33 @@ class PreviewWidget extends ConsumerWidget {
             records: currentRecords,
             isLoading: isLoading,
             errorMessage: errorMessage,
+            taskStatus: _getTaskStatusFromLocalState(taskState),
           ),
         ),
         _buildPagination(),
       ],
     );
+  }
+
+  String _getTaskStatusFromLocalState(LocalTaskState state) {
+    switch (state) {
+      case LocalTaskState.ready:
+        return 'PENDING';
+      case LocalTaskState.previewing:
+        return 'PREVIEWING';
+      case LocalTaskState.previewCompleted:
+        return 'PREVIEWED';
+      case LocalTaskState.previewFailed:
+        return 'FAILED';
+      case LocalTaskState.executing:
+        return 'EXECUTING';
+      case LocalTaskState.executionCompleted:
+        return 'COMPLETED';
+      case LocalTaskState.executionFailed:
+        return 'FAILED';
+      case LocalTaskState.cancelled:
+        return 'CANCELLED';
+    }
   }
 
   Widget _buildPagination() {

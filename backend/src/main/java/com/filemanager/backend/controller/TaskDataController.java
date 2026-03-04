@@ -16,9 +16,10 @@ import java.util.Map;
 /**
  * 任务数据查询控制器
  * 提供扫描/预览/执行三个阶段的数据分页查询API
+ * 注意：此控制器使用独立路径 /api/task-data 避免与 TaskController 冲突
  */
 @RestController
-@RequestMapping("/api/tasks/{taskId}")
+@RequestMapping("/api/task-data/{taskId}")
 @CrossOrigin(origins = "*")
 public class TaskDataController {
 
@@ -167,10 +168,7 @@ public class TaskDataController {
      * @param page 页码（默认1）
      * @param pageSize 每页数量（默认20）
      * @param search 搜索关键词
-     * @param operationType 操作类型筛选
      * @param status 状态筛选
-     * @param startTime 开始时间戳
-     * @param endTime 结束时间戳
      * @param sortField 排序字段
      * @param sortOrder 排序方向（asc/desc）
      * @return 分页响应
@@ -181,10 +179,7 @@ public class TaskDataController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int pageSize,
             @RequestParam(required = false) String search,
-            @RequestParam(required = false) String operationType,
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) Long startTime,
-            @RequestParam(required = false) Long endTime,
             @RequestParam(required = false) String sortField,
             @RequestParam(defaultValue = "asc") String sortOrder) {
 
@@ -196,10 +191,7 @@ public class TaskDataController {
             params.setPage(page);
             params.setPageSize(pageSize);
             params.setSearch(search);
-            params.setOperationType(operationType);
             params.setStatus(status);
-            params.setStartTime(startTime);
-            params.setEndTime(endTime);
             params.setSortField(sortField);
             params.setSortOrder(sortOrder);
 
@@ -224,68 +216,5 @@ public class TaskDataController {
 
             return ResponseEntity.ok(error);
         }
-    }
-
-    /**
-     * 获取单条扫描记录详情
-     * @param taskId 任务ID
-     * @param recordId 记录ID
-     * @return 记录详情
-     */
-    @GetMapping("/scan/records/{recordId}")
-    public ResponseEntity<Map<String, Object>> getScanRecordDetail(
-            @PathVariable String taskId,
-            @PathVariable String recordId) {
-
-        logger.info("[TaskDataController] 获取扫描记录详情, taskId={}, recordId={}", taskId, recordId);
-
-        // TODO: 实现单条记录查询
-        Map<String, Object> result = new HashMap<>();
-        result.put("success", false);
-        result.put("message", "功能开发中");
-
-        return ResponseEntity.ok(result);
-    }
-
-    /**
-     * 获取单条预览记录详情
-     * @param taskId 任务ID
-     * @param recordId 记录ID
-     * @return 记录详情
-     */
-    @GetMapping("/preview/records/{recordId}")
-    public ResponseEntity<Map<String, Object>> getPreviewRecordDetail(
-            @PathVariable String taskId,
-            @PathVariable String recordId) {
-
-        logger.info("[TaskDataController] 获取预览记录详情, taskId={}, recordId={}", taskId, recordId);
-
-        // TODO: 实现单条记录查询
-        Map<String, Object> result = new HashMap<>();
-        result.put("success", false);
-        result.put("message", "功能开发中");
-
-        return ResponseEntity.ok(result);
-    }
-
-    /**
-     * 获取单条执行记录详情
-     * @param taskId 任务ID
-     * @param recordId 记录ID
-     * @return 记录详情
-     */
-    @GetMapping("/execution/records/{recordId}")
-    public ResponseEntity<Map<String, Object>> getExecutionRecordDetail(
-            @PathVariable String taskId,
-            @PathVariable String recordId) {
-
-        logger.info("[TaskDataController] 获取执行记录详情, taskId={}, recordId={}", taskId, recordId);
-
-        // TODO: 实现单条记录查询
-        Map<String, Object> result = new HashMap<>();
-        result.put("success", false);
-        result.put("message", "功能开发中");
-
-        return ResponseEntity.ok(result);
     }
 }

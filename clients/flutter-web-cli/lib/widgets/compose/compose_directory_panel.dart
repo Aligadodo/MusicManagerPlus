@@ -201,10 +201,34 @@ class _ComposeDirectoryPanelState extends State<ComposeDirectoryPanel> {
     }
   }
 
-  void _removeDirectory(SourceDirectory directory) {
-    final newDirectories = List<SourceDirectory>.from(widget.sourceDirectories);
-    newDirectories.remove(directory);
-    widget.onDirectoriesChanged(newDirectories);
+  Future<void> _removeDirectory(SourceDirectory directory) async {
+    try {
+      // 调用后端 API 删除目录
+      await widget.sourceDirectoryService.removeSourceDirectory(directory.path);
+      
+      // 从本地列表移除
+      final newDirectories = List<SourceDirectory>.from(widget.sourceDirectories);
+      newDirectories.remove(directory);
+      
+      if (!_isDisposed) {
+        widget.onDirectoriesChanged(newDirectories);
+      }
+    } catch (e) {
+      print('删除目录失败: $e');
+      if (!_isDisposed) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: SelectableTextWidget(
+              text: '删除目录失败: $e',
+              style: const TextStyle(color: Colors.white),
+              maxLines: 5,
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _clearDirectories() async {
@@ -368,7 +392,7 @@ class _ComposeDirectoryPanelState extends State<ComposeDirectoryPanel> {
           index: index,
           onMoveUp: index > 0 ? () => _moveDirectory(index, -1) : () {},
           onMoveDown: index < widget.sourceDirectories.length - 1 ? () => _moveDirectory(index, 1) : () {},
-          onDelete: () => _removeDirectory(directory),
+          onDelete: () async => await _removeDirectory(directory),
         );
       },
     );

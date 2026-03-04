@@ -1063,7 +1063,7 @@ public class TaskExecutionService {
                 scanStage.setTotalFiles(filePaths.size());
                 scanStage.setScanEndTime(System.currentTimeMillis());
                 scanStage.setScanDuration(scanStage.getScanEndTime() - scanStage.getScanStartTime());
-                scanStage.setStatus("COMPLETED");
+                scanStage.setStatus("SCANNED");
                 storageService.saveScanStatistics(taskId, scanStage);
                 
                 // 更新任务状态
@@ -1259,7 +1259,7 @@ public class TaskExecutionService {
                 previewStage.setUnchangedFiles(processedCount.get() - changedCount.get());
                 previewStage.setPreviewEndTime(System.currentTimeMillis());
                 previewStage.setPreviewDuration(previewStage.getPreviewEndTime() - previewStage.getPreviewStartTime());
-                previewStage.setStatus("COMPLETED");
+                previewStage.setStatus("PREVIEWED");
                 storageService.savePreviewStatistics(taskId, previewStage);
                 
                 // 更新任务状态
@@ -1653,42 +1653,63 @@ public class TaskExecutionService {
         }
 
         private void scanDirectory(String path, boolean recursive, int depth, List<String> filePaths) {
-            File dir = new File(path);
-            if (!dir.exists() || !dir.isDirectory()) {
-                taskExecutionLogService.warn(taskId, "SCAN", "目录不存在或不是有效目录: " + path);
-                return;
-            }
-            
-            File[] files = dir.listFiles();
-            if (files == null) {
-                taskExecutionLogService.warn(taskId, "SCAN", "无法读取目录内容: " + path);
-                return;
-            }
-            
-            int fileCount = 0;
-            int dirCount = 0;
-            for (File file : files) {
-                if (cancelled) {
-                    taskExecutionLogService.info(taskId, "SCAN", "扫描被取消，已处理 " + filePaths.size() + " 个文件");
-                    break;
+            try {
+                Path dirPath = Paths.get(path);
+                
+                // 检查目录是否存在且可读
+                if (!Files.exists(dirPath)) {
+                    taskExecutionLogService.warn(taskId, "SCAN", "目录不存在: " + path);
+                    return;
                 }
                 
-                if (file.isDirectory() && recursive && depth > 0) {
-                    scanDirectory(file.getAbsolutePath(), recursive, depth - 1, filePaths);
-                    dirCount++;
-                } else if (file.isFile()) {
-                    filePaths.add(file.getAbsolutePath());
-                    fileCount++;
-                    
-                    // 每扫描100个文件记录一次进度
-                    if (filePaths.size() % 100 == 0) {
-                        taskExecutionLogService.info(taskId, "SCAN", "扫描进度: 已发现 " + filePaths.size() + " 个文件");
-                    }
+                if (!Files.isDirectory(dirPath)) {
+                    taskExecutionLogService.warn(taskId, "SCAN", "路径不是目录: " + path);
+                    return;
                 }
-            }
-            
-            if (fileCount > 0 || dirCount > 0) {
-                taskExecutionLogService.debug(taskId, "SCAN", "目录扫描详情: " + path + " - 文件: " + fileCount + ", 子目录: " + dirCount);
+                
+                if (!Files.isReadable(dirPath)) {
+                    taskExecutionLogService.warn(taskId, "SCAN", "目录不可读: " + path);
+                    return;
+                }
+                
+                // 使用 NIO 的 DirectoryStream 来遍历目录，对网络路径支持更好
+                int fileCount = 0;
+                int dirCount = 0;
+                
+                try (var stream = Files.newDirectoryStream(dirPath)) {
+                    for (Path entry : stream) {
+                        if (cancelled) {
+                            taskExecutionLogService.info(taskId, "SCAN", "扫描被取消，已处理 " + filePaths.size() + " 个文件");
+                            break;
+                        }
+                        
+                        if (Files.isDirectory(entry)) {
+                            if (recursive && depth > 0) {
+                                scanDirectory(entry.toString(), recursive, depth - 1, filePaths);
+                                dirCount++;
+                            }
+                        } else if (Files.isRegularFile(entry)) {
+                            filePaths.add(entry.toString());
+                            fileCount++;
+                            
+                            // 每扫描100个文件记录一次进度
+                            if (filePaths.size() % 100 == 0) {
+                                taskExecutionLogService.info(taskId, "SCAN", "扫描进度: 已发现 " + filePaths.size() + " 个文件");
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    taskExecutionLogService.error(taskId, "SCAN", "读取目录内容失败: " + path + " - " + e.getMessage());
+                    logger.error("[TaskExecution] 读取目录失败: {}", path, e);
+                }
+                
+                if (fileCount > 0 || dirCount > 0) {
+                    taskExecutionLogService.debug(taskId, "SCAN", "目录扫描详情: " + path + " - 文件: " + fileCount + ", 子目录: " + dirCount);
+                }
+                
+            } catch (Exception e) {
+                taskExecutionLogService.error(taskId, "SCAN", "扫描目录异常: " + path + " - " + e.getMessage());
+                logger.error("[TaskExecution] 扫描目录异常: {}", path, e);
             }
         }
 
