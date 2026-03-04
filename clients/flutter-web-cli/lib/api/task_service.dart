@@ -392,6 +392,19 @@ class TaskService {
     }
   }
 
+  Future<Map<String, dynamic>> updateTaskName(String taskId, String taskName) async {
+    final response = await _apiClient.put(
+      '/api/tasks/$taskId/name',
+      body: {'taskName': taskName},
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to update task name: ${response.statusCode}');
+    }
+  }
+
   WebSocketChannel connectTaskWebSocket(String taskId) {
     return _apiClient.connectWebSocket('/ws/tasks/$taskId');
   }

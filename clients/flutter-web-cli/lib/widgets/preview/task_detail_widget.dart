@@ -148,6 +148,21 @@ class _TaskDetailWidgetState extends ConsumerState<TaskDetailWidget> with Single
     }
   }
 
+  Future<void> _updateTaskName(String newName) async {
+    if (widget.selectedTask == null) return;
+
+    try {
+      final result = await _taskService.updateTaskName(widget.selectedTask!.taskId!, newName);
+      if (result['success'] == true) {
+        _showSuccess('任务名称已更新');
+      } else {
+        _showError('更新任务名称失败: ${result['error']['message']}');
+      }
+    } catch (e) {
+      _showError('更新任务名称失败: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (widget.selectedTask == null) {
@@ -202,7 +217,10 @@ class _TaskDetailWidgetState extends ConsumerState<TaskDetailWidget> with Single
                 // 任务信息
                 SingleChildScrollView(
                   padding: const EdgeInsets.only(bottom: 24),
-                  child: TaskInfoCard(selectedTask: widget.selectedTask!),
+                  child: TaskInfoCard(
+                    selectedTask: widget.selectedTask!,
+                    onTaskNameChanged: _updateTaskName,
+                  ),
                 ),
                 
                 // 配置快照

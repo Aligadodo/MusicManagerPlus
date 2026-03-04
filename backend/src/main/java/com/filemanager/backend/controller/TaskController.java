@@ -1800,4 +1800,59 @@ public class TaskController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
+
+    @PutMapping("/{taskId}/name")
+    public ResponseEntity<Map<String, Object>> updateTaskName(
+            @PathVariable String taskId,
+            @RequestBody Map<String, String> request) {
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            String newTaskName = request.get("taskName");
+            if (newTaskName == null || newTaskName.trim().isEmpty()) {
+                response.put("success", false);
+                Map<String, Object> error = new HashMap<>();
+                error.put("code", "INVALID_TASK_NAME");
+                error.put("message", "任务名称不能为空");
+                response.put("error", error);
+                return ResponseEntity.badRequest().body(response);
+            }
+
+            TaskInfoPO taskInfoPO = taskInfoMapper.selectByTaskId(taskId);
+            if (taskInfoPO == null) {
+                response.put("success", false);
+                Map<String, Object> error = new HashMap<>();
+                error.put("code", "TASK_NOT_FOUND");
+                error.put("message", "任务不存在");
+                response.put("error", error);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+            }
+
+            taskInfoPO.setTaskName(newTaskName.trim());
+            taskInfoMapper.update(taskInfoPO);
+
+            taskRegistry.invalidate(taskId);
+
+            TaskInfo taskInfo = taskRegistry.getTask(taskId);
+
+            response.put("success", true);
+            response.put("data", taskInfoToMap(taskInfo));
+            response.put("message", "任务名称已更新");
+
+            logger.info("[TaskController] 任务名称已更新: {} -> {}", taskId, newTaskName);
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            logger.error("[TaskController] 更新任务名称失败: {}", taskId, e);
+
+            response.put("success", false);
+            Map<String, Object> error = new HashMap<>();
+            error.put("code", "UPDATE_TASK_NAME_FAILED");
+            error.put("message", "更新任务名称失败");
+            error.put("details", e.getMessage());
+            response.put("error", error);
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
 }

@@ -524,6 +524,11 @@ public class TaskRegistry {
             UnifiedLogger.backendError("TaskRegistry", "保存任务信息失败: " + task.getTaskId(), e);
         }
     }
+
+    public void invalidate(String taskId) {
+        registeredTasks.remove(taskId);
+        UnifiedLogger.backendOperation("TaskRegistry", "已清除任务缓存: " + taskId);
+    }
     
     /**
      * 清理已完成任务
