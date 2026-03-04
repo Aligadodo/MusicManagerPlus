@@ -13,6 +13,7 @@ import 'package:filemanager_flutter/pages/settings/global_settings_page.dart';
 import 'package:filemanager_flutter/providers/config_provider.dart';
 import 'package:filemanager_flutter/widgets/common/selectable_text_widget.dart';
 import 'package:filemanager_flutter/models/task_state.dart';
+import 'package:filemanager_flutter/api/providers.dart';
 
 final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());
 
@@ -133,12 +134,22 @@ class _MainLayoutState extends ConsumerState<MainLayout> with SingleTickerProvid
   Future<String?> _createTask() async {
     try {
       final apiClient = ref.read(apiClientProvider);
+      final sourceDirectoryService = ref.read(sourceDirectoryServiceProvider);
+      
+      // 获取当前源目录配置
+      final sourceDirectories = await sourceDirectoryService.getSourceDirectories();
+      
       final response = await apiClient.post(
         '/api/tasks',
         body: {
           'taskName': '文件管理任务',
           'description': '通过前端创建的任务',
           'autoExecute': false,
+          'sourceDirectories': sourceDirectories.map((dir) => {
+            'path': dir.path,
+            'depth': 4,
+            'recursive': true,
+          }).toList(),
         },
       );
       

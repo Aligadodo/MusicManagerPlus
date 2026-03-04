@@ -103,3 +103,7 @@ clients/flutter-web-cli/.dart_tool/
 backend/data/music_manager.db
 **/music_manager.db
 backend/backend.pid
+bin/macos/backend-1.0.0.jar
+backend/backend.jar
+data/tasks/task_manager.db
+backend/backend.jar
