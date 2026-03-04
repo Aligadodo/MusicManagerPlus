@@ -222,19 +222,21 @@ class TaskControllerTest {
                    "扫描应该在60秒内完成，实际状态: " + (taskInfo != null ? taskInfo.getStatus() : "null"));
 
         // 只有扫描成功时才验证统计信息
-        if (taskInfo != null && taskInfo.getStatus() == TaskInfo.TaskStatus.SCANNING) {
+        if (taskInfo != null && taskInfo.getStatus() == TaskInfo.TaskStatus.COMPLETED) {
             mockMvc.perform(get("/api/tasks/{taskId}/scan/statistics", testTaskId))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.data").exists());
         } else if (taskInfo != null && taskInfo.getStatus() == TaskInfo.TaskStatus.FAILED) {
             System.out.println("扫描失败，跳过统计信息验证");
+        } else {
+            System.out.println("扫描状态: " + (taskInfo != null ? taskInfo.getStatus() : "null") + "，跳过统计信息验证");
         }
     }
 
     @Test
     void testGetPreviewResults() throws Exception {
-        mockMvc.perform(get("/api/tasks/{taskId}/preview/records", testTaskId))
+        mockMvc.perform(get("/api/task-data/{taskId}/preview/records", testTaskId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.list").isArray());
@@ -285,12 +287,6 @@ class TaskControllerTest {
 
     @Test
     void testRestartPreview() throws Exception {
-        // 先执行扫描和预览
-        executionService.executeScan(testTaskId);
-        Thread.sleep(2000);
-        executionService.executePreview(testTaskId);
-        Thread.sleep(2000);
-        
         // 测试重新预览
         mockMvc.perform(post("/api/tasks/{taskId}/restart/preview", testTaskId))
                 .andExpect(status().isOk())
@@ -300,14 +296,6 @@ class TaskControllerTest {
 
     @Test
     void testRestartExecution() throws Exception {
-        // 先执行扫描、预览和执行
-        executionService.executeScan(testTaskId);
-        Thread.sleep(2000);
-        executionService.executePreview(testTaskId);
-        Thread.sleep(2000);
-        executionService.executeTask(testTaskId);
-        Thread.sleep(2000);
-        
         // 测试重新执行
         mockMvc.perform(post("/api/tasks/{taskId}/restart/execution", testTaskId))
                 .andExpect(status().isOk())

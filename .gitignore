@@ -64,6 +64,10 @@ backend/data/*.db-wal
 **/music_manager.db
 **/music_manager_plus.db
 
+### Task Data ###
+backend/data/tasks/
+backend/data/tasks/**
+
 ### Local Configuration Files ###
 backend/config.json
 backend/pipeline_config.json
@@ -95,6 +99,11 @@ strategy_configs.json
 **/*.temp
 **/tmp/
 **/tmp/**
+**/temp/
+**/temp/**
+**/*.log*
+**/logs/
+**/logs/**
 
 ### Flutter Web Build Output ###
 frontend/

@@ -18,6 +18,7 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -191,7 +192,7 @@ public class TaskExecutionService {
         // 检查扫描是否完成，最多等待10秒
         int maxRetries = 10;
         for (int i = 0; i < maxRetries; i++) {
-            if ("COMPLETED".equals(taskInfo.getStages().getScan().getStatus())) {
+            if ("SCANNED".equals(taskInfo.getStages().getScan().getStatus())) {
                 logger.info("[TaskExecution] 扫描已完成，可以开始预览分析");
                 taskExecutionLogService.info(taskId, "PREVIEW", "扫描已完成，开始预览分析");
                 break;
@@ -209,7 +210,7 @@ public class TaskExecutionService {
             }
         }
 
-        if (!"COMPLETED".equals(taskInfo.getStages().getScan().getStatus())) {
+        if (!"SCANNED".equals(taskInfo.getStages().getScan().getStatus())) {
             logger.error("[TaskExecution] 扫描未完成，当前状态: {}", taskInfo.getStages().getScan().getStatus());
             taskExecutionLogService.error(taskId, "PREVIEW", "扫描未完成，无法执行预览分析");
             throw new IllegalStateException("文件扫描未完成，无法执行预览分析");
@@ -1676,7 +1677,7 @@ public class TaskExecutionService {
                 int fileCount = 0;
                 int dirCount = 0;
                 
-                try (var stream = Files.newDirectoryStream(dirPath)) {
+                try (DirectoryStream<Path> stream = Files.newDirectoryStream(dirPath)) {
                     for (Path entry : stream) {
                         if (cancelled) {
                             taskExecutionLogService.info(taskId, "SCAN", "扫描被取消，已处理 " + filePaths.size() + " 个文件");
