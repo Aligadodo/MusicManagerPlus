@@ -3,6 +3,7 @@ package com.filemanager.backend.controller;
 import com.filemanager.backend.model.*;
 import com.filemanager.backend.service.TaskExecutionService;
 import com.filemanager.backend.service.TaskStorageService;
+import com.filemanager.backend.service.TaskRegistry;
 import com.filemanager.backend.service.ChangeRecordService;
 import com.filemanager.backend.service.TaskOperationLogService;
 import com.filemanager.backend.service.TaskExecutionLogService;
@@ -41,6 +42,7 @@ public class TaskController {
 
     private final TaskStorageService storageService;
     private final TaskExecutionService executionService;
+    private final TaskRegistry taskRegistry;
     private final ChangeRecordService changeRecordService;
     private final TaskOperationLogService taskOperationLogService;
     private final TaskExecutionLogService taskExecutionLogService;
@@ -49,12 +51,14 @@ public class TaskController {
     @Autowired
     public TaskController(TaskStorageService storageService, 
                          TaskExecutionService executionService,
+                         TaskRegistry taskRegistry,
                          ChangeRecordService changeRecordService,
                          TaskOperationLogService taskOperationLogService,
                          TaskExecutionLogService taskExecutionLogService,
                          TaskInfoMapper taskInfoMapper) {
         this.storageService = storageService;
         this.executionService = executionService;
+        this.taskRegistry = taskRegistry;
         this.changeRecordService = changeRecordService;
         this.taskOperationLogService = taskOperationLogService;
         this.taskExecutionLogService = taskExecutionLogService;
@@ -181,7 +185,10 @@ public class TaskController {
         Map<String, Object> response = new HashMap<>();
         
         try {
-            TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
+            TaskInfo taskInfo = taskRegistry.getTask(taskId);
+            if (taskInfo == null) {
+                taskInfo = storageService.loadTaskInfo(taskId);
+            }
             if (taskInfo == null) {
                 response.put("success", false);
                 Map<String, Object> error = new HashMap<>();
@@ -978,52 +985,6 @@ public class TaskController {
             Map<String, Object> error = new HashMap<>();
             error.put("code", "GET_PREVIEW_STATISTICS_FAILED");
             error.put("message", "获取预览统计失败");
-            error.put("details", e.getMessage());
-            response.put("error", error);
-            
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-        }
-    }
-
-    /**
-     * 获取预览变更记录
-     */
-    @GetMapping("/{taskId}/preview/records")
-    public ResponseEntity<Map<String, Object>> getPreviewRecords(
-            @PathVariable String taskId,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int pageSize,
-            @RequestParam(required = false) String operationType,
-            @RequestParam(required = false) Boolean changed,
-            @RequestParam(required = false) String keyword) {
-        Map<String, Object> response = new HashMap<>();
-        
-        try {
-            List<String> records = storageService.readPreviewData(taskId, page, pageSize);
-            
-            int total = records.size();
-            int totalPages = (int) Math.ceil((double) total / pageSize);
-            
-            Map<String, Object> data = new HashMap<>();
-            data.put("list", records);
-            data.put("total", total);
-            data.put("page", page);
-            data.put("pageSize", pageSize);
-            data.put("totalPages", totalPages);
-            
-            response.put("success", true);
-            response.put("data", data);
-            
-            logger.debug("[TaskController] 获取预览变更记录成功: {}", taskId);
-            return ResponseEntity.ok(response);
-            
-        } catch (Exception e) {
-            logger.error("[TaskController] 获取预览变更记录失败: {}", taskId, e);
-            
-            response.put("success", false);
-            Map<String, Object> error = new HashMap<>();
-            error.put("code", "GET_PREVIEW_RECORDS_FAILED");
-            error.put("message", "获取预览变更记录失败");
             error.put("details", e.getMessage());
             response.put("error", error);
             

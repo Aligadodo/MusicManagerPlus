@@ -5,6 +5,7 @@ import com.filemanager.backend.entity.TaskStagePO;
 import com.filemanager.backend.entity.TaskOperationLogPO;
 import com.filemanager.backend.entity.ChangeRecordPO;
 import com.filemanager.backend.model.TaskInfo;
+import com.filemanager.backend.model.TaskConfigSnapshot;
 import com.filemanager.backend.logging.UnifiedLogger;
 import com.filemanager.backend.service.TaskInfoService;
 import com.filemanager.backend.service.TaskStageService;
@@ -47,6 +48,9 @@ public class TaskRegistry {
     
     @Autowired
     private ChangeRecordService changeRecordService;
+    
+    @Autowired
+    private ConfigSnapshotService configSnapshotService;
     
     private final Map<String, TaskInfo> registeredTasks = new ConcurrentHashMap<>();
     private final Map<String, PipelineTaskStatusDTO> runningTasks = new ConcurrentHashMap<>();
@@ -134,6 +138,7 @@ public class TaskRegistry {
         taskInfo.setCurrentStage(taskInfoPO.getCurrentStage());
         taskInfo.setOverallProgress(taskInfoPO.getOverallProgress() != null ? taskInfoPO.getOverallProgress() : 0.0);
         taskInfo.setMessage(taskInfoPO.getMessage());
+        taskInfo.setConfigSnapshotId(taskInfoPO.getConfigSnapshotId());
         
         if (taskInfoPO.getCreatedAt() != null) {
             taskInfo.setCreatedAt(taskInfoPO.getCreatedAt().getTime());
@@ -157,6 +162,12 @@ public class TaskRegistry {
                 if (taskInfoPO != null) {
                     task = convertFromTaskInfoPO(taskInfoPO);
                     if (task != null) {
+                        if (task.getConfigSnapshotId() != null && !task.getConfigSnapshotId().isEmpty()) {
+                            TaskConfigSnapshot configSnapshot = configSnapshotService.getSnapshot(task.getConfigSnapshotId());
+                            if (configSnapshot != null) {
+                                task.setConfigSnapshot(configSnapshot);
+                            }
+                        }
                         registeredTasks.put(taskId, task);
                     }
                 }

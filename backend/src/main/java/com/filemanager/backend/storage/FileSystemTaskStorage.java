@@ -95,7 +95,14 @@ public class FileSystemTaskStorage implements ITaskStorage {
                 return null;
             }
             
-            return objectMapper.readValue(file, TaskInfo.class);
+            TaskInfo taskInfo = objectMapper.readValue(file, TaskInfo.class);
+            
+            TaskConfigSnapshot configSnapshot = loadConfigSnapshot(taskId);
+            if (configSnapshot != null) {
+                taskInfo.setConfigSnapshot(configSnapshot);
+            }
+            
+            return taskInfo;
         } catch (IOException e) {
             logger.error("[FileSystemStorage] 加载任务信息失败: {}", taskId, e);
             return null;
