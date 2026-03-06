@@ -14,6 +14,7 @@ class TaskListWidget extends ConsumerStatefulWidget {
   final bool isLoading;
   final String errorMessage;
   final VoidCallback? onRefresh;
+  final Function(String, String)? onTaskNameChanged; // 添加任务名称变更回调
 
   const TaskListWidget({
     super.key,
@@ -24,6 +25,7 @@ class TaskListWidget extends ConsumerStatefulWidget {
     required this.isLoading,
     required this.errorMessage,
     this.onRefresh,
+    this.onTaskNameChanged, // 添加可选参数
   });
 
   @override
@@ -34,6 +36,8 @@ class _TaskListWidgetState extends ConsumerState<TaskListWidget> {
   String _searchKeyword = '';
   String _statusFilter = '全部';
   DateTimeRange? _dateRange;
+  Map<String, bool> _editingTasks = {}; // 跟踪正在编辑的任务
+  Map<String, TextEditingController> _nameControllers = {}; // 存储每个任务的编辑控制器
 
   List<task_models.TaskStatus> get _filteredTasks {
     return widget.tasks.where((task) {
@@ -318,15 +322,63 @@ class _TaskListWidgetState extends ConsumerState<TaskListWidget> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     // 任务名称
-                    Text(
-                      task.taskName ?? '未命名任务',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _editingTasks[task.taskId] ?? false
+                              ? TextField(
+                                  controller: _nameControllers[task.taskId] ?? TextEditingController(text: task.taskName ?? '未命名任务'),
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black87,
+                                  ),
+                                  decoration: const InputDecoration(
+                                    isDense: true,
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  onSubmitted: (_) => _saveTaskName(task.taskId!, _nameControllers[task.taskId]?.text ?? ''),
+                                )
+                              : Text(
+                                  task.taskName ?? '未命名任务',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black87,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                        ),
+                        IconButton(
+                          icon: Icon(
+                            _editingTasks[task.taskId] ?? false ? Icons.check : Icons.edit,
+                            size: 16,
+                            color: _editingTasks[task.taskId] ?? false ? Colors.green : Colors.blue,
+                          ),
+                          onPressed: () {
+                            if (_editingTasks[task.taskId] ?? false) {
+                              _saveTaskName(task.taskId!, _nameControllers[task.taskId]?.text ?? '');
+                            } else {
+                              _startEditing(task);
+                            }
+                          },
+                          tooltip: _editingTasks[task.taskId] ?? false ? '保存' : '编辑任务名称',
+                          padding: const EdgeInsets.all(4),
+                          constraints: const BoxConstraints(),
+                        ),
+                        if (_editingTasks[task.taskId] ?? false)
+                          IconButton(
+                            icon: const Icon(Icons.close, size: 16, color: Colors.red),
+                            onPressed: () {
+                              _cancelEditing(task.taskId!);
+                            },
+                            tooltip: '取消',
+                            padding: const EdgeInsets.all(4),
+                            constraints: const BoxConstraints(),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 6),
                     // 状态标签行
@@ -753,7 +805,27 @@ class _TaskListWidgetState extends ConsumerState<TaskListWidget> {
     }
   }
 
+  void _startEditing(task_models.TaskStatus task) {
+    setState(() {
+      _editingTasks[task.taskId!] = true;
+      _nameControllers[task.taskId!] = TextEditingController(text: task.taskName ?? '未命名任务');
+    });
+  }
 
+  void _saveTaskName(String taskId, String newName) {
+    final trimmedName = newName.trim();
+    if (trimmedName.isNotEmpty) {
+      widget.onTaskNameChanged?.call(taskId, trimmedName);
+    }
+    _cancelEditing(taskId);
+  }
+
+  void _cancelEditing(String taskId) {
+    setState(() {
+      _editingTasks[taskId] = false;
+      _nameControllers.remove(taskId);
+    });
+  }
 
   Future<void> _executeTask(BuildContext context, String taskId) async {
     final confirmed = await showDialog<bool>(

@@ -40,6 +40,7 @@ public class TaskInfo {
     private Boolean autoExecute;
 
     public TaskInfo() {
+        this.stages = new TaskStages();
     }
 
     public TaskInfo(String taskId) {

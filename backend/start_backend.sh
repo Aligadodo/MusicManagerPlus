@@ -24,7 +24,7 @@ if [ -f "backend.pid" ]; then
 fi
 
 # 后台运行模式
-nohup mvn spring-boot:run > backend.log 2>&1 &
+nohup mvn spring-boot:run -DskipTests > backend.log 2>&1 &
 PID=$!
 
 # 保存 PID

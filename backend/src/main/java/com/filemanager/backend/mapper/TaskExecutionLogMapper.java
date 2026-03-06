@@ -10,7 +10,6 @@ public interface TaskExecutionLogMapper {
 
     @Insert("INSERT INTO task_execution_log (task_id, timestamp, log_level, log_type, message, details, created_at) " +
             "VALUES (#{taskId}, #{timestamp}, #{logLevel}, #{logType}, #{message}, #{details}, #{createdAt})")
-    @Options(useGeneratedKeys = true, keyProperty = "id")
     int insert(TaskExecutionLog log);
 
     @Select("SELECT * FROM task_execution_log WHERE task_id = #{taskId} ORDER BY timestamp DESC LIMIT #{limit} OFFSET #{offset}")

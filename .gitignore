@@ -116,3 +116,4 @@ bin/macos/backend-1.0.0.jar
 backend/backend.jar
 data/tasks/task_manager.db
 backend/backend.jar
+data/tasks/**

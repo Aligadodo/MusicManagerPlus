@@ -51,7 +51,7 @@ public class TaskDataQueryService {
         try {
             // 1. 读取扫描结果文件
             String taskDir = taskStorage.getTaskDirectory(taskId);
-            Path scanResultPath = Paths.get(taskDir, "scan", "scan_result.json");
+            Path scanResultPath = Paths.get(taskDir, "scan", "data.json");
 
             if (!Files.exists(scanResultPath)) {
                 logger.warn("[TaskDataQuery] 扫描结果文件不存在: {}", scanResultPath);
@@ -94,7 +94,7 @@ public class TaskDataQueryService {
         try {
             // 1. 读取预览结果文件
             String taskDir = taskStorage.getTaskDirectory(taskId);
-            Path previewResultPath = Paths.get(taskDir, "preview", "preview_result.json");
+            Path previewResultPath = Paths.get(taskDir, "preview", "data.json");
 
             if (!Files.exists(previewResultPath)) {
                 logger.warn("[TaskDataQuery] 预览结果文件不存在: {}", previewResultPath);
@@ -137,7 +137,7 @@ public class TaskDataQueryService {
         try {
             // 1. 读取执行结果文件
             String taskDir = taskStorage.getTaskDirectory(taskId);
-            Path executionResultPath = Paths.get(taskDir, "execution", "execution_result.json");
+            Path executionResultPath = Paths.get(taskDir, "execution", "data.json");
 
             if (!Files.exists(executionResultPath)) {
                 logger.warn("[TaskDataQuery] 执行结果文件不存在: {}", executionResultPath);
@@ -173,7 +173,7 @@ public class TaskDataQueryService {
      * 读取扫描结果文件
      */
     private List<File> readScanResultFile(Path scanResultPath) throws IOException {
-        // 扫描结果文件格式：每行一个文件路径的 JSON 字符串
+        // 扫描结果文件格式：每行一个 JSON 对象，包含文件信息
         List<File> files = new ArrayList<>();
         
         try (BufferedReader reader = new BufferedReader(new FileReader(scanResultPath.toFile()))) {
@@ -183,9 +183,15 @@ public class TaskDataQueryService {
                 if (line.isEmpty()) continue;
                 
                 try {
-                    // 尝试解析为文件路径
-                    File file = new File(line.replace("\"", ""));
-                    if (file.exists()) {
+                    // 解析 JSON 对象
+                    Map<String, Object> fileInfo = objectMapper.readValue(line, new TypeReference<Map<String, Object>>() {});
+                    
+                    // 从 JSON 中提取文件路径
+                    String filePath = (String) fileInfo.get("filePath");
+                    if (filePath != null) {
+                        File file = new File(filePath);
+                        // 不再检查文件是否存在，直接添加到列表
+                        // 因为扫描时的文件路径可能是临时文件，现在可能已不存在
                         files.add(file);
                     }
                 } catch (Exception e) {

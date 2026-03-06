@@ -129,8 +129,18 @@ public class TaskController {
             
             List<Map<String, Object>> taskList = new java.util.ArrayList<>();
             for (TaskInfoPO taskInfoPO : taskInfoList) {
-                if (status != null && !status.isEmpty() && !taskInfoPO.getStatus().equals(status)) {
-                    continue;
+                if (status != null && !status.isEmpty()) {
+                    String[] statusArray = status.split(",");
+                    boolean statusMatch = false;
+                    for (String s : statusArray) {
+                        if (taskInfoPO.getStatus().equals(s.trim())) {
+                            statusMatch = true;
+                            break;
+                        }
+                    }
+                    if (!statusMatch) {
+                        continue;
+                    }
                 }
                 if (keyword != null && !keyword.isEmpty() && 
                     !taskInfoPO.getTaskName().contains(keyword) && 
@@ -188,6 +198,13 @@ public class TaskController {
             TaskInfo taskInfo = taskRegistry.getTask(taskId);
             if (taskInfo == null) {
                 taskInfo = storageService.loadTaskInfo(taskId);
+            }
+            // 从文件系统加载扫描统计信息
+            if (taskInfo != null) {
+                TaskInfo.ScanStage scanStage = storageService.loadScanStatistics(taskId);
+                if (scanStage != null) {
+                    taskInfo.getStages().setScan(scanStage);
+                }
             }
             if (taskInfo == null) {
                 response.put("success", false);
@@ -1403,7 +1420,7 @@ public class TaskController {
         map.put("scanStartTime", scanStage.getScanStartTime());
         map.put("scanEndTime", scanStage.getScanEndTime());
         map.put("scanDuration", scanStage.getScanDuration());
-        map.put("totalFiles", scanStage.getTotalFiles());
+        map.put("scannedFiles", scanStage.getTotalFiles());
         return map;
     }
 
@@ -1831,9 +1848,17 @@ public class TaskController {
             taskInfoPO.setTaskName(newTaskName.trim());
             taskInfoMapper.update(taskInfoPO);
 
+            // 同时更新文件系统中的任务信息
+            TaskInfo taskInfo = storageService.loadTaskInfo(taskId);
+            if (taskInfo != null) {
+                taskInfo.setTaskName(newTaskName.trim());
+                taskInfo.setUpdatedAt(System.currentTimeMillis());
+                storageService.saveTaskInfo(taskInfo);
+            }
+
             taskRegistry.invalidate(taskId);
 
-            TaskInfo taskInfo = taskRegistry.getTask(taskId);
+            taskInfo = taskRegistry.getTask(taskId);
 
             response.put("success", true);
             response.put("data", taskInfoToMap(taskInfo));

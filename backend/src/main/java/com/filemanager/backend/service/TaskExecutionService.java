@@ -43,6 +43,7 @@ public class TaskExecutionService {
     private final TaskInfoMapper taskInfoMapper;
     private final ChangeRecordMapper changeRecordMapper;
     private final TaskExecutionLogService taskExecutionLogService;
+    private final TaskRegistry taskRegistry;
     private final Map<String, TaskExecution> runningTasks = new ConcurrentHashMap<>();
     private final ExecutorService taskExecutor = Executors.newFixedThreadPool(5);
     private final ExecutorService processingExecutor = Executors.newFixedThreadPool(10);
@@ -54,7 +55,8 @@ public class TaskExecutionService {
                                          ConfigSnapshotService configSnapshotService,
                                          TaskInfoMapper taskInfoMapper,
                                          ChangeRecordMapper changeRecordMapper,
-                                         TaskExecutionLogService taskExecutionLogService) {
+                                         TaskExecutionLogService taskExecutionLogService,
+                                         TaskRegistry taskRegistry) {
         this.storageService = storageService;
         this.strategyService = strategyService;
         this.webSocketService = webSocketService;
@@ -62,6 +64,7 @@ public class TaskExecutionService {
         this.taskInfoMapper = taskInfoMapper;
         this.changeRecordMapper = changeRecordMapper;
         this.taskExecutionLogService = taskExecutionLogService;
+        this.taskRegistry = taskRegistry;
     }
 
     /**
@@ -569,6 +572,9 @@ public class TaskExecutionService {
         storageService.saveTaskInfo(taskInfo);
         storageService.writeTaskLog(taskId, "[INFO] [RESTART] 准备重新扫描");
         updateTaskInfoInDatabase(taskInfo);
+        
+        // 使 taskRegistry 中的任务缓存失效，确保前端获取到最新状态
+        taskRegistry.invalidate(taskId);
         
         // 实际启动扫描
         executeScan(taskId);
@@ -1092,6 +1098,9 @@ public class TaskExecutionService {
                 storageService.writeTaskLog(taskId, "[INFO] [SCAN] 扫描完成，共 " + filePaths.size() + " 个文件");
                 webSocketService.sendTaskInfoUpdate(taskId, taskInfo);
                 updateTaskInfoInDatabase(taskInfo);
+                
+                // 使 taskRegistry 中的任务缓存失效，下次获取时会重新加载最新状态
+                taskRegistry.invalidate(taskId);
                 
                 taskExecutionLogService.info(taskId, "SCAN", "=== 文件扫描阶段完成 ===");
                 taskExecutionLogService.info(taskId, "SCAN", "扫描统计: 总文件数=" + filePaths.size() + ", 耗时=" + scanStage.getScanDuration() + "ms");

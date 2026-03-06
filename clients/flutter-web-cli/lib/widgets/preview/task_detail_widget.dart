@@ -155,6 +155,12 @@ class _TaskDetailWidgetState extends ConsumerState<TaskDetailWidget> with Single
       final result = await _taskService.updateTaskName(widget.selectedTask!.taskId!, newName);
       if (result['success'] == true) {
         _showSuccess('任务名称已更新');
+        // 刷新任务详情，确保显示更新后的名称
+        if (mounted) {
+          setState(() {
+            // 触发组件重新构建，获取最新的任务信息
+          });
+        }
       } else {
         _showError('更新任务名称失败: ${result['error']['message']}');
       }

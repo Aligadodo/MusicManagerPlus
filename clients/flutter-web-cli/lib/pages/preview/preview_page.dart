@@ -752,6 +752,19 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
     }
   }
 
+  Future<void> _updateTaskName(String taskId, String newName) async {
+    try {
+      await _taskService.updateTaskName(taskId, newName);
+      _showSuccess('任务名称已更新');
+      _refreshTasks();
+      if (_selectedTask?.taskId == taskId) {
+        await _refreshTaskDetail();
+      }
+    } catch (e) {
+      _showError('更新任务名称失败: $e');
+    }
+  }
+
   Future<void> _fetchChanges() async {
     setState(() {
       _isLoading = true;
@@ -833,6 +846,9 @@ class _PreviewPageState extends ConsumerState<PreviewPage> {
       isLoading: _isLoading,
       errorMessage: _errorMessage,
       onRefresh: _refreshTasks,
+      onTaskNameChanged: (taskId, newName) async {
+        await _updateTaskName(taskId, newName);
+      },
     );
   }
 

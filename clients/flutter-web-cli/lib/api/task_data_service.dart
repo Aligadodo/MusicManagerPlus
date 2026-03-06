@@ -40,7 +40,7 @@ class TaskDataService {
       final queryString = _buildQueryString(queryParams);
       
       final response = await _apiClient.get(
-        '/api/tasks/$taskId/scan/records$queryString',
+        '/api/task-data/$taskId/scan/records$queryString',
       );
 
       if (response.statusCode == 200) {
@@ -75,7 +75,7 @@ class TaskDataService {
       final queryString = _buildQueryString(queryParams);
       
       final response = await _apiClient.get(
-        '/api/tasks/$taskId/preview/records$queryString',
+        '/api/task-data/$taskId/preview/records$queryString',
       );
 
       if (response.statusCode == 200) {
@@ -110,7 +110,7 @@ class TaskDataService {
       final queryString = _buildQueryString(queryParams);
       
       final response = await _apiClient.get(
-        '/api/tasks/$taskId/execution/records$queryString',
+        '/api/task-data/$taskId/execution/records$queryString',
       );
 
       if (response.statusCode == 200) {
@@ -137,7 +137,7 @@ class TaskDataService {
   Future<TaskRecord?> getScanRecordDetail(String taskId, String recordId) async {
     try {
       final response = await _apiClient.get(
-        '/api/tasks/$taskId/scan/records/$recordId',
+        '/api/task-data/$taskId/scan/records/$recordId',
       );
 
       if (response.statusCode == 200) {
@@ -161,7 +161,7 @@ class TaskDataService {
   Future<TaskRecord?> getPreviewRecordDetail(String taskId, String recordId) async {
     try {
       final response = await _apiClient.get(
-        '/api/tasks/$taskId/preview/records/$recordId',
+        '/api/task-data/$taskId/preview/records/$recordId',
       );
 
       if (response.statusCode == 200) {
@@ -185,7 +185,7 @@ class TaskDataService {
   Future<TaskRecord?> getExecutionRecordDetail(String taskId, String recordId) async {
     try {
       final response = await _apiClient.get(
-        '/api/tasks/$taskId/execution/records/$recordId',
+        '/api/task-data/$taskId/execution/records/$recordId',
       );
 
       if (response.statusCode == 200) {

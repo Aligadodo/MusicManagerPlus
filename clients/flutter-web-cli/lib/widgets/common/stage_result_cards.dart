@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../models/task_status.dart' as task_models;
+import '../../models/task_record.dart';
+import '../../api/task_data_service.dart';
+import 'generic_data_list.dart';
+import 'column_config.dart';
 
 /// 阶段状态类型
 enum StageStatusType {
@@ -88,15 +92,23 @@ String _formatDuration(int? startTime, int? endTime) {
   }
 }
 
-class ScanResultCard extends StatelessWidget {
+class ScanResultCard extends StatefulWidget {
   final task_models.TaskStatus selectedTask;
 
   const ScanResultCard({super.key, required this.selectedTask});
 
   @override
+  State<ScanResultCard> createState() => _ScanResultCardState();
+}
+
+class _ScanResultCardState extends State<ScanResultCard> {
+  final TaskDataService _taskDataService = TaskDataService();
+  bool _showDataList = true;
+
+  @override
   Widget build(BuildContext context) {
     // 从未执行过扫描
-    if (selectedTask.stages?.scan == null) {
+    if (widget.selectedTask.stages?.scan == null) {
       return _buildEmptyCard(
         title: '扫描结果',
         color: Colors.blue,
@@ -105,9 +117,10 @@ class ScanResultCard extends StatelessWidget {
       );
     }
 
-    final scanStage = selectedTask.stages!.scan!;
+    final scanStage = widget.selectedTask.stages!.scan!;
     final statusType = _getStageStatusType(scanStage.status);
     final statusColor = _getStatusColor(statusType);
+    final hasData = (scanStage.scannedFiles ?? 0) > 0;
 
     return Card(
       elevation: 4,
@@ -205,6 +218,41 @@ class ScanResultCard extends StatelessWidget {
                 color: Colors.red,
                 message: '扫描失败，请查看日志了解详情',
               ),
+
+            // 数据列表展示
+            if (statusType == StageStatusType.completed) ...[
+              const SizedBox(height: 16),
+              // 切换按钮
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        _showDataList = !_showDataList;
+                      });
+                    },
+                    icon: Icon(_showDataList ? Icons.visibility_off : Icons.visibility),
+                    label: Text(_showDataList ? '隐藏文件列表' : '查看文件列表'),
+                  ),
+                ],
+              ),
+              // 数据列表
+              if (_showDataList)
+                Expanded(
+                  child: GenericDataList(
+                    columns: ScanColumnConfigs.defaultColumns,
+                    onLoadData: (params) => _taskDataService.queryScanRecords(
+                      widget.selectedTask.taskId!,
+                      params,
+                    ),
+                    title: '扫描文件列表',
+                    showSearch: true,
+                    showPagination: true,
+                    defaultPageSize: 20,
+                  ),
+                ),
+            ],
           ],
         ),
       ),
@@ -212,15 +260,23 @@ class ScanResultCard extends StatelessWidget {
   }
 }
 
-class PreviewResultCard extends StatelessWidget {
+class PreviewResultCard extends StatefulWidget {
   final task_models.TaskStatus selectedTask;
 
   const PreviewResultCard({super.key, required this.selectedTask});
 
   @override
+  State<PreviewResultCard> createState() => _PreviewResultCardState();
+}
+
+class _PreviewResultCardState extends State<PreviewResultCard> {
+  final TaskDataService _taskDataService = TaskDataService();
+  bool _showDataList = true;
+
+  @override
   Widget build(BuildContext context) {
     // 从未执行过预览
-    if (selectedTask.stages?.preview == null) {
+    if (widget.selectedTask.stages?.preview == null) {
       return _buildEmptyCard(
         title: '预览结果',
         color: Colors.green,
@@ -229,9 +285,10 @@ class PreviewResultCard extends StatelessWidget {
       );
     }
 
-    final previewStage = selectedTask.stages!.preview!;
+    final previewStage = widget.selectedTask.stages!.preview!;
     final statusType = _getStageStatusType(previewStage.status);
     final statusColor = _getStatusColor(statusType);
+    final hasData = (previewStage.totalChanges ?? 0) > 0;
 
     return Card(
       elevation: 4,
@@ -303,7 +360,7 @@ class PreviewResultCard extends StatelessWidget {
             if (statusType == StageStatusType.running)
               _buildProgressIndicator(
                 scannedFiles: previewStage.analyzedFiles ?? 0,
-                totalFiles: selectedTask.stages?.scan?.scannedFiles,
+                totalFiles: widget.selectedTask.stages?.scan?.scannedFiles,
               ),
             
             // 统计信息
@@ -330,6 +387,41 @@ class PreviewResultCard extends StatelessWidget {
                 color: Colors.red,
                 message: '预览失败，请查看日志了解详情',
               ),
+
+            // 数据列表展示
+            if (statusType == StageStatusType.completed) ...[
+              const SizedBox(height: 16),
+              // 切换按钮
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        _showDataList = !_showDataList;
+                      });
+                    },
+                    icon: Icon(_showDataList ? Icons.visibility_off : Icons.visibility),
+                    label: Text(_showDataList ? '隐藏变更列表' : '查看变更列表'),
+                  ),
+                ],
+              ),
+              // 数据列表
+              if (_showDataList)
+                Expanded(
+                  child: GenericDataList(
+                    columns: PreviewColumnConfigs.defaultColumns,
+                    onLoadData: (params) => _taskDataService.queryPreviewRecords(
+                      widget.selectedTask.taskId!,
+                      params,
+                    ),
+                    title: '预览变更列表',
+                    showSearch: true,
+                    showPagination: true,
+                    defaultPageSize: 20,
+                  ),
+                ),
+            ],
           ],
         ),
       ),
@@ -337,15 +429,23 @@ class PreviewResultCard extends StatelessWidget {
   }
 }
 
-class ExecutionResultCard extends StatelessWidget {
+class ExecutionResultCard extends StatefulWidget {
   final task_models.TaskStatus selectedTask;
 
   const ExecutionResultCard({super.key, required this.selectedTask});
 
   @override
+  State<ExecutionResultCard> createState() => _ExecutionResultCardState();
+}
+
+class _ExecutionResultCardState extends State<ExecutionResultCard> {
+  final TaskDataService _taskDataService = TaskDataService();
+  bool _showDataList = true;
+
+  @override
   Widget build(BuildContext context) {
     // 从未执行过
-    if (selectedTask.stages?.execution == null) {
+    if (widget.selectedTask.stages?.execution == null) {
       return _buildEmptyCard(
         title: '执行结果',
         color: Colors.purple,
@@ -354,9 +454,10 @@ class ExecutionResultCard extends StatelessWidget {
       );
     }
 
-    final executionStage = selectedTask.stages!.execution!;
+    final executionStage = widget.selectedTask.stages!.execution!;
     final statusType = _getStageStatusType(executionStage.status);
     final statusColor = _getStatusColor(statusType);
+    final hasData = (executionStage.executedFiles ?? 0) > 0;
 
     return Card(
       elevation: 4,
@@ -428,7 +529,7 @@ class ExecutionResultCard extends StatelessWidget {
             if (statusType == StageStatusType.running)
               _buildProgressIndicator(
                 scannedFiles: executionStage.executedFiles ?? 0,
-                totalFiles: selectedTask.stages?.preview?.totalChanges,
+                totalFiles: widget.selectedTask.stages?.preview?.totalChanges,
               ),
             
             // 统计信息
@@ -456,6 +557,41 @@ class ExecutionResultCard extends StatelessWidget {
                 color: Colors.red,
                 message: '执行失败，请查看日志了解详情',
               ),
+
+            // 数据列表展示
+            if (statusType == StageStatusType.completed || statusType == StageStatusType.failed) ...[
+              const SizedBox(height: 16),
+              // 切换按钮
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        _showDataList = !_showDataList;
+                      });
+                    },
+                    icon: Icon(_showDataList ? Icons.visibility_off : Icons.visibility),
+                    label: Text(_showDataList ? '隐藏执行列表' : '查看执行列表'),
+                  ),
+                ],
+              ),
+              // 数据列表
+              if (_showDataList)
+                Expanded(
+                  child: GenericDataList(
+                    columns: ExecutionColumnConfigs.defaultColumns,
+                    onLoadData: (params) => _taskDataService.queryExecutionRecords(
+                      widget.selectedTask.taskId!,
+                      params,
+                    ),
+                    title: '执行记录列表',
+                    showSearch: true,
+                    showPagination: true,
+                    defaultPageSize: 20,
+                  ),
+                ),
+            ],
           ],
         ),
       ),
