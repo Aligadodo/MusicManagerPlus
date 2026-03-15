@@ -40,6 +40,7 @@ class TaskStorageServiceTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         configSnapshotService = new ConfigSnapshotService();
+        // 使用FileSystemTaskStorage，它不会调用taskInfoMapper
         fileSystemTaskStorage = new FileSystemTaskStorage();
         storageService = new TaskStorageService(fileSystemTaskStorage, configSnapshotService);
         testTaskId = "test-task-" + System.currentTimeMillis();
@@ -219,9 +220,6 @@ class TaskStorageServiceTest {
 
     @Test
     void testDeleteTask() {
-        when(taskInfoMapper.selectByTaskId(anyString())).thenReturn(null);
-        when(taskInfoMapper.deleteByTaskId(anyString())).thenReturn(1);
-        
         storageService.initializeTaskDirectory(testTaskId);
 
         TaskInfo taskInfo = new TaskInfo(testTaskId);
@@ -234,8 +232,6 @@ class TaskStorageServiceTest {
 
         TaskInfo deletedTaskInfo = storageService.loadTaskInfo(testTaskId);
         assertNull(deletedTaskInfo);
-        
-        verify(taskInfoMapper, times(1)).deleteByTaskId(testTaskId);
     }
 
     @Test

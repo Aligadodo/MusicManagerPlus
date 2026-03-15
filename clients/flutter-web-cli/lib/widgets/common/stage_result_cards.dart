@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/task_status.dart' as task_models;
 import '../../models/task_record.dart';
 import '../../api/task_data_service.dart';
+import '../../utils/file_utils.dart';
 import 'generic_data_list.dart';
 import 'column_config.dart';
 
@@ -104,6 +105,103 @@ class ScanResultCard extends StatefulWidget {
 class _ScanResultCardState extends State<ScanResultCard> {
   final TaskDataService _taskDataService = TaskDataService();
   bool _showDataList = true;
+
+  /// 处理文件双击
+  void _handleFileDoubleTap(TaskRecord record) {
+    if (record.originalPath != null) {
+      FileUtils.openFile(record.originalPath!);
+    }
+  }
+
+  /// 显示文件右键菜单
+  void _showFileContextMenu(BuildContext context, TaskRecord record, Offset tapPosition) {
+    final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final RelativeRect menuPosition = RelativeRect.fromRect(
+      Rect.fromPoints(
+        overlay.globalToLocal(Offset(tapPosition.dx, tapPosition.dy)),
+        overlay.globalToLocal(Offset(tapPosition.dx + 1, tapPosition.dy + 1)),
+      ),
+      Offset.zero & overlay.size,
+    );
+
+    showMenu(
+      context: context,
+      position: menuPosition,
+      items: [
+        // 打开源文件
+        if (record.originalPath != null)
+          PopupMenuItem(
+            value: 'openOriginal',
+            child: const ListTile(
+              leading: Icon(Icons.open_in_new),
+              title: Text('打开源文件'),
+            ),
+          ),
+        // 打开源文件所在目录
+        if (record.originalPath != null)
+          PopupMenuItem(
+            value: 'openOriginalLocation',
+            child: const ListTile(
+              leading: Icon(Icons.folder_open),
+              title: Text('打开源文件所在目录'),
+            ),
+          ),
+        // 删除源文件
+        if (record.originalPath != null)
+          PopupMenuItem(
+            value: 'deleteOriginal',
+            child: const ListTile(
+              leading: Icon(Icons.delete, color: Colors.red),
+              title: Text('删除源文件', style: TextStyle(color: Colors.red)),
+            ),
+          ),
+      ],
+    ).then((value) async {
+      if (value == null) return;
+
+      switch (value) {
+        case 'openOriginal':
+          if (record.originalPath != null) {
+            final success = await FileUtils.openFile(record.originalPath!);
+            FileUtils.showFileOperationResult(
+              context,
+              success,
+              '文件已打开',
+              '打开文件失败',
+            );
+          }
+          break;
+        case 'openOriginalLocation':
+          if (record.originalPath != null) {
+            final success = await FileUtils.openFileLocation(record.originalPath!);
+            FileUtils.showFileOperationResult(
+              context,
+              success,
+              '文件所在目录已打开',
+              '打开文件所在目录失败',
+            );
+          }
+          break;
+        case 'deleteOriginal':
+          if (record.originalPath != null) {
+            await FileUtils.confirmDeleteFile(
+              context,
+              record.originalPath!,
+              () async {
+                final success = await FileUtils.deleteFile(record.originalPath!);
+                FileUtils.showFileOperationResult(
+                  context,
+                  success,
+                  '文件已删除',
+                  '删除文件失败',
+                );
+              },
+            );
+          }
+          break;
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -250,6 +348,12 @@ class _ScanResultCardState extends State<ScanResultCard> {
                     showSearch: true,
                     showPagination: true,
                     defaultPageSize: 20,
+                    onRowDoubleTap: (record) {
+                      _handleFileDoubleTap(record);
+                    },
+                    onRowContextMenu: (record, position) {
+                      _showFileContextMenu(context, record, position);
+                    },
                   ),
                 ),
             ],
@@ -272,6 +376,171 @@ class PreviewResultCard extends StatefulWidget {
 class _PreviewResultCardState extends State<PreviewResultCard> {
   final TaskDataService _taskDataService = TaskDataService();
   bool _showDataList = true;
+
+  /// 处理文件双击
+  void _handleFileDoubleTap(TaskRecord record) {
+    if (record.originalPath != null) {
+      FileUtils.openFile(record.originalPath!);
+    } else if (record.newPath != null) {
+      FileUtils.openFile(record.newPath!);
+    }
+  }
+
+  /// 显示文件右键菜单
+  void _showFileContextMenu(BuildContext context, TaskRecord record, Offset tapPosition) {
+    final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final RelativeRect menuPosition = RelativeRect.fromRect(
+      Rect.fromPoints(
+        overlay.globalToLocal(Offset(tapPosition.dx, tapPosition.dy)),
+        overlay.globalToLocal(Offset(tapPosition.dx + 1, tapPosition.dy + 1)),
+      ),
+      Offset.zero & overlay.size,
+    );
+
+    showMenu(
+      context: context,
+      position: menuPosition,
+      items: [
+        // 打开源文件
+        if (record.originalPath != null)
+          PopupMenuItem(
+            value: 'openOriginal',
+            child: const ListTile(
+              leading: Icon(Icons.open_in_new),
+              title: Text('打开源文件'),
+            ),
+          ),
+        // 打开目标文件
+        if (record.newPath != null)
+          PopupMenuItem(
+            value: 'openNew',
+            child: const ListTile(
+              leading: Icon(Icons.open_in_new),
+              title: Text('打开目标文件'),
+            ),
+          ),
+        // 打开源文件所在目录
+        if (record.originalPath != null)
+          PopupMenuItem(
+            value: 'openOriginalLocation',
+            child: const ListTile(
+              leading: Icon(Icons.folder_open),
+              title: Text('打开源文件所在目录'),
+            ),
+          ),
+        // 打开目标文件所在目录
+        if (record.newPath != null)
+          PopupMenuItem(
+            value: 'openNewLocation',
+            child: const ListTile(
+              leading: Icon(Icons.folder_open),
+              title: Text('打开目标文件所在目录'),
+            ),
+          ),
+        // 删除源文件
+        if (record.originalPath != null)
+          PopupMenuItem(
+            value: 'deleteOriginal',
+            child: const ListTile(
+              leading: Icon(Icons.delete, color: Colors.red),
+              title: Text('删除源文件', style: TextStyle(color: Colors.red)),
+            ),
+          ),
+        // 删除目标文件
+        if (record.newPath != null)
+          PopupMenuItem(
+            value: 'deleteNew',
+            child: const ListTile(
+              leading: Icon(Icons.delete, color: Colors.red),
+              title: Text('删除目标文件', style: TextStyle(color: Colors.red)),
+            ),
+          ),
+      ],
+    ).then((value) async {
+      if (value == null) return;
+
+      switch (value) {
+        case 'openOriginal':
+          if (record.originalPath != null) {
+            final success = await FileUtils.openFile(record.originalPath!);
+            FileUtils.showFileOperationResult(
+              context,
+              success,
+              '文件已打开',
+              '打开文件失败',
+            );
+          }
+          break;
+        case 'openNew':
+          if (record.newPath != null) {
+            final success = await FileUtils.openFile(record.newPath!);
+            FileUtils.showFileOperationResult(
+              context,
+              success,
+              '文件已打开',
+              '打开文件失败',
+            );
+          }
+          break;
+        case 'openOriginalLocation':
+          if (record.originalPath != null) {
+            final success = await FileUtils.openFileLocation(record.originalPath!);
+            FileUtils.showFileOperationResult(
+              context,
+              success,
+              '文件所在目录已打开',
+              '打开文件所在目录失败',
+            );
+          }
+          break;
+        case 'openNewLocation':
+          if (record.newPath != null) {
+            final success = await FileUtils.openFileLocation(record.newPath!);
+            FileUtils.showFileOperationResult(
+              context,
+              success,
+              '文件所在目录已打开',
+              '打开文件所在目录失败',
+            );
+          }
+          break;
+        case 'deleteOriginal':
+          if (record.originalPath != null) {
+            await FileUtils.confirmDeleteFile(
+              context,
+              record.originalPath!,
+              () async {
+                final success = await FileUtils.deleteFile(record.originalPath!);
+                FileUtils.showFileOperationResult(
+                  context,
+                  success,
+                  '文件已删除',
+                  '删除文件失败',
+                );
+              },
+            );
+          }
+          break;
+        case 'deleteNew':
+          if (record.newPath != null) {
+            await FileUtils.confirmDeleteFile(
+              context,
+              record.newPath!,
+              () async {
+                final success = await FileUtils.deleteFile(record.newPath!);
+                FileUtils.showFileOperationResult(
+                  context,
+                  success,
+                  '文件已删除',
+                  '删除文件失败',
+                );
+              },
+            );
+          }
+          break;
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -419,6 +688,12 @@ class _PreviewResultCardState extends State<PreviewResultCard> {
                     showSearch: true,
                     showPagination: true,
                     defaultPageSize: 20,
+                    onRowDoubleTap: (record) {
+                      _handleFileDoubleTap(record);
+                    },
+                    onRowContextMenu: (record, position) {
+                      _showFileContextMenu(context, record, position);
+                    },
                   ),
                 ),
             ],
@@ -441,6 +716,171 @@ class ExecutionResultCard extends StatefulWidget {
 class _ExecutionResultCardState extends State<ExecutionResultCard> {
   final TaskDataService _taskDataService = TaskDataService();
   bool _showDataList = true;
+
+  /// 处理文件双击
+  void _handleFileDoubleTap(TaskRecord record) {
+    if (record.originalPath != null) {
+      FileUtils.openFile(record.originalPath!);
+    } else if (record.newPath != null) {
+      FileUtils.openFile(record.newPath!);
+    }
+  }
+
+  /// 显示文件右键菜单
+  void _showFileContextMenu(BuildContext context, TaskRecord record, Offset tapPosition) {
+    final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final RelativeRect menuPosition = RelativeRect.fromRect(
+      Rect.fromPoints(
+        overlay.globalToLocal(Offset(tapPosition.dx, tapPosition.dy)),
+        overlay.globalToLocal(Offset(tapPosition.dx + 1, tapPosition.dy + 1)),
+      ),
+      Offset.zero & overlay.size,
+    );
+
+    showMenu(
+      context: context,
+      position: menuPosition,
+      items: [
+        // 打开源文件
+        if (record.originalPath != null)
+          PopupMenuItem(
+            value: 'openOriginal',
+            child: const ListTile(
+              leading: Icon(Icons.open_in_new),
+              title: Text('打开源文件'),
+            ),
+          ),
+        // 打开目标文件
+        if (record.newPath != null)
+          PopupMenuItem(
+            value: 'openNew',
+            child: const ListTile(
+              leading: Icon(Icons.open_in_new),
+              title: Text('打开目标文件'),
+            ),
+          ),
+        // 打开源文件所在目录
+        if (record.originalPath != null)
+          PopupMenuItem(
+            value: 'openOriginalLocation',
+            child: const ListTile(
+              leading: Icon(Icons.folder_open),
+              title: Text('打开源文件所在目录'),
+            ),
+          ),
+        // 打开目标文件所在目录
+        if (record.newPath != null)
+          PopupMenuItem(
+            value: 'openNewLocation',
+            child: const ListTile(
+              leading: Icon(Icons.folder_open),
+              title: Text('打开目标文件所在目录'),
+            ),
+          ),
+        // 删除源文件
+        if (record.originalPath != null)
+          PopupMenuItem(
+            value: 'deleteOriginal',
+            child: const ListTile(
+              leading: Icon(Icons.delete, color: Colors.red),
+              title: Text('删除源文件', style: TextStyle(color: Colors.red)),
+            ),
+          ),
+        // 删除目标文件
+        if (record.newPath != null)
+          PopupMenuItem(
+            value: 'deleteNew',
+            child: const ListTile(
+              leading: Icon(Icons.delete, color: Colors.red),
+              title: Text('删除目标文件', style: TextStyle(color: Colors.red)),
+            ),
+          ),
+      ],
+    ).then((value) async {
+      if (value == null) return;
+
+      switch (value) {
+        case 'openOriginal':
+          if (record.originalPath != null) {
+            final success = await FileUtils.openFile(record.originalPath!);
+            FileUtils.showFileOperationResult(
+              context,
+              success,
+              '文件已打开',
+              '打开文件失败',
+            );
+          }
+          break;
+        case 'openNew':
+          if (record.newPath != null) {
+            final success = await FileUtils.openFile(record.newPath!);
+            FileUtils.showFileOperationResult(
+              context,
+              success,
+              '文件已打开',
+              '打开文件失败',
+            );
+          }
+          break;
+        case 'openOriginalLocation':
+          if (record.originalPath != null) {
+            final success = await FileUtils.openFileLocation(record.originalPath!);
+            FileUtils.showFileOperationResult(
+              context,
+              success,
+              '文件所在目录已打开',
+              '打开文件所在目录失败',
+            );
+          }
+          break;
+        case 'openNewLocation':
+          if (record.newPath != null) {
+            final success = await FileUtils.openFileLocation(record.newPath!);
+            FileUtils.showFileOperationResult(
+              context,
+              success,
+              '文件所在目录已打开',
+              '打开文件所在目录失败',
+            );
+          }
+          break;
+        case 'deleteOriginal':
+          if (record.originalPath != null) {
+            await FileUtils.confirmDeleteFile(
+              context,
+              record.originalPath!,
+              () async {
+                final success = await FileUtils.deleteFile(record.originalPath!);
+                FileUtils.showFileOperationResult(
+                  context,
+                  success,
+                  '文件已删除',
+                  '删除文件失败',
+                );
+              },
+            );
+          }
+          break;
+        case 'deleteNew':
+          if (record.newPath != null) {
+            await FileUtils.confirmDeleteFile(
+              context,
+              record.newPath!,
+              () async {
+                final success = await FileUtils.deleteFile(record.newPath!);
+                FileUtils.showFileOperationResult(
+                  context,
+                  success,
+                  '文件已删除',
+                  '删除文件失败',
+                );
+              },
+            );
+          }
+          break;
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -589,6 +1029,12 @@ class _ExecutionResultCardState extends State<ExecutionResultCard> {
                     showSearch: true,
                     showPagination: true,
                     defaultPageSize: 20,
+                    onRowDoubleTap: (record) {
+                      _handleFileDoubleTap(record);
+                    },
+                    onRowContextMenu: (record, position) {
+                      _showFileContextMenu(context, record, position);
+                    },
                   ),
                 ),
             ],

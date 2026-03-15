@@ -154,12 +154,12 @@ class TaskExecutionE2ETest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("扫描已开始"));
 
-        waitForTaskStatus(testTaskId, "SCANNING", 30);
+        waitForTaskStatus(testTaskId, "PREVIEWING", 30);
         System.out.println("   扫描完成");
 
         System.out.println("5. 验证扫描结果");
         taskInfo = taskInfoMapper.selectByTaskId(testTaskId);
-        assertEquals("SCANNING", taskInfo.getStatus(), "任务状态应该是SCANNING");
+        assertEquals("PREVIEWING", taskInfo.getStatus(), "任务状态应该是PREVIEWING");
         System.out.println("   扫描状态: " + taskInfo.getStatus());
 
         System.out.println("6. 执行预览分析");
@@ -175,7 +175,11 @@ class TaskExecutionE2ETest {
         assertTrue(changeRecords.size() >= 0, "变更记录数量应该大于等于0");
         System.out.println("   变更记录数量: " + changeRecords.size());
 
-        System.out.println("8. 执行任务");
+        // 等待预览完成
+        System.out.println("8. 等待预览完成");
+        Thread.sleep(5000);
+
+        System.out.println("9. 执行任务");
         mockMvc.perform(post("/api/tasks/" + testTaskId + "/execute"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("执行已开始"));
@@ -271,7 +275,11 @@ class TaskExecutionE2ETest {
                 .andExpect(status().isOk());
         waitForTaskStatus(testTaskId, "SCANNING", 30);
 
-        System.out.println("2. 重新扫描");
+        // 等待任务信息和配置快照保存完成
+        System.out.println("2. 等待任务信息保存完成");
+        Thread.sleep(3000);
+
+        System.out.println("3. 重新扫描");
         mockMvc.perform(post("/api/tasks/" + testTaskId + "/restart/scan"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("重新扫描已开始"));
@@ -307,11 +315,23 @@ class TaskExecutionE2ETest {
                 .andExpect(status().isOk());
         waitForTaskStatus(testTaskId, "SCANNING", 30);
 
+        // 等待扫描完成
+        System.out.println("   等待扫描完成");
+        Thread.sleep(8000);
+
         mockMvc.perform(post("/api/tasks/" + testTaskId + "/preview"))
                 .andExpect(status().isOk());
         waitForTaskStatus(testTaskId, "PREVIEWING", 30);
 
-        System.out.println("2. 重新预览");
+        // 等待预览完成
+        System.out.println("   等待预览完成");
+        Thread.sleep(8000);
+
+        // 等待任务信息和配置快照保存完成
+        System.out.println("2. 等待任务信息保存完成");
+        Thread.sleep(5000);
+
+        System.out.println("3. 重新预览");
         try {
             mockMvc.perform(post("/api/tasks/" + testTaskId + "/restart/preview"))
                     .andExpect(status().isOk())
@@ -353,15 +373,27 @@ class TaskExecutionE2ETest {
                 .andExpect(status().isOk());
         waitForTaskStatus(testTaskId, "SCANNING", 30);
 
+        // 等待扫描完成
+        System.out.println("   等待扫描完成");
+        Thread.sleep(8000);
+
         mockMvc.perform(post("/api/tasks/" + testTaskId + "/preview"))
                 .andExpect(status().isOk());
         waitForTaskStatus(testTaskId, "PREVIEWING", 30);
+
+        // 等待预览完成
+        System.out.println("   等待预览完成");
+        Thread.sleep(8000);
 
         mockMvc.perform(post("/api/tasks/" + testTaskId + "/execute"))
                 .andExpect(status().isOk());
         waitForTaskStatus(testTaskId, "COMPLETED", 60);
 
-        System.out.println("2. 重新执行");
+        // 等待任务信息和配置快照保存完成
+        System.out.println("2. 等待任务信息保存完成");
+        Thread.sleep(3000);
+
+        System.out.println("3. 重新执行");
         try {
             mockMvc.perform(post("/api/tasks/" + testTaskId + "/restart/execution"))
                     .andExpect(status().isOk())

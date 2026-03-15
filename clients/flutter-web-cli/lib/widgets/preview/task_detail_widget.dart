@@ -119,6 +119,12 @@ class _TaskDetailWidgetState extends ConsumerState<TaskDetailWidget> with Single
     try {
       await _taskService.cancelTask(taskId);
       _showSuccess('任务已终止');
+      // 刷新任务状态
+      if (mounted) {
+        setState(() {
+          // 触发组件重新构建，获取最新的任务信息
+        });
+      }
     } catch (e) {
       _showError('终止任务失败: $e');
     }

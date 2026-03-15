@@ -59,6 +59,9 @@ public class PipelineControllerTest {
     @Mock
     private TaskExecutionService taskExecutionService;
 
+    @Mock
+    private com.filemanager.backend.service.TaskExecutionLogService taskExecutionLogService;
+
     @InjectMocks
     private PipelineController pipelineController;
 
@@ -67,8 +70,11 @@ public class PipelineControllerTest {
     @BeforeEach
     public void setup() {
         MockitoAnnotations.openMocks(this);
-        mockMvc = MockMvcBuilders.standaloneSetup(pipelineController).build();
         
+        // 重置PipelineTaskManager的状态
+        com.filemanager.domain.service.PipelineTaskManager.getInstance().clearAllTasks();
+        
+        // 先设置所有的mock
         when(taskService.createTask(any(TaskRequestDTO.class))).thenReturn("test-task-123");
         when(taskExecutionService.createTask(any(TaskRequestDTO.class))).thenReturn("test-task-123");
         when(storageService.loadTaskInfo(anyString())).thenReturn(null);
@@ -83,6 +89,9 @@ public class PipelineControllerTest {
             .thenReturn(new ArrayList<>());
         when(pluginService.executePlugin(anyString(), anyList(), any(PluginConfigDTO.class)))
             .thenReturn(new ArrayList<>());
+        
+        // 构建mockMvc
+        mockMvc = MockMvcBuilders.standaloneSetup(pipelineController).build();
     }
 
     @Test

@@ -521,13 +521,22 @@ class _GenericDataListState extends State<GenericDataList> {
 
       cells.add(
         DataCell(
-          Container(
-            alignment: column.alignment,
-            child: cellContent,
+          GestureDetector(
+            onSecondaryTapDown: (details) {
+              if (widget.onRowContextMenu != null) {
+                widget.onRowContextMenu!(record, details.globalPosition);
+              }
+            },
+            onDoubleTap: () {
+              if (widget.onRowDoubleTap != null) {
+                widget.onRowDoubleTap!(record);
+              }
+            },
+            child: Container(
+              alignment: column.alignment,
+              child: cellContent,
+            ),
           ),
-          onTap: () {
-            // 双击检测
-          },
         ),
       );
     }

@@ -3,6 +3,7 @@ package com.filemanager.backend.controller;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,15 +14,36 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 public class SourceDirectoryControllerTest {
 
+    @Mock
+    private com.filemanager.backend.config.ConfigManager configManager;
+
     @InjectMocks
     private SourceDirectoryController sourceDirectoryController;
+    
+    // 用于模拟配置存储
+    private List<Map<String, Object>> sourceDirectoriesConfig;
 
     @BeforeEach
     public void setUp() {
         MockitoAnnotations.openMocks(this);
+        sourceDirectoriesConfig = new ArrayList<>();
+        
+        // 模拟getConfig方法，返回当前的配置列表
+        when(configManager.getConfig(eq("sourceDirectories"), any())).thenAnswer(invocation -> sourceDirectoriesConfig);
+        
+        // 模拟setConfig方法，更新配置列表
+        doAnswer(invocation -> {
+            Object value = invocation.getArgument(1);
+            if (value instanceof List) {
+                sourceDirectoriesConfig = (List<Map<String, Object>>) value;
+            }
+            return null;
+        }).when(configManager).setConfig(eq("sourceDirectories"), any());
     }
 
     @Test

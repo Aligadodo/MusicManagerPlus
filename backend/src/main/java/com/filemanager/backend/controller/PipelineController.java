@@ -4,9 +4,10 @@ import com.filemanager.domain.dto.PluginConfigDTO;
 import com.filemanager.domain.dto.PipelineTaskStatusDTO;
 import com.filemanager.domain.dto.PreconditionGroupDTO;
 import com.filemanager.domain.entity.ChangeRecord;
-import com.filemanager.domain.enums.TaskStatus;
+
 import com.filemanager.domain.service.PluginService;
 import com.filemanager.domain.service.PipelineTaskManager;
+import com.filemanager.domain.enums.TaskStatus;
 import com.filemanager.domain.service.TaskService;
 import com.filemanager.domain.dto.TaskRequestDTO;
 import com.filemanager.domain.dto.ChangeRecordQueryDTO;
@@ -265,11 +266,20 @@ public class PipelineController {
                 taskInfo.setCurrentStage("SCANNING");
                 taskInfo.setMessage("正在扫描文件...");
                 taskRegistry.updateTaskStatus(taskId, TaskInfo.TaskStatus.SCANNING);
+            } else {
+                // 如果任务信息加载失败，创建一个新的任务信息
+                taskInfo = new TaskInfo(taskId);
+                taskInfo.setStatus(TaskInfo.TaskStatus.SCANNING);
+                taskInfo.setCurrentStage("SCANNING");
+                taskInfo.setMessage("正在扫描文件...");
+                taskRegistry.registerTask(taskInfo);
+                taskRegistry.updateTaskStatus(taskId, TaskInfo.TaskStatus.SCANNING);
+                storageService.saveTaskInfo(taskInfo);
             }
             
             // 同时创建 PipelineTaskManager 中的任务，使用相同的任务ID
             taskManager.createTaskWithId(taskId, "preview");
-            taskManager.updateTaskStatus(taskId, com.filemanager.domain.enums.TaskStatus.PREVIEWING);
+            taskManager.updateTaskStatus(taskId, TaskStatus.PREVIEWING);
             taskManager.setCurrentTaskRunning(true);
             taskManager.updateTaskStep(taskId, "初始化预览任务");
             taskManager.updateTaskMessage(taskId, "开始分析流水线...");
@@ -524,7 +534,14 @@ public class PipelineController {
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            // 输出详细的错误信息
+            System.err.println("PipelineController.analyzePipeline error: " + e.getMessage());
+            e.printStackTrace(System.err);
+            // 返回更详细的错误信息
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("success", false);
+            errorResult.put("message", "预览任务创建失败: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResult);
         }
     }
 

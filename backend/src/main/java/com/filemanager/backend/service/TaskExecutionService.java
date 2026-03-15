@@ -79,7 +79,8 @@ public class TaskExecutionService {
         // 创建任务信息
         TaskInfo taskInfo = new TaskInfo(taskId);
         taskInfo.setTaskName(request.getTaskName() != null ? request.getTaskName() : "未命名任务");
-        taskInfo.setAutoExecute(request.getAutoExecute() != null ? request.getAutoExecute() : false);
+        boolean autoExecute = request.getAutoExecute() != null ? request.getAutoExecute() : false;
+        taskInfo.setAutoExecute(autoExecute);
         
         // 创建配置快照
         TaskConfigSnapshot configSnapshot = createConfigSnapshot(request);
@@ -108,7 +109,14 @@ public class TaskExecutionService {
         taskInfoPO.setUpdatedAt(new Date(taskInfo.getUpdatedAt()));
         taskInfoMapper.insert(taskInfoPO);
         
-        logger.info("[TaskExecution] 任务已创建: {}，配置快照ID: {}", taskId, snapshotId);
+        logger.info("[TaskExecution] 任务已创建: {}，配置快照ID: {}，自动执行: {}", taskId, snapshotId, autoExecute);
+        
+        // 如果启用了自动执行，则自动执行任务
+        if (autoExecute) {
+            logger.info("[TaskExecution] 自动执行任务: {}", taskId);
+            executeScan(taskId);
+        }
+        
         return taskId;
     }
     

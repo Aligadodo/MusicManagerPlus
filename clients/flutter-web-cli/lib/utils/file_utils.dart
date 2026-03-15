@@ -1,70 +1,148 @@
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'; // 导入kIsWeb
+
+/// 文件操作工具类
+/// 提供文件打开、删除等操作
 class FileUtils {
-  /// 获取文件名（不包含路径）
-  static String getFileName(String path) {
-    if (path.isEmpty) return '';
-    final parts = path.split('/');
-    return parts.isNotEmpty ? parts.last : path;
-  }
+  /// 打开文件
+  /// [filePath] 文件路径
+  /// 返回是否成功打开
+  static Future<bool> openFile(String filePath) async {
+    try {
+      final file = File(filePath);
+      if (!file.existsSync()) {
+        debugPrint('文件不存在: $filePath');
+        return false;
+      }
 
-  /// 获取文件扩展名
-  static String getFileExtension(String fileName) {
-    if (fileName.isEmpty) return '';
-    final lastDotIndex = fileName.lastIndexOf('.');
-    if (lastDotIndex == -1) return '';
-    return fileName.substring(lastDotIndex + 1).toLowerCase();
-  }
+      // 在不同平台打开文件
+      if (Platform.isMacOS) {
+        await Process.run('open', [filePath]);
+      } else if (Platform.isWindows) {
+        await Process.run('start', ['', filePath]);
+      } else if (Platform.isLinux) {
+        await Process.run('xdg-open', [filePath]);
+      } else if (kIsWeb) {
+        // Web平台不支持直接打开文件，显示提示
+        debugPrint('Web平台不支持直接打开文件');
+        return false;
+      } else {
+        debugPrint('不支持的平台');
+        return false;
+      }
 
-  /// 获取文件路径（不包含文件名）
-  static String getDirectoryPath(String path) {
-    if (path.isEmpty || path == '/') return path;
-    final lastSlashIndex = path.lastIndexOf('/');
-    if (lastSlashIndex == -1) return '';
-    return path.substring(0, lastSlashIndex + 1);
-  }
-
-  /// 格式化文件大小
-  static String formatFileSize(int sizeInBytes) {
-    if (sizeInBytes < 1024) {
-      return '$sizeInBytes B';
-    } else if (sizeInBytes < 1024 * 1024) {
-      return '${(sizeInBytes / 1024).toStringAsFixed(2)} KB';
-    } else if (sizeInBytes < 1024 * 1024 * 1024) {
-      return '${(sizeInBytes / (1024 * 1024)).toStringAsFixed(2)} MB';
-    } else {
-      return '${(sizeInBytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
+      return true;
+    } catch (e) {
+      debugPrint('打开文件失败: $e');
+      return false;
     }
   }
 
-  /// 格式化时间戳
-  static String formatTimestamp(int timestamp) {
-    final dateTime = DateTime.fromMillisecondsSinceEpoch(timestamp);
-    return dateTime.toString();
+  /// 删除文件
+  /// [filePath] 文件路径
+  /// 返回是否成功删除
+  static Future<bool> deleteFile(String filePath) async {
+    try {
+      final file = File(filePath);
+      if (!file.existsSync()) {
+        debugPrint('文件不存在: $filePath');
+        return false;
+      }
+
+      await file.delete();
+      return true;
+    } catch (e) {
+      debugPrint('删除文件失败: $e');
+      return false;
+    }
   }
 
-  /// 检查是否是音频文件
-  static bool isAudioFile(String fileName) {
-    final audioExtensions = {
-      'mp3', 'wav', 'flac', 'ogg', 'aac', 'wma', 'm4a', 'opus',
-    };
-    final extension = getFileExtension(fileName);
-    return audioExtensions.contains(extension);
+  /// 显示文件操作结果
+  /// [context] 上下文
+  /// [success] 是否成功
+  /// [successMessage] 成功消息
+  /// [errorMessage] 错误消息
+  static void showFileOperationResult(
+    BuildContext context,
+    bool success,
+    String successMessage,
+    String errorMessage,
+  ) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(success ? successMessage : errorMessage),
+        backgroundColor: success ? Colors.green : Colors.red,
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 
-  /// 检查是否是视频文件
-  static bool isVideoFile(String fileName) {
-    final videoExtensions = {
-      'mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv', 'webm', 'm4v',
-    };
-    final extension = getFileExtension(fileName);
-    return videoExtensions.contains(extension);
+  /// 确认删除文件
+  /// [context] 上下文
+  /// [filePath] 文件路径
+  /// [onConfirm] 确认回调
+  static Future<void> confirmDeleteFile(
+    BuildContext context,
+    String filePath,
+    VoidCallback onConfirm,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('确认删除'),
+        content: Text('确定要删除文件:\n$filePath'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('删除', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      onConfirm();
+    }
   }
 
-  /// 检查是否是图片文件
-  static bool isImageFile(String fileName) {
-    final imageExtensions = {
-      'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'heic',
-    };
-    final extension = getFileExtension(fileName);
-    return imageExtensions.contains(extension);
+  /// 打开文件所在目录
+  /// [filePath] 文件路径
+  /// 返回是否成功打开
+  static Future<bool> openFileLocation(String filePath) async {
+    try {
+      final file = File(filePath);
+      if (!file.existsSync()) {
+        debugPrint('文件不存在: $filePath');
+        return false;
+      }
+
+      final directory = file.parent.path;
+
+      // 在不同平台打开目录
+      if (Platform.isMacOS) {
+        await Process.run('open', [directory]);
+      } else if (Platform.isWindows) {
+        await Process.run('explorer', [directory]);
+      } else if (Platform.isLinux) {
+        await Process.run('xdg-open', [directory]);
+      } else if (kIsWeb) {
+        // Web平台不支持直接打开目录，显示提示
+        debugPrint('Web平台不支持直接打开目录');
+        return false;
+      } else {
+        debugPrint('不支持的平台');
+        return false;
+      }
+
+      return true;
+    } catch (e) {
+      debugPrint('打开文件所在目录失败: $e');
+      return false;
+    }
   }
 }
