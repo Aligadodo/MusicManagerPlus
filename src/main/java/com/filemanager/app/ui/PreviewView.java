@@ -823,14 +823,7 @@ public class PreviewView implements IAutoReloadAble {
         chkSelectAll = new JFXCheckBox("全选");
         chkSelectAll.setTooltip(new Tooltip("选择所有可见行"));
         
-        // 建立与表头复选框的绑定关系
-        if (previewTable != null && !previewTable.getColumns().isEmpty()) {
-            TreeTableColumn<ChangeRecord, ?> selectionColumn = previewTable.getColumns().get(0);
-            if (selectionColumn.getGraphic() instanceof CheckBox) {
-                CheckBox headerCheckBox = (CheckBox) selectionColumn.getGraphic();
-                headerCheckBox.selectedProperty().bindBidirectional(chkSelectAll.selectedProperty());
-            }
-        }
+        Platform.runLater(() -> bindHeaderCheckBoxToSelectAll());
         
         chkSelectAll.selectedProperty().addListener((obs, oldVal, newVal) -> {
             TreeTableView<ChangeRecord> tableView = getPreviewTable();
@@ -1136,6 +1129,25 @@ public class PreviewView implements IAutoReloadAble {
                 newPathColumn
         );
 
+        bindHeaderCheckBoxToSelectAll(selectionColumn, headerCheckBox);
+
+    }
+
+    private void bindHeaderCheckBoxToSelectAll(TreeTableColumn<ChangeRecord, Boolean> selectionColumn, CheckBox headerCheckBox) {
+        if (chkSelectAll != null && selectionColumn != null && headerCheckBox != null) {
+            headerCheckBox.selectedProperty().bindBidirectional(chkSelectAll.selectedProperty());
+        }
+    }
+    
+    private void bindHeaderCheckBoxToSelectAll() {
+        if (chkSelectAll == null || previewTable == null || previewTable.getColumns().isEmpty()) {
+            return;
+        }
+        TreeTableColumn<ChangeRecord, ?> selectionColumn = previewTable.getColumns().get(0);
+        if (selectionColumn != null && selectionColumn.getGraphic() instanceof CheckBox) {
+            CheckBox headerCheckBox = (CheckBox) selectionColumn.getGraphic();
+            headerCheckBox.selectedProperty().bindBidirectional(chkSelectAll.selectedProperty());
+        }
     }
 
     private void setupPreviewRows() {

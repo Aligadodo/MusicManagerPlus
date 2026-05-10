@@ -735,7 +735,11 @@ public class FileManagerPlusApp extends Application implements IAppController, I
     public void invalidatePreview(String r) {
         if (!fullChangeList.isEmpty()) {
             fullChangeList.clear();
-            previewView.getPreviewTable().setRoot(null);
+            TreeItem<ChangeRecord> root = previewView.getPreviewTable().getRoot();
+            if (root != null) {
+                root.getChildren().clear();
+            }
+            previewView.getPreviewTable().refresh();
             log(r);
         }
         btnExecute.setDisable(true);
